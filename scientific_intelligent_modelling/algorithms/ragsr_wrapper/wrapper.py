@@ -92,6 +92,8 @@ class RAGSRRegressor(BaseWrapper):
         "task_global_index",
         "expected_dataset_rel",
         "expected_dataset_dir",
+        "benchmark_variant",
+        "component_notes",
     }
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {"random_state", "categorical_features"}
     _INT_PARAMS = {
