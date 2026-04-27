@@ -7,8 +7,10 @@ import traceback
 import os
 try:
     from .config_manager import config_manager
+    from .exceptions import NoValidOutputError
 except ImportError:
     from config_manager import config_manager
+    from exceptions import NoValidOutputError
 
 # print(f"当前工作目录: {os.getcwd()}")
 # print(f"脚本所在目录: {os.path.dirname(os.path.abspath(__file__))}")
@@ -46,6 +48,15 @@ def main():
         with open(args.output, 'w') as f:
             json.dump(result, f)
             
+    except NoValidOutputError as e:
+        no_valid_result = {
+            'success': False,
+            'no_valid_output': True,
+            'message': str(e),
+            'traceback': traceback.format_exc(),
+        }
+        with open(args.output, 'w') as f:
+            json.dump(no_valid_result, f)
     except Exception as e:
         # 错误处理
         error_result = {

@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from scientific_intelligent_modelling.benchmarks import runner
+from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
 
 
 class _FakeRegressor:
@@ -65,6 +66,11 @@ class _TimeoutFakeRegressor(_FakeRegressor):
 class _TimeoutRecoverableFakeRegressor(_FakeRegressor):
     def fit(self, X, y):
         raise TimeoutError("fit timeout")
+
+
+class _NoValidOutputFakeRegressor(_FakeRegressor):
+    def fit(self, X, y):
+        raise NoValidOutputError("fake algorithm produced no model")
 
 
 class BenchmarkRunnerTest(unittest.TestCase):
@@ -287,6 +293,45 @@ dataset:
             self.assertFalse(result["recovered_from_timeout"])
             self.assertEqual(result["termination_reason"], "no_valid_output")
             self.assertTrue(result["experiment_dir"])
+
+    def test_run_benchmark_task_maps_no_valid_output_to_done_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            dataset_dir.mkdir()
+            (dataset_dir / "metadata.yaml").write_text(
+                """
+dataset:
+  target:
+    name: y
+  features:
+    - name: x0
+""".strip(),
+                encoding="utf-8",
+            )
+            (dataset_dir / "train.csv").write_text("x0,y\n1,1\n2,2\n", encoding="utf-8")
+
+            original_cls = runner.SymbolicRegressor
+            runner.SymbolicRegressor = _NoValidOutputFakeRegressor
+            try:
+                result_path = runner.run_benchmark_task(
+                    tool_name="QLattice",
+                    dataset_dir=dataset_dir,
+                    output_root=root / "bench_results",
+                    seed=1314,
+                )
+            finally:
+                runner.SymbolicRegressor = original_cls
+
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "no_valid_output")
+            self.assertIsNone(result["error"])
+            self.assertFalse(result["budget_exhausted"])
+            self.assertEqual(result["timeout_type"], "no_valid_output")
+            self.assertEqual(result["termination_reason"], "no_valid_output")
+            self.assertIn("fake algorithm produced no model", result["no_valid_output_reason"])
+            self.assertIsNone(result["equation"])
+            self.assertIsNone(result["id_test"])
 
     def test_run_benchmark_task_recovers_timeout_result_from_candidate_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:

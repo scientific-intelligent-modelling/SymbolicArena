@@ -17,6 +17,7 @@ from typing import List, Optional
 
 from ..base_wrapper import BaseWrapper
 from scientific_intelligent_modelling.benchmarks.normalizers import normalize_qlattice_artifact
+from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
 
 
 class QLatticeRegressor(BaseWrapper):
@@ -228,11 +229,11 @@ class QLatticeRegressor(BaseWrapper):
                     criterion_name=criterion_name,
                 )
             if not models:
-                raise RuntimeError('QLattice.auto_run 未返回任何模型，请检查数据与参数。')
+                raise NoValidOutputError('QLattice.auto_run 未返回任何模型。')
         else:
             models = list(self._ql.auto_run(**auto_args))
             if not models:
-                raise RuntimeError('QLattice.auto_run 未返回任何模型，请检查数据与参数。')
+                raise NoValidOutputError('QLattice.auto_run 未返回任何模型。')
 
         self._models = models
         self._best_model = self._select_best_model(models, criterion_name)

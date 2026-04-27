@@ -165,6 +165,8 @@ def _timeout_type(
 ) -> str:
     if explicit_timeout_type:
         return explicit_timeout_type
+    if task_status == "no_valid_output" or result_status == "no_valid_output":
+        return "no_valid_output"
     if task_status != "timed_out" and result_status != "timed_out":
         return "not_timeout"
     if valid_output:

@@ -14,6 +14,7 @@ import numpy as np
 
 from .config_manager import config_manager
 from .conda_env_manager import env_manager
+from .exceptions import NoValidOutputError
 
 class SymbolicRegressor:
     def __init__(self, tool_name, problem_name: Optional[str] = None, experiments_dir: Optional[str] = None, seed: int = 1314, **kwargs):
@@ -183,6 +184,13 @@ class SymbolicRegressor:
             raise
         
         # 检查结果
+        if result.get('no_valid_output'):
+            try:
+                self._update_manifest(status="no_valid_output")
+            except Exception:
+                pass
+            raise NoValidOutputError(result.get('message') or "算法未产生可评估符号表达式")
+
         if 'error' in result:
             try:
                 self._update_manifest(status="failed")

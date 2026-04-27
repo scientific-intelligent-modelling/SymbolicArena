@@ -24,6 +24,7 @@ from scientific_intelligent_modelling.benchmarks.result_artifacts import (
     safe_build_canonical_artifact,
     safe_export_canonical_artifact,
 )
+from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
 from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor
 
 
@@ -1456,6 +1457,7 @@ def run_benchmark_task(
     budget_exhausted = False
     timeout_type = "not_timeout"
     raw_timeout_error = None
+    no_valid_output_reason = None
 
     reg = SymbolicRegressor(
         tool_name,
@@ -1535,6 +1537,11 @@ def run_benchmark_task(
                 error = None
         else:
             timeout_type = "no_valid_output"
+    except NoValidOutputError as exc:
+        status = "no_valid_output"
+        error = None
+        timeout_type = "no_valid_output"
+        no_valid_output_reason = str(exc)
     except Exception as exc:
         status = "error"
         error = repr(exc)
@@ -1570,8 +1577,11 @@ def run_benchmark_task(
     result["timeout_type"] = timeout_type
     result["raw_timeout_error"] = raw_timeout_error
     result["recovered_from_timeout"] = timeout_type == "budget_exhausted_with_output"
+    result["no_valid_output_reason"] = no_valid_output_reason
     if budget_exhausted:
         result["termination_reason"] = timeout_type
+    elif status == "no_valid_output":
+        result["termination_reason"] = "no_valid_output"
     else:
         result["termination_reason"] = "completed" if status == "ok" else status
 

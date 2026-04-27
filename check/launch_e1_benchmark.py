@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 
-DONE_STATUSES = {"ok", "timed_out"}
+DONE_STATUSES = {"ok", "timed_out", "no_valid_output"}
 
 
 def _load_tasks(slice_csv: Path) -> list[dict[str, str]]:
