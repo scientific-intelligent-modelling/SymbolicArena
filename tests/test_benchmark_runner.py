@@ -695,8 +695,10 @@ dataset:
                 )
 
                 self.assertIs(params["canonical_prompt_variables"], True)
-                self.assertEqual(params["feature_names"], ["x0", "x1"])
-                self.assertEqual(params["target_name"], "y")
+                self.assertEqual(params["feature_names"], ["t", "A"])
+                self.assertEqual(params["target_name"], "dA_dt")
+                self.assertEqual(params["prompt_feature_names"], ["x0", "x1"])
+                self.assertEqual(params["prompt_target_name"], "y")
                 self.assertEqual(params["original_feature_names"], ["t", "A"])
                 self.assertEqual(params["original_target_name"], "dA_dt")
                 self.assertEqual(params["feature_descriptions"], ["Time", "Concentration at time t"])
@@ -740,8 +742,10 @@ dataset:
                 params_override={"anonymize": True},
             )
 
-            self.assertEqual(params["feature_names"], ["x1", "x2"])
-            self.assertEqual(params["target_name"], "y")
+            self.assertEqual(params["feature_names"], ["mu", "Nn"])
+            self.assertEqual(params["target_name"], "output")
+            self.assertEqual(params["prompt_feature_names"], ["x1", "x2"])
+            self.assertEqual(params["prompt_target_name"], "y")
             self.assertIs(params["anonymize"], True)
 
     def test_anonymize_removes_descriptions(self):
@@ -790,8 +794,10 @@ dataset:
                 params_override={"anonymize": True},
             )
 
-            self.assertEqual(params["feature_names"], ["x1", "x2"])
-            self.assertEqual(params["target_name"], "y")
+            self.assertEqual(params["feature_names"], ["mu", "Nn"])
+            self.assertEqual(params["target_name"], "output")
+            self.assertEqual(params["prompt_feature_names"], ["x1", "x2"])
+            self.assertEqual(params["prompt_target_name"], "y")
 
     def test_anonymize_with_srsd_distractor(self):
         """anonymize + SRSD distractor 时，以 anonymize 优先，不注入描述。"""
@@ -825,6 +831,9 @@ dataset:
                 params_override={"anonymize": True},
             )
 
-            self.assertEqual(params["feature_names"], ["x1", "x2"])
+            self.assertEqual(params["feature_names"], ["x0", "x1"])
+            self.assertEqual(params["target_name"], "y")
+            self.assertEqual(params["prompt_feature_names"], ["x1", "x2"])
+            self.assertEqual(params["prompt_target_name"], "y")
             self.assertNotIn("feature_descriptions", params)
             self.assertNotIn("target_description", params)

@@ -1259,29 +1259,36 @@ def build_runner_params(
     params.setdefault("feature_names", list(dataset.feature_names))
     params.setdefault("target_name", dataset.target_name)
 
-    # 变量名匿名化：将原始列名替换为 x1..xN，目标列名替换为 y。
-    # 对 llmsr/drsr 生效，可通过 params_override 中的 anonymize 开关控制。
+    # `feature_names` / `target_name` 始终表示真实数据契约；
+    # LLM prompt 中的变量命名另用 `prompt_feature_names` / `prompt_target_name` 显式表达。
+    # 对 llmsr/drsr 可通过 params_override 中的 anonymize 开关切到 x1..xN/y 且隐藏描述。
     anonymize = _as_bool(params.pop("anonymize", None), default=False)
     if anonymize:
-        n = len(dataset.feature_names)
-        params["feature_names"] = [f"x{i+1}" for i in range(n)]
-        params["target_name"] = "y"
         params["anonymize"] = True
 
     if tool_name in {"llmsr", "drsr"}:
+        canonical_prompt_variables = _as_bool(
+            params.get("canonical_prompt_variables"),
+            default=True,
+        )
+        if anonymize:
+            canonical_prompt_variables = True
+        params["canonical_prompt_variables"] = canonical_prompt_variables
+        params.setdefault("original_feature_names", list(dataset.feature_names))
+        params.setdefault("original_target_name", dataset.target_name)
+
+        if anonymize:
+            params["prompt_feature_names"] = [f"x{i+1}" for i in range(len(dataset.feature_names))]
+            params["prompt_target_name"] = "y"
+        elif canonical_prompt_variables:
+            params["prompt_feature_names"] = [f"x{i}" for i in range(len(dataset.feature_names))]
+            params["prompt_target_name"] = "y"
+        else:
+            params.setdefault("prompt_feature_names", list(dataset.feature_names))
+            params.setdefault("prompt_target_name", dataset.target_name)
+
         inject_prompt_semantics = _as_bool(params.get("inject_prompt_semantics"), default=True)
         if inject_prompt_semantics:
-            canonical_prompt_variables = _as_bool(
-                params.get("canonical_prompt_variables"),
-                default=not bool(params.get("anonymize")),
-            )
-            params["canonical_prompt_variables"] = canonical_prompt_variables
-            if canonical_prompt_variables and not params.get("anonymize"):
-                params.setdefault("original_feature_names", list(dataset.feature_names))
-                params.setdefault("original_target_name", dataset.target_name)
-                params["feature_names"] = [f"x{i}" for i in range(len(dataset.feature_names))]
-                params["target_name"] = "y"
-
             background = _build_background(dataset.metadata, dataset.feature_names)
             params.setdefault("background", background)
             params.setdefault("metadata_path", str(dataset.dataset_dir / "metadata.yaml"))

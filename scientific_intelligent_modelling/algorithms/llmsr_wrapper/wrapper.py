@@ -180,6 +180,8 @@ class LLMSRRegressor(BaseWrapper):
         self._n_features: Optional[int] = self.params.pop("n_features", None)
         self._feature_names: Optional[list[str]] = self.params.pop("feature_names", None)
         self._target_name: Optional[str] = self.params.pop("target_name", None)
+        self._prompt_feature_names: Optional[list[str]] = self.params.pop("prompt_feature_names", None)
+        self._prompt_target_name: Optional[str] = self.params.pop("prompt_target_name", None)
 
     # ------------------------------------------------------------------
     # 序列化 / 反序列化：只记录元信息与实验目录
@@ -200,6 +202,8 @@ class LLMSRRegressor(BaseWrapper):
             "n_features": self._n_features,
             "feature_names": self._feature_names,
             "target_name": self._target_name,
+            "prompt_feature_names": self._prompt_feature_names,
+            "prompt_target_name": self._prompt_target_name,
         }
         return json.dumps(state, ensure_ascii=False)
 
@@ -219,11 +223,28 @@ class LLMSRRegressor(BaseWrapper):
         inst._n_features = obj.get("n_features")
         inst._feature_names = obj.get("feature_names")
         inst._target_name = obj.get("target_name")
+        inst._prompt_feature_names = obj.get("prompt_feature_names")
+        inst._prompt_target_name = obj.get("prompt_target_name")
         return inst
 
     # ------------------------------------------------------------------
     # 训练接口
     # ------------------------------------------------------------------
+    def _resolve_prompt_columns(self, n_features: int) -> tuple[list[str], str]:
+        """解析传给 LLMSR 子仓库的 CSV 列名。
+
+        `feature_names` / `target_name` 是真实数据契约；这里统一只使用
+        `prompt_feature_names` / `prompt_target_name`，避免 LLMSR 和 DRSR
+        在 prompt 变量命名上走不同隐式路径。
+        """
+        prompt_feature_names = self._prompt_feature_names
+        if not isinstance(prompt_feature_names, list) or len(prompt_feature_names) != n_features:
+            prompt_feature_names = [f"x{i}" for i in range(n_features)]
+        prompt_target_name = self._prompt_target_name
+        if not isinstance(prompt_target_name, str) or not prompt_target_name.strip():
+            prompt_target_name = "y"
+        return list(prompt_feature_names), prompt_target_name.strip()
+
     def _can_reuse_existing_experiment(self) -> bool:
         """判断是否可以直接复用已有实验目录而跳过在线训练。"""
         if not self._exp_dir:
@@ -276,8 +297,8 @@ class LLMSRRegressor(BaseWrapper):
         try:
             n_features = X_arr.shape[1]
             self._n_features = int(n_features)
-            feature_names = [f"x{i}" for i in range(n_features)]
-            columns = feature_names + ["y"]
+            prompt_feature_names, prompt_target_name = self._resolve_prompt_columns(n_features)
+            columns = prompt_feature_names + [prompt_target_name]
             data = np.column_stack([X_arr, y_arr])
             df = pd.DataFrame(data, columns=columns)
             csv_path = os.path.join(tmp_dir, f"{problem_name}.csv")
@@ -332,7 +353,8 @@ class LLMSRRegressor(BaseWrapper):
                 metadata_path=self.params.get("metadata_path"),
                 feature_descriptions=self.params.get("feature_descriptions"),
                 target_description=self.params.get("target_description"),
-                anonymize=_as_bool(self.params.get("anonymize", False), default=False),
+                # wrapper 已经显式写好 prompt CSV 列名，不再依赖子仓库二次匿名化。
+                anonymize=False,
                 wandb_config=wandb_cfg,
             )
             core.fit()

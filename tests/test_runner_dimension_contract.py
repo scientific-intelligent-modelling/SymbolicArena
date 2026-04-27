@@ -47,19 +47,25 @@ class RunnerDimensionContractTest(unittest.TestCase):
             "exp_name": "demo",
             "seed": 1314,
             "n_features": 3,
-            "feature_names": ["x0", "x1", "x2"],
+            "feature_names": ["t", "A", "B"],
             "target_name": "target",
+            "prompt_feature_names": ["x0", "x1", "x2"],
+            "prompt_target_name": "y",
         }
 
         llmsr = LLMSRRegressor(**shared)
         self.assertEqual(llmsr._n_features, 3)
-        self.assertEqual(llmsr._feature_names, ["x0", "x1", "x2"])
+        self.assertEqual(llmsr._feature_names, ["t", "A", "B"])
         self.assertEqual(llmsr._target_name, "target")
+        self.assertEqual(llmsr._resolve_prompt_columns(3), (["x0", "x1", "x2"], "y"))
 
         drsr = DRSRRegressor(**shared)
         self.assertEqual(drsr._n_features, 3)
-        self.assertEqual(drsr._feature_names, ["x0", "x1", "x2"])
+        self.assertEqual(drsr._feature_names, ["t", "A", "B"])
         self.assertEqual(drsr._target_name, "target")
+        names, _, _ = drsr._resolve_prompt_semantics(3)
+        self.assertEqual(names, ["x0", "x1", "x2"])
+        self.assertEqual(drsr._resolve_prompt_target_name(), "y")
 
     def test_explicit_contract_rejects_n_features_mismatch(self):
         X = np.ones((4, 2))

@@ -99,13 +99,15 @@ class DRSRRegressor(BaseWrapper):
         self._n_features: Optional[int] = self.params.pop("n_features", None)  # 记录特征数量
         self._feature_names: Optional[List[str]] = self.params.pop("feature_names", None)
         self._target_name: Optional[str] = self.params.pop("target_name", None)
+        self._prompt_feature_names: Optional[List[str]] = self.params.pop("prompt_feature_names", None)
+        self._prompt_target_name: Optional[str] = self.params.pop("prompt_target_name", None)
 
-        # 变量名匿名化：与 llmsr 对齐，通过 anonymize 标志显式控制。
+        # 变量名匿名化只影响 prompt 命名；真实数据契约仍保存在 feature_names/target_name。
         self._anonymize: bool = self._as_bool(self.params.pop("anonymize", False), default=False)
-        if self._anonymize:
+        if self._anonymize and not self._prompt_feature_names:
             n = len(self._feature_names) if self._feature_names else (self._n_features or 0)
-            self._feature_names = [f"x{i+1}" for i in range(n)]
-            self._target_name = "y"
+            self._prompt_feature_names = [f"x{i+1}" for i in range(n)]
+            self._prompt_target_name = "y"
 
     def _resolve_experiment_layout(self) -> Tuple[str, str, str]:
         """
@@ -181,11 +183,16 @@ class DRSRRegressor(BaseWrapper):
         - 若 metadata 中存在 description，则优先使用 description
         - 否则退化到 name
         """
-        # 匿名化模式：使用 x1..xN, y，不加载任何描述。
+        # 匿名化模式：prompt 使用 x1..xN/y，不加载任何描述；真实数据契约不改名。
         if self._anonymize:
-            return [f"x{i+1}" for i in range(n_features)], None, None
+            prompt_names = self._prompt_feature_names
+            if not isinstance(prompt_names, list) or len(prompt_names) != n_features:
+                prompt_names = [f"x{i+1}" for i in range(n_features)]
+            return prompt_names, None, None
 
-        feature_names = self._feature_names
+        feature_names = self._prompt_feature_names
+        if not isinstance(feature_names, list) or len(feature_names) != n_features:
+            feature_names = self._feature_names
         if not isinstance(feature_names, list) or len(feature_names) != n_features:
             feature_names = [f"x{i}" for i in range(n_features)]
         feature_descriptions = self.params.get("feature_descriptions")
@@ -221,6 +228,17 @@ class DRSRRegressor(BaseWrapper):
                 normalized_feature_descriptions = None
 
         return feature_names, normalized_feature_descriptions, target_description
+
+    def _resolve_prompt_target_name(self) -> str:
+        prompt_target_name = self._prompt_target_name
+        if isinstance(prompt_target_name, str) and prompt_target_name.strip():
+            return prompt_target_name.strip()
+        if self._anonymize:
+            return "y"
+        target_name = self._target_name
+        if isinstance(target_name, str) and target_name.strip():
+            return target_name.strip()
+        return "y"
 
     @staticmethod
     def _resolve_api_key_from_config(api_key_cfg, model_name: str, provider: str):
@@ -421,10 +439,11 @@ class DRSRRegressor(BaseWrapper):
         )
 
         feature_names, feature_descriptions, target_description = self._resolve_prompt_semantics(self._n_features or 0)
+        prompt_target_name = self._resolve_prompt_target_name()
         prompt_ctx = prompt_config_lib.PromptContext(
             n_features=self._n_features or 0,
             feature_names=feature_names or None,
-            dependent_name=self._target_name or "y",
+            dependent_name=prompt_target_name,
             problem_name=self.params.get("problem_name"),
             background=background,
             feature_descriptions=feature_descriptions,
@@ -497,6 +516,8 @@ class DRSRRegressor(BaseWrapper):
             'n_features': self._n_features,
             'feature_names': self._feature_names,
             'target_name': self._target_name,
+            'prompt_feature_names': self._prompt_feature_names,
+            'prompt_target_name': self._prompt_target_name,
             'anonymize': self._anonymize,
         }
         return json.dumps(state)
@@ -697,6 +718,8 @@ class DRSRRegressor(BaseWrapper):
         inst._n_features = obj.get('n_features')
         inst._feature_names = obj.get('feature_names') or inst._feature_names
         inst._target_name = obj.get('target_name') or inst._target_name
+        inst._prompt_feature_names = obj.get('prompt_feature_names') or inst._prompt_feature_names
+        inst._prompt_target_name = obj.get('prompt_target_name') or inst._prompt_target_name
         inst._anonymize = cls._as_bool(obj.get('anonymize'), default=getattr(inst, "_anonymize", False))
         best_params = obj.get('best_params')
         inst._best_params = np.array(best_params) if best_params is not None else None
@@ -1019,7 +1042,7 @@ class DRSRRegressor(BaseWrapper):
         return build_shared_specification(
             background=background,
             features=feature_names,
-            target="y",
+            target=self._resolve_prompt_target_name(),
             max_params=self._max_params(),
             problem=self.params.get("problem_name"),
             evaluate_style="drsr",

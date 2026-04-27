@@ -43,14 +43,16 @@ def test_drsr_default_exp_layout_uses_experiments_dir(monkeypatch, tmp_path):
 
 
 def test_drsr_anonymize_renames_features():
-    """anonymize=True 时变量名变为 x1..xN，目标名为 y，不加载描述。"""
+    """anonymize=True 只改变 prompt 变量名，真实数据契约不改名。"""
     reg = DRSRRegressor(
         feature_names=["mu", "Nn"],
         target_name="output",
         anonymize=True,
     )
-    assert reg._feature_names == ["x1", "x2"]
-    assert reg._target_name == "y"
+    assert reg._feature_names == ["mu", "Nn"]
+    assert reg._target_name == "output"
+    assert reg._prompt_feature_names == ["x1", "x2"]
+    assert reg._prompt_target_name == "y"
     names, descs, tdesc = reg._resolve_prompt_semantics(2)
     assert names == ["x1", "x2"]
     assert descs is None
@@ -63,8 +65,10 @@ def test_drsr_anonymize_fallback_no_feature_names():
         n_features=3,
         anonymize=True,
     )
-    assert reg._feature_names == ["x1", "x2", "x3"]
-    assert reg._target_name == "y"
+    assert reg._feature_names is None
+    assert reg._target_name is None
+    assert reg._prompt_feature_names == ["x1", "x2", "x3"]
+    assert reg._prompt_target_name == "y"
     names, descs, tdesc = reg._resolve_prompt_semantics(3)
     assert names == ["x1", "x2", "x3"]
 
@@ -110,5 +114,7 @@ def test_drsr_serialize_preserves_anonymize_contract():
     assert raw["anonymize"] is True
     restored = DRSRRegressor.deserialize(payload)
     assert restored._anonymize is True
-    assert restored._feature_names == ["x1", "x2"]
-    assert restored._target_name == "y"
+    assert restored._feature_names == ["mu", "Nn"]
+    assert restored._target_name == "output"
+    assert restored._prompt_feature_names == ["x1", "x2"]
+    assert restored._prompt_target_name == "y"
