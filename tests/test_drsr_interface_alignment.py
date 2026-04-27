@@ -1,3 +1,7 @@
+import json
+
+import numpy as np
+
 from scientific_intelligent_modelling.algorithms.drsr_wrapper.wrapper import DRSRRegressor
 
 
@@ -73,3 +77,38 @@ def test_drsr_anonymize_default_false():
     )
     assert reg._feature_names == ["mu", "Nn"]
     assert reg._target_name == "output"
+
+
+def test_drsr_anonymize_string_false_is_false():
+    """配置文件传入字符串 false 时不应被 bool("false") 误判为 True。"""
+    reg = DRSRRegressor(
+        feature_names=["mu", "Nn"],
+        target_name="output",
+        anonymize="false",
+    )
+    assert reg._anonymize is False
+    assert reg._feature_names == ["mu", "Nn"]
+    assert reg._target_name == "output"
+
+
+def test_drsr_compile_one_based_anonymized_variables():
+    """DRSR 回放时支持 x1..xN 匿名变量，避免最后一个变量越界。"""
+    func = DRSRRegressor._compile_equation("return x1 + x2\n", 2)
+    pred = func(np.asarray([1.0, 2.0]), np.asarray([3.0, 4.0]), np.ones(10))
+    np.testing.assert_allclose(pred, np.asarray([4.0, 6.0]))
+
+
+def test_drsr_serialize_preserves_anonymize_contract():
+    reg = DRSRRegressor(
+        n_features=2,
+        feature_names=["mu", "Nn"],
+        target_name="output",
+        anonymize=True,
+    )
+    payload = reg.serialize()
+    raw = json.loads(payload)
+    assert raw["anonymize"] is True
+    restored = DRSRRegressor.deserialize(payload)
+    assert restored._anonymize is True
+    assert restored._feature_names == ["x1", "x2"]
+    assert restored._target_name == "y"

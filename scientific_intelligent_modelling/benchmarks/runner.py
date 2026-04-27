@@ -1202,28 +1202,23 @@ def _build_srsd_distractor_summary(
 ) -> str | None:
     """为含 distractor 的 SRSD 数据集构建变量汇总描述。
 
-    当数据集包含 meaningless 的噪声变量时，生成形如:
-      "There are 5 variables. Active features: x1 (k_spring, Spring constant); x2 (x, Position).
-       The remaining 3 variables are distractor features with no physical meaning."
+    注意：这里不能列出哪些变量是 active feature，否则会把 dummy 变量答案直接泄露给 LLM。
+    只暴露“存在候选变量/可能有 distractor”这一全局事实。
     """
-    meaningful_parts: list[str] = []
-    distractor_count = 0
-    for name, desc in zip(feature_names, feature_descriptions):
+    has_distractor = False
+    for _, desc in zip(feature_names, feature_descriptions):
         if desc and "meaningless" in str(desc).lower():
-            distractor_count += 1
-        else:
-            desc_text = str(desc).strip() if desc else name
-            meaningful_parts.append(f"{name} ({desc_text})")
+            has_distractor = True
+            break
 
-    if distractor_count == 0:
+    if not has_distractor:
         return None  # 无 distractor，无需汇总
 
-    meaningful_str = "; ".join(meaningful_parts)
     n_total = len(feature_names)
     return (
-        f"There are {n_total} variables. "
-        f"Active features: {meaningful_str}. "
-        f"The remaining {distractor_count} variables are distractor features with no physical meaning."
+        f"There are {n_total} candidate variables. "
+        "Some variables may be physically meaningful while others may be distractor variables. "
+        "Feature-level semantic descriptions are intentionally hidden to avoid revealing which variables are active."
     )
 
 

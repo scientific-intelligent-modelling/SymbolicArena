@@ -52,6 +52,20 @@ def _default_llm_config_path() -> str:
     )
 
 
+def _as_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in {"0", "false", "no", "off"}:
+            return False
+        if text in {"1", "true", "yes", "on"}:
+            return True
+    return bool(value)
+
+
 def _import_core_regressor():
     """
     动态导入子仓库中的 LLMSRRegressor。
@@ -318,7 +332,7 @@ class LLMSRRegressor(BaseWrapper):
                 metadata_path=self.params.get("metadata_path"),
                 feature_descriptions=self.params.get("feature_descriptions"),
                 target_description=self.params.get("target_description"),
-                anonymize=bool(self.params.get("anonymize", False)),
+                anonymize=_as_bool(self.params.get("anonymize", False), default=False),
                 wandb_config=wandb_cfg,
             )
             core.fit()

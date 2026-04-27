@@ -612,11 +612,12 @@ dataset:
                 "llmsr", dataset, root / "bench_results", seed=1314,
             )
 
-            # background 应追加汇总信息
-            self.assertIn("There are 5 variables", params["background"])
-            self.assertIn("x1 (k_spring, Spring constant)", params["background"])
-            self.assertIn("x2 (x, Position)", params["background"])
-            self.assertIn("remaining 3 variables are distractor", params["background"])
+            # background 只能追加全局提示，不能泄露哪些变量是 active feature。
+            self.assertIn("There are 5 candidate variables", params["background"])
+            self.assertIn("Some variables may be physically meaningful", params["background"])
+            self.assertNotIn("Active features", params["background"])
+            self.assertNotIn("x1 (k_spring, Spring constant)", params["background"])
+            self.assertNotIn("x2 (x, Position)", params["background"])
 
             # 每个变量的描述统一为 "meaning or meaningless"
             self.assertEqual(

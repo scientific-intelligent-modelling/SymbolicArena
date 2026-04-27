@@ -5,6 +5,7 @@ import glob
 import tempfile
 import time
 import ast
+import re
 from typing import List, Optional
 import textwrap
 
@@ -61,6 +62,20 @@ class DRSRRegressor(BaseWrapper):
       一律优先使用新接口。
     """
 
+    @staticmethod
+    def _as_bool(value, default: bool = False) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            text = value.strip().lower()
+            if text in {"0", "false", "no", "off"}:
+                return False
+            if text in {"1", "true", "yes", "on"}:
+                return True
+        return bool(value)
+
     def __init__(self, **kwargs):
         self.params = dict(kwargs) if kwargs else {}
         self.params.setdefault("timeout_in_seconds", 3600)
@@ -86,7 +101,7 @@ class DRSRRegressor(BaseWrapper):
         self._target_name: Optional[str] = self.params.pop("target_name", None)
 
         # 变量名匿名化：与 llmsr 对齐，通过 anonymize 标志显式控制。
-        self._anonymize: bool = bool(self.params.pop("anonymize", False))
+        self._anonymize: bool = self._as_bool(self.params.pop("anonymize", False), default=False)
         if self._anonymize:
             n = len(self._feature_names) if self._feature_names else (self._n_features or 0)
             self._feature_names = [f"x{i+1}" for i in range(n)]
@@ -480,6 +495,9 @@ class DRSRRegressor(BaseWrapper):
             'all_bodies': self._all_bodies,
             'best_params': self._best_params.tolist() if isinstance(self._best_params, np.ndarray) else None,
             'n_features': self._n_features,
+            'feature_names': self._feature_names,
+            'target_name': self._target_name,
+            'anonymize': self._anonymize,
         }
         return json.dumps(state)
 
@@ -670,10 +688,16 @@ class DRSRRegressor(BaseWrapper):
     @classmethod
     def deserialize(cls, payload: str):
         obj = json.loads(payload)
-        inst = cls(**obj.get('params', {}))
+        params = dict(obj.get('params', {}))
+        if obj.get('anonymize') is not None:
+            params['anonymize'] = obj.get('anonymize')
+        inst = cls(**params)
         inst._equation_body = obj.get('equation_body')
         inst._all_bodies = obj.get('all_bodies', [])
         inst._n_features = obj.get('n_features')
+        inst._feature_names = obj.get('feature_names') or inst._feature_names
+        inst._target_name = obj.get('target_name') or inst._target_name
+        inst._anonymize = cls._as_bool(obj.get('anonymize'), default=getattr(inst, "_anonymize", False))
         best_params = obj.get('best_params')
         inst._best_params = np.array(best_params) if best_params is not None else None
         if inst._equation_body:
@@ -884,6 +908,17 @@ class DRSRRegressor(BaseWrapper):
             return body
         n = 0 if (n_features is None or n_features <= 0) else int(n_features)
         names = DRSRRegressor._collect_variable_names(body)
+        x_indices = sorted(
+            {
+                int(match.group(1))
+                for name in names
+                for match in [re.fullmatch(r"x(\d+)", name)]
+                if match is not None
+            }
+        )
+        # 匿名化或部分上游 prompt 会生成 x1..xN。若表达式没有 x0，
+        # 按 one-based 约定平移到 col0..colN-1，避免最后一个变量无法回放。
+        one_based_x = bool(x_indices) and 0 not in x_indices and min(x_indices) >= 1 and max(x_indices) <= n
         aliases = []
         alias_map = {}
         if n >= 1:
@@ -891,9 +926,12 @@ class DRSRRegressor(BaseWrapper):
             alias_map["x0"] = "col0"
         if n >= 2:
             alias_map["v"] = "col1"
-            alias_map["x1"] = "col1"
-        for i in range(n):
-            alias_map[f"x{i}"] = f"col{i}"
+        if one_based_x:
+            for i in range(1, n + 1):
+                alias_map[f"x{i}"] = f"col{i - 1}"
+        else:
+            for i in range(n):
+                alias_map[f"x{i}"] = f"col{i}"
 
         for old_name, new_name in alias_map.items():
             if old_name in names and old_name not in ("col" + new_name[3:] if new_name.startswith("col") else ""):
