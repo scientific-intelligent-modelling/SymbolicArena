@@ -1271,6 +1271,17 @@ def build_runner_params(
     if tool_name in {"llmsr", "drsr"}:
         inject_prompt_semantics = _as_bool(params.get("inject_prompt_semantics"), default=True)
         if inject_prompt_semantics:
+            canonical_prompt_variables = _as_bool(
+                params.get("canonical_prompt_variables"),
+                default=not bool(params.get("anonymize")),
+            )
+            params["canonical_prompt_variables"] = canonical_prompt_variables
+            if canonical_prompt_variables and not params.get("anonymize"):
+                params.setdefault("original_feature_names", list(dataset.feature_names))
+                params.setdefault("original_target_name", dataset.target_name)
+                params["feature_names"] = [f"x{i}" for i in range(len(dataset.feature_names))]
+                params["target_name"] = "y"
+
             background = _build_background(dataset.metadata, dataset.feature_names)
             params.setdefault("background", background)
             params.setdefault("metadata_path", str(dataset.dataset_dir / "metadata.yaml"))

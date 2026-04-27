@@ -673,6 +673,35 @@ dataset:
             self.assertNotIn("background", params)
             self.assertNotIn("feature_descriptions", params)
 
+    def test_semantic_prompt_variables_are_canonical_for_llmsr_and_drsr(self):
+        """语义 prompt 默认使用 x0..xN/y，原始列名仅作为追溯信息保留。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset = self._make_dataset(
+                root,
+                "Calculate reaction rate given Time and Concentration",
+                feature_names=["t", "A"],
+                target_name="dA_dt",
+                feature_descs=["Time", "Concentration at time t"],
+                target_desc="Rate of change of concentration",
+            )
+
+            for tool_name in ("llmsr", "drsr"):
+                params = runner.build_runner_params(
+                    tool_name,
+                    dataset,
+                    root / "bench_results",
+                    seed=1314,
+                )
+
+                self.assertIs(params["canonical_prompt_variables"], True)
+                self.assertEqual(params["feature_names"], ["x0", "x1"])
+                self.assertEqual(params["target_name"], "y")
+                self.assertEqual(params["original_feature_names"], ["t", "A"])
+                self.assertEqual(params["original_target_name"], "dA_dt")
+                self.assertEqual(params["feature_descriptions"], ["Time", "Concentration at time t"])
+                self.assertEqual(params["target_description"], "Rate of change of concentration")
+
 
 class AnonymizeTest(unittest.TestCase):
     """测试变量名匿名化逻辑。"""
@@ -731,8 +760,8 @@ dataset:
             self.assertNotIn("feature_descriptions", params)
             self.assertNotIn("target_description", params)
 
-    def test_anonymize_disabled_by_default(self):
-        """默认 anonymize=False，变量名保持原始。"""
+    def test_anonymize_disabled_by_default_when_semantics_disabled(self):
+        """关闭语义注入时，默认 anonymize=False，变量名保持原始。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             dataset = self._make_dataset(root)
@@ -741,6 +770,7 @@ dataset:
                 dataset,
                 root / "bench_results",
                 seed=1314,
+                params_override={"inject_prompt_semantics": False},
             )
 
             self.assertEqual(params["feature_names"], ["mu", "Nn"])
