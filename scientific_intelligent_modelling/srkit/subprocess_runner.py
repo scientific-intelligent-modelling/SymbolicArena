@@ -7,9 +7,16 @@ import traceback
 import os
 try:
     from .config_manager import config_manager
-    from .exceptions import NoValidOutputError
 except ImportError:
     from config_manager import config_manager
+
+try:
+    from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
+except ImportError:
+    try:
+        from .exceptions import NoValidOutputError
+    except ImportError:
+        from exceptions import NoValidOutputError
     from exceptions import NoValidOutputError
 
 # print(f"当前工作目录: {os.getcwd()}")
