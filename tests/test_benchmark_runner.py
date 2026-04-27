@@ -614,15 +614,19 @@ dataset:
 
             # background 只能追加全局提示，不能泄露哪些变量是 active feature。
             self.assertIn("There are 5 candidate variables", params["background"])
-            self.assertIn("Some variables may be physically meaningful", params["background"])
+            self.assertIn("unknown order", params["background"])
+            self.assertIn('1 variable with semantic role "k_spring, Spring constant"', params["background"])
+            self.assertIn('1 variable with semantic role "x, Position"', params["background"])
+            self.assertIn("3 distractor/meaningless variables", params["background"])
+            self.assertIn("mapping from semantic roles to variable names is intentionally hidden", params["background"])
             self.assertNotIn("Active features", params["background"])
             self.assertNotIn("x1 (k_spring, Spring constant)", params["background"])
             self.assertNotIn("x2 (x, Position)", params["background"])
 
-            # 每个变量的描述统一为 "meaning or meaningless"
+            # 每个变量仍不暴露具体语义，只暴露无序语义集合。
             self.assertEqual(
                 params["feature_descriptions"],
-                ["meaning or meaningless"] * 5,
+                ["candidate variable; semantic role hidden"] * 5,
             )
 
     def test_distractor_summary_without_dummy(self):

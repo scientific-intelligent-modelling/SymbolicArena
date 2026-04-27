@@ -1202,23 +1202,38 @@ def _build_srsd_distractor_summary(
 ) -> str | None:
     """为含 distractor 的 SRSD 数据集构建变量汇总描述。
 
-    注意：这里不能列出哪些变量是 active feature，否则会把 dummy 变量答案直接泄露给 LLM。
-    只暴露“存在候选变量/可能有 distractor”这一全局事实。
+    注意：这里不能列出哪个 x_i 对应哪个语义，否则会把 dummy 变量答案直接泄露给 LLM。
+    允许暴露无序语义集合：有哪些物理含义、各出现多少个、dummy 有多少个。
     """
-    has_distractor = False
-    for _, desc in zip(feature_names, feature_descriptions):
-        if desc and "meaningless" in str(desc).lower():
-            has_distractor = True
-            break
+    semantic_counts: dict[str, int] = {}
+    n_distractors = 0
+    for desc in feature_descriptions:
+        text = str(desc or "").strip()
+        if not text:
+            continue
+        if "meaningless" in text.lower():
+            n_distractors += 1
+            continue
+        semantic_counts[text] = semantic_counts.get(text, 0) + 1
 
-    if not has_distractor:
+    if n_distractors == 0:
         return None  # 无 distractor，无需汇总
 
     n_total = len(feature_names)
+    role_parts = []
+    for role, count in sorted(semantic_counts.items(), key=lambda item: item[0].lower()):
+        unit = "variable" if count == 1 else "variables"
+        role_parts.append(f'{count} {unit} with semantic role "{role}"')
+    if n_distractors:
+        unit = "variable" if n_distractors == 1 else "variables"
+        role_parts.append(f"{n_distractors} distractor/meaningless {unit}")
+    role_text = "; ".join(role_parts) if role_parts else f"{n_total} candidate variables"
+
     return (
-        f"There are {n_total} candidate variables. "
-        "Some variables may be physically meaningful while others may be distractor variables. "
-        "Feature-level semantic descriptions are intentionally hidden to avoid revealing which variables are active."
+        f"There are {n_total} candidate variables in an unknown order. "
+        f"The unordered semantic-role multiset is: {role_text}. "
+        "The mapping from semantic roles to variable names is intentionally hidden; "
+        "do not assume which x_i corresponds to which semantic role."
     )
 
 
@@ -1272,7 +1287,9 @@ def build_runner_params(
                 )
                 if srsd_summary is not None:
                     params["background"] = f"{background} {srsd_summary}"
-                    params["feature_descriptions"] = ["meaning or meaningless"] * len(dataset.feature_names)
+                    params["feature_descriptions"] = [
+                        "candidate variable; semantic role hidden"
+                    ] * len(dataset.feature_names)
                 else:
                     params.setdefault("feature_descriptions", dataset.feature_descriptions)
             else:
