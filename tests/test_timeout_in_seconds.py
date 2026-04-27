@@ -75,7 +75,8 @@ def test_dso_build_fit_config_preserves_logdir_and_disables_gp_meld():
     }
     cfg = DSORegressor._build_fit_config(base_config, [[1.0, 2.0]], [3.0])
     assert cfg["experiment"]["logdir"] == "/tmp/dso-logdir"
-    assert cfg["task"]["dataset"] == "/tmp/dso-logdir/case__train.csv"
+    assert cfg["task"]["dataset"].startswith("/tmp/e1tmp/dso_data/case__train_")
+    assert cfg["task"]["dataset"].endswith(".csv")
     assert cfg["gp_meld"]["run_gp_meld"] is False
 
 

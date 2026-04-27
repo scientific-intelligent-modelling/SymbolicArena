@@ -117,7 +117,7 @@ class UDSRRegressor(DSORegressor):
             experiment["logdir"] = logdir
         os.makedirs(logdir, exist_ok=True)
         exp_name = experiment.get("exp_name") or "udsr_regression"
-        dataset_path = os.path.join(logdir, f"{exp_name}__train.csv")
+        dataset_path = UDSRRegressor._short_dataset_path(str(exp_name), "udsr_regression")
         x_arr = np.asarray(X, dtype=float)
         y_arr = np.asarray(y, dtype=float).reshape(-1, 1)
         stacked = np.concatenate([x_arr, y_arr], axis=1)

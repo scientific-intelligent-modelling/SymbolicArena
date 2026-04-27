@@ -6,6 +6,8 @@ from typing import Any, Dict
 from copy import deepcopy
 import tempfile
 import time
+import hashlib
+import re
 
 import numpy as np
 from sympy import sympify, lambdify
@@ -187,6 +189,16 @@ class DSORegressor(BaseWrapper):
         return self
 
     @staticmethod
+    def _short_dataset_path(exp_name: str, prefix: str) -> str:
+        tmp_root = os.environ.get("SIM_DSO_DATA_TMP", "/tmp/e1tmp/dso_data")
+        os.makedirs(tmp_root, exist_ok=True)
+        raw_name = str(exp_name or prefix or "dso_regression")
+        safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", raw_name).strip("_") or prefix
+        safe_name = safe_name[:80]
+        digest = hashlib.sha1(raw_name.encode("utf-8")).hexdigest()[:10]
+        return os.path.join(tmp_root, f"{safe_name}__train_{digest}.csv")
+
+    @staticmethod
     def _build_fit_config(base_config: Dict[str, Any], X, y) -> Dict[str, Any]:
         config = deepcopy(base_config)
         experiment = config.setdefault("experiment", {})
@@ -196,7 +208,7 @@ class DSORegressor(BaseWrapper):
             experiment["logdir"] = logdir
         os.makedirs(logdir, exist_ok=True)
         exp_name = experiment.get("exp_name") or "dso_regression"
-        dataset_path = os.path.join(logdir, f"{exp_name}__train.csv")
+        dataset_path = DSORegressor._short_dataset_path(str(exp_name), "dso_regression")
         x_arr = np.asarray(X, dtype=float)
         y_arr = np.asarray(y, dtype=float).reshape(-1, 1)
         stacked = np.concatenate([x_arr, y_arr], axis=1)
