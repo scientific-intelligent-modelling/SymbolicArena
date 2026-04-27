@@ -214,16 +214,21 @@ class QLatticeRegressor(BaseWrapper):
                     epoch_args['starting_models'] = running_models
                 else:
                     epoch_args.pop('starting_models', None)
-                models = list(self._ql.auto_run(**epoch_args))
-                if not models:
-                    raise RuntimeError('QLattice.auto_run 未返回任何模型，请检查数据与参数。')
-                running_models = models
+                epoch_models = list(self._ql.auto_run(**epoch_args))
+                # feyn 在单 epoch 增量调用时，部分数据集可能偶发返回空列表；
+                # 这不等价于整个搜索失败，继续给后续 epoch 机会即可。
+                if not epoch_models:
+                    continue
+                models = epoch_models
+                running_models = epoch_models
                 self._write_progress_state_from_models(
                     models,
                     epoch=epoch,
                     signif=signif,
                     criterion_name=criterion_name,
                 )
+            if not models:
+                raise RuntimeError('QLattice.auto_run 未返回任何模型，请检查数据与参数。')
         else:
             models = list(self._ql.auto_run(**auto_args))
             if not models:
