@@ -46,6 +46,7 @@ class E2ESRRegressor(BaseWrapper):
                  n_trees_to_refine=10, 
                  rescale=True,
                  force_cpu=True,
+                 torch_num_threads=1,
                  **kwargs):
         """
         初始化E2ESR回归器
@@ -58,6 +59,7 @@ class E2ESRRegressor(BaseWrapper):
         stop_refinement_after: 精炼停止条件
         n_trees_to_refine: 要优化的树的数量
         rescale: 是否重新缩放数据
+        torch_num_threads: CPU 推理时每个进程允许使用的 PyTorch 线程数
         """
         # 保存参数
         self._exp_path = kwargs.get("exp_path")
@@ -69,6 +71,7 @@ class E2ESRRegressor(BaseWrapper):
             'n_trees_to_refine': n_trees_to_refine,
             'rescale': rescale,
             'force_cpu': force_cpu,
+            'torch_num_threads': torch_num_threads,
             **kwargs
         }
         self._contract_n_features = self.params.pop("n_features", None)
@@ -118,6 +121,8 @@ class E2ESRRegressor(BaseWrapper):
             
             # 加载模型
             force_cpu = bool(self.params.get('force_cpu', True))
+            if force_cpu:
+                self._configure_cpu_threads(self.params.get('torch_num_threads', 1))
 
             # 默认优先 CPU，避免不同机器 CUDA 兼容性问题（例如驱动/算力不一致导致加载失败）
             if force_cpu:
@@ -142,6 +147,24 @@ class E2ESRRegressor(BaseWrapper):
             print(f"加载模型时出错: {str(e)}")
             # 如果加载失败，模型将在fit时创建
             self.model = None
+
+    @staticmethod
+    def _configure_cpu_threads(torch_num_threads):
+        """限制单进程 CPU 线程，避免多 worker 批量评测时线程爆炸。"""
+        try:
+            threads = int(torch_num_threads)
+        except Exception:
+            threads = 1
+        threads = max(1, threads)
+        try:
+            torch.set_num_threads(threads)
+        except Exception:
+            pass
+        try:
+            torch.set_num_interop_threads(threads)
+        except Exception:
+            # PyTorch 可能在并行运行时初始化后禁止再次设置 interop 线程。
+            pass
     
     def fit(self, X, y):
         """
@@ -176,7 +199,8 @@ class E2ESRRegressor(BaseWrapper):
                 for k, v in self.params.items()
                 if k in allowed_regressor_params
             }
-            unknown_params = [k for k in self.params if k not in allowed_regressor_params and k != "force_cpu"]
+            wrapper_only_params = {"force_cpu", "torch_num_threads"}
+            unknown_params = [k for k in self.params if k not in allowed_regressor_params and k not in wrapper_only_params]
             if unknown_params:
                 # 剔除 SymbolicRegressor 注入的元参数，避免 __init__ 透传失败
                 pass

@@ -118,6 +118,7 @@
   - `n_trees_to_refine = 10`
   - `rescale = true`
   - `force_cpu = true`
+  - `torch_num_threads = 1`
   - 目标是对齐官方 `evaluate.py` 的 black-box 评测口径，同时保留 CPU 环境稳定性保护项
 - `qlattice` 当前采用的口径是：
   - `n_epochs = 100`

@@ -99,6 +99,7 @@ def test_e2esr_defaults_are_aligned(monkeypatch):
     assert reg.params["stop_refinement_after"] == 1
     assert reg.params["n_trees_to_refine"] == 10
     assert reg.params["force_cpu"] is True
+    assert reg.params["torch_num_threads"] == 1
 
 
 def test_qlattice_defaults_are_aligned():
