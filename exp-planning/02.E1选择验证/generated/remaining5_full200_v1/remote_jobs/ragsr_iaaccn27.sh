@@ -17,11 +17,11 @@ fi
 
 cd "$REMOTE_ROOT"
 export PYTHONPATH=.
-export OMP_NUM_THREADS=1
-export OPENBLAS_NUM_THREADS=1
-export MKL_NUM_THREADS=1
-export VECLIB_MAXIMUM_THREADS=1
-export NUMEXPR_NUM_THREADS=1
+export OMP_NUM_THREADS=4
+export OPENBLAS_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+export VECLIB_MAXIMUM_THREADS=4
+export NUMEXPR_NUM_THREADS=4
 
 conda run -n sim_ragsr python check/launch_e1_benchmark.py run \
   --tool ragsr \

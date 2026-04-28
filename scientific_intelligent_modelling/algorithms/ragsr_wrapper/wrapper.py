@@ -132,7 +132,7 @@ class RAGSRRegressor(BaseWrapper):
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
         self._seed = raw_kwargs.get("seed")
-        self._cpu_num_threads = self._as_positive_int(raw_kwargs.get("cpu_num_threads"), default=1)
+        self._cpu_num_threads = self._as_positive_int(raw_kwargs.get("cpu_num_threads"), default=4)
         self._timeout_in_seconds = self._as_positive_float(raw_kwargs.get("timeout_in_seconds"))
         self._experiment_dir = self._resolve_experiment_dir(raw_kwargs)
         self.params, self._fit_kwargs = self._validate_and_normalize_params(raw_kwargs)

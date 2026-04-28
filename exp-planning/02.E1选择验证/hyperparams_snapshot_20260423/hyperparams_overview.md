@@ -24,7 +24,7 @@
 | `QLattice` | `E3 / E6` | 图结构搜索 | `n_epochs=100` | `kind=regression` | `criterion=bic`, `signif=4` | `threads=1` |
 | `iMCTS` | `E3 / E6` | MCTS-based SR | `max_expressions=2000000`, `K=500`, `c=4.0`, `gamma=0.5` | `+,-,*,/,sin,cos,exp,log` | `max_depth=6`, `gp_rate=0.2`, `mutation_rate=0.1`, `exploration_rate=0.2`, `max_constants=10` | `optimization_method=LN_NELDERMEAD`, `verbose=false` |
 | `udsr` | `E3 / E6` | uDSR-trunk / DSO + LINEAR/poly + GP-meld | `training.n_samples=2000000`, `batch_size=1000`, `gp_meld.generations=20` | `add,sub,mul,div,sin,cos,exp,log,sqrt,1.0,const,poly` | `poly_optimizer.degree=3`, `policy_optimizer_type=pg`, `epsilon=0.05`, `baseline=R_e`, `gp_meld.run_gp_meld=true` | 保持 `udsr_wrapper` 与 `tool_name=udsr`；组件开关 `aif=false, dsr=true, lspt=false, gp_meld=true, linear_poly=true`；不是论文 full uDSR |
-| `ragsr` | `E3 / E6` | RAG-SR / EvolutionaryForest | `n_gen=100`, `n_pop=200`, `max_trees=10000`, `gene_num=10` | `Add,Sub,Mul,AQ,Sqrt,AbsLog,Abs,Square,RSin,RCos,Max,Min,Neg` | `select=AutomaticLexicase`, `cross_pb=0.9`, `mutation_pb=0.1`, `max_height=10`, `categorical_encoding=Target` | wrapper 对齐官方 Target encoding 默认值；`time_limit` 由 `timeout_in_seconds` 自动派生；`cpu_num_threads=1`；每分钟写 best-so-far 快照 |
+| `ragsr` | `E3 / E6` | RAG-SR / EvolutionaryForest | `n_gen=100`, `n_pop=200`, `max_trees=10000`, `gene_num=10` | `Add,Sub,Mul,AQ,Sqrt,AbsLog,Abs,Square,RSin,RCos,Max,Min,Neg` | `select=AutomaticLexicase`, `cross_pb=0.9`, `mutation_pb=0.1`, `max_height=10`, `categorical_encoding=Target` | wrapper 对齐官方 Target encoding 默认值；`time_limit` 由 `timeout_in_seconds` 自动派生；`cpu_num_threads=4`；每分钟写 best-so-far 快照 |
 
 ## 补充说明
 
