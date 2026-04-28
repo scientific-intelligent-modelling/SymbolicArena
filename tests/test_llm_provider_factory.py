@@ -55,6 +55,13 @@ class LLMProviderFactoryTest(unittest.TestCase):
         self.assertEqual(client.model, "meta-llama/Meta-Llama-3.1-8B-Instruct")
         self.assertEqual(client.api_key, "dummy-deepinfra-key")
 
+    def test_llmsr_deepinfra_factory_requires_api_key(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(ValueError, "DEEPINFRA_API_KEY"):
+                llmsr_llm.ClientFactory.from_config(
+                    {"model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct"}
+                )
+
     def test_drsr_deepinfra_factory_supports_alias(self):
         client = drsr_llm.ClientFactory.from_config(
             {
@@ -64,6 +71,13 @@ class LLMProviderFactoryTest(unittest.TestCase):
         )
         self.assertIsInstance(client, drsr_llm.DeepInfraClient)
         self.assertEqual(client.base_url, "https://api.deepinfra.com/v1/openai")
+
+    def test_drsr_deepinfra_factory_requires_api_key(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(ValueError, "DEEPINFRA_API_KEY"):
+                drsr_llm.ClientFactory.from_config(
+                    {"model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct"}
+                )
 
     def test_srkit_deepinfra_factory_honors_explicit_base_url(self):
         client = srkit_llm.ClientFactory.from_config(
