@@ -121,3 +121,13 @@ def test_imcts_defaults_are_aligned():
     assert reg.params["K"] == 500
     assert reg.params["max_expressions"] == 2000000
     assert reg.params["optimization_method"] == "LN_NELDERMEAD"
+
+
+def test_ragsr_defaults_are_thread_capped():
+    from scientific_intelligent_modelling.algorithms.ragsr_wrapper.wrapper import RAGSRRegressor
+
+    reg = RAGSRRegressor(n_features=2, feature_names=["x0", "x1"], target_name="y")
+    assert reg._cpu_num_threads == 1
+    assert reg.params["n_pop"] == 200
+    assert reg.params["n_gen"] == 100
+    assert "cpu_num_threads" not in reg.params

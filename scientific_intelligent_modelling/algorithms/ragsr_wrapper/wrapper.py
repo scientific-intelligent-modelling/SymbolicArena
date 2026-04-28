@@ -8,8 +8,10 @@ benchmark 没有分类特征。
 from __future__ import annotations
 
 import base64
+from contextlib import nullcontext
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 import pickle
 import time
@@ -79,6 +81,7 @@ class RAGSRRegressor(BaseWrapper):
         "time_limit": None,
     }
     _META_PARAMS = {
+        "cpu_num_threads",
         "exp_name",
         "exp_path",
         "problem_name",
@@ -129,6 +132,7 @@ class RAGSRRegressor(BaseWrapper):
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
         self._seed = raw_kwargs.get("seed")
+        self._cpu_num_threads = self._as_positive_int(raw_kwargs.get("cpu_num_threads"), default=1)
         self._timeout_in_seconds = self._as_positive_float(raw_kwargs.get("timeout_in_seconds"))
         self._experiment_dir = self._resolve_experiment_dir(raw_kwargs)
         self.params, self._fit_kwargs = self._validate_and_normalize_params(raw_kwargs)
@@ -146,6 +150,44 @@ class RAGSRRegressor(BaseWrapper):
         except Exception:
             return None
         return value if value > 0 else None
+
+    @staticmethod
+    def _as_positive_int(value: Any, *, default: int) -> int:
+        try:
+            value = int(value)
+        except Exception:
+            return int(default)
+        return value if value > 0 else int(default)
+
+    @staticmethod
+    def _configure_cpu_threads(threads: int) -> None:
+        value = str(max(1, int(threads)))
+        for key in (
+            "OMP_NUM_THREADS",
+            "OPENBLAS_NUM_THREADS",
+            "MKL_NUM_THREADS",
+            "VECLIB_MAXIMUM_THREADS",
+            "NUMEXPR_NUM_THREADS",
+        ):
+            os.environ[key] = value
+        try:
+            import torch
+
+            torch.set_num_threads(int(value))
+            try:
+                torch.set_num_interop_threads(int(value))
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    @staticmethod
+    def _threadpool_limits_context(threads: int):
+        try:
+            from threadpoolctl import threadpool_limits
+        except Exception:
+            return nullcontext()
+        return threadpool_limits(limits=max(1, int(threads)))
 
     @staticmethod
     def _resolve_experiment_dir(raw_params: dict[str, Any]) -> Path | None:
@@ -200,16 +242,18 @@ class RAGSRRegressor(BaseWrapper):
             target_name=self._contract_target_name,
             context="RAGSRRegressor.fit",
         )
-        from evolutionary_forest.forest import EvolutionaryForestRegressor
+        self._configure_cpu_threads(self._cpu_num_threads)
+        with self._threadpool_limits_context(self._cpu_num_threads):
+            from evolutionary_forest.forest import EvolutionaryForestRegressor
 
-        x_arr = np.asarray(X, dtype=float)
-        y_arr = np.asarray(y, dtype=float).reshape(-1)
-        self.model = EvolutionaryForestRegressor(**self.params)
-        self._install_current_best_callback()
-        fit_kwargs = dict(self._fit_kwargs)
-        if self.params.get("categorical_encoding") is not None:
-            fit_kwargs.setdefault("categorical_features", [False] * x_arr.shape[1])
-        self.model.fit(x_arr, y_arr, **fit_kwargs)
+            x_arr = np.asarray(X, dtype=float)
+            y_arr = np.asarray(y, dtype=float).reshape(-1)
+            self.model = EvolutionaryForestRegressor(**self.params)
+            self._install_current_best_callback()
+            fit_kwargs = dict(self._fit_kwargs)
+            if self.params.get("categorical_encoding") is not None:
+                fit_kwargs.setdefault("categorical_features", [False] * x_arr.shape[1])
+            self.model.fit(x_arr, y_arr, **fit_kwargs)
         self._equation = self._extract_model_expression()
         self._write_current_best_snapshot(source="final")
         return self

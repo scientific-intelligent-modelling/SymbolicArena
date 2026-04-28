@@ -165,5 +165,6 @@
   - `gene_num = 10`
   - `basic_primitives = Add,Sub,Mul,AQ,Sqrt,AbsLog,Abs,Square,RSin,RCos,Max,Min,Neg`
   - `categorical_encoding = Target`
+  - `cpu_num_threads = 1`
   - `time_limit` 默认由 `timeout_in_seconds` 自动派生
   - 目标是把 RAG-SR 作为 EvolutionaryForest/RAG family 代表纳入后续验证，并保证 timeout 后能用分钟级快照恢复 best-so-far
