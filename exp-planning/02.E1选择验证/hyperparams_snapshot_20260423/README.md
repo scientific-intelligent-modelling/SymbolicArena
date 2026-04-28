@@ -113,12 +113,12 @@
   - 目标是在 `E1` 中避免因 wrapper 过弱默认值而系统性低估 DSO
 - `e2esr` 当前采用的口径是：
   - `max_input_points = 200`
-  - `max_number_bags = -1`
+  - `max_number_bags = 10`
   - `stop_refinement_after = 1`
-  - `n_trees_to_refine = 100`
+  - `n_trees_to_refine = 10`
   - `rescale = true`
   - `force_cpu = true`
-  - 目标是在 CPU 环境下固定 E2E 家族的推理预算与稳定性口径
+  - 目标是对齐官方 `evaluate.py` 的 black-box 评测口径，同时保留 CPU 环境稳定性保护项
 - `qlattice` 当前采用的口径是：
   - `n_epochs = 100`
   - `kind = regression`

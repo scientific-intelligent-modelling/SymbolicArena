@@ -41,9 +41,9 @@ class E2ESRRegressor(BaseWrapper):
                  model_path=None, 
                  model_url="https://dl.fbaipublicfiles.com/symbolicregression/model1.pt",
                  max_input_points=200, 
-                 max_number_bags=-1,
+                 max_number_bags=10,
                  stop_refinement_after=1,
-                 n_trees_to_refine=100, 
+                 n_trees_to_refine=10, 
                  rescale=True,
                  force_cpu=True,
                  **kwargs):
@@ -54,7 +54,7 @@ class E2ESRRegressor(BaseWrapper):
         model_path: 模型文件路径，如果为None，则使用默认路径
         model_url: 模型下载URL，如果本地没有模型文件则从此URL下载
         max_input_points: 最大输入点数
-        max_number_bags: 默认不限制 bag 数
+        max_number_bags: 最大 bag 数，默认对齐官方 evaluate.py 的 black-box 评测口径
         stop_refinement_after: 精炼停止条件
         n_trees_to_refine: 要优化的树的数量
         rescale: 是否重新缩放数据

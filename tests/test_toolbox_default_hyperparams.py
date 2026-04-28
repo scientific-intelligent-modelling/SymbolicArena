@@ -95,9 +95,9 @@ def test_e2esr_defaults_are_aligned(monkeypatch):
     monkeypatch.setattr(E2ESRRegressor, "_load_model", lambda self: None)
     reg = E2ESRRegressor()
     assert reg.params["max_input_points"] == 200
-    assert reg.params["max_number_bags"] == -1
+    assert reg.params["max_number_bags"] == 10
     assert reg.params["stop_refinement_after"] == 1
-    assert reg.params["n_trees_to_refine"] == 100
+    assert reg.params["n_trees_to_refine"] == 10
     assert reg.params["force_cpu"] is True
 
 
