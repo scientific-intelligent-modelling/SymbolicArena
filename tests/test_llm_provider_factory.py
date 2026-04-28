@@ -90,6 +90,14 @@ class LLMProviderFactoryTest(unittest.TestCase):
         self.assertIsInstance(client, srkit_llm.DeepInfraClient)
         self.assertEqual(client.base_url, "https://api.deepinfra.com/v1/openai")
 
+    def test_srkit_cstcloud_factory_supports_benchmark_provider(self):
+        with mock.patch.dict(os.environ, {"CSTCLOUD_API_KEY": "dummy-cstcloud-key"}, clear=False):
+            client = srkit_llm.ClientFactory.from_config({"model": "CSTCloud/gpt-oss-120b"})
+        self.assertIsInstance(client, srkit_llm.CSTCloudClient)
+        self.assertEqual(client.base_url, "https://uni-api.cstcloud.cn/v1")
+        self.assertEqual(client.model, "gpt-oss-120b")
+        self.assertEqual(client.api_key, "dummy-cstcloud-key")
+
 
 if __name__ == "__main__":
     unittest.main()

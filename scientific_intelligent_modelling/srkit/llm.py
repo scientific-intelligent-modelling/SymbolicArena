@@ -2,7 +2,7 @@ import os
 """统一的 LLM 客户端封装。
 
 提供商/模型命名规则：'provider/model'，provider 大小写不敏感，model 保留大小写与路径。
-当前支持：deepseek、siliconflow、deepinfra、openai、ollama。
+当前支持：deepseek、siliconflow、deepinfra、openai、ollama、blt、cstcloud。
 """
 import requests
 from typing import List, Dict, Tuple
@@ -75,6 +75,8 @@ class LLMClient:
                 return 'blt'
             if 'ollama' in url or 'localhost' in url:
                 return 'ollama'
+            if 'cstcloud' in url or 'uni-api.cstcloud.cn' in url:
+                return 'cstcloud'
         except Exception:
             pass
         return 'llm'
@@ -246,6 +248,13 @@ class BltClient(LLMClient):
         super().__init__(api_key=api_key, model=model, base_url=base_url)
 
 
+class CSTCloudClient(LLMClient):
+    """CSTCloud（科技云）OpenAI Chat Completions 兼容客户端。"""
+
+    def __init__(self, api_key: str, model: str, base_url: str = "https://uni-api.cstcloud.cn/v1"):
+        super().__init__(api_key=api_key, model=model, base_url=base_url)
+
+
 class OpenAIClient(LLMClient):
     """OpenAI Chat Completions 兼容客户端。"""
 
@@ -304,8 +313,11 @@ class ClientFactory:
         elif provider in ('blt', 'bltcy', 'plato'):
             # 优先使用传入 api_key，否则读环境变量 BLT_API_KEY
             return BltClient(api_key=api_key or os.getenv('BLT_API_KEY', ''), model=model, base_url=base_url or os.getenv('BLT_API_BASE', 'https://api.bltcy.ai/v1'))
+        elif provider in ('cstcloud', 'cst', 'cst-cloud', 'keji', 'keji-yun'):
+            base_url = base_url or "https://uni-api.cstcloud.cn/v1"
+            return CSTCloudClient(api_key=api_key or os.getenv('CSTCLOUD_API_KEY', ''), model=model, base_url=base_url)
         else:
-            raise ValueError(f"不支持的提供商: {provider}，请使用 'deepseek'、'siliconflow'、'deepinfra'、'openai'、'blt' 或 'ollama'")
+            raise ValueError(f"不支持的提供商: {provider}，请使用 'deepseek'、'siliconflow'、'deepinfra'、'openai'、'blt'、'cstcloud' 或 'ollama'")
         
 
 
