@@ -164,12 +164,11 @@ finite_id_ood_rate(a)
   = count_d [finite(id_nmse(a,d)) and finite(ood_nmse(a,d))] / N
 ```
 
-四个 split 全部可评估率：
+核心三类 split 全部可评估率：
 
 ```text
-all_four_present_rate(a)
+train_id_ood_present_rate(a)
   = count_d [finite(train_nmse(a,d))
-             and finite(valid_nmse(a,d))
              and finite(id_nmse(a,d))
              and finite(ood_nmse(a,d))] / N
 ```
@@ -179,21 +178,23 @@ all_four_present_rate(a)
 当前使用阈值：
 
 ```text
-EXPLOSION_THRESHOLD = 1e12
+EXPLOSION_THRESHOLD = 100
 ```
 
 ID/OOD 爆炸率：
 
 ```text
-id_ood_explosion_rate_1e12(a)
-  = count_d [id_nmse(a,d) > 1e12 or ood_nmse(a,d) > 1e12] / N
+id_ood_explosion_rate_gt_100(a)
+  = count_d [id_nmse(a,d) > 100 or ood_nmse(a,d) > 100] / N
 ```
 
-train/valid 爆炸率：
+train/ID/OOD 爆炸率：
 
 ```text
-train_valid_explosion_rate_1e12(a)
-  = count_d [train_nmse(a,d) > 1e12 or valid_nmse(a,d) > 1e12] / N
+train_id_ood_explosion_rate_gt_100(a)
+  = count_d [train_nmse(a,d) > 100
+             or id_nmse(a,d) > 100
+             or ood_nmse(a,d) > 100] / N
 ```
 
 这里的爆炸率不直接作为硬过滤条件。原因是 Probe 的一部分价值就是识别“哪些数据集会让某类方法数值崩溃”。但爆炸率会在人工审计时作为风险信号。
@@ -285,13 +286,13 @@ family 权重更高，因为后续 664 全量筛选必须避免被某个 benchma
 ```text
 operational_stability_score(a)
   = 0.60 * finite_id_ood_rate(a)
-  + 0.40 * all_four_present_rate(a)
+  + 0.40 * train_id_ood_present_rate(a)
 ```
 
 解释：
 
 - `finite_id_ood_rate` 权重更高，因为后续数据集筛选主要依赖 ID/OOD 泛化表现。
-- `all_four_present_rate` 保留 train/valid 维度，避免算法只在最终 split 上有结果但训练过程指标不可回放。
+- `train_id_ood_present_rate` 保留 train 维度，但不要求 valid；Probe-4 选择主要依赖训练可回放、ID 泛化和 OOD 外推三类结果。
 
 限制：
 
@@ -561,33 +562,33 @@ probe4_selection_report.md
 
 单算法可用分前 10：
 
-| rank | algorithm | taxonomy | score | finite_id_ood | explosion_1e12 | discrimination | coverage |
+| rank | algorithm | taxonomy | score | finite_id_ood | explosion_gt_100 | discrimination | coverage |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 1 | `pysr` | `evolutionary_gp` | 0.5998 | 0.985 | 0.120 | 0.984 | 0.867 |
-| 2 | `imcts` | `mcts` | 0.4809 | 0.990 | 0.020 | 0.574 | 0.891 |
-| 3 | `udsr` | `rl_hybrid` | 0.4690 | 0.990 | 0.005 | 0.572 | 0.782 |
-| 4 | `gplearn` | `classic_gp` | 0.4482 | 1.000 | 0.075 | 0.408 | 1.000 |
-| 5 | `tpsr` | `pretrained_neural` | 0.4476 | 0.975 | 0.115 | 0.442 | 0.976 |
-| 6 | `dso` | `rl_policy` | 0.4403 | 0.990 | 0.010 | 0.442 | 0.891 |
-| 7 | `ragsr` | `rag_hybrid` | 0.4148 | 0.885 | 0.195 | 0.649 | 0.539 |
-| 8 | `pyoperon` | `evolutionary_gp` | 0.3687 | 0.975 | 0.000 | 0.179 | 0.976 |
-| 9 | `e2esr` | `pretrained_neural` | 0.3655 | 0.695 | 0.065 | 0.601 | 0.555 |
-| 10 | `qlattice` | `graph_hybrid` | 0.3610 | 0.950 | 0.000 | 0.228 | 0.844 |
+| 1 | `pysr` | `evolutionary_gp` | 0.6004 | 0.985 | 0.205 | 0.984 | 0.867 |
+| 2 | `imcts` | `mcts` | 0.4812 | 0.990 | 0.055 | 0.574 | 0.891 |
+| 3 | `udsr` | `rl_hybrid` | 0.4690 | 0.990 | 0.015 | 0.572 | 0.782 |
+| 4 | `gplearn` | `classic_gp` | 0.4488 | 1.000 | 0.140 | 0.408 | 1.000 |
+| 5 | `tpsr` | `pretrained_neural` | 0.4479 | 0.975 | 0.250 | 0.442 | 0.976 |
+| 6 | `dso` | `rl_policy` | 0.4406 | 0.990 | 0.050 | 0.442 | 0.891 |
+| 7 | `ragsr` | `rag_hybrid` | 0.4148 | 0.885 | 0.585 | 0.649 | 0.539 |
+| 8 | `pyoperon` | `evolutionary_gp` | 0.3687 | 0.975 | 0.035 | 0.179 | 0.976 |
+| 9 | `e2esr` | `pretrained_neural` | 0.3655 | 0.695 | 0.140 | 0.601 | 0.555 |
+| 10 | `qlattice` | `graph_hybrid` | 0.3610 | 0.950 | 0.030 | 0.228 | 0.844 |
 
 四算法组合前 10：
 
 | rank | combo | score | stability | discrimination | complementarity | coverage | finite_id_ood |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | `imcts;pysr;ragsr;udsr` | 0.7893 | 0.958 | 0.695 | 0.793 | 0.770 | 0.963 |
-| 2 | `imcts;pysr;ragsr;tpsr` | 0.7832 | 0.954 | 0.662 | 0.790 | 0.818 | 0.959 |
-| 3 | `pysr;ragsr;tpsr;udsr` | 0.7810 | 0.954 | 0.662 | 0.793 | 0.791 | 0.959 |
-| 4 | `gplearn;imcts;pysr;ragsr` | 0.7729 | 0.960 | 0.654 | 0.748 | 0.824 | 0.965 |
-| 5 | `gplearn;pysr;ragsr;udsr` | 0.7715 | 0.960 | 0.653 | 0.754 | 0.797 | 0.965 |
-| 6 | `dso;pysr;ragsr;udsr` | 0.7707 | 0.958 | 0.662 | 0.759 | 0.770 | 0.963 |
-| 7 | `e2esr;imcts;pysr;ragsr` | 0.7692 | 0.884 | 0.702 | 0.816 | 0.713 | 0.889 |
-| 8 | `imcts;pysr;qlattice;ragsr` | 0.7681 | 0.948 | 0.609 | 0.816 | 0.785 | 0.953 |
-| 9 | `imcts;pysr;tpsr;udsr` | 0.7675 | 0.980 | 0.643 | 0.673 | 0.879 | 0.985 |
-| 10 | `dso;imcts;pysr;ragsr` | 0.7645 | 0.958 | 0.662 | 0.722 | 0.797 | 0.963 |
+| 1 | `imcts;pysr;ragsr;udsr` | 0.7895 | 0.960 | 0.695 | 0.793 | 0.770 | 0.963 |
+| 2 | `imcts;pysr;ragsr;tpsr` | 0.7835 | 0.956 | 0.662 | 0.790 | 0.818 | 0.959 |
+| 3 | `pysr;ragsr;tpsr;udsr` | 0.7812 | 0.956 | 0.662 | 0.793 | 0.791 | 0.959 |
+| 4 | `gplearn;imcts;pysr;ragsr` | 0.7732 | 0.962 | 0.654 | 0.748 | 0.824 | 0.965 |
+| 5 | `gplearn;pysr;ragsr;udsr` | 0.7718 | 0.962 | 0.653 | 0.754 | 0.797 | 0.965 |
+| 6 | `dso;pysr;ragsr;udsr` | 0.7710 | 0.960 | 0.662 | 0.759 | 0.770 | 0.963 |
+| 7 | `e2esr;imcts;pysr;ragsr` | 0.7694 | 0.886 | 0.702 | 0.816 | 0.713 | 0.889 |
+| 8 | `imcts;pysr;qlattice;ragsr` | 0.7684 | 0.950 | 0.609 | 0.816 | 0.785 | 0.953 |
+| 9 | `imcts;pysr;tpsr;udsr` | 0.7678 | 0.982 | 0.643 | 0.673 | 0.879 | 0.985 |
+| 10 | `dso;imcts;pysr;ragsr` | 0.7648 | 0.960 | 0.662 | 0.722 | 0.797 | 0.963 |
 
 ## 17. 如何使用当前结果选 Probe-4
 
@@ -596,7 +597,7 @@ probe4_selection_report.md
 推荐使用流程：
 
 1. 先查看 `probe4_combo_scores_nmse_only.csv` 的 top 组合。
-2. 对 top 组合中的每个算法检查单算法指标，重点看 `finite_id_ood_rate`、`id_ood_explosion_rate_1e12`、`coverage_score`。
+2. 对 top 组合中的每个算法检查单算法指标，重点看 `finite_id_ood_rate`、`id_ood_explosion_rate_gt_100`、`coverage_score`。
 3. 检查组合是否包含足够多的方法族，避免 4 个 probe 过度集中在同一类 GP 或同一类神经方法。
 4. 对明显高风险算法做人工审计。例如当前 `ragsr` 互补性和区分度高，但 `finite_id_ood_rate=0.885`、`coverage=0.539`，不能只因为进入 top combo 就直接冻结。
 5. 在 raw result 表补齐 `runtime/status/failure_reason` 后，重新计算完整版本，把真实运行成本和失败类型纳入分数。
@@ -656,4 +657,3 @@ complexity_sanity_score
 ```
 
 补齐后，`practical_cost_score` 不再设为 `0.5`，而应由真实 runtime 和资源消耗计算。
-

@@ -24,7 +24,7 @@ EXCLUDED_ALGORITHMS = {"drsr", "llmsr"}
 LOG_FLOOR = 1e-12
 LOG_CLIP_MIN = -12.0
 LOG_CLIP_MAX = 12.0
-EXPLOSION_THRESHOLD = 1e12
+EXPLOSION_THRESHOLD = 100.0
 
 TAXONOMY = {
     "dso": "rl_policy",
@@ -197,8 +197,8 @@ def _algorithm_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, Any]], d
             split: sum(_float(row.get(f"{split}_nmse")) is not None for row in group)
             for split in ("train", "valid", "id", "ood")
         }
-        all_four = sum(
-            all(_float(row.get(f"{split}_nmse")) is not None for split in ("train", "valid", "id", "ood"))
+        train_id_ood = sum(
+            all(_float(row.get(f"{split}_nmse")) is not None for split in ("train", "id", "ood"))
             for row in group
         )
         id_ood = sum(
@@ -212,10 +212,14 @@ def _algorithm_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, Any]], d
             )
             for row in group
         )
-        any_train_valid_explosion = sum(
+        any_train_id_ood_explosion = sum(
             any(
                 (value is not None and value > EXPLOSION_THRESHOLD)
-                for value in (_float(row.get("train_nmse")), _float(row.get("valid_nmse")))
+                for value in (
+                    _float(row.get("train_nmse")),
+                    _float(row.get("id_nmse")),
+                    _float(row.get("ood_nmse")),
+                )
             )
             for row in group
         )
@@ -244,9 +248,9 @@ def _algorithm_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, Any]], d
                 "finite_id_rate": _rate(finite["id"], total),
                 "finite_ood_rate": _rate(finite["ood"], total),
                 "finite_id_ood_rate": _rate(id_ood, total),
-                "all_four_present_rate": _rate(all_four, total),
-                "id_ood_explosion_rate_1e12": _rate(any_id_ood_explosion, total),
-                "train_valid_explosion_rate_1e12": _rate(any_train_valid_explosion, total),
+                "train_id_ood_present_rate": _rate(train_id_ood, total),
+                "id_ood_explosion_rate_gt_100": _rate(any_id_ood_explosion, total),
+                "train_id_ood_explosion_rate_gt_100": _rate(any_train_id_ood_explosion, total),
                 "median_combined_log_id_ood_nmse": _median(scores),
                 "mean_combined_log_id_ood_nmse": _mean(scores),
                 "std_combined_log_id_ood_nmse": _stdev(scores),
@@ -266,7 +270,7 @@ def _algorithm_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, Any]], d
     _normalize_by_max(out, "subgroup_mean_score_std", "subgroup_discrimination_norm")
     for row in out:
         row["operational_stability_score"] = (
-            0.60 * row["finite_id_ood_rate"] + 0.40 * row["all_four_present_rate"]
+            0.60 * row["finite_id_ood_rate"] + 0.40 * row["train_id_ood_present_rate"]
         )
         row["discrimination_score"] = (
             0.45 * row["dataset_discrimination_std_norm"]
@@ -422,7 +426,7 @@ def _family_rows(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                 "family": family,
                 "rows": total,
                 "finite_id_ood_rate": _rate(id_ood, total),
-                "id_ood_explosion_rate_1e12": _rate(explosion, total),
+                "id_ood_explosion_rate_gt_100": _rate(explosion, total),
                 "median_combined_log_id_ood_nmse": _median(scores),
                 "iqr_combined_log_id_ood_nmse": _iqr(scores),
             }
@@ -459,7 +463,7 @@ def _write_report(
         "",
         "## Top Algorithms By Available Metric Score",
         "",
-        "| rank | algorithm | taxonomy | score | finite_id_ood | explosion_1e12 | discrimination | coverage |",
+        "| rank | algorithm | taxonomy | score | finite_id_ood | explosion_gt_100 | discrimination | coverage |",
         "| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |",
     ]
     for i, row in enumerate(top_alg, 1):
@@ -470,7 +474,7 @@ def _write_report(
                 taxonomy=row["taxonomy"],
                 score=row["available_metric_score"],
                 finite=row["finite_id_ood_rate"],
-                explosion=row["id_ood_explosion_rate_1e12"],
+                explosion=row["id_ood_explosion_rate_gt_100"],
                 disc=row["discrimination_score"],
                 coverage=row["coverage_score"],
             )

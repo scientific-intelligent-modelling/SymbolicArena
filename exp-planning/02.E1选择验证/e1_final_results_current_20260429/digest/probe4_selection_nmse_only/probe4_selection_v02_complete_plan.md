@@ -150,10 +150,10 @@ ID/OOD 同时有效：
 m_id_ood(i,a) = m_id(i,a) * m_ood(i,a)
 ```
 
-四个 split 全有效：
+核心三类 split 全有效：
 
 ```text
-m_all(i,a) = m_train(i,a) * m_valid(i,a) * m_id(i,a) * m_ood(i,a)
+m_train_id_ood(i,a) = m_train(i,a) * m_id(i,a) * m_ood(i,a)
 ```
 
 ## 5. 预处理
@@ -168,14 +168,16 @@ m_all(i,a) = m_train(i,a) * m_valid(i,a) * m_id(i,a) * m_ood(i,a)
 爆炸阈值：
 
 ```text
-EXPLOSION_THRESHOLD = 1e12
+EXPLOSION_THRESHOLD = 100
 ```
 
 爆炸指示：
 
 ```text
-e_id_ood(i,a) = 1[id_nmse(i,a) > 1e12 or ood_nmse(i,a) > 1e12]
-e_train_valid(i,a) = 1[train_nmse(i,a) > 1e12 or valid_nmse(i,a) > 1e12]
+e_id_ood(i,a) = 1[id_nmse(i,a) > 100 or ood_nmse(i,a) > 100]
+e_train_id_ood(i,a) = 1[train_nmse(i,a) > 100
+                        or id_nmse(i,a) > 100
+                        or ood_nmse(i,a) > 100]
 ```
 
 ## 6. Log NMSE 变换
@@ -489,8 +491,8 @@ finite_id_ood_rate(a)
 ```
 
 ```text
-all_four_present_rate(a)
-  = mean_i m_all(i,a)
+train_id_ood_present_rate(a)
+  = mean_i m_train_id_ood(i,a)
 ```
 
 算法自身稳定性：
@@ -498,7 +500,7 @@ all_four_present_rate(a)
 ```text
 stability(a)
   = 0.60 * finite_id_ood_rate(a)
-  + 0.40 * all_four_present_rate(a)
+  + 0.40 * train_id_ood_present_rate(a)
 ```
 
 组合稳定性：
@@ -1121,9 +1123,9 @@ finite_valid_rate
 finite_id_rate
 finite_ood_rate
 finite_id_ood_rate
-all_four_present_rate
-id_ood_explosion_rate_1e12
-train_valid_explosion_rate_1e12
+train_id_ood_present_rate
+id_ood_explosion_rate_gt_100
+train_id_ood_explosion_rate_gt_100
 median_combined_log_id_ood_nmse
 baseline_quality
 finite_coverage
@@ -1467,4 +1469,3 @@ probe4_freeze_report.md
 - 用 bootstrap 和 sensitivity audit 决定是否 freeze。
 
 当前 v0.1 top combo `imcts;pysr;ragsr;udsr` 是合理 shortlist，但最终 Probe-4 必须等 v0.2 scorer 和 sensitivity audit 跑完后再冻结。
-
