@@ -40,6 +40,14 @@
 - 表达式结构：表达式长度、token 数、AST 节点数、树深度、用了几个变量、变量覆盖率、用了哪些算子类别。
 - 工程健康：是否有表达式 artifact、artifact 是否有效、是否能被 sympy 解析、原始状态、是否预算用尽、Probe-4 口径下是否成功。
 
+## LLM 算法结果口径
+
+`llmsr` 和 `drsr` 现在使用带物理语义背景的新批次结果，替换掉旧 E1 里不带语义的结果。
+这个替换只发生在这两个算法上，其它 10 个算法仍使用原 Candidate-200 E1 结果。
+
+语义批次的 prompt 会告诉模型目标物理量、候选变量语义角色集合和 dummy 变量数量，但不会告诉它具体哪个 `x_i` 对应哪个物理角色。
+大表里的 `prompt_semantics_mode = physics_semantic_hidden_mapping` 就表示该行来自这个新口径。
+
 ## 表达式 artifact 覆盖情况
 
 - 表达式 artifact 完整覆盖的算法：`drsr, dso, gplearn, llmsr, pyoperon, pysr`。
@@ -54,10 +62,10 @@
 | algorithm | explosion_gt_100_rate | artifact_available_rate | median_ast_nodes |
 | --- | ---: | ---: | ---: |
 | `ragsr` | 0.585 | 0.000 |  |
-| `llmsr` | 0.365 | 1.000 | 11 |
-| `drsr` | 0.355 | 1.000 | 11 |
 | `tpsr` | 0.250 | 0.990 | 29 |
 | `pysr` | 0.205 | 1.000 | 15 |
+| `e2esr` | 0.140 | 0.000 |  |
+| `gplearn` | 0.140 | 1.000 | 15.5 |
 
 ## 文件说明
 

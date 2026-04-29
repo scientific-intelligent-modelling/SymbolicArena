@@ -15,6 +15,9 @@ ROOT = Path("exp-planning/02.E1选择验证")
 INPUT_TABLE = ROOT / "e1_final_results_current_20260429/digest/e1_12_dataset_algorithm_nmse_table.csv"
 CANDIDATE_TABLE = ROOT / "generated/candidate200_unified.csv"
 RAW_RESULTS = ROOT / "e1_final_results_20260424-041046_clean/all_results.jsonl"
+SEMANTIC_LLM_RESULTS = ROOT / (
+    "semantic200_llm_physics_v2_comparison_20260430/semantic_results_raw.csv"
+)
 OUTPUT_DIR = ROOT / "probe4_v02_readable_selection_20260429"
 
 LOG_FLOOR = 1e-12
@@ -178,6 +181,13 @@ def _complexity_bucket(ast_node_count: int | None) -> str:
     return "very_complex"
 
 
+def _int_from_numeric(value: Any) -> int | None:
+    number = _float(value)
+    if number is None:
+        return None
+    return int(number)
+
+
 def _preview(text: Any, max_len: int = 180) -> str:
     if text is None:
         return ""
@@ -203,8 +213,14 @@ def _health_label(finite_id_ood: bool, explosion: bool, artifact_available: bool
     return "metric_ok_artifact_ok"
 
 
-def _normalized_status(raw_status: str, metric_success: bool) -> str:
-    if metric_success and raw_status == "timed_out":
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def _normalized_status(raw_status: str, metric_success: bool, budget_exhausted: bool = False) -> str:
+    if metric_success and (raw_status == "timed_out" or budget_exhausted):
         return "success_budget_exhausted"
     if metric_success and raw_status == "ok":
         return "success_completed"
@@ -219,24 +235,84 @@ def _normalized_status(raw_status: str, metric_success: bool) -> str:
     return "metric_missing_raw_status_unknown"
 
 
+def _load_semantic_llm_overrides() -> dict[tuple[str, str], dict[str, Any]]:
+    """加载带物理语义的 llmsr/drsr 结果，用来替换旧的无语义 E1 结果。"""
+    overrides: dict[tuple[str, str], dict[str, Any]] = {}
+    if not SEMANTIC_LLM_RESULTS.exists():
+        return overrides
+    _, rows = _read_csv(SEMANTIC_LLM_RESULTS)
+    for row in rows:
+        algorithm = str(row.get("algorithm") or "")
+        if algorithm not in {"llmsr", "drsr"}:
+            continue
+        dataset_id = str(row.get("dataset_id") or "")
+        operators = [item for item in str(row.get("operator_set") or "").split(";") if item]
+        variables = [item for item in str(row.get("variables") or "").split(";") if item]
+        artifact_valid = _truthy(row.get("artifact_valid"))
+        artifact: dict[str, Any] = {
+            "artifact_valid": artifact_valid,
+            # semantic_results_raw 是从 canonical artifact 摘要表生成的；没有单独存 sympy 标记时，
+            # 用 artifact_valid 作为表达式可解析性的保守替代。
+            "sympy_parse_ok": artifact_valid,
+            "normalized_expression": row.get("normalized_expression") or "",
+            "raw_equation": "",
+            "variables": variables,
+            "operator_set": operators,
+            "ast_node_count": row.get("ast_node_count") or "",
+            "tree_depth": row.get("tree_depth") or "",
+            "expected_n_features": row.get("n_features") or "",
+            "parameter_symbols": [],
+        }
+        overrides[(dataset_id, algorithm)] = {
+            "dataset_id": dataset_id,
+            "algorithm": algorithm,
+            "train_nmse": row.get("train_nmse") or "",
+            "valid_nmse": row.get("valid_nmse") or "",
+            "id_nmse": row.get("id_nmse") or "",
+            "ood_nmse": row.get("ood_nmse") or "",
+            "result_status": row.get("status") or "",
+            "outer_status": row.get("status") or "",
+            "budget_exhausted": _truthy(row.get("budget_exhausted")),
+            "wall_time_seconds": row.get("seconds") or "",
+            "equation": row.get("normalized_expression") or "",
+            "equation_count": "1" if row.get("normalized_expression") else "",
+            "canonical_artifact": artifact,
+            "canonical_artifact_error": "",
+            "source_result_path": row.get("result_path") or "",
+            "host": row.get("host") or "",
+            "wave": "semantic200",
+            "prompt_semantics_mode": "physics_semantic_hidden_mapping",
+            "llm_model_assignment": row.get("llm_model_assignment") or "",
+            "semantic_background_preview": row.get("background_preview") or "",
+        }
+    return overrides
+
+
 def _enrich_row(
     row: dict[str, str],
     candidates: dict[int, dict[str, str]],
     artifacts: dict[tuple[str, str], dict[str, Any]],
+    semantic_overrides: dict[tuple[str, str], dict[str, Any]],
 ) -> dict[str, Any]:
     dataset_id = row["dataset_id"]
     algorithm = row["algorithm"]
     idx = _global_index(dataset_id)
     candidate = candidates.get(idx or -1, {})
-    artifact_info = artifacts.get((dataset_id, algorithm), {})
+    semantic_override = semantic_overrides.get((dataset_id, algorithm), {})
+    artifact_info = semantic_override or artifacts.get((dataset_id, algorithm), {})
     artifact = artifact_info.get("canonical_artifact") or {}
 
-    train = _float(row.get("train_nmse"))
-    id_nmse = _float(row.get("id_nmse"))
-    ood = _float(row.get("ood_nmse"))
-    log_train = _log_nmse(row.get("train_nmse"))
-    log_id = _log_nmse(row.get("id_nmse"))
-    log_ood = _log_nmse(row.get("ood_nmse"))
+    train_value = semantic_override.get("train_nmse", row.get("train_nmse"))
+    valid_value = semantic_override.get("valid_nmse", row.get("valid_nmse"))
+    id_value = semantic_override.get("id_nmse", row.get("id_nmse"))
+    ood_value = semantic_override.get("ood_nmse", row.get("ood_nmse"))
+
+    train = _float(train_value)
+    id_nmse = _float(id_value)
+    ood = _float(ood_value)
+    log_train = _log_nmse(train_value)
+    log_id = _log_nmse(id_value)
+    log_ood = _log_nmse(ood_value)
     finite_train = train is not None
     finite_id = id_nmse is not None
     finite_ood = ood is not None
@@ -256,10 +332,7 @@ def _enrich_row(
     if not isinstance(params, list):
         params = []
     expected_n_features = artifact.get("expected_n_features")
-    try:
-        expected_n_features_int = int(expected_n_features)
-    except (TypeError, ValueError):
-        expected_n_features_int = None
+    expected_n_features_int = _int_from_numeric(expected_n_features)
 
     variable_count = len(set(map(str, variables)))
     variable_coverage = (
@@ -272,20 +345,14 @@ def _enrich_row(
     sympy_parse_ok = bool(artifact.get("sympy_parse_ok")) if artifact_available else False
     raw_equation = artifact_info.get("equation") or artifact.get("raw_equation") or ""
     normalized = artifact.get("normalized_expression") or ""
-    try:
-        ast_nodes = int(artifact.get("ast_node_count")) if artifact_available else None
-    except (TypeError, ValueError):
-        ast_nodes = None
-    try:
-        tree_depth = int(artifact.get("tree_depth")) if artifact_available else None
-    except (TypeError, ValueError):
-        tree_depth = None
+    ast_nodes = _int_from_numeric(artifact.get("ast_node_count")) if artifact_available else None
+    tree_depth = _int_from_numeric(artifact.get("tree_depth")) if artifact_available else None
 
     category_flags = _operator_categories(operators_set)
     operator_category_count = sum(int(value) for key, value in category_flags.items() if key != "uses_complex_symbols")
     health = _health_label(finite_id_ood, id_ood_explosion, artifact_available, artifact_valid)
     raw_status = str(artifact_info.get("result_status", "") or "")
-    budget_exhausted = raw_status == "timed_out"
+    budget_exhausted = bool(artifact_info.get("budget_exhausted")) or raw_status == "timed_out"
     probe4_success = finite_train_id_ood
 
     out: dict[str, Any] = {
@@ -300,10 +367,13 @@ def _enrich_row(
         "candidate_advantage_side": candidate.get("candidate_advantage_side", ""),
         "algorithm": algorithm,
         "taxonomy": TAXONOMY.get(algorithm, "unknown"),
-        "train_nmse": row.get("train_nmse", ""),
-        "valid_nmse_raw_observed_not_used_for_probe4": row.get("valid_nmse", ""),
-        "id_nmse": row.get("id_nmse", ""),
-        "ood_nmse": row.get("ood_nmse", ""),
+        "prompt_semantics_mode": artifact_info.get("prompt_semantics_mode", "none_or_original_e1"),
+        "llm_model_assignment": artifact_info.get("llm_model_assignment", ""),
+        "semantic_background_preview": artifact_info.get("semantic_background_preview", ""),
+        "train_nmse": train_value or "",
+        "valid_nmse_raw_observed_not_used_for_probe4": valid_value or "",
+        "id_nmse": id_value or "",
+        "ood_nmse": ood_value or "",
         "finite_train": _flag(finite_train),
         "finite_id": _flag(finite_id),
         "finite_ood": _flag(finite_ood),
@@ -322,7 +392,7 @@ def _enrich_row(
         "outer_status": artifact_info.get("outer_status", ""),
         "budget_exhausted": _flag(budget_exhausted),
         "probe4_success": _flag(probe4_success),
-        "normalized_status_for_probe4": _normalized_status(raw_status, probe4_success),
+        "normalized_status_for_probe4": _normalized_status(raw_status, probe4_success, budget_exhausted),
         "wall_time_seconds": artifact_info.get("wall_time_seconds", ""),
         "expression_artifact_available": _flag(artifact_available),
         "equation_present": _flag(bool(raw_equation)),
@@ -501,6 +571,14 @@ def _write_human_docs(output_dir: Path, run_rows: list[dict[str, Any]], alg_rows
         "- 表达式结构：表达式长度、token 数、AST 节点数、树深度、用了几个变量、变量覆盖率、用了哪些算子类别。",
         "- 工程健康：是否有表达式 artifact、artifact 是否有效、是否能被 sympy 解析、原始状态、是否预算用尽、Probe-4 口径下是否成功。",
         "",
+        "## LLM 算法结果口径",
+        "",
+        "`llmsr` 和 `drsr` 现在使用带物理语义背景的新批次结果，替换掉旧 E1 里不带语义的结果。",
+        "这个替换只发生在这两个算法上，其它 10 个算法仍使用原 Candidate-200 E1 结果。",
+        "",
+        "语义批次的 prompt 会告诉模型目标物理量、候选变量语义角色集合和 dummy 变量数量，但不会告诉它具体哪个 `x_i` 对应哪个物理角色。",
+        "大表里的 `prompt_semantics_mode = physics_semantic_hidden_mapping` 就表示该行来自这个新口径。",
+        "",
         "## 表达式 artifact 覆盖情况",
         "",
         f"- 表达式 artifact 完整覆盖的算法：`{', '.join(full_artifact_algorithms)}`。",
@@ -546,6 +624,8 @@ def _write_human_docs(output_dir: Path, run_rows: list[dict[str, Any]], alg_rows
         "## 第一步：把每条实验结果变成可比较记录",
         "",
         "每一行代表一个算法在一个数据集上的表现。原始表里有 train、valid、ID、OOD 的 NMSE。Probe-4 当前只用 train、ID、OOD 三类；valid 只是保留原始记录，不进入派生指标。",
+        "",
+        "`llmsr` 和 `drsr` 这两类 LLM 算法已经切换成带物理语义背景的新批次结果；其它算法仍使用原 E1 结果。这样 Probe-4 评估的是“后续正式会使用的语义 LLM 口径”，而不是旧的无语义 LLM 口径。",
         "",
         "我们先判断这条记录是不是能用：train、ID、OOD 是否都是正常数字；ID 或 OOD 有没有超过 100；如果超过 100，就认为这条结果存在爆炸风险。",
         "",
@@ -630,6 +710,9 @@ def _write_human_docs(output_dir: Path, run_rows: list[dict[str, Any]], alg_rows
         "- `finite_ood`：OOD test NMSE 是否可计算。",
         "- `finite_id_ood`：ID 和 OOD 两个最终评价 split 是否都可计算。",
         "- `finite_train_id_ood`：train、ID、OOD 三类是否都可计算。Probe-4 现在不要求 valid。",
+        "- `prompt_semantics_mode`：该行是否使用物理语义 prompt。`physics_semantic_hidden_mapping` 表示 `llmsr/drsr` 新语义批次；`none_or_original_e1` 表示原 E1 口径。",
+        "- `llm_model_assignment`：语义批次中实际使用的 LLM 模型分配。只用于审计，不作为 Probe-4 评分项。",
+        "- `semantic_background_preview`：语义 prompt 背景摘要预览。只用于审计，不作为 Probe-4 评分项。",
         "- `combined_log_id_ood_nmse`：把 ID 和 OOD 的误差压到 log 尺度后取平均。它用于避免极端大数直接支配表格。",
         "- `gap_log_ood_minus_id`：OOD 比 ID 坏多少。越大说明外推退化越明显。",
         "- `delta_id_minus_train`：ID 比 train 坏多少。它反映从训练拟合到同分布测试是否稳定。",
@@ -682,7 +765,8 @@ def main() -> None:
     _, nmse_rows = _read_csv(INPUT_TABLE)
     candidates = _load_candidates()
     artifacts = _load_expression_artifacts()
-    run_rows = [_enrich_row(row, candidates, artifacts) for row in nmse_rows]
+    semantic_overrides = _load_semantic_llm_overrides()
+    run_rows = [_enrich_row(row, candidates, artifacts, semantic_overrides) for row in nmse_rows]
     alg_rows = _algorithm_summary(run_rows)
     dataset_rows = _dataset_summary(run_rows)
 
@@ -698,6 +782,10 @@ def main() -> None:
         "algorithms": len({row["algorithm"] for row in run_rows}),
         "datasets": len({row["dataset_id"] for row in run_rows}),
         "expression_artifact_rows": sum(row["expression_artifact_available"] == "1" for row in run_rows),
+        "semantic_llm_override_rows": sum(
+            row["prompt_semantics_mode"] == "physics_semantic_hidden_mapping" for row in run_rows
+        ),
+        "semantic_llm_override_source": str(SEMANTIC_LLM_RESULTS),
     }
     (OUTPUT_DIR / "build_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(report)

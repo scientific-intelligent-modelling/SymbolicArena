@@ -9,6 +9,9 @@
 - `finite_ood`：OOD test NMSE 是否可计算。
 - `finite_id_ood`：ID 和 OOD 两个最终评价 split 是否都可计算。
 - `finite_train_id_ood`：train、ID、OOD 三类是否都可计算。Probe-4 现在不要求 valid。
+- `prompt_semantics_mode`：该行是否使用物理语义 prompt。`physics_semantic_hidden_mapping` 表示 `llmsr/drsr` 新语义批次；`none_or_original_e1` 表示原 E1 口径。
+- `llm_model_assignment`：语义批次中实际使用的 LLM 模型分配。只用于审计，不作为 Probe-4 评分项。
+- `semantic_background_preview`：语义 prompt 背景摘要预览。只用于审计，不作为 Probe-4 评分项。
 - `combined_log_id_ood_nmse`：把 ID 和 OOD 的误差压到 log 尺度后取平均。它用于避免极端大数直接支配表格。
 - `gap_log_ood_minus_id`：OOD 比 ID 坏多少。越大说明外推退化越明显。
 - `delta_id_minus_train`：ID 比 train 坏多少。它反映从训练拟合到同分布测试是否稳定。
