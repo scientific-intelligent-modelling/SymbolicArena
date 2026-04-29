@@ -1,0 +1,71 @@
+"""
+Find the mathematical function skeleton that fits the data.
+
+Background:
+Calculate the Polarizability given Number of atom, Electric dipole moment, Magnitude of electric field, Boltzmann constant
+
+Variables:
+- Independents:
+  - x0: n_0, Number of atom
+  - x1: p_0, Electric dipole moment
+  - x2: E, Magnitude of electric field
+  - x3: k, Boltzmann constant
+- Dependent:
+  - y: P, Polarizability
+"""
+
+import numpy as np
+from scipy.optimize import minimize
+
+# Initialize parameters
+MAX_NPARAMS = 10
+params = [1.0]*MAX_NPARAMS
+# 全局变量用于在沙箱中读取 BFGS 结果参数
+BFGS_PARAMS = None
+
+@evaluate.run
+def evaluate(data: dict) -> float:
+    """ Evaluate the equation on data observations. """
+    inputs, outputs = data['inputs'], data['outputs']
+    X = inputs
+
+    def loss(params):
+        y_pred = equation(*X.T, params)
+        return np.mean((y_pred - outputs) ** 2)
+
+    result = minimize(loss, [1.0]*MAX_NPARAMS, method='BFGS')
+    global BFGS_PARAMS
+    try:
+        BFGS_PARAMS = result.x
+    except Exception:
+        BFGS_PARAMS = None
+    loss_val = result.fun
+    if np.isnan(loss_val) or np.isinf(loss_val):
+        return None
+    return -loss_val
+
+@equation.evolve
+def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:
+    """Equation to be evolved.
+
+    Background:
+    Calculate the Polarizability given Number of atom, Electric dipole moment, Magnitude of electric field, Boltzmann constant
+
+    Variables:
+    - Independents:
+  - x0: n_0, Number of atom
+  - x1: p_0, Electric dipole moment
+  - x2: E, Magnitude of electric field
+  - x3: k, Boltzmann constant
+- Dependent:
+  - y: P, Polarizability
+
+    Parameters:
+    - params (np.ndarray): Trainable coefficients used by the equation skeleton.
+
+    Output requirement:
+    - Write the final formula as a single-line return statement.
+    - Do not split the final formula across multiple lines.
+    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3
+    """
+    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3
