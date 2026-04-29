@@ -19,23 +19,26 @@ EXPLOSION_THRESHOLD = 100.0
 
 DERIVED_COLUMNS = [
     "finite_train",
-    "finite_valid",
     "finite_id",
     "finite_ood",
     "finite_id_ood",
     "finite_train_id_ood",
     "log_train_nmse_clipped",
-    "log_valid_nmse_clipped",
     "log_id_nmse_clipped",
     "log_ood_nmse_clipped",
     "combined_log_id_ood_nmse",
     "gap_log_ood_minus_id",
-    "delta_valid_minus_train",
-    "delta_id_minus_valid",
+    "delta_id_minus_train",
     "delta_ood_minus_id",
     "id_ood_explosion_gt_100",
     "train_id_ood_explosion_gt_100",
 ]
+STRIP_COLUMNS = set(DERIVED_COLUMNS) | {
+    "finite_valid",
+    "log_valid_nmse_clipped",
+    "delta_valid_minus_train",
+    "delta_id_minus_valid",
+}
 
 
 def _read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
@@ -96,17 +99,14 @@ def _fmt(value: float | None) -> str:
 
 def _augment_row(row: dict[str, str]) -> dict[str, str]:
     train = _nmse(row.get("train_nmse"))
-    valid = _nmse(row.get("valid_nmse"))
     id_test = _nmse(row.get("id_nmse"))
     ood = _nmse(row.get("ood_nmse"))
 
     log_train = _log_nmse(train)
-    log_valid = _log_nmse(valid)
     log_id = _log_nmse(id_test)
     log_ood = _log_nmse(ood)
 
     finite_train = train is not None
-    finite_valid = valid is not None
     finite_id = id_test is not None
     finite_ood = ood is not None
     finite_id_ood = finite_id and finite_ood
@@ -123,19 +123,16 @@ def _augment_row(row: dict[str, str]) -> dict[str, str]:
 
     derived = {
         "finite_train": _flag(finite_train),
-        "finite_valid": _flag(finite_valid),
         "finite_id": _flag(finite_id),
         "finite_ood": _flag(finite_ood),
         "finite_id_ood": _flag(finite_id_ood),
         "finite_train_id_ood": _flag(finite_train_id_ood),
         "log_train_nmse_clipped": _fmt(log_train),
-        "log_valid_nmse_clipped": _fmt(log_valid),
         "log_id_nmse_clipped": _fmt(log_id),
         "log_ood_nmse_clipped": _fmt(log_ood),
         "combined_log_id_ood_nmse": _fmt(_mean2(log_id, log_ood)),
         "gap_log_ood_minus_id": _fmt(_sub(log_ood, log_id)),
-        "delta_valid_minus_train": _fmt(_sub(log_valid, log_train)),
-        "delta_id_minus_valid": _fmt(_sub(log_id, log_valid)),
+        "delta_id_minus_train": _fmt(_sub(log_id, log_train)),
         "delta_ood_minus_id": _fmt(_sub(log_ood, log_id)),
         "id_ood_explosion_gt_100": _flag(id_ood_explosion),
         "train_id_ood_explosion_gt_100": _flag(train_id_ood_explosion),
@@ -147,7 +144,7 @@ def _augment_row(row: dict[str, str]) -> dict[str, str]:
 
 def augment(path: Path, output: Path | None = None) -> None:
     fields, rows = _read_csv(path)
-    base_fields = [field for field in fields if field not in DERIVED_COLUMNS]
+    base_fields = [field for field in fields if field not in STRIP_COLUMNS]
     out_fields = base_fields + DERIVED_COLUMNS
     out_rows = []
     for row in rows:

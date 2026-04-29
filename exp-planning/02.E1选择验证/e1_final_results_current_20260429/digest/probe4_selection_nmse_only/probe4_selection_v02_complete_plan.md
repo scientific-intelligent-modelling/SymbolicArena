@@ -35,7 +35,7 @@ Probe-4 不是选 4 个最强算法，也不是选 4 个平均 NMSE 最低的算
 - `complementarity = 1 - abs(rho)` 会把强反向失败模式也判成低互补，过于保守。
 - `practical_cost_score = 0.5` 是常数，对排序没有作用，不应作为有效指标。
 - 爆炸率只被报告，没有进入 penalty，容易奖励“靠爆炸产生高方差”的算法。
-- 没有显式使用 `train -> valid -> id -> ood` 的性能梯度。
+- 没有显式使用 `train -> id -> ood` 的性能梯度。
 - 没有做 `allow/forbid PySR`、`allow/forbid RAGSR`、`with/without DRSR` 的 sensitivity audit。
 
 v0.2 保留 v0.1 的可执行框架，但把核心评分改成组合级保真评分。
@@ -200,7 +200,6 @@ LOG_CLIP_MAX = 12
 
 ```text
 z_train(i,a) = z(train_nmse(i,a))
-z_valid(i,a) = z(valid_nmse(i,a))
 z_id(i,a)    = z(id_nmse(i,a))
 z_ood(i,a)   = z(ood_nmse(i,a))
 ```
@@ -217,26 +216,24 @@ s(i,a) = 0.5 * z_id(i,a) + 0.5 * z_ood(i,a)
 
 ## 7. 性能梯度
 
-当前表有 `train/valid/id/ood` 四个层次，因此需要显式刻画性能退化路径。
+当前 Probe-4 口径只使用 `train/id/ood` 三个层次刻画性能退化路径；`valid_nmse` 保留为原始观测列，但不进入梯度特征。
 
-定义三个梯度：
+定义两个梯度：
 
 ```text
-delta_tv(i,a) = z_valid(i,a) - z_train(i,a)
-delta_vi(i,a) = z_id(i,a)    - z_valid(i,a)
-delta_io(i,a) = z_ood(i,a)   - z_id(i,a)
+delta_ti(i,a) = z_id(i,a)  - z_train(i,a)
+delta_io(i,a) = z_ood(i,a) - z_id(i,a)
 ```
 
 解释：
 
-- `delta_tv`：训练到验证的退化，反映拟合训练集后是否泛化到同分布验证集。
-- `delta_vi`：验证到 ID test 的退化，反映同分布测试稳定性。
+- `delta_ti`：训练到 ID test 的退化，反映从训练拟合到同分布测试的稳定性。
 - `delta_io`：ID 到 OOD 的退化，反映外推和分布迁移能力。
 
 组合梯度向量：
 
 ```text
-g(i,a) = [delta_tv(i,a), delta_vi(i,a), delta_io(i,a)]
+g(i,a) = [delta_ti(i,a), delta_io(i,a)]
 ```
 
 如果相关 split 缺失，则对应梯度缺失。
@@ -448,7 +445,7 @@ D_valid(a,b)
 
 ```text
 D_gradient(a,b)
-  = mean over k in {tv,vi,io}
+  = mean over k in {ti,io}
     [1 - Spearman(delta_k(:,a), delta_k(:,b))] / 2
 ```
 
@@ -655,12 +652,11 @@ performance_gradient_diversity(C)
   = mean_{a,b in C, a < b} D_gradient(a,b)
 ```
 
-该项权重不宜太高，因为它和 complementarity 有重叠。但它明确利用了 `train/valid/id/ood` 四层信息，能识别：
+该项权重不宜太高，因为它和 complementarity 有重叠。但它明确利用了 `train/id/ood` 三层信息，能识别：
 
-- train 好但 valid 崩的算法。
-- valid 好但 ID 崩的算法。
+- train 好但 ID 崩的算法。
 - ID 好但 OOD 崩的算法。
-- train/valid/id/ood 都稳定的算法。
+- train/id/ood 都稳定的算法。
 
 ## 15. Baseline Quality
 
@@ -813,7 +809,7 @@ T = T_no_llm
 - `algorithm_complementarity` 保证 probe 之间行为不同。
 - `selected_dataset_coverage` 防止高信息 top-k 被某个 family/subgroup 吞掉。
 - `operational_stability` 保证后续 664 全量跑得动。
-- `performance_gradient_diversity` 使用 train/valid/id/ood 四层变化。
+- `performance_gradient_diversity` 使用 train/id/ood 三层变化。
 - `baseline_quality` 防止选出整体过弱 probe。
 - penalty 用来控制缺失、爆炸和方法族冗余。
 
@@ -975,9 +971,9 @@ metadata: dataset -> family/subgroup/srsd_variant
 计算：
 
 ```text
-z_train, z_valid, z_id, z_ood
+z_train, z_id, z_ood
 s = 0.5*z_id + 0.5*z_ood
-delta_tv, delta_vi, delta_io
+delta_ti, delta_io
 gap = z_ood - z_id
 ```
 
@@ -1119,7 +1115,6 @@ probe4_v02_algorithm_metrics.csv
 algorithm
 taxonomy
 finite_train_rate
-finite_valid_rate
 finite_id_rate
 finite_ood_rate
 finite_id_ood_rate
@@ -1463,7 +1458,7 @@ probe4_freeze_report.md
 
 - 用 `I(i,C)` 对 `I(i,T)` 的保真替代单算法平均区分度。
 - 用 top-k 高信息数据集的 family/subgroup 分布替代单纯 finite coverage。
-- 用 train/valid/id/ood 梯度刻画性能退化路径。
+- 用 train/id/ood 梯度刻画性能退化路径。
 - 删除当前无效的 constant practical cost。
 - 加入 missing 和 explosion penalty。
 - 用 bootstrap 和 sensitivity audit 决定是否 freeze。
