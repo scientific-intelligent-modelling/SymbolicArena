@@ -26,13 +26,19 @@
 - `missing_penalty`：缺 train/id/ood 指标越多，扣分越多。
 - `explosion_penalty`：只要 ID/OOD NMSE 超过 100，就认为这个 run 对实际评价有爆炸风险。爆炸多的算法不能因为方差大而被奖励。
 
+## timeout 的语义
+
+`timed_out` 不等于失败。这里的 timeout 只是说明算法跑满了一小时预算。如果它在预算结束时已经落盘了 train/ID/OOD 指标，我们在 Probe-4 选择里把它记为 `success_budget_exhausted`。
+
+这正是本轮实验要看的问题：给算法一小时，它在这个预算内能交出多好的结果。
+
 ## 这次大表额外加了什么
 
 除了原始 NMSE，大表还加入了三类信息：
 
 - 数值健康：finite 标记、log NMSE、train 到 ID 的退化、ID 到 OOD 的退化、NMSE > 100 爆炸标记。
 - 表达式结构：表达式长度、token 数、AST 节点数、树深度、用了几个变量、变量覆盖率、用了哪些算子类别。
-- 工程健康：是否有表达式 artifact、artifact 是否有效、是否能被 sympy 解析、状态和 wall time。
+- 工程健康：是否有表达式 artifact、artifact 是否有效、是否能被 sympy 解析、原始状态、是否预算用尽、Probe-4 口径下是否成功。
 
 ## 表达式 artifact 覆盖情况
 

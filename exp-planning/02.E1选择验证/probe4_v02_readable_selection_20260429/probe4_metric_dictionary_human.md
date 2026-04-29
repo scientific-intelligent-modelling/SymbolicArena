@@ -42,7 +42,10 @@
 
 ## 工程健康
 
-- `result_status`：原始 result 的状态，例如 ok 或 timed_out。
+- `raw_result_status`：原始 result 的状态，例如 ok 或 timed_out。它只记录运行器看到的原始状态，不直接等于 Probe-4 成功/失败。
+- `budget_exhausted`：是否跑满预算。`1` 通常对应原始 `timed_out`。
+- `probe4_success`：Probe-4 选择口径下是否成功。只要 train、ID、OOD 指标都能落盘并可计算，就算成功；即使原始状态是 timed_out 也算成功。
+- `normalized_status_for_probe4`：把原始状态翻译成适合本实验的状态。例如 `success_budget_exhausted` 表示跑满预算但结果可用。
 - `wall_time_seconds`：这条 run 大概用了多久。
 - `expression_health_label`：把数值健康和 artifact 健康合成的人话标签，例如 `metric_ok_artifact_ok` 或 `finite_but_exploded`。
 

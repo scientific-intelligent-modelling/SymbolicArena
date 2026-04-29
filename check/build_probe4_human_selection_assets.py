@@ -203,6 +203,22 @@ def _health_label(finite_id_ood: bool, explosion: bool, artifact_available: bool
     return "metric_ok_artifact_ok"
 
 
+def _normalized_status(raw_status: str, metric_success: bool) -> str:
+    if metric_success and raw_status == "timed_out":
+        return "success_budget_exhausted"
+    if metric_success and raw_status == "ok":
+        return "success_completed"
+    if metric_success and not raw_status:
+        return "success_metrics_available_raw_status_unknown"
+    if metric_success:
+        return f"success_raw_{raw_status}"
+    if raw_status == "timed_out":
+        return "metric_missing_after_budget_exhausted"
+    if raw_status:
+        return f"metric_missing_raw_{raw_status}"
+    return "metric_missing_raw_status_unknown"
+
+
 def _enrich_row(
     row: dict[str, str],
     candidates: dict[int, dict[str, str]],
@@ -268,6 +284,9 @@ def _enrich_row(
     category_flags = _operator_categories(operators_set)
     operator_category_count = sum(int(value) for key, value in category_flags.items() if key != "uses_complex_symbols")
     health = _health_label(finite_id_ood, id_ood_explosion, artifact_available, artifact_valid)
+    raw_status = str(artifact_info.get("result_status", "") or "")
+    budget_exhausted = raw_status == "timed_out"
+    probe4_success = finite_train_id_ood
 
     out: dict[str, Any] = {
         "dataset_id": dataset_id,
@@ -299,8 +318,11 @@ def _enrich_row(
         "delta_ood_minus_id": _fmt(log_ood - log_id if log_id is not None and log_ood is not None else None),
         "id_ood_explosion_gt_100": _flag(id_ood_explosion),
         "train_id_ood_explosion_gt_100": _flag(train_id_ood_explosion),
-        "result_status": artifact_info.get("result_status", ""),
+        "raw_result_status": raw_status,
         "outer_status": artifact_info.get("outer_status", ""),
+        "budget_exhausted": _flag(budget_exhausted),
+        "probe4_success": _flag(probe4_success),
+        "normalized_status_for_probe4": _normalized_status(raw_status, probe4_success),
         "wall_time_seconds": artifact_info.get("wall_time_seconds", ""),
         "expression_artifact_available": _flag(artifact_available),
         "equation_present": _flag(bool(raw_equation)),
@@ -358,13 +380,19 @@ def _algorithm_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         variable_coverage = [_float(row.get("variable_coverage_ratio")) for row in group]
         variable_coverage = [v for v in variable_coverage if v is not None]
         health_counts = Counter(str(row.get("expression_health_label", "")) for row in group)
-        status_counts = Counter(str(row.get("result_status", "")) for row in group if row.get("result_status"))
+        raw_status_counts = Counter(str(row.get("raw_result_status", "")) for row in group if row.get("raw_result_status"))
+        normalized_status_counts = Counter(str(row.get("normalized_status_for_probe4", "")) for row in group)
         out.append(
             {
                 "algorithm": alg,
                 "taxonomy": TAXONOMY.get(alg, "unknown"),
                 "rows": total,
                 "finite_train_id_ood_rate": _rate(sum(row["finite_train_id_ood"] == "1" for row in group), total),
+                "probe4_success_rate": _rate(sum(row["probe4_success"] == "1" for row in group), total),
+                "budget_exhausted_success_rate": _rate(
+                    sum(row["probe4_success"] == "1" and row["budget_exhausted"] == "1" for row in group),
+                    total,
+                ),
                 "finite_id_ood_rate": _rate(sum(row["finite_id_ood"] == "1" for row in group), total),
                 "id_ood_explosion_gt_100_rate": _rate(sum(row["id_ood_explosion_gt_100"] == "1" for row in group), total),
                 "expression_artifact_available_rate": _rate(sum(row["expression_artifact_available"] == "1" for row in group), total),
@@ -378,7 +406,8 @@ def _algorithm_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "uses_product_power_rate": _rate(sum(row["uses_product_power_ops"] == "1" for row in group), total),
                 "uses_complex_symbol_rate": _rate(sum(row["uses_complex_symbols"] == "1" for row in group), total),
                 "health_counts": json.dumps(health_counts, ensure_ascii=False, sort_keys=True),
-                "status_counts": json.dumps(status_counts, ensure_ascii=False, sort_keys=True),
+                "raw_status_counts": json.dumps(raw_status_counts, ensure_ascii=False, sort_keys=True),
+                "normalized_status_counts": json.dumps(normalized_status_counts, ensure_ascii=False, sort_keys=True),
             }
         )
     return out
@@ -458,13 +487,19 @@ def _write_human_docs(output_dir: Path, run_rows: list[dict[str, Any]], alg_rows
         "- `missing_penalty`：缺 train/id/ood 指标越多，扣分越多。",
         "- `explosion_penalty`：只要 ID/OOD NMSE 超过 100，就认为这个 run 对实际评价有爆炸风险。爆炸多的算法不能因为方差大而被奖励。",
         "",
+        "## timeout 的语义",
+        "",
+        "`timed_out` 不等于失败。这里的 timeout 只是说明算法跑满了一小时预算。如果它在预算结束时已经落盘了 train/ID/OOD 指标，我们在 Probe-4 选择里把它记为 `success_budget_exhausted`。",
+        "",
+        "这正是本轮实验要看的问题：给算法一小时，它在这个预算内能交出多好的结果。",
+        "",
         "## 这次大表额外加了什么",
         "",
         "除了原始 NMSE，大表还加入了三类信息：",
         "",
         "- 数值健康：finite 标记、log NMSE、train 到 ID 的退化、ID 到 OOD 的退化、NMSE > 100 爆炸标记。",
         "- 表达式结构：表达式长度、token 数、AST 节点数、树深度、用了几个变量、变量覆盖率、用了哪些算子类别。",
-        "- 工程健康：是否有表达式 artifact、artifact 是否有效、是否能被 sympy 解析、状态和 wall time。",
+        "- 工程健康：是否有表达式 artifact、artifact 是否有效、是否能被 sympy 解析、原始状态、是否预算用尽、Probe-4 口径下是否成功。",
         "",
         "## 表达式 artifact 覆盖情况",
         "",
@@ -513,6 +548,8 @@ def _write_human_docs(output_dir: Path, run_rows: list[dict[str, Any]], alg_rows
         "每一行代表一个算法在一个数据集上的表现。原始表里有 train、valid、ID、OOD 的 NMSE。Probe-4 当前只用 train、ID、OOD 三类；valid 只是保留原始记录，不进入派生指标。",
         "",
         "我们先判断这条记录是不是能用：train、ID、OOD 是否都是正常数字；ID 或 OOD 有没有超过 100；如果超过 100，就认为这条结果存在爆炸风险。",
+        "",
+        "这里要特别注意：`timed_out` 不自动算失败。很多算法本来就是按一小时预算跑，跑满预算后把当前最好表达式和指标落盘，这在本实验里就是成功。我们会把这种情况标成 `success_budget_exhausted`。",
         "",
         "## 第二步：把巨大 NMSE 压到可比较尺度",
         "",
@@ -626,7 +663,10 @@ def _write_human_docs(output_dir: Path, run_rows: list[dict[str, Any]], alg_rows
         "",
         "## 工程健康",
         "",
-        "- `result_status`：原始 result 的状态，例如 ok 或 timed_out。",
+        "- `raw_result_status`：原始 result 的状态，例如 ok 或 timed_out。它只记录运行器看到的原始状态，不直接等于 Probe-4 成功/失败。",
+        "- `budget_exhausted`：是否跑满预算。`1` 通常对应原始 `timed_out`。",
+        "- `probe4_success`：Probe-4 选择口径下是否成功。只要 train、ID、OOD 指标都能落盘并可计算，就算成功；即使原始状态是 timed_out 也算成功。",
+        "- `normalized_status_for_probe4`：把原始状态翻译成适合本实验的状态。例如 `success_budget_exhausted` 表示跑满预算但结果可用。",
         "- `wall_time_seconds`：这条 run 大概用了多久。",
         "- `expression_health_label`：把数值健康和 artifact 健康合成的人话标签，例如 `metric_ok_artifact_ok` 或 `finite_but_exploded`。",
         "",
