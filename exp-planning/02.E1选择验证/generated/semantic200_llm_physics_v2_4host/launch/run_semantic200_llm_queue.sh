@@ -36,7 +36,7 @@ check_auth_local() {
 check_auth_remote() {
   local target="$1"
   local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v2_4host/remote_jobs/check_llm_auth.py"
-  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" "python '$script'"
+  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$target" "python '$script'"
 }
 
 start_local() {
@@ -56,7 +56,7 @@ start_remote() {
   local target="$3"
   local session="semantic200_${tool}_${host}"
   local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v2_4host/remote_jobs/${tool}_${host}.sh"
-  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \
+  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$target" \
     "chmod +x '$script'; tmux kill-session -t '$session' >/dev/null 2>&1 || true; tmux new-session -d -s '$session' env CONFIRM_SEMANTIC200_LLM_PHYSICS='semantic200_llm_physics_v2_4host' /bin/bash '$script' '$BATCH_NAME' '$WORKERS'"
   echo "STARTED $host $session"
 }
@@ -72,7 +72,7 @@ wait_local() {
 wait_remote() {
   local session="$1"
   local target="$2"
-  while timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \
+  while timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$target" \
     "tmux has-session -t '$session' >/dev/null 2>&1"; do
     sleep 60
   done
