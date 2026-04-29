@@ -98,7 +98,7 @@
   - `pool_size = 500`
   - `max_length = 50`
   - `tournament_size = 5`
-  - `allowed_symbols = add,mul,aq,exp,log,sin,tanh,constant,variable`
+  - `allowed_symbols = add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable`
   - `max_evaluations = 500000`
   - 目标是在 `E1` 中显式冻结 EA / tree-search 家族代表的搜索空间
 - `dso` 当前不再使用 wrapper 中的弱默认值，而采用更接近官方 regression benchmark 的显式口径：

@@ -135,7 +135,7 @@ WAVE_CONFIGS = [
             "max_length": 50,
             "max_depth": 10,
             "tournament_size": 5,
-            "allowed_symbols": "add,mul,aq,exp,log,sin,tanh,constant,variable",
+            "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
             "offspring_generator": "basic",
             "reinserter": "keep-best",
             "optimizer": "lm",
