@@ -481,7 +481,13 @@ def _host_can_accept(host_state: dict[str, Any], args: argparse.Namespace) -> tu
         return False, str(host_state.get("error") or "host probe failed")
     if int(host_state.get("queue_sessions") or 0) >= args.max_jobs_per_host:
         return False, "queue session 已达上限"
-    if not args.allow_existing_probe4 and int(host_state.get("probe4_sessions") or 0) > int(host_state.get("queue_sessions") or 0):
+    # controller 机器上会常驻一个 `probe4_full664_queue` 调度器 tmux，会被
+    # probe4_sessions 统计到，但它不是实际任务，不应阻止该机器领取任务。
+    controller_session_allowance = 1 if str(host_state.get("host")) == args.controller_host else 0
+    if (
+        not args.allow_existing_probe4
+        and int(host_state.get("probe4_sessions") or 0) > int(host_state.get("queue_sessions") or 0) + controller_session_allowance
+    ):
         return False, "存在非队列 probe4 session"
     if float(host_state.get("load_ratio") or 99.0) >= args.max_load_ratio:
         return False, f"load_ratio>={args.max_load_ratio}"
