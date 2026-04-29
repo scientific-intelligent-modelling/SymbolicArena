@@ -170,6 +170,46 @@ def _read_status(host: str, batch_name: str, tool: str, seed: str) -> list[dict[
     return rows
 
 
+def _read_job_state(row: dict[str, str], batch_name: str) -> dict[str, Any]:
+    tool = row["tool"]
+    seed = row["seed"]
+    host = row["host"]
+    session = row["tmux_session"]
+    path = REMOTE_ROOT / "experiments" / batch_name / tool / f"seed{seed}" / host / "__launcher__/task_status.jsonl"
+    cmd = (
+        f"if tmux has-session -t {shlex.quote(session)} >/dev/null 2>&1; "
+        f"then echo __RUNNING__=1; else echo __RUNNING__=0; fi; "
+        f"if test -f {shlex.quote(str(path))}; then cat {shlex.quote(str(path))}; fi"
+    )
+    result = _ssh(host, cmd, timeout=25)
+    running = False
+    rows: list[dict[str, Any]] = []
+    ssh_error = None
+    if result.returncode != 0:
+        ssh_error = result.stderr.strip() or result.stdout.strip() or f"ssh_returncode={result.returncode}"
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line == "__RUNNING__=1":
+            running = True
+            continue
+        if line == "__RUNNING__=0":
+            running = False
+            continue
+        if not line:
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        rows.append(item)
+    return {
+        "row": row,
+        "running": running,
+        "rows": rows,
+        "ssh_error": ssh_error,
+    }
+
+
 def _summarize(batch_name: str, seed: str, manifest: dict[tuple[str, str, str], dict[str, str]]) -> dict[str, Any]:
     by_job: list[dict[str, Any]] = []
     total_expected = 0
@@ -179,13 +219,20 @@ def _summarize(batch_name: str, seed: str, manifest: dict[tuple[str, str, str], 
     running_sessions = 0
     status_counter: Counter[str] = Counter()
 
-    for tool in TOOLS:
-        for host in HOSTS:
-            row = manifest[(tool, seed, host)]
+    rows = [manifest[(tool, seed, host)] for tool in TOOLS for host in HOSTS]
+    states: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=28) as executor:
+        futures = [executor.submit(_read_job_state, row, batch_name) for row in rows]
+        for future in as_completed(futures):
+            states.append(future.result())
+
+    for state in states:
+            row = state["row"]
+            tool = row["tool"]
+            host = row["host"]
             expected = int(row["tasks"])
-            session = _session(tool, seed, host)
-            running = _tmux_running(host, session)
-            statuses = _read_status(host, batch_name, tool, seed)
+            running = bool(state["running"])
+            statuses = state["rows"]
             latest: dict[str, dict[str, Any]] = {}
             for item in statuses:
                 key = item.get("task_key")
@@ -203,6 +250,8 @@ def _summarize(batch_name: str, seed: str, manifest: dict[tuple[str, str, str], 
             total_error += errors
             running_sessions += int(running)
             status_counter.update(counts)
+            if state["ssh_error"]:
+                status_counter["ssh_error"] += expected
             if missing:
                 status_counter["missing"] += missing
 
@@ -217,6 +266,7 @@ def _summarize(batch_name: str, seed: str, manifest: dict[tuple[str, str, str], 
                     "error": errors,
                     "missing": missing,
                     "running": running,
+                    "ssh_error": state["ssh_error"],
                     "status_counts": dict(sorted(counts.items())),
                 }
             )
