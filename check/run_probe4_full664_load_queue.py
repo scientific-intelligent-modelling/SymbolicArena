@@ -118,8 +118,9 @@ def _target_for_host(host: str, *, controller_host: str, use_internal_ips: bool)
 
 
 def _is_local_host(host: str, controller_host: str) -> bool:
-    del controller_host
     local_names = {socket.gethostname(), socket.getfqdn(), "localhost", "127.0.0.1"}
+    if host == controller_host:
+        local_names.add(controller_host)
     short_names = {name.split(".")[0] for name in local_names}
     return host in local_names or host in short_names
 
@@ -135,6 +136,10 @@ def _ssh(host: str, command: str, *, controller_host: str, use_internal_ips: boo
             "BatchMode=yes",
             "-o",
             "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
             target,
             command,
         ],
@@ -156,6 +161,10 @@ def _scp(local_path: Path, host: str, remote_path: Path, *, controller_host: str
             "BatchMode=yes",
             "-o",
             "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
             str(local_path),
             f"{target}:{remote_path}",
         ],
@@ -385,7 +394,7 @@ def _sync_support_to_host(host: str, *, controller_host: str, use_internal_ips: 
                 "rsync",
                 "-a",
                 "-e",
-                "ssh -o BatchMode=yes -o ConnectTimeout=10",
+                "ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
                 f"{local_slices}/",
                 f"{target}:{remote_slices}/",
             ],
