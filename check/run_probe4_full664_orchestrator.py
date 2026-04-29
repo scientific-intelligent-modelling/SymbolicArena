@@ -13,9 +13,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import shlex
 import subprocess
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -73,25 +75,83 @@ def _tmux_running(host: str, session: str) -> bool:
     return result.returncode == 0
 
 
-def _start_tool_seed(tool: str, seed: str, batch_name: str, *, retry: bool) -> None:
+def _start_manifest_job(row: dict[str, str], batch_name: str, *, retry: bool) -> dict[str, Any]:
+    """启动单个 host/tool/seed job。
+
+    不通过 `run_tool_seed.sh` 整波启动，原因是单台 SSH 抖动不应该阻断
+    其它 host/tool。这里按 job 独立启动，已在跑的 tmux 会直接跳过。
+    """
+
     retry_arg = "retry" if retry else "noretry"
-    result = _run(
-        ["/bin/bash", str(LAUNCH_SCRIPT), tool, seed, batch_name, retry_arg],
-        timeout=360,
+    host = row["host"]
+    session = row["tmux_session"]
+    remote_job = REMOTE_ROOT / "exp-planning/02.E1选择验证/generated/probe4_full664_v1" / row["remote_job"]
+    cmd = (
+        f"cd {shlex.quote(str(REMOTE_ROOT))} && "
+        f"chmod +x {shlex.quote(str(remote_job))} && "
+        f"if tmux has-session -t {shlex.quote(session)} >/dev/null 2>&1; then "
+        f"echo ALREADY_RUNNING; "
+        f"else "
+        f"tmux new-session -d -s {shlex.quote(session)} "
+        f"/bin/bash {shlex.quote(str(remote_job))} "
+        f"{shlex.quote(batch_name)} {shlex.quote(row['workers'])} {shlex.quote(retry_arg)}; "
+        f"echo STARTED; "
+        f"fi"
     )
-    event = {
-        "event": "start_tool_seed",
-        "tool": tool,
-        "seed": seed,
+    result = _ssh(host, cmd, timeout=60)
+    return {
+        "tool": row["tool"],
+        "seed": row["seed"],
+        "host": host,
+        "session": session,
         "retry": retry,
         "returncode": result.returncode,
-        "stdout_tail": result.stdout.strip().splitlines()[-10:],
-        "stderr_tail": result.stderr.strip().splitlines()[-10:],
-        "time": datetime.now().isoformat(timespec="seconds"),
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
     }
-    print(json.dumps(event, ensure_ascii=False), flush=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"启动 {tool} seed{seed} 失败: {result.stderr.strip() or result.stdout.strip()}")
+
+
+def _start_seed_jobs(seed: str, batch_name: str, *, retry: bool, manifest_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+    jobs = [row for row in manifest_rows if row["seed"] == seed]
+    results: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=14) as executor:
+        future_map = {
+            executor.submit(_start_manifest_job, row, batch_name, retry=retry): row
+            for row in jobs
+        }
+        for future in as_completed(future_map):
+            row = future_map[future]
+            try:
+                item = future.result()
+            except Exception as exc:
+                item = {
+                    "tool": row["tool"],
+                    "seed": row["seed"],
+                    "host": row["host"],
+                    "session": row["tmux_session"],
+                    "retry": retry,
+                    "returncode": 1,
+                    "stdout": "",
+                    "stderr": repr(exc),
+                }
+            results.append(item)
+            print(json.dumps({"event": "start_job", **item}, ensure_ascii=False), flush=True)
+    failed = [item for item in results if item["returncode"] != 0]
+    print(
+        json.dumps(
+            {
+                "event": "start_seed_jobs_done",
+                "seed": seed,
+                "retry": retry,
+                "total": len(results),
+                "failed": len(failed),
+                "time": datetime.now().isoformat(timespec="seconds"),
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    return results
 
 
 def _read_status(host: str, batch_name: str, tool: str, seed: str) -> list[dict[str, Any]]:
@@ -191,7 +251,8 @@ def main() -> None:
     parser.add_argument("--seeds", nargs="+", default=SEEDS)
     args = parser.parse_args()
 
-    manifest = _manifest_index()
+    manifest_rows = _load_manifest()
+    manifest = {(row["tool"], row["seed"], row["host"]): row for row in manifest_rows}
     print(
         json.dumps(
             {
@@ -217,8 +278,7 @@ def main() -> None:
                 ),
                 flush=True,
             )
-            for tool in TOOLS:
-                _start_tool_seed(tool, seed, args.batch_name, retry=retry)
+            _start_seed_jobs(seed, args.batch_name, retry=retry, manifest_rows=manifest_rows)
 
             deadline = time.time() + args.seed_timeout_hours * 3600
             while True:
@@ -248,6 +308,32 @@ def main() -> None:
                         )
                         break
                     raise SystemExit(f"seed{seed} 结束但仍有未完成或失败任务: {summary}")
+
+                stale_jobs = [
+                    job
+                    for job in summary["jobs"]
+                    if not job["running"] and job["done"] < job["expected"]
+                ]
+                if stale_jobs:
+                    stale_keys = {(job["tool"], job["seed"], job["host"]) for job in stale_jobs}
+                    stale_rows = [row for row in manifest_rows if (row["tool"], row["seed"], row["host"]) in stale_keys]
+                    print(
+                        json.dumps(
+                            {
+                                "event": "restart_stale_jobs",
+                                "seed": seed,
+                                "count": len(stale_rows),
+                                "jobs": sorted([f"{row['tool']}:{row['host']}" for row in stale_rows]),
+                            },
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
+                    with ThreadPoolExecutor(max_workers=8) as executor:
+                        for future in as_completed(
+                            [executor.submit(_start_manifest_job, row, args.batch_name, retry=True) for row in stale_rows]
+                        ):
+                            print(json.dumps({"event": "restart_stale_job_result", **future.result()}, ensure_ascii=False), flush=True)
 
                 if time.time() > deadline:
                     raise SystemExit(f"seed{seed} 超过 {args.seed_timeout_hours} 小时仍未结束")
