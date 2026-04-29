@@ -9,23 +9,26 @@
 
 ## 负载队列入口
 
-推荐使用负载感知队列，让 `iaaccn23` 做中心调度，`23~29` 空闲后自动领取 chunk：
+推荐使用负载感知队列，让 `iaaccn23` 做中心调度，`23~29` 空闲后自动领取单数据集任务：
 
 ```bash
 tmux new-session -d -s probe4_full664_queue \
   bash exp-planning/02.E1选择验证/generated/probe4_full664_v1/launch/run_load_queue.sh
 ```
 
-调度器默认每台机器同时只跑一个 chunk，并按 load、可用内存和已有 `probe4` session 数派发任务。
+调度器默认每台机器最多 50 个并发任务，并按 CPU load ratio、内存使用率和已有 `probe4` session 数派发任务。
+启动时会先把单任务 slice 通过 `rsync` 预同步到各机器，派发时只创建远端 `tmux` 任务，避免每个任务单独 `scp`。
+每次 poll 会把符合条件的机器一次性补到 50 个单数据集任务；后续任务结束后，如果负载仍低于阈值，会继续补发。
+当某台机器 `load1 / cpu_count >= 0.80` 或 `mem_used_ratio >= 0.80` 时，调度器停止向该机器补发新任务。
 
-默认 chunk 策略：
+默认队列策略：
 
-| tool | env | workers/chunk | datasets/chunk |
-|---|---|---:|---:|
-| `pyoperon` | `sim_base` | `24` | `24` |
-| `imcts` | `sim_iMCTS` | `24` | `24` |
-| `dso` | `sim_dso` | `8` | `8` |
-| `udsr` | `sim_dso` | `8` | `8` |
+| tool | env | launcher workers/task | datasets/task | max tasks/host |
+|---|---|---:|---:|---:|
+| `pyoperon` | `sim_base` | `1` | `1` | `50` |
+| `imcts` | `sim_iMCTS` | `1` | `1` | `50` |
+| `dso` | `sim_dso` | `1` | `1` | `50` |
+| `udsr` | `sim_dso` | `1` | `1` | `50` |
 
 状态文件：
 

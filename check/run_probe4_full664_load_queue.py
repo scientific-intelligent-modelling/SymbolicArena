@@ -3,9 +3,9 @@
 
 设计目标：
 - `iaaccn23` 作为中心调度节点，维护 pending/running/done 状态。
-- `iaaccn23~29` 每台机器同一时间默认只跑一个 chunk，避免 DSO/UDSR
-  和其它重线程任务在同机叠加。
-- 调度器根据 load、可用内存、已有 probe4 session 数决定是否派发任务。
+- 调度粒度是单个 dataset × tool × seed 任务，机器空闲时持续领取任务。
+- `iaaccn23~29` 每台机器默认最多 50 个并发任务。
+- 调度器根据 CPU load ratio、内存使用率、已有 probe4 session 数决定是否派发任务。
 - `timed_out` 只表示预算耗尽，不等价于失败；调度完成判定以 launcher
   的任务状态是否收口为准。
 """
@@ -42,29 +42,29 @@ TOOL_CONFIG: dict[str, dict[str, Any]] = {
         "tool_arg": "pyoperon",
         "params": "pyoperon",
         "env": "sim_base",
-        "workers": 24,
-        "chunk_size": 24,
+        "workers": 1,
+        "task_size": 1,
     },
     "imcts": {
         "tool_arg": "iMCTS",
         "params": "imcts",
         "env": "sim_iMCTS",
-        "workers": 24,
-        "chunk_size": 24,
+        "workers": 1,
+        "task_size": 1,
     },
     "dso": {
         "tool_arg": "dso",
         "params": "dso",
         "env": "sim_dso",
-        "workers": 8,
-        "chunk_size": 8,
+        "workers": 1,
+        "task_size": 1,
     },
     "udsr": {
         "tool_arg": "udsr",
         "params": "udsr",
         "env": "sim_dso",
-        "workers": 8,
-        "chunk_size": 8,
+        "workers": 1,
+        "task_size": 1,
     },
 }
 
@@ -74,7 +74,7 @@ class QueueTask:
     task_id: str
     tool: str
     seed: int
-    chunk_index: int
+    task_index: int
     rows: list[dict[str, str]]
     slice_path: Path
 
@@ -182,18 +182,19 @@ def _build_tasks(rows: list[dict[str, str]], *, tools: list[str], seeds: list[in
     tasks: list[QueueTask] = []
     for seed in seeds:
         for tool in tools:
-            chunk_size = int(TOOL_CONFIG[tool]["chunk_size"])
-            for chunk_index, start in enumerate(range(0, len(rows), chunk_size), start=1):
-                chunk_rows = rows[start : start + chunk_size]
-                task_id = f"{tool}_s{seed}_c{chunk_index:04d}"
+            task_size = int(TOOL_CONFIG[tool]["task_size"])
+            for task_index, start in enumerate(range(0, len(rows), task_size), start=1):
+                task_rows = rows[start : start + task_size]
+                global_index = task_rows[0].get("global_index", str(task_index))
+                task_id = f"{tool}_s{seed}_g{int(global_index):04d}"
                 slice_path = ASSET_ROOT / "load_queue" / "slices" / tool / f"seed{seed}" / f"{task_id}.csv"
                 tasks.append(
                     QueueTask(
                         task_id=task_id,
                         tool=tool,
                         seed=seed,
-                        chunk_index=chunk_index,
-                        rows=chunk_rows,
+                        task_index=task_index,
+                        rows=task_rows,
                         slice_path=slice_path,
                     )
                 )
@@ -207,7 +208,7 @@ def _materialize_slices(tasks: list[QueueTask]) -> None:
 
 
 def _remote_support_script_path() -> Path:
-    return ASSET_ROOT / "load_queue" / "remote" / "run_queue_chunk.sh"
+    return ASSET_ROOT / "load_queue" / "remote" / "run_queue_task.sh"
 
 
 def _write_remote_support_script() -> Path:
@@ -256,7 +257,7 @@ conda run -n "$ENV_NAME" python check/launch_e1_benchmark.py run \\
   --tool "$TOOL_ARG" \\
   --slice-csv "$REMOTE_ROOT/$SLICE_REL" \\
   --params-json "$REMOTE_ROOT/$PARAMS_REL" \\
-  --output-root "$REMOTE_ROOT/experiments/$BATCH_NAME/$TOOL_KEY/seed$SEED/chunks/$TASK_ID/$HOST_LABEL" \\
+  --output-root "$REMOTE_ROOT/experiments/$BATCH_NAME/$TOOL_KEY/seed$SEED/tasks/$TASK_ID/$HOST_LABEL" \\
   --seed "$SEED" \\
   --workers "$WORKERS" \\
   "${{EXTRA_ARGS[@]}}"
@@ -289,7 +290,7 @@ def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
                 "task_id": task.task_id,
                 "tool": task.tool,
                 "seed": task.seed,
-                "chunk_index": task.chunk_index,
+                "task_index": task.task_index,
                 "expected": task.expected,
                 "state": "pending",
                 "attempts": 0,
@@ -308,7 +309,15 @@ def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
 def _load_or_init_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
     path = _state_path(batch_name)
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        state = json.loads(path.read_text(encoding="utf-8"))
+        expected_ids = {task.task_id for task in tasks}
+        actual_ids = set(state.get("tasks", {}))
+        if expected_ids != actual_ids:
+            raise SystemExit(
+                f"已有 state 与当前任务粒度不一致，避免混跑: {path}. "
+                "请换 batch-name，或确认后手动删除旧 state。"
+            )
+        return state
     state = _initial_state(batch_name, tasks)
     _save_state(state)
     return state
@@ -346,6 +355,8 @@ def _sync_support_to_host(host: str, *, controller_host: str, use_internal_ips: 
     remote_support = REMOTE_ROOT / support.relative_to(REPO_ROOT)
     remote_launcher = REMOTE_ROOT / "check/launch_e1_benchmark.py"
     local_launcher = REPO_ROOT / "check/launch_e1_benchmark.py"
+    local_slices = ASSET_ROOT / "load_queue" / "slices"
+    remote_slices = REMOTE_ROOT / local_slices.relative_to(REPO_ROOT)
     param_pairs = []
     for config in TOOL_CONFIG.values():
         local_param = REPO_ROOT / "exp-planning/02.E1选择验证/generated/params" / f"{config['params']}.json"
@@ -354,12 +365,33 @@ def _sync_support_to_host(host: str, *, controller_host: str, use_internal_ips: 
 
     _remote_mkdir(host, remote_support.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     _remote_mkdir(host, remote_launcher.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
+    _remote_mkdir(host, remote_slices.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     for _, remote_path in param_pairs:
         _remote_mkdir(host, remote_path.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     for local_path, remote_path in ((support, remote_support), (local_launcher, remote_launcher), *param_pairs):
         result = _scp(local_path, host, remote_path, controller_host=controller_host, use_internal_ips=use_internal_ips, timeout=60)
         if result.returncode != 0:
             raise RuntimeError(f"{host} 同步 {local_path} 失败: {result.stderr or result.stdout}")
+    if _is_local_host(host, controller_host):
+        if local_slices.resolve() != remote_slices.resolve():
+            result = _run(["rsync", "-a", f"{local_slices}/", f"{remote_slices}/"], timeout=180)
+        else:
+            result = subprocess.CompletedProcess(["rsync", str(local_slices), str(remote_slices)], 0, "same dir", "")
+    else:
+        target = _target_for_host(host, controller_host=controller_host, use_internal_ips=use_internal_ips)
+        result = _run(
+            [
+                "rsync",
+                "-a",
+                "-e",
+                "ssh -o BatchMode=yes -o ConnectTimeout=10",
+                f"{local_slices}/",
+                f"{target}:{remote_slices}/",
+            ],
+            timeout=300,
+        )
+    if result.returncode != 0:
+        raise RuntimeError(f"{host} 同步 load_queue slices 失败: {result.stderr or result.stdout}")
     chmod = _ssh(
         host,
         f"chmod +x {shlex.quote(str(remote_support))}",
@@ -372,12 +404,8 @@ def _sync_support_to_host(host: str, *, controller_host: str, use_internal_ips: 
 
 
 def _sync_task_slice(host: str, task: QueueTask, *, controller_host: str, use_internal_ips: bool) -> str:
+    del host, controller_host, use_internal_ips
     rel = task.slice_path.relative_to(REPO_ROOT)
-    remote_path = REMOTE_ROOT / rel
-    _remote_mkdir(host, remote_path.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
-    result = _scp(task.slice_path, host, remote_path, controller_host=controller_host, use_internal_ips=use_internal_ips, timeout=60)
-    if result.returncode != 0:
-        raise RuntimeError(f"{host} 同步 chunk slice 失败: {result.stderr or result.stdout}")
     return str(rel)
 
 
@@ -387,16 +415,27 @@ import json
 import os
 import subprocess
 
-def mem_available_gb():
+def mem_info():
     try:
         values = {}
         with open("/proc/meminfo", "r", encoding="utf-8") as f:
             for line in f:
                 key, value = line.split(":", 1)
                 values[key] = int(value.strip().split()[0])
-        return values.get("MemAvailable", 0) / 1024 / 1024
+        total_gb = values.get("MemTotal", 0) / 1024 / 1024
+        available_gb = values.get("MemAvailable", 0) / 1024 / 1024
+        used_ratio = 1.0 - (available_gb / total_gb) if total_gb else None
+        return {
+            "mem_total_gb": total_gb,
+            "mem_available_gb": available_gb,
+            "mem_used_ratio": used_ratio,
+        }
     except Exception:
-        return None
+        return {
+            "mem_total_gb": None,
+            "mem_available_gb": None,
+            "mem_used_ratio": None,
+        }
 
 def session_count(pattern):
     proc = subprocess.run(["bash", "-lc", "tmux ls 2>/dev/null || true"], text=True, capture_output=True)
@@ -404,13 +443,14 @@ def session_count(pattern):
 
 load1, load5, load15 = os.getloadavg()
 cpu_count = os.cpu_count() or 1
+memory = mem_info()
 print(json.dumps({
     "load1": load1,
     "load5": load5,
     "load15": load15,
     "cpu_count": cpu_count,
     "load_ratio": load1 / cpu_count,
-    "mem_available_gb": mem_available_gb(),
+    **memory,
     "queue_sessions": session_count("probe4_full664_queue_"),
     "probe4_sessions": session_count("probe4_full664"),
 }))
@@ -433,10 +473,13 @@ def _host_can_accept(host_state: dict[str, Any], args: argparse.Namespace) -> tu
         return False, "queue session 已达上限"
     if not args.allow_existing_probe4 and int(host_state.get("probe4_sessions") or 0) > int(host_state.get("queue_sessions") or 0):
         return False, "存在非队列 probe4 session"
-    if float(host_state.get("load_ratio") or 99.0) > args.max_load_ratio:
-        return False, f"load_ratio>{args.max_load_ratio}"
+    if float(host_state.get("load_ratio") or 99.0) >= args.max_load_ratio:
+        return False, f"load_ratio>={args.max_load_ratio}"
+    mem_used = host_state.get("mem_used_ratio")
+    if mem_used is not None and float(mem_used) >= args.max_memory_used_ratio:
+        return False, f"mem_used_ratio>={args.max_memory_used_ratio}"
     mem_available = host_state.get("mem_available_gb")
-    if mem_available is not None and float(mem_available) < args.min_free_mem_gb:
+    if args.min_free_mem_gb > 0 and mem_available is not None and float(mem_available) < args.min_free_mem_gb:
         return False, f"mem_available_gb<{args.min_free_mem_gb}"
     return True, "ok"
 
@@ -452,7 +495,7 @@ def _read_task_status(task: dict[str, Any], *, controller_host: str, use_interna
         / str(task["batch_name"])
         / tool
         / f"seed{seed}"
-        / "chunks"
+        / "tasks"
         / task_id
         / host
         / "__launcher__/task_status.jsonl"
@@ -613,18 +656,22 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
         print(json.dumps(_summarize_state(state), ensure_ascii=False, indent=2))
         return
 
+    ready_hosts: list[str] = []
     for host in args.hosts:
         try:
             _sync_support_to_host(host, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips)
             _append_event(args.batch_name, {"event": "support_synced", "host": host})
+            ready_hosts.append(host)
         except Exception as exc:
             _append_event(args.batch_name, {"event": "support_sync_failed", "host": host, "error": repr(exc)})
+    if not ready_hosts:
+        raise SystemExit("没有任何机器完成支持文件和队列切片同步，停止调度。")
 
     while True:
         _update_running_tasks(state, args)
         host_states = [
             _probe_host(host, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips)
-            for host in args.hosts
+            for host in ready_hosts
         ]
 
         pending_ids = _pending_task_ids(state)
@@ -637,16 +684,24 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
             if not can_accept:
                 host_state["dispatch_skip_reason"] = reason
                 continue
-            task_id = pending_ids.pop(0)
-            task = task_map[task_id]
-            state_task = state["tasks"][task_id]
-            try:
-                _start_task_on_host(task, host, state_task, args)
-                dispatched += 1
-                _append_event(args.batch_name, {"event": "task_started", "task_id": task_id, "host": host, "tool": task.tool, "seed": task.seed})
-            except Exception as exc:
-                state_task["error"] = repr(exc)
-                _append_event(args.batch_name, {"event": "task_start_failed", "task_id": task_id, "host": host, "error": repr(exc)})
+            active_sessions = int(host_state.get("queue_sessions") or 0)
+            available_slots = max(0, args.max_jobs_per_host - active_sessions)
+            host_dispatched = 0
+            for _ in range(available_slots):
+                if not pending_ids:
+                    break
+                task_id = pending_ids.pop(0)
+                task = task_map[task_id]
+                state_task = state["tasks"][task_id]
+                try:
+                    _start_task_on_host(task, host, state_task, args)
+                    dispatched += 1
+                    host_dispatched += 1
+                    _append_event(args.batch_name, {"event": "task_started", "task_id": task_id, "host": host, "tool": task.tool, "seed": task.seed})
+                except Exception as exc:
+                    state_task["error"] = repr(exc)
+                    _append_event(args.batch_name, {"event": "task_start_failed", "task_id": task_id, "host": host, "error": repr(exc)})
+            host_state["dispatched"] = host_dispatched
 
         _save_state(state)
         _write_summary(state, host_states)
@@ -656,7 +711,7 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
         counts = Counter(task["state"] for task in state["tasks"].values())
         if counts.get("pending", 0) == 0 and counts.get("running", 0) == 0:
             if counts.get("failed", 0) > 0:
-                raise SystemExit(f"队列结束但存在 failed chunk: {dict(counts)}")
+                raise SystemExit(f"队列结束但存在 failed task: {dict(counts)}")
             print(json.dumps({"event": "queue_done", "batch_name": args.batch_name, "time": _now()}, ensure_ascii=False), flush=True)
             break
         if args.once:
@@ -674,9 +729,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--use-internal-ips", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--poll-seconds", type=int, default=60)
     parser.add_argument("--retry-limit", type=int, default=1)
-    parser.add_argument("--max-jobs-per-host", type=int, default=1)
-    parser.add_argument("--max-load-ratio", type=float, default=0.70)
-    parser.add_argument("--min-free-mem-gb", type=float, default=20.0)
+    parser.add_argument("--max-jobs-per-host", type=int, default=50)
+    parser.add_argument("--max-load-ratio", type=float, default=0.80)
+    parser.add_argument("--max-memory-used-ratio", type=float, default=0.80)
+    parser.add_argument("--min-free-mem-gb", type=float, default=0.0)
     parser.add_argument("--allow-existing-probe4", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--once", action="store_true")
