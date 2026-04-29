@@ -139,7 +139,7 @@ def _check_envs(repo_root: Path) -> dict[str, Any]:
             "sim_dso",
             "python",
             "-c",
-            "from scientific_intelligent_modelling import SymbolicRegressor; print('dso_udsr_ok')",
+            "from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor; print('dso_udsr_ok')",
         ],
         repo_root,
     )
@@ -151,7 +151,7 @@ def _check_envs(repo_root: Path) -> dict[str, Any]:
             "sim_iMCTS",
             "python",
             "-c",
-            "from scientific_intelligent_modelling import SymbolicRegressor; print('imcts_ok')",
+            "from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor; print('imcts_ok')",
         ],
         repo_root,
     )
