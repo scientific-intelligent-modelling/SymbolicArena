@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate assets for the semantic Candidate-200 LLM rerun."""
+"""Generate assets for the physics-aware Candidate-200 LLM rerun."""
 
 from __future__ import annotations
 
@@ -11,10 +11,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATED_ROOT = REPO_ROOT / "exp-planning/02.E1选择验证" / "generated"
 CANDIDATE200_CSV = GENERATED_ROOT / "candidate200_unified.csv"
-OUTPUT_ROOT = GENERATED_ROOT / "semantic200_llm_v1"
+ASSET_NAME = "semantic200_llm_physics_v1"
+OUTPUT_ROOT = GENERATED_ROOT / ASSET_NAME
 REMOTE_PROJECT_ROOT = "/home/zhangziwen/projects/scientific-intelligent-modelling"
 SEED = 1314
 WORKERS = 50
+CONFIRM_ENV = "CONFIRM_SEMANTIC200_LLM_PHYSICS"
 
 
 PARAMS = {
@@ -76,8 +78,8 @@ def _write_params() -> None:
 
 
 def _job_script(tool: str, host: str) -> str:
-    rel_slice = f"exp-planning/02.E1选择验证/generated/semantic200_llm_v1/slices/{host}.csv"
-    rel_params = f"exp-planning/02.E1选择验证/generated/semantic200_llm_v1/params/{tool}_semantic.json"
+    rel_slice = f"exp-planning/02.E1选择验证/generated/{ASSET_NAME}/slices/{host}.csv"
+    rel_params = f"exp-planning/02.E1选择验证/generated/{ASSET_NAME}/params/{tool}_semantic.json"
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 
@@ -91,6 +93,11 @@ WORKERS="$2"
 RETRY_MODE="${{3:-}}"
 REMOTE_ROOT="{REMOTE_PROJECT_ROOT}"
 EXTRA_ARGS=()
+if [ "${{{CONFIRM_ENV}:-}}" != "{ASSET_NAME}" ]; then
+  echo "Refusing to launch {tool}/{host}: export {CONFIRM_ENV}={ASSET_NAME} after explicit user confirmation." >&2
+  exit 3
+fi
+
 if [ "$RETRY_MODE" = "retry" ]; then
   EXTRA_ARGS+=(--retry-failed)
 fi
@@ -126,8 +133,23 @@ set -euo pipefail
 REMOTE_ROOT="{REMOTE_PROJECT_ROOT}"
 REMOTE_HOST_23="${{REMOTE_HOST_23:-10.10.100.23}}"
 STAMP="${{STAMP:-$(date +%Y%m%d-%H%M%S)}}"
-BATCH_NAME="${{BATCH_NAME:-semantic200_llm_v1_seed{SEED}_${{STAMP}}}}"
+BATCH_NAME="${{BATCH_NAME:-{ASSET_NAME}_seed{SEED}_${{STAMP}}}}"
 WORKERS="${{WORKERS:-{WORKERS}}}"
+
+if [ "${{{CONFIRM_ENV}:-}}" != "{ASSET_NAME}" ]; then
+  cat >&2 <<'EOF'
+Refusing to launch semantic200 LLM physics rerun.
+
+This batch reruns LLMSR and DRSR on Candidate-200 with physical/semantic
+metadata injected into prompts. It must only be launched after explicit user
+confirmation.
+
+After confirmation, run:
+  export {CONFIRM_ENV}={ASSET_NAME}
+  bash exp-planning/02.E1选择验证/generated/{ASSET_NAME}/launch/run_semantic200_llm_queue.sh
+EOF
+  exit 3
+fi
 
 echo "BATCH_NAME=${{BATCH_NAME}}"
 echo "WORKERS=${{WORKERS}}"
@@ -135,19 +157,19 @@ echo "WORKERS=${{WORKERS}}"
 start_local() {{
   local tool="$1"
   local session="semantic200_${{tool}}_22"
-  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_v1/remote_jobs/${{tool}}_iaaccn22.sh"
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/${{tool}}_iaaccn22.sh"
   chmod +x "$script"
   tmux kill-session -t "$session" >/dev/null 2>&1 || true
-  tmux new-session -d -s "$session" /bin/bash "$script" "$BATCH_NAME" "$WORKERS"
+  tmux new-session -d -s "$session" env {CONFIRM_ENV}="${{{CONFIRM_ENV}}}" /bin/bash "$script" "$BATCH_NAME" "$WORKERS"
   echo "STARTED iaaccn22 $session"
 }}
 
 start_remote23() {{
   local tool="$1"
   local session="semantic200_${{tool}}_23"
-  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_v1/remote_jobs/${{tool}}_iaaccn23.sh"
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/${{tool}}_iaaccn23.sh"
   timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$REMOTE_HOST_23" \\
-    "chmod +x '$script'; tmux kill-session -t '$session' >/dev/null 2>&1 || true; tmux new-session -d -s '$session' /bin/bash '$script' '$BATCH_NAME' '$WORKERS'"
+    "chmod +x '$script'; tmux kill-session -t '$session' >/dev/null 2>&1 || true; tmux new-session -d -s '$session' env {CONFIRM_ENV}='{ASSET_NAME}' /bin/bash '$script' '$BATCH_NAME' '$WORKERS'"
   echo "STARTED iaaccn23 $session"
 }}
 
@@ -197,12 +219,14 @@ def _write_launch() -> None:
 
 def _write_manifest(rows_by_host: dict[str, list[dict[str, str]]]) -> None:
     lines = [
-        "# semantic200_llm_v1",
+        f"# {ASSET_NAME}",
         "",
         f"- seed: {SEED}",
         f"- workers_per_host: {WORKERS}",
         "- queue: llmsr on iaaccn22/iaaccn23, then drsr on iaaccn22/iaaccn23",
-        "- prompt policy: x0/x1/.../y prompt variables with metadata semantics",
+        "- prompt policy: x0/x1/.../y prompt variables with physical metadata semantics",
+        "- launch guard: export "
+        f"{CONFIRM_ENV}={ASSET_NAME} only after explicit user confirmation",
         "",
     ]
     for host, rows in rows_by_host.items():
