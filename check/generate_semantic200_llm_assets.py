@@ -11,7 +11,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATED_ROOT = REPO_ROOT / "exp-planning/02.E1选择验证" / "generated"
 CANDIDATE200_CSV = GENERATED_ROOT / "candidate200_unified.csv"
-ASSET_NAME = "semantic200_llm_physics_v1"
+ASSET_NAME = "semantic200_llm_physics_v2_4host"
 OUTPUT_ROOT = GENERATED_ROOT / ASSET_NAME
 REMOTE_PROJECT_ROOT = "/home/zhangziwen/projects/scientific-intelligent-modelling"
 SEED = 1314
@@ -19,11 +19,19 @@ WORKERS = 50
 CONFIRM_ENV = "CONFIRM_SEMANTIC200_LLM_PHYSICS"
 LLM_CONFIG_DIR = f"{REMOTE_PROJECT_ROOT}/exp-planning/02.E1选择验证/llm_configs"
 HOST_MODEL_ASSIGNMENTS = {
-    "iaaccn22": {
+    "iaaccn23": {
         "model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct",
         "config_name": "benchmark_llm_deepinfra_llama31_8b.config",
     },
-    "iaaccn23": {
+    "iaaccn24": {
+        "model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+        "config_name": "benchmark_llm_deepinfra_llama31_8b_turbo.config",
+    },
+    "iaaccn25": {
+        "model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "config_name": "benchmark_llm_deepinfra_llama31_8b.config",
+    },
+    "iaaccn26": {
         "model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
         "config_name": "benchmark_llm_deepinfra_llama31_8b_turbo.config",
     },
@@ -146,7 +154,7 @@ def _write_jobs() -> None:
     jobs_dir = OUTPUT_ROOT / "remote_jobs"
     jobs_dir.mkdir(parents=True, exist_ok=True)
     for tool in ("llmsr", "drsr"):
-        for host in ("iaaccn22", "iaaccn23"):
+        for host in HOST_MODEL_ASSIGNMENTS:
             path = jobs_dir / f"{tool}_{host}.sh"
             path.write_text(_job_script(tool, host), encoding="utf-8")
             path.chmod(0o755)
@@ -158,6 +166,9 @@ set -euo pipefail
 
 REMOTE_ROOT="{REMOTE_PROJECT_ROOT}"
 REMOTE_HOST_23="${{REMOTE_HOST_23:-10.10.100.23}}"
+REMOTE_HOST_24="${{REMOTE_HOST_24:-10.10.100.24}}"
+REMOTE_HOST_25="${{REMOTE_HOST_25:-10.10.100.25}}"
+REMOTE_HOST_26="${{REMOTE_HOST_26:-10.10.100.26}}"
 STAMP="${{STAMP:-$(date +%Y%m%d-%H%M%S)}}"
 BATCH_NAME="${{BATCH_NAME:-{ASSET_NAME}_seed{SEED}_${{STAMP}}}}"
 WORKERS="${{WORKERS:-{WORKERS}}}"
@@ -182,21 +193,24 @@ echo "WORKERS=${{WORKERS}}"
 
 start_local() {{
   local tool="$1"
-  local session="semantic200_${{tool}}_22"
-  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/${{tool}}_iaaccn22.sh"
+  local host="$2"
+  local session="semantic200_${{tool}}_${{host}}"
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/${{tool}}_${{host}}.sh"
   chmod +x "$script"
   tmux kill-session -t "$session" >/dev/null 2>&1 || true
   tmux new-session -d -s "$session" env {CONFIRM_ENV}="${{{CONFIRM_ENV}}}" /bin/bash "$script" "$BATCH_NAME" "$WORKERS"
-  echo "STARTED iaaccn22 $session"
+  echo "STARTED $host $session"
 }}
 
-start_remote23() {{
+start_remote() {{
   local tool="$1"
-  local session="semantic200_${{tool}}_23"
-  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/${{tool}}_iaaccn23.sh"
-  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$REMOTE_HOST_23" \\
+  local host="$2"
+  local target="$3"
+  local session="semantic200_${{tool}}_${{host}}"
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/${{tool}}_${{host}}.sh"
+  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \\
     "chmod +x '$script'; tmux kill-session -t '$session' >/dev/null 2>&1 || true; tmux new-session -d -s '$session' env {CONFIRM_ENV}='{ASSET_NAME}' /bin/bash '$script' '$BATCH_NAME' '$WORKERS'"
-  echo "STARTED iaaccn23 $session"
+  echo "STARTED $host $session"
 }}
 
 wait_local() {{
@@ -204,27 +218,35 @@ wait_local() {{
   while tmux has-session -t "$session" >/dev/null 2>&1; do
     sleep 60
   done
-  echo "FINISHED iaaccn22 $session"
+  echo "FINISHED local $session"
 }}
 
-wait_remote23() {{
+wait_remote() {{
   local session="$1"
-  while timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$REMOTE_HOST_23" \\
+  local target="$2"
+  while timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \\
     "tmux has-session -t '$session' >/dev/null 2>&1"; do
     sleep 60
   done
-  echo "FINISHED iaaccn23 $session"
+  echo "FINISHED remote $session"
 }}
 
 run_wave() {{
   local tool="$1"
-  start_local "$tool"
-  start_remote23 "$tool"
-  wait_local "semantic200_${{tool}}_22" &
+  start_local "$tool" "iaaccn23"
+  start_remote "$tool" "iaaccn24" "$REMOTE_HOST_24"
+  start_remote "$tool" "iaaccn25" "$REMOTE_HOST_25"
+  start_remote "$tool" "iaaccn26" "$REMOTE_HOST_26"
+
+  wait_local "semantic200_${{tool}}_iaaccn23" &
   local p1=$!
-  wait_remote23 "semantic200_${{tool}}_23" &
+  wait_remote "semantic200_${{tool}}_iaaccn24" "$REMOTE_HOST_24" &
   local p2=$!
-  wait "$p1" "$p2"
+  wait_remote "semantic200_${{tool}}_iaaccn25" "$REMOTE_HOST_25" &
+  local p3=$!
+  wait_remote "semantic200_${{tool}}_iaaccn26" "$REMOTE_HOST_26" &
+  local p4=$!
+  wait "$p1" "$p2" "$p3" "$p4"
   echo "WAVE_DONE $tool"
 }}
 
@@ -249,10 +271,10 @@ def _write_manifest(rows_by_host: dict[str, list[dict[str, str]]]) -> None:
         "",
         f"- seed: {SEED}",
         f"- workers_per_host: {WORKERS}",
-        "- queue: llmsr on iaaccn22/iaaccn23, then drsr on iaaccn22/iaaccn23",
+        "- queue: llmsr on iaaccn23/iaaccn24/iaaccn25/iaaccn26, then drsr on the same four hosts",
         "- prompt policy: x0/x1/.../y prompt variables with physical metadata semantics",
-        "- model split: iaaccn22 uses Meta-Llama-3.1-8B-Instruct; "
-        "iaaccn23 uses Meta-Llama-3.1-8B-Instruct-Turbo",
+        "- model split: iaaccn23 and iaaccn25 use Meta-Llama-3.1-8B-Instruct; "
+        "iaaccn24 and iaaccn26 use Meta-Llama-3.1-8B-Instruct-Turbo",
         "- launch guard: export "
         f"{CONFIRM_ENV}={ASSET_NAME} only after explicit user confirmation",
         "",
@@ -267,13 +289,13 @@ def _write_manifest(rows_by_host: dict[str, list[dict[str, str]]]) -> None:
 def main() -> None:
     rows = _read_rows()
     fieldnames = list(rows[0].keys())
-    rows_by_host = {
-        "iaaccn22": [row for idx, row in enumerate(rows) if idx % 2 == 0],
-        "iaaccn23": [row for idx, row in enumerate(rows) if idx % 2 == 1],
-    }
+    hosts = list(HOST_MODEL_ASSIGNMENTS)
+    rows_by_host = {host: [] for host in hosts}
+    for idx, row in enumerate(rows):
+        rows_by_host[hosts[idx % len(hosts)]].append(row)
     for host, host_rows in rows_by_host.items():
-        if len(host_rows) != 100:
-            raise ValueError(f"{host} expected 100 rows, got {len(host_rows)}")
+        if len(host_rows) != 50:
+            raise ValueError(f"{host} expected 50 rows, got {len(host_rows)}")
         _write_csv(OUTPUT_ROOT / "slices" / f"{host}.csv", host_rows, fieldnames)
     _write_params()
     _write_jobs()
