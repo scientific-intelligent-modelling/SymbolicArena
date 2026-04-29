@@ -74,6 +74,24 @@ launch/run_semantic200_llm_queue.sh
 | 2 | `drsr` | `iaaccn22` | 100 | 50 |
 | 2 | `drsr` | `iaaccn23` | 100 | 50 |
 
+## DeepInfra 模型分流
+
+为提高并发承载，本轮不再让两个 host 都打到同一个 DeepInfra 模型名，而是按 host 做 1:1 分流：
+
+| host | datasets | model | config |
+|---|---:|---|---|
+| `iaaccn22` | 100 | `deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct` | `benchmark_llm_deepinfra_llama31_8b.config` |
+| `iaaccn23` | 100 | `deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo` | `benchmark_llm_deepinfra_llama31_8b_turbo.config` |
+
+这个分流对 `llmsr` 和 `drsr` 同时生效：
+
+- `llmsr_semantic_iaaccn22.json` 使用普通 `8B-Instruct`
+- `llmsr_semantic_iaaccn23.json` 使用 `8B-Instruct-Turbo`
+- `drsr_semantic_iaaccn22.json` 使用普通 `8B-Instruct`
+- `drsr_semantic_iaaccn23.json` 使用 `8B-Instruct-Turbo`
+
+两个模型按当前实验口径视为同一 Llama-3.1-8B-Instruct 家族，只用于分摊 DeepInfra 并发；最终汇总时需要在 run metadata 中保留 `llm_model_assignment` 字段，方便审计。
+
 执行顺序：
 
 1. 先并发跑 `llmsr` 的 `iaaccn22 + iaaccn23`
@@ -106,7 +124,9 @@ bash exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v1/launch/
 - `iaaccn22` 能通过内网访问 `10.10.100.23`
 - 两台机器都存在真实数据目录 `/home/zhangziwen/sim-datasets-data`
 - 两台机器都存在非 Git 跟踪的真实 LLM 配置：
-  `exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config`
+  `exp-planning/02.E1选择验证/llm_configs/benchmark_llm_deepinfra_llama31_8b.config`
+  和
+  `exp-planning/02.E1选择验证/llm_configs/benchmark_llm_deepinfra_llama31_8b_turbo.config`
 
 运行中：
 

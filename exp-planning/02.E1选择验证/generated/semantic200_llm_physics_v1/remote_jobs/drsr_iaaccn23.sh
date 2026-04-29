@@ -26,7 +26,7 @@ export PYTHONPATH=.
 conda run -n sim_llm python check/launch_e1_benchmark.py run \
   --tool drsr \
   --slice-csv "$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v1/slices/iaaccn23.csv" \
-  --params-json "$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v1/params/drsr_semantic.json" \
+  --params-json "$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v1/params/drsr_semantic_iaaccn23.json" \
   --output-root "$REMOTE_ROOT/experiments/${BATCH_NAME}/drsr/iaaccn23" \
   --seed 1314 \
   --workers "$WORKERS" \

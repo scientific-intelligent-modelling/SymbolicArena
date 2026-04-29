@@ -17,6 +17,17 @@ REMOTE_PROJECT_ROOT = "/home/zhangziwen/projects/scientific-intelligent-modellin
 SEED = 1314
 WORKERS = 50
 CONFIRM_ENV = "CONFIRM_SEMANTIC200_LLM_PHYSICS"
+LLM_CONFIG_DIR = f"{REMOTE_PROJECT_ROOT}/exp-planning/02.E1选择验证/llm_configs"
+HOST_MODEL_ASSIGNMENTS = {
+    "iaaccn22": {
+        "model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "config_name": "benchmark_llm_deepinfra_llama31_8b.config",
+    },
+    "iaaccn23": {
+        "model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+        "config_name": "benchmark_llm_deepinfra_llama31_8b_turbo.config",
+    },
+}
 
 
 PARAMS = {
@@ -29,10 +40,6 @@ PARAMS = {
         "inject_prompt_semantics": True,
         "canonical_prompt_variables": True,
         "persist_all_samples": False,
-        "llm_config_path": (
-            f"{REMOTE_PROJECT_ROOT}/exp-planning/02.E1选择验证/"
-            "llm_configs/benchmark_llm.config"
-        ),
     },
     "drsr": {
         "timeout_in_seconds": 3600,
@@ -43,10 +50,6 @@ PARAMS = {
         "inject_prompt_semantics": True,
         "canonical_prompt_variables": True,
         "persist_all_samples": False,
-        "llm_config_path": (
-            f"{REMOTE_PROJECT_ROOT}/exp-planning/02.E1选择验证/"
-            "llm_configs/benchmark_llm.config"
-        ),
     },
 }
 
@@ -71,15 +74,38 @@ def _write_params() -> None:
     params_dir = OUTPUT_ROOT / "params"
     params_dir.mkdir(parents=True, exist_ok=True)
     for tool, payload in PARAMS.items():
-        (params_dir / f"{tool}_semantic.json").write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        for host, assignment in HOST_MODEL_ASSIGNMENTS.items():
+            host_payload = dict(payload)
+            host_payload["llm_config_path"] = f"{LLM_CONFIG_DIR}/{assignment['config_name']}"
+            host_payload["llm_model_assignment"] = assignment["model"]
+            (params_dir / f"{tool}_semantic_{host}.json").write_text(
+                json.dumps(host_payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+    lines = [
+        "# Semantic-200 LLM Physics Params",
+        "",
+        "Remote jobs use the host-specific files in this directory:",
+        "",
+    ]
+    for tool in ("llmsr", "drsr"):
+        for host, assignment in HOST_MODEL_ASSIGNMENTS.items():
+            lines.append(
+                f"- `{tool}_semantic_{host}.json`: `{assignment['model']}`"
+            )
+    lines.extend(
+        [
+            "",
+            "The legacy `*_semantic.json` files are not used by the physics rerun launcher.",
+            "",
+        ]
+    )
+    (params_dir / "README.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def _job_script(tool: str, host: str) -> str:
     rel_slice = f"exp-planning/02.E1选择验证/generated/{ASSET_NAME}/slices/{host}.csv"
-    rel_params = f"exp-planning/02.E1选择验证/generated/{ASSET_NAME}/params/{tool}_semantic.json"
+    rel_params = f"exp-planning/02.E1选择验证/generated/{ASSET_NAME}/params/{tool}_semantic_{host}.json"
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 
@@ -225,12 +251,16 @@ def _write_manifest(rows_by_host: dict[str, list[dict[str, str]]]) -> None:
         f"- workers_per_host: {WORKERS}",
         "- queue: llmsr on iaaccn22/iaaccn23, then drsr on iaaccn22/iaaccn23",
         "- prompt policy: x0/x1/.../y prompt variables with physical metadata semantics",
+        "- model split: iaaccn22 uses Meta-Llama-3.1-8B-Instruct; "
+        "iaaccn23 uses Meta-Llama-3.1-8B-Instruct-Turbo",
         "- launch guard: export "
         f"{CONFIRM_ENV}={ASSET_NAME} only after explicit user confirmation",
         "",
     ]
     for host, rows in rows_by_host.items():
-        lines.append(f"- {host}: {len(rows)} datasets")
+        model = HOST_MODEL_ASSIGNMENTS[host]["model"]
+        config_name = HOST_MODEL_ASSIGNMENTS[host]["config_name"]
+        lines.append(f"- {host}: {len(rows)} datasets, model: `{model}`, config: `{config_name}`")
     (OUTPUT_ROOT / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
