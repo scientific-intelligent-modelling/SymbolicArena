@@ -5,6 +5,7 @@
 - `iaaccn23` 作为中心调度节点，维护 pending/running/done 状态。
 - 调度粒度是单个 dataset × tool × seed 任务，机器空闲时持续领取任务。
 - `iaaccn23~29` 每台机器默认最多 100 个并发任务。
+- 每轮 poll 每台机器默认最多新增 2 个任务，用慢启动避免瞬时打爆机器。
 - 调度器根据 CPU load ratio、内存使用率、已有 probe4 session 数决定是否派发任务。
 - `timed_out` 只表示预算耗尽，不等价于失败；调度完成判定以 launcher
   的任务状态是否收口为准。
@@ -685,7 +686,7 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                 host_state["dispatch_skip_reason"] = reason
                 continue
             active_sessions = int(host_state.get("queue_sessions") or 0)
-            available_slots = max(0, args.max_jobs_per_host - active_sessions)
+            available_slots = max(0, min(args.max_new_jobs_per_host_per_poll, args.max_jobs_per_host - active_sessions))
             host_dispatched = 0
             for _ in range(available_slots):
                 if not pending_ids:
@@ -730,6 +731,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--poll-seconds", type=int, default=60)
     parser.add_argument("--retry-limit", type=int, default=1)
     parser.add_argument("--max-jobs-per-host", type=int, default=100)
+    parser.add_argument("--max-new-jobs-per-host-per-poll", type=int, default=2)
     parser.add_argument("--max-load-ratio", type=float, default=0.80)
     parser.add_argument("--max-memory-used-ratio", type=float, default=0.80)
     parser.add_argument("--min-free-mem-gb", type=float, default=0.0)
