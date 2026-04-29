@@ -35,11 +35,19 @@ HOSTS = ["iaaccn23", "iaaccn24", "iaaccn25", "iaaccn26", "iaaccn27", "iaaccn28",
 DONE_STATUSES = {"ok", "timed_out", "no_valid_output"}
 
 
+def _safe_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 def _run(cmd: list[str], *, timeout: int = 60) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(cmd, text=True, capture_output=True, timeout=timeout, check=False)
     except subprocess.TimeoutExpired as exc:
-        return subprocess.CompletedProcess(cmd, 124, exc.stdout or "", exc.stderr or "timeout")
+        return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), _safe_text(exc.stderr) or "timeout")
 
 
 def _ssh(host: str, command: str, *, timeout: int = 60) -> subprocess.CompletedProcess[str]:
@@ -106,8 +114,8 @@ def _start_manifest_job(row: dict[str, str], batch_name: str, *, retry: bool) ->
         "session": session,
         "retry": retry,
         "returncode": result.returncode,
-        "stdout": result.stdout.strip(),
-        "stderr": result.stderr.strip(),
+        "stdout": _safe_text(result.stdout).strip(),
+        "stderr": _safe_text(result.stderr).strip(),
     }
 
 
