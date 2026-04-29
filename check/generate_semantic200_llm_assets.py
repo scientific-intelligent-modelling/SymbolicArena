@@ -158,6 +158,43 @@ def _write_jobs() -> None:
             path = jobs_dir / f"{tool}_{host}.sh"
             path.write_text(_job_script(tool, host), encoding="utf-8")
             path.chmod(0o755)
+    auth_check = jobs_dir / "check_llm_auth.py"
+    auth_check.write_text(
+        f"""#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+
+root = Path("{REMOTE_PROJECT_ROOT}")
+config_dir = root / "exp-planning/02.E1选择验证/llm_configs"
+config_names = [
+    "benchmark_llm_deepinfra_llama31_8b.config",
+    "benchmark_llm_deepinfra_llama31_8b_turbo.config",
+]
+
+missing = []
+has_env = bool(os.environ.get("DEEPINFRA_API_KEY"))
+for name in config_names:
+    path = config_dir / name
+    if not path.exists():
+        missing.append(f"missing:{{name}}")
+        continue
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        missing.append(f"invalid:{{name}}:{{type(exc).__name__}}")
+        continue
+    if not has_env and not payload.get("api_key"):
+        missing.append(f"no_api_key:{{name}}")
+
+if missing:
+    print("LLM_AUTH_FAIL", ",".join(missing))
+    raise SystemExit(2)
+print("LLM_AUTH_OK")
+""",
+        encoding="utf-8",
+    )
+    auth_check.chmod(0o755)
 
 
 def _queue_script() -> str:
@@ -190,6 +227,17 @@ fi
 
 echo "BATCH_NAME=${{BATCH_NAME}}"
 echo "WORKERS=${{WORKERS}}"
+
+check_auth_local() {{
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/check_llm_auth.py"
+  python "$script"
+}}
+
+check_auth_remote() {{
+  local target="$1"
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/{ASSET_NAME}/remote_jobs/check_llm_auth.py"
+  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" "python '$script'"
+}}
 
 start_local() {{
   local tool="$1"
@@ -251,6 +299,10 @@ run_wave() {{
 }}
 
 cd "$REMOTE_ROOT"
+check_auth_local
+check_auth_remote "$REMOTE_HOST_24"
+check_auth_remote "$REMOTE_HOST_25"
+check_auth_remote "$REMOTE_HOST_26"
 run_wave llmsr
 run_wave drsr
 echo "QUEUE_DONE $BATCH_NAME"

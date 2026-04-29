@@ -28,6 +28,17 @@ fi
 echo "BATCH_NAME=${BATCH_NAME}"
 echo "WORKERS=${WORKERS}"
 
+check_auth_local() {
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v2_4host/remote_jobs/check_llm_auth.py"
+  python "$script"
+}
+
+check_auth_remote() {
+  local target="$1"
+  local script="$REMOTE_ROOT/exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v2_4host/remote_jobs/check_llm_auth.py"
+  timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" "python '$script'"
+}
+
 start_local() {
   local tool="$1"
   local host="$2"
@@ -88,6 +99,10 @@ run_wave() {
 }
 
 cd "$REMOTE_ROOT"
+check_auth_local
+check_auth_remote "$REMOTE_HOST_24"
+check_auth_remote "$REMOTE_HOST_25"
+check_auth_remote "$REMOTE_HOST_26"
 run_wave llmsr
 run_wave drsr
 echo "QUEUE_DONE $BATCH_NAME"
