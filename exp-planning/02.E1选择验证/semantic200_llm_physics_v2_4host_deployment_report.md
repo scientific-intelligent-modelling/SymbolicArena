@@ -61,32 +61,18 @@
 - host-specific params JSON 可解析
 - launch / remote job shell 语法检查通过
 
-## 当前阻塞
+## 启动状态
 
-实验尚未启动。
+DeepInfra `api_key` 已写入四台机器的 ignored config 文件。
 
-原因：四台都缺少 DeepInfra 鉴权。
+已完成四机 API smoke：
 
-检查结果：
+- `iaaccn23`: `Meta-Llama-3.1-8B-Instruct`, HTTP 200
+- `iaaccn24`: `Meta-Llama-3.1-8B-Instruct-Turbo`, HTTP 200
+- `iaaccn25`: `Meta-Llama-3.1-8B-Instruct`, HTTP 200
+- `iaaccn26`: `Meta-Llama-3.1-8B-Instruct-Turbo`, HTTP 200
 
-- `DEEPINFRA_API_KEY`: missing
-- `benchmark_llm_deepinfra_llama31_8b.config`: exists, but no `api_key`
-- `benchmark_llm_deepinfra_llama31_8b_turbo.config`: exists, but no `api_key`
-
-带确认令牌执行启动脚本时，已按预期在启动任务前失败：
-
-```text
-LLM_AUTH_FAIL no_api_key:benchmark_llm_deepinfra_llama31_8b.config,no_api_key:benchmark_llm_deepinfra_llama31_8b_turbo.config
-EXIT_CODE=2
-```
-
-确认没有任何 `semantic200` tmux 会话在运行。
-
-## 补齐 key 后的启动方式
-
-在四台机器的两份 ignored config 中补入 DeepInfra `api_key`，或在四台机器的运行环境中提供 `DEEPINFRA_API_KEY`。
-
-然后从 `iaaccn23` 启动：
+启动命令：
 
 ```bash
 cd /home/zhangziwen/projects/scientific-intelligent-modelling
@@ -94,4 +80,21 @@ export CONFIRM_SEMANTIC200_LLM_PHYSICS=semantic200_llm_physics_v2_4host
 bash exp-planning/02.E1选择验证/generated/semantic200_llm_physics_v2_4host/launch/run_semantic200_llm_queue.sh
 ```
 
-启动脚本会先做四机鉴权预检；预检不通过不会创建任务 tmux。
+实际通过 `tmux` 队列控制器启动：
+
+```text
+tmux session: semantic200_v2_queue
+batch: semantic200_llm_physics_v2_4host_seed1314_20260429-205250
+queue log: /home/zhangziwen/projects/scientific-intelligent-modelling/experiments/semantic200_llm_physics_v2_4host_seed1314_20260429-205250.queue.log
+```
+
+当前正在运行 `llmsr` wave：
+
+| host | tmux session | logs | progress snapshots |
+|---|---|---:|---:|
+| `iaaccn23` | `semantic200_llmsr_iaaccn23` | 50 | 200 |
+| `iaaccn24` | `semantic200_llmsr_iaaccn24` | 50 | 198 |
+| `iaaccn25` | `semantic200_llmsr_iaaccn25` | 50 | 198 |
+| `iaaccn26` | `semantic200_llmsr_iaaccn26` | 50 | 198 |
+
+`drsr` wave 会在四台 `llmsr` 任务全部结束后由队列控制器自动启动。
