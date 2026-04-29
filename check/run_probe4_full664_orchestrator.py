@@ -122,7 +122,8 @@ def _start_manifest_job(row: dict[str, str], batch_name: str, *, retry: bool) ->
 def _start_seed_jobs(seed: str, batch_name: str, *, retry: bool, manifest_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     jobs = [row for row in manifest_rows if row["seed"] == seed]
     results: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=14) as executor:
+    # SSH 跳板链路对高并发很敏感，启动并发过高会触发 banner timeout。
+    with ThreadPoolExecutor(max_workers=7) as executor:
         future_map = {
             executor.submit(_start_manifest_job, row, batch_name, retry=retry): row
             for row in jobs
@@ -229,7 +230,7 @@ def _summarize(batch_name: str, seed: str, manifest: dict[tuple[str, str, str], 
 
     rows = [manifest[(tool, seed, host)] for tool in TOOLS for host in HOSTS]
     states: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=28) as executor:
+    with ThreadPoolExecutor(max_workers=7) as executor:
         futures = [executor.submit(_read_job_state, row, batch_name) for row in rows]
         for future in as_completed(futures):
             states.append(future.result())
@@ -387,7 +388,7 @@ def main() -> None:
                         ),
                         flush=True,
                     )
-                    with ThreadPoolExecutor(max_workers=8) as executor:
+                    with ThreadPoolExecutor(max_workers=4) as executor:
                         for future in as_completed(
                             [executor.submit(_start_manifest_job, row, args.batch_name, retry=True) for row in stale_rows]
                         ):
