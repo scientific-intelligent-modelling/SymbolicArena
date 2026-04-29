@@ -102,6 +102,15 @@ fi
 
 cd "$REMOTE_ROOT"
 export PYTHONPATH=.
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export BLIS_NUM_THREADS=1
+export RAYON_NUM_THREADS=1
+export TF_NUM_INTRAOP_THREADS=1
+export TF_NUM_INTEROP_THREADS=1
 
 conda run -n {tool['env']} python check/launch_e1_benchmark.py run \\
   --tool {tool['tool_arg']} \\
