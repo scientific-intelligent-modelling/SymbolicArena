@@ -5,7 +5,8 @@
 - `iaaccn23` 作为中心调度节点，维护 pending/running/done 状态。
 - 调度粒度是单个 dataset × tool × seed 任务，机器空闲时持续领取任务。
 - `iaaccn23~29` 每台机器默认最多 100 个并发任务。
-- 每轮 poll 每台机器默认最多新增 2 个任务，用慢启动避免瞬时打爆机器。
+- 每轮 poll 每台机器按负载分段新增任务：load < 50% 补 10 个，
+  load < 70% 补 5 个，load < 80% 补 2 个，避免临界负载时一次性猛塞。
 - 调度器根据 CPU load ratio、内存使用率、已有 probe4 session 数决定是否派发任务。
 - `timed_out` 只表示预算耗尽，不等价于失败；调度完成判定以 launcher
   的任务状态是否收口为准。
@@ -21,7 +22,7 @@ import shlex
 import socket
 import subprocess
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -500,6 +501,46 @@ def _host_can_accept(host_state: dict[str, Any], args: argparse.Namespace) -> tu
     return True, "ok"
 
 
+def _parse_load_tiers(raw: str) -> list[tuple[float, int]]:
+    if not raw.strip():
+        return []
+    tiers: list[tuple[float, int]] = []
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            raise ValueError(f"负载分段格式错误，缺少 ':': {item!r}")
+        threshold_raw, jobs_raw = item.split(":", 1)
+        threshold = float(threshold_raw)
+        jobs = int(jobs_raw)
+        if not 0 < threshold <= 1:
+            raise ValueError(f"负载阈值必须在 (0, 1] 内: {threshold}")
+        if jobs < 0:
+            raise ValueError(f"新增任务数不能为负数: {jobs}")
+        tiers.append((threshold, jobs))
+    if not tiers:
+        return []
+    tiers.sort(key=lambda pair: pair[0])
+    return tiers
+
+
+def _max_new_jobs_for_host(host_state: dict[str, Any], args: argparse.Namespace) -> tuple[int, str]:
+    active_sessions = int(host_state.get("queue_sessions") or 0)
+    hard_slots = max(0, args.max_jobs_per_host - active_sessions)
+    if hard_slots <= 0:
+        return 0, "no_hard_slot"
+
+    load_ratio = float(host_state.get("load_ratio") or 99.0)
+    tiers = args.load_tier_new_jobs_parsed
+    if tiers:
+        for threshold, jobs in tiers:
+            if load_ratio < threshold:
+                return min(jobs, hard_slots), f"load<{threshold:g}:jobs={jobs}"
+        return 0, "load_not_in_tiers"
+    return min(args.max_new_jobs_per_host_per_poll, hard_slots), "fixed_max_new_jobs"
+
+
 def _read_task_status(task: dict[str, Any], *, controller_host: str, use_internal_ips: bool) -> dict[str, Any]:
     host = str(task["assigned_host"])
     tool = str(task["tool"])
@@ -549,6 +590,111 @@ def _read_task_status(task: dict[str, Any], *, controller_host: str, use_interna
     }
 
 
+def _read_task_statuses_bulk(
+    host: str,
+    tasks: list[dict[str, Any]],
+    *,
+    controller_host: str,
+    use_internal_ips: bool,
+) -> dict[str, dict[str, Any]]:
+    if not tasks:
+        return {}
+    task_specs = [
+        {
+            "task_id": str(task["task_id"]),
+            "tool": str(task["tool"]),
+            "seed": int(task["seed"]),
+            "host": str(task["assigned_host"]),
+            "batch_name": str(task["batch_name"]),
+        }
+        for task in tasks
+    ]
+    script = f"""
+import json
+from collections import Counter
+from pathlib import Path
+
+REMOTE_ROOT = Path({str(REMOTE_ROOT)!r})
+DONE_STATUSES = {sorted(DONE_STATUSES)!r}
+TASKS = json.loads({json.dumps(task_specs, ensure_ascii=False)!r})
+out = {{}}
+
+for task in TASKS:
+    status_path = (
+        REMOTE_ROOT
+        / "experiments"
+        / task["batch_name"]
+        / task["tool"]
+        / f"seed{{task['seed']}}"
+        / "tasks"
+        / task["task_id"]
+        / task["host"]
+        / "__launcher__/task_status.jsonl"
+    )
+    latest = {{}}
+    try:
+        if status_path.exists():
+            for line in status_path.read_text(encoding="utf-8", errors="replace").splitlines():
+                try:
+                    item = json.loads(line)
+                except Exception:
+                    continue
+                task_key = item.get("task_key")
+                if isinstance(task_key, str):
+                    latest[task_key] = item
+        counts = Counter(str(item.get("status") or "unknown") for item in latest.values())
+        done = sum(count for status, count in counts.items() if status in DONE_STATUSES)
+        out[task["task_id"]] = {{
+            "read_error": None,
+            "seen": len(latest),
+            "done": done,
+            "errors": counts.get("error", 0),
+            "counts": dict(sorted(counts.items())),
+        }}
+    except Exception as exc:
+        out[task["task_id"]] = {{
+            "read_error": repr(exc),
+            "seen": 0,
+            "done": 0,
+            "errors": 0,
+            "counts": {{}},
+        }}
+
+print(json.dumps(out, ensure_ascii=False))
+"""
+    result = _ssh(
+        host,
+        f"python - <<'PY'\n{script}\nPY",
+        controller_host=controller_host,
+        use_internal_ips=use_internal_ips,
+        timeout=max(60, 2 * len(tasks)),
+    )
+    if result.returncode != 0:
+        return {
+            str(task["task_id"]): {
+                "read_error": (result.stderr or result.stdout).strip(),
+                "seen": 0,
+                "done": 0,
+                "errors": 0,
+                "counts": {},
+            }
+            for task in tasks
+        }
+    try:
+        return json.loads(result.stdout.strip().splitlines()[-1])
+    except Exception as exc:
+        return {
+            str(task["task_id"]): {
+                "read_error": f"bulk status parse failed: {exc}; stdout={result.stdout[:500]!r}",
+                "seen": 0,
+                "done": 0,
+                "errors": 0,
+                "counts": {},
+            }
+            for task in tasks
+        }
+
+
 def _session_running(host: str, session: str, *, controller_host: str, use_internal_ips: bool) -> bool:
     result = _ssh(
         host,
@@ -558,6 +704,19 @@ def _session_running(host: str, session: str, *, controller_host: str, use_inter
         timeout=15,
     )
     return result.returncode == 0
+
+
+def _list_probe4_queue_sessions(host: str, *, controller_host: str, use_internal_ips: bool) -> set[str] | None:
+    result = _ssh(
+        host,
+        "tmux ls 2>/dev/null | cut -d: -f1 | grep '^probe4_full664_queue_' || true",
+        controller_host=controller_host,
+        use_internal_ips=use_internal_ips,
+        timeout=25,
+    )
+    if result.returncode != 0:
+        return None
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
 
 def _start_task_on_host(
@@ -607,14 +766,46 @@ def _start_task_on_host(
 
 
 def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> None:
-    for task_id, task in state["tasks"].items():
-        if task.get("state") != "running":
-            continue
+    running_items = [(task_id, task) for task_id, task in state["tasks"].items() if task.get("state") == "running"]
+    sessions_by_host: dict[str, set[str] | None] = {}
+    for _, task in running_items:
+        host = str(task["assigned_host"])
+        if host not in sessions_by_host:
+            sessions_by_host[host] = _list_probe4_queue_sessions(
+                host,
+                controller_host=args.controller_host,
+                use_internal_ips=args.use_internal_ips,
+            )
+
+    finished_items: list[tuple[str, dict[str, Any]]] = []
+    for task_id, task in running_items:
         host = str(task["assigned_host"])
         session = str(task["session"])
-        if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
+        host_sessions = sessions_by_host.get(host)
+        if host_sessions is not None:
+            if session in host_sessions:
+                continue
+        elif _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
             continue
-        status = _read_task_status(task, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips)
+        finished_items.append((task_id, task))
+
+    finished_by_host: dict[str, list[tuple[str, dict[str, Any]]]] = defaultdict(list)
+    for item in finished_items:
+        finished_by_host[str(item[1]["assigned_host"])].append(item)
+
+    statuses: dict[str, dict[str, Any]] = {}
+    for host, items in finished_by_host.items():
+        host_statuses = _read_task_statuses_bulk(
+            host,
+            [task for _, task in items],
+            controller_host=args.controller_host,
+            use_internal_ips=args.use_internal_ips,
+        )
+        statuses.update(host_statuses)
+
+    for task_id, task in finished_items:
+        host = str(task["assigned_host"])
+        status = statuses.get(task_id) or _read_task_status(task, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips)
         task["status_counts"] = status["counts"]
         expected = int(task["expected"])
         missing = max(0, expected - int(status["seen"]))
@@ -700,8 +891,9 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
             if not can_accept:
                 host_state["dispatch_skip_reason"] = reason
                 continue
-            active_sessions = int(host_state.get("queue_sessions") or 0)
-            available_slots = max(0, min(args.max_new_jobs_per_host_per_poll, args.max_jobs_per_host - active_sessions))
+            available_slots, dispatch_limit_reason = _max_new_jobs_for_host(host_state, args)
+            host_state["dispatch_limit_reason"] = dispatch_limit_reason
+            host_state["available_slots"] = available_slots
             host_dispatched = 0
             for _ in range(available_slots):
                 if not pending_ids:
@@ -747,13 +939,24 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--retry-limit", type=int, default=1)
     parser.add_argument("--max-jobs-per-host", type=int, default=100)
     parser.add_argument("--max-new-jobs-per-host-per-poll", type=int, default=2)
+    parser.add_argument(
+        "--load-tier-new-jobs",
+        default="0.50:10,0.70:5,0.80:2",
+        help=(
+            "按整机 load_ratio 分段设置每台每轮新增任务数，格式如 "
+            "'0.50:10,0.70:5,0.80:2'。设为空字符串时退回 "
+            "--max-new-jobs-per-host-per-poll 固定派发。"
+        ),
+    )
     parser.add_argument("--max-load-ratio", type=float, default=0.80)
     parser.add_argument("--max-memory-used-ratio", type=float, default=0.80)
     parser.add_argument("--min-free-mem-gb", type=float, default=0.0)
     parser.add_argument("--allow-existing-probe4", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--once", action="store_true")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.load_tier_new_jobs_parsed = _parse_load_tiers(args.load_tier_new_jobs)
+    return args
 
 
 def main() -> None:
@@ -775,6 +978,7 @@ def main() -> None:
                 "seeds": args.seeds,
                 "tasks": len(tasks),
                 "tool_config": TOOL_CONFIG,
+                "load_tier_new_jobs": args.load_tier_new_jobs,
                 "dry_run": args.dry_run,
                 "time": _now(),
             },
