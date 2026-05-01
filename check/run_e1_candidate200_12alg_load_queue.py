@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""E1 Candidate-200 / 12 算法负载感知队列调度器。
+"""E1 Candidate-200 / Core50 / 12 算法负载感知队列调度器。
 
 默认只在 `iaaccn23~29` 上调度。设计继承 Probe4 full-664 队列调度器：
 
-- 调度粒度为 `dataset x tool x seed`，当前 E1 重跑默认 12 x 200 x 1。
+- 调度粒度为 `dataset x tool x seed`，E1 默认 12 x 200 x 1；
+  Core50 可通过 `--source-csv/--expected-rows/--queue-root` 复用同一调度器。
 - 每台机器按整机 CPU load ratio 与内存使用率决定是否继续领取任务。
 - 默认派发梯度：load < 50% 每轮补 10 个，load < 70% 补 5 个，
   load < 80% 补 2 个。
@@ -167,11 +168,19 @@ def _scp(local_path: Path, host: str, remote_path: Path, *, controller_host: str
     )
 
 
-def _read_rows(path: Path) -> list[dict[str, str]]:
+def _read_rows(path: Path, *, expected_rows: int | None = 200) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
-    if len(rows) != 200:
-        raise ValueError(f"期望 Candidate-200 任务表有 200 行，实际 {len(rows)} 行: {path}")
+    if expected_rows is not None and len(rows) != expected_rows:
+        raise ValueError(f"期望任务表有 {expected_rows} 行，实际 {len(rows)} 行: {path}")
+    for index, row in enumerate(rows, start=1):
+        # Core50 manifest 使用 core50_index；旧 E1 launcher 依赖 global_index。
+        if not row.get("global_index"):
+            row["global_index"] = row.get("core50_index") or str(index)
+        if not row.get("dataset_rel"):
+            row["dataset_rel"] = row.get("dataset_dir") or ""
+        if not row.get("dataset_name"):
+            row["dataset_name"] = row.get("dataset_id") or row.get("basename") or f"dataset_{index}"
     return rows
 
 
@@ -185,7 +194,7 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
-def _build_tasks(rows: list[dict[str, str]], *, tools: list[str], seeds: list[int]) -> list[QueueTask]:
+def _build_tasks(rows: list[dict[str, str]], *, tools: list[str], seeds: list[int], queue_root: Path) -> list[QueueTask]:
     tasks: list[QueueTask] = []
     for seed in seeds:
         for tool in tools:
@@ -194,7 +203,7 @@ def _build_tasks(rows: list[dict[str, str]], *, tools: list[str], seeds: list[in
                 task_rows = rows[start : start + task_size]
                 global_index = task_rows[0].get("global_index", str(task_index))
                 task_id = f"{tool}_s{seed}_g{int(global_index):04d}"
-                slice_path = QUEUE_ROOT / "slices" / tool / f"seed{seed}" / f"{task_id}.csv"
+                slice_path = queue_root / "slices" / tool / f"seed{seed}" / f"{task_id}.csv"
                 tasks.append(
                     QueueTask(
                         task_id=task_id,
@@ -214,12 +223,12 @@ def _materialize_slices(tasks: list[QueueTask]) -> None:
             _write_csv(task.slice_path, task.rows)
 
 
-def _remote_support_script_path() -> Path:
-    return QUEUE_ROOT / "remote" / "run_queue_task.sh"
+def _remote_support_script_path(queue_root: Path) -> Path:
+    return queue_root / "remote" / "run_queue_task.sh"
 
 
-def _write_remote_support_script() -> Path:
-    path = _remote_support_script_path()
+def _write_remote_support_script(queue_root: Path) -> Path:
+    path = _remote_support_script_path(queue_root)
     content = f"""#!/usr/bin/env bash
 set -euo pipefail
 
@@ -275,16 +284,16 @@ conda run -n "$ENV_NAME" python check/launch_e1_benchmark.py run \\
     return path
 
 
-def _state_path(batch_name: str) -> Path:
-    return QUEUE_ROOT / "state" / f"{batch_name}.state.json"
+def _state_path(batch_name: str, queue_root: Path) -> Path:
+    return queue_root / "state" / f"{batch_name}.state.json"
 
 
-def _summary_path(batch_name: str) -> Path:
-    return QUEUE_ROOT / "state" / f"{batch_name}.latest.json"
+def _summary_path(batch_name: str, queue_root: Path) -> Path:
+    return queue_root / "state" / f"{batch_name}.latest.json"
 
 
-def _log_path(batch_name: str) -> Path:
-    return QUEUE_ROOT / "state" / f"{batch_name}.events.jsonl"
+def _log_path(batch_name: str, queue_root: Path) -> Path:
+    return queue_root / "state" / f"{batch_name}.events.jsonl"
 
 
 def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
@@ -313,8 +322,8 @@ def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
     }
 
 
-def _load_or_init_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
-    path = _state_path(batch_name)
+def _load_or_init_state(batch_name: str, tasks: list[QueueTask], queue_root: Path) -> dict[str, Any]:
+    path = _state_path(batch_name, queue_root)
     if path.exists():
         state = json.loads(path.read_text(encoding="utf-8"))
         expected_ids = {task.task_id for task in tasks}
@@ -326,19 +335,19 @@ def _load_or_init_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, An
             )
         return state
     state = _initial_state(batch_name, tasks)
-    _save_state(state)
+    _save_state(state, queue_root)
     return state
 
 
-def _save_state(state: dict[str, Any]) -> None:
+def _save_state(state: dict[str, Any], queue_root: Path) -> None:
     state["updated_at"] = _now()
-    path = _state_path(state["batch_name"])
+    path = _state_path(state["batch_name"], queue_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _append_event(batch_name: str, payload: dict[str, Any]) -> None:
-    path = _log_path(batch_name)
+def _append_event(batch_name: str, payload: dict[str, Any], queue_root: Path) -> None:
+    path = _log_path(batch_name, queue_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"time": _now(), **payload}
     with path.open("a", encoding="utf-8") as f:
@@ -361,7 +370,7 @@ def _selected_envs(tools: list[str]) -> list[str]:
     return sorted({str(TOOL_CONFIG[tool]["env"]) for tool in tools})
 
 
-def _selected_params(tools: list[str]) -> list[tuple[Path, Path]]:
+def _selected_params(tools: list[str], params_root: Path) -> list[tuple[Path, Path]]:
     pairs: list[tuple[Path, Path]] = []
     seen: set[str] = set()
     for tool in tools:
@@ -369,20 +378,28 @@ def _selected_params(tools: list[str]) -> list[tuple[Path, Path]]:
         if params_name in seen:
             continue
         seen.add(params_name)
-        local_param = PARAMS_ROOT / f"{params_name}.json"
+        local_param = params_root / f"{params_name}.json"
         remote_param = REMOTE_ROOT / local_param.relative_to(REPO_ROOT)
         pairs.append((local_param, remote_param))
     return pairs
 
 
-def _sync_support_to_host(host: str, *, tools: list[str], controller_host: str, use_internal_ips: bool) -> None:
-    support = _write_remote_support_script()
+def _sync_support_to_host(
+    host: str,
+    *,
+    tools: list[str],
+    queue_root: Path,
+    params_root: Path,
+    controller_host: str,
+    use_internal_ips: bool,
+) -> None:
+    support = _write_remote_support_script(queue_root)
     remote_support = REMOTE_ROOT / support.relative_to(REPO_ROOT)
     remote_launcher = REMOTE_ROOT / "check/launch_e1_benchmark.py"
     local_launcher = REPO_ROOT / "check/launch_e1_benchmark.py"
-    local_slices = QUEUE_ROOT / "slices"
+    local_slices = queue_root / "slices"
     remote_slices = REMOTE_ROOT / local_slices.relative_to(REPO_ROOT)
-    param_pairs = _selected_params(tools)
+    param_pairs = _selected_params(tools, params_root)
 
     _remote_mkdir(host, remote_support.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     _remote_mkdir(host, remote_launcher.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
@@ -671,10 +688,10 @@ def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: b
 def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> None:
     config = TOOL_CONFIG[task.tool]
     session = f"{args.session_prefix}{task.task_id}"
-    support_rel = _remote_support_script_path().relative_to(REPO_ROOT)
+    support_rel = _remote_support_script_path(args.queue_root_path).relative_to(REPO_ROOT)
     support_remote = REMOTE_ROOT / support_rel
     slice_rel = _sync_task_slice(task)
-    params_rel = f"exp-planning/02.E1选择验证/generated/params/{config['params']}.json"
+    params_rel = str((args.params_root_path / f"{config['params']}.json").relative_to(REPO_ROOT))
     retry = "retry" if int(state_task.get("attempts") or 0) > 0 else "noretry"
     command = (
         f"cd {shlex.quote(str(REMOTE_ROOT))} && "
@@ -757,16 +774,16 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         errors = int(status.get("errors") or 0)
         if status.get("read_error"):
             task.update({"state": "pending", "error": status["read_error"]})
-            _append_event(args.batch_name, {"event": "task_status_read_failed", "task_id": task_id, "host": host, "error": status["read_error"]})
+            _append_event(args.batch_name, {"event": "task_status_read_failed", "task_id": task_id, "host": host, "error": status["read_error"]}, args.queue_root_path)
         elif int(status.get("done") or 0) == expected and errors == 0:
             task.update({"state": "done", "ended_at": _now(), "error": None})
-            _append_event(args.batch_name, {"event": "task_done", "task_id": task_id, "host": host, "status_counts": status.get("counts", {})})
+            _append_event(args.batch_name, {"event": "task_done", "task_id": task_id, "host": host, "status_counts": status.get("counts", {})}, args.queue_root_path)
         elif int(task.get("attempts") or 0) <= args.retry_limit:
             task.update({"state": "pending", "error": f"未完整收口: missing={missing}, errors={errors}"})
-            _append_event(args.batch_name, {"event": "task_retry_pending", "task_id": task_id, "host": host, "status": status})
+            _append_event(args.batch_name, {"event": "task_retry_pending", "task_id": task_id, "host": host, "status": status}, args.queue_root_path)
         else:
             task.update({"state": "failed", "ended_at": _now(), "error": f"超过重试上限: missing={missing}, errors={errors}"})
-            _append_event(args.batch_name, {"event": "task_failed", "task_id": task_id, "host": host, "status": status})
+            _append_event(args.batch_name, {"event": "task_failed", "task_id": task_id, "host": host, "status": status}, args.queue_root_path)
 
 
 def _summarize_state(state: dict[str, Any], host_states: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -785,7 +802,7 @@ def _summarize_state(state: dict[str, Any], host_states: list[dict[str, Any]] | 
 
 
 def _write_summary(state: dict[str, Any], host_states: list[dict[str, Any]] | None = None) -> None:
-    path = _summary_path(state["batch_name"])
+    path = _summary_path(state["batch_name"], Path(state.get("queue_root") or QUEUE_ROOT))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(_summarize_state(state, host_states), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -827,7 +844,8 @@ def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> st
 
 def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
     task_map = {task.task_id: task for task in tasks}
-    state = _load_or_init_state(args.batch_name, tasks)
+    state = _load_or_init_state(args.batch_name, tasks, args.queue_root_path)
+    state["queue_root"] = str(args.queue_root_path)
 
     if args.dry_run:
         print(json.dumps(_summarize_state(state), ensure_ascii=False, indent=2))
@@ -836,11 +854,18 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
     ready_hosts: list[str] = []
     for host in args.hosts:
         try:
-            _sync_support_to_host(host, tools=args.tools, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips)
-            _append_event(args.batch_name, {"event": "support_synced", "host": host})
+            _sync_support_to_host(
+                host,
+                tools=args.tools,
+                queue_root=args.queue_root_path,
+                params_root=args.params_root_path,
+                controller_host=args.controller_host,
+                use_internal_ips=args.use_internal_ips,
+            )
+            _append_event(args.batch_name, {"event": "support_synced", "host": host}, args.queue_root_path)
             ready_hosts.append(host)
         except Exception as exc:
-            _append_event(args.batch_name, {"event": "support_sync_failed", "host": host, "error": repr(exc)})
+            _append_event(args.batch_name, {"event": "support_sync_failed", "host": host, "error": repr(exc)}, args.queue_root_path)
     if not ready_hosts:
         raise SystemExit("没有任何机器完成支持文件和队列切片同步，停止调度。")
 
@@ -872,15 +897,15 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                     _start_task_on_host(task, host, state_task, args)
                     dispatched += 1
                     host_dispatched += 1
-                    _append_event(args.batch_name, {"event": "task_started", "task_id": task_id, "host": host, "tool": task.tool, "seed": task.seed})
+                    _append_event(args.batch_name, {"event": "task_started", "task_id": task_id, "host": host, "tool": task.tool, "seed": task.seed}, args.queue_root_path)
                 except Exception as exc:
                     state_task["error"] = repr(exc)
-                    _append_event(args.batch_name, {"event": "task_start_failed", "task_id": task_id, "host": host, "error": repr(exc)})
+                    _append_event(args.batch_name, {"event": "task_start_failed", "task_id": task_id, "host": host, "error": repr(exc)}, args.queue_root_path)
                     # 启动失败不立即丢弃任务，下轮继续尝试。
                     break
             host_state["dispatched"] = host_dispatched
 
-        _save_state(state)
+        _save_state(state, args.queue_root_path)
         _write_summary(state, host_states)
         summary = _summarize_state(state, host_states)
         print(json.dumps({"event": "queue_poll", "dispatched": dispatched, **{k: v for k, v in summary.items() if k != "hosts"}}, ensure_ascii=False), flush=True)
@@ -1296,6 +1321,10 @@ def _run_preflight(args: argparse.Namespace) -> dict[str, Any]:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="E1 Candidate-200 / 12 算法负载感知队列调度器")
     parser.add_argument("--batch-name", default=f"e1_candidate200_12alg_queue_{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+    parser.add_argument("--source-csv", default=str(SOURCE_CSV), help="任务数据集清单 CSV，需包含 dataset_dir；Core50 可传 core50_datasets.csv。")
+    parser.add_argument("--expected-rows", type=int, default=200, help="任务清单期望行数；传 0 表示不校验。")
+    parser.add_argument("--queue-root", default=str(QUEUE_ROOT), help="本地/远端仓库内队列状态、切片和支持脚本目录。")
+    parser.add_argument("--params-root", default=str(PARAMS_ROOT), help="参数 JSON 所在目录。")
     parser.add_argument("--hosts", nargs="+", default=list(DEFAULT_HOSTS))
     parser.add_argument("--tools", nargs="+", default=list(DEFAULT_TOOLS), choices=sorted(TOOL_CONFIG))
     parser.add_argument("--seeds", nargs="+", type=int, default=list(DEFAULT_SEEDS))
@@ -1324,6 +1353,16 @@ def _parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     args.load_tier_new_jobs_parsed = _parse_load_tiers(args.load_tier_new_jobs)
     args.tools = [str(tool).strip().lower() for tool in args.tools]
+    args.source_csv_path = Path(args.source_csv).expanduser()
+    if not args.source_csv_path.is_absolute():
+        args.source_csv_path = REPO_ROOT / args.source_csv_path
+    args.queue_root_path = Path(args.queue_root).expanduser()
+    if not args.queue_root_path.is_absolute():
+        args.queue_root_path = REPO_ROOT / args.queue_root_path
+    args.params_root_path = Path(args.params_root).expanduser()
+    if not args.params_root_path.is_absolute():
+        args.params_root_path = REPO_ROOT / args.params_root_path
+    args.expected_rows_value = None if args.expected_rows == 0 else args.expected_rows
     unknown = sorted(set(args.tools) - set(TOOL_CONFIG))
     if unknown:
         raise SystemExit(f"未知工具: {unknown}")
@@ -1332,13 +1371,16 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
-    rows = _read_rows(SOURCE_CSV)
-    tasks = _build_tasks(rows, tools=args.tools, seeds=args.seeds)
+    rows = _read_rows(args.source_csv_path, expected_rows=args.expected_rows_value)
+    tasks = _build_tasks(rows, tools=args.tools, seeds=args.seeds, queue_root=args.queue_root_path)
     print(
         json.dumps(
             {
                 "event": "queue_start",
                 "batch_name": args.batch_name,
+                "source_csv": str(args.source_csv_path),
+                "queue_root": str(args.queue_root_path),
+                "params_root": str(args.params_root_path),
                 "hosts": args.hosts,
                 "tools": args.tools,
                 "seeds": args.seeds,
@@ -1359,7 +1401,7 @@ def main() -> None:
         return
     if not args.dry_run:
         _materialize_slices(tasks)
-        _write_remote_support_script()
+        _write_remote_support_script(args.queue_root_path)
     _run_scheduler(tasks, args)
 
 
