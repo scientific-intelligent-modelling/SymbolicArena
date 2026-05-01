@@ -130,8 +130,7 @@
       "comments": "TPSR (Transformer-based Planning for Symbolic Regression)环境",
       "post_install_commands": [
         "pip install -e .",
-        "pip install -e ./scientific_intelligent_modelling/algorithms/tpsr_wrapper/tpsr/nesymres/src"
-        ,
+        "pip install --no-deps -e ./scientific_intelligent_modelling/algorithms/tpsr_wrapper/tpsr/nesymres/src",
         "python -c \"from pathlib import Path; import urllib.request; p=Path('scientific_intelligent_modelling/algorithms/e2esr_wrapper/model.pt'); p.parent.mkdir(parents=True, exist_ok=True); p.exists() or urllib.request.urlretrieve('https://dl.fbaipublicfiles.com/symbolicregression/model1.pt', str(p))\""
       ]
     },

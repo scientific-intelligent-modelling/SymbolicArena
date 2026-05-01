@@ -573,22 +573,21 @@ def conda_env_exists(env_name: str) -> bool:
 
 def install_env(env_name: str, env_config: dict, log_file) -> dict:
     env_dir = REMOTE_CONDA_ENVS / env_name
-    if env_dir.exists():
-        log_file.write(f"[skip] {env_name} already exists at {env_dir}; not overwriting.\n")
-        return {"env": env_name, "ok": True, "skipped": "exists"}
-
     python_version = str(env_config.get("python_version") or "3.10")
     conda_packages = [str(pkg) for pkg in env_config.get("conda_packages", [])]
     pip_packages = [str(pkg) for pkg in env_config.get("pip_packages", [])]
     channels = [str(channel) for channel in env_config.get("channels", [])]
     post_commands = [str(command) for command in env_config.get("post_install_commands", [])]
 
-    create_cmd = ["conda", "create", "-y", "-n", env_name, f"python={python_version}", *conda_packages]
-    for channel in channels:
-        create_cmd.extend(["-c", channel])
-    rc = run(shell_join(create_cmd), log_file, cwd=REMOTE_ROOT)
-    if rc != 0:
-        return {"env": env_name, "ok": False, "stage": "conda_create", "returncode": rc}
+    if env_dir.exists():
+        log_file.write(f"[repair] {env_name} already exists at {env_dir}; installing configured packages in-place.\n")
+    else:
+        create_cmd = ["conda", "create", "-y", "-n", env_name, f"python={python_version}", *conda_packages]
+        for channel in channels:
+            create_cmd.extend(["-c", channel])
+        rc = run(shell_join(create_cmd), log_file, cwd=REMOTE_ROOT)
+        if rc != 0:
+            return {"env": env_name, "ok": False, "stage": "conda_create", "returncode": rc}
 
     for package in pip_packages:
         cmd = shell_join(["conda", "run", "-n", env_name, "python", "-m", "pip", "install", package])
@@ -597,7 +596,13 @@ def install_env(env_name: str, env_config: dict, log_file) -> dict:
             return {"env": env_name, "ok": False, "stage": "pip_install", "package": package, "returncode": rc}
 
     for command in post_commands:
-        cmd = f"cd {shlex.quote(str(REMOTE_ROOT))} && conda run -n {shlex.quote(env_name)} bash -lc {shlex.quote(command)}"
+        stripped = command.strip()
+        if stripped.startswith("pip "):
+            cmd = f"cd {shlex.quote(str(REMOTE_ROOT))} && conda run -n {shlex.quote(env_name)} python -m pip {stripped[4:]}"
+        elif stripped.startswith("python "):
+            cmd = f"cd {shlex.quote(str(REMOTE_ROOT))} && conda run -n {shlex.quote(env_name)} python {stripped[7:]}"
+        else:
+            cmd = f"cd {shlex.quote(str(REMOTE_ROOT))} && conda run -n {shlex.quote(env_name)} bash -lc {shlex.quote(command)}"
         rc = run(cmd, log_file, cwd=REMOTE_ROOT)
         if rc != 0:
             return {"env": env_name, "ok": False, "stage": "post_install", "command": command, "returncode": rc}
@@ -652,7 +657,7 @@ def launch_missing_env_installers(host_reports: list[dict[str, Any]]) -> list[di
         missing_envs = [
             env
             for env, item in sorted(report.get("envs", {}).items())
-            if not item.get("ok") and not item.get("env_dir_exists")
+            if not item.get("ok")
         ]
         if not missing_envs:
             actions.append({"host": host, "ok": True, "skipped": "no_missing_envs"})
