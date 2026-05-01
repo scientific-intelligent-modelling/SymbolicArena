@@ -68,6 +68,7 @@ class DSORegressor(BaseWrapper):
         self._dso_equation = None
         self._dso_expression = None
         self._dso_pred_fn = None
+        self._dso_pred_constant = None
         self._dso_var_count = 0
         self._dso_input_indices = []
         self._dso_n_features = None
@@ -279,6 +280,7 @@ class DSORegressor(BaseWrapper):
             self._dso_equation = None
             self._dso_expression = None
             self._dso_pred_fn = None
+            self._dso_pred_constant = None
             self._dso_var_count = 0
             return
 
@@ -293,6 +295,7 @@ class DSORegressor(BaseWrapper):
         except (SympifyError, TypeError, SyntaxError, ValueError):
             self._dso_var_count = 0
             self._dso_pred_fn = None
+            self._dso_pred_constant = None
             return
 
         raw_indices = []
@@ -309,6 +312,10 @@ class DSORegressor(BaseWrapper):
             self._dso_var_count = 0
             self._dso_pred_fn = None
             self._dso_input_indices = []
+            try:
+                self._dso_pred_constant = float(expr)
+            except Exception:
+                self._dso_pred_constant = None
             return
 
         one_based = 0 not in raw_indices
@@ -318,12 +325,14 @@ class DSORegressor(BaseWrapper):
             if mapped < 0:
                 self._dso_var_count = 0
                 self._dso_pred_fn = None
+                self._dso_pred_constant = None
                 self._dso_input_indices = []
                 return
             input_indices.append(mapped)
 
         self._dso_var_count = max(input_indices) + 1
         self._dso_pred_fn = None
+        self._dso_pred_constant = None
         self._dso_input_indices = input_indices
 
         if self._dso_var_count <= 0:
@@ -334,12 +343,15 @@ class DSORegressor(BaseWrapper):
         self._dso_pred_fn = lambdify(symbols, expr, modules="numpy")
 
     def _predict_with_cached_fn(self, X):
-        if self._dso_pred_fn is None:
-            raise RuntimeError("DSO 反序列化模型不包含可执行方程，无法继续执行 predict")
-
         x_arr = np.asarray(X, dtype=float)
         if x_arr.ndim == 1:
             x_arr = x_arr.reshape(1, -1)
+
+        if self._dso_pred_constant is not None:
+            return np.full(x_arr.shape[0], float(self._dso_pred_constant), dtype=float)
+
+        if self._dso_pred_fn is None:
+            raise RuntimeError("DSO 反序列化模型不包含可执行方程，无法继续执行 predict")
 
         n_features = x_arr.shape[1] if x_arr.ndim > 1 else 0
         if n_features < self._dso_var_count:
@@ -351,7 +363,7 @@ class DSORegressor(BaseWrapper):
     
     def predict(self, X):
         if self.model is None:
-            if self._dso_pred_fn is not None:
+            if self._dso_pred_fn is not None or self._dso_pred_constant is not None:
                 return self._predict_with_cached_fn(X)
             raise ValueError("模型尚未训练，请先调用fit方法")
         if hasattr(self.model, "predict"):
@@ -394,6 +406,8 @@ class DSORegressor(BaseWrapper):
 
     def __setstate__(self, state: Dict[str, Any]):
         self.__dict__.update(state)
+        if not hasattr(self, "_dso_pred_constant"):
+            self._dso_pred_constant = None
         if self.model is not None:
             self.model = None
         if self._dso_expression:
