@@ -12,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE200_CSV = REPO_ROOT / "experiment-results/benchmark_selection_dossier_20260422/tables/stage1_candidate200_flat.csv"
 OUTPUT_ROOT = REPO_ROOT / "exp-planning/02.E1选择验证"
 GENERATED_ROOT = OUTPUT_ROOT / "generated"
-REMOTE_PROJECT_ROOT = "/home/zhangziwen/projects/scientific-intelligent-modelling"
+REMOTE_PROJECT_ROOT = "/home/zhangziwen/workplace/scientific-intelligent-modelling"
 REMOTE_DATA_ROOT = "/home/zhangziwen/sim-datasets-data"
 SEED = 1314
 
