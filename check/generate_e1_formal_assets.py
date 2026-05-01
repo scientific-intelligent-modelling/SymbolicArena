@@ -16,10 +16,7 @@ REMOTE_PROJECT_ROOT = "/home/zhangziwen/projects/scientific-intelligent-modellin
 REMOTE_DATA_ROOT = "/home/zhangziwen/sim-datasets-data"
 SEED = 1314
 
-NEUTRAL_SR_BACKGROUND = (
-    "This is a symbolic regression task. "
-    "Find a compact mathematical equation that predicts the target from the observed variables."
-)
+BENCHMARK_LLM_CONFIG = f"{REMOTE_PROJECT_ROOT}/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config"
 
 
 def _load_rows(csv_path: Path) -> list[dict[str, str]]:
@@ -114,10 +111,12 @@ WAVE_CONFIGS = [
             "niterations": 100000,
             "samples_per_iteration": 4,
             "max_params": 10,
-            "inject_prompt_semantics": False,
-            "background": NEUTRAL_SR_BACKGROUND,
+            # E1 重跑中 LLM 类算法使用物理语义 prompt：
+            # runner 会从 metadata.yaml 构造 background / feature descriptions。
+            "inject_prompt_semantics": True,
+            "canonical_prompt_variables": True,
             "persist_all_samples": False,
-            "llm_config_path": f"{REMOTE_PROJECT_ROOT}/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+            "llm_config_path": BENCHMARK_LLM_CONFIG,
         },
     },
     {
@@ -157,9 +156,10 @@ WAVE_CONFIGS = [
             "niterations": 100000,
             "samples_per_iteration": 4,
             "max_params": 10,
+            "inject_prompt_semantics": True,
+            "canonical_prompt_variables": True,
             "persist_all_samples": False,
-            "background": NEUTRAL_SR_BACKGROUND,
-            "llm_config_path": f"{REMOTE_PROJECT_ROOT}/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+            "llm_config_path": BENCHMARK_LLM_CONFIG,
         },
     },
     {
