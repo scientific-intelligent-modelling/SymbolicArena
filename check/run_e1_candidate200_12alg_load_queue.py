@@ -117,6 +117,8 @@ def _target_for_host(host: str, *, controller_host: str, use_internal_ips: bool)
 def _is_local_host(host: str, controller_host: str) -> bool:
     local_names = {socket.gethostname(), socket.getfqdn(), "localhost", "127.0.0.1"}
     short_names = {name.split(".")[0] for name in local_names}
+    if os.environ.get("SIM_QUEUE_CONTROLLER_IS_LOCAL") == "1" and host == controller_host:
+        return True
     del controller_host
     return host in local_names or host in short_names
 
