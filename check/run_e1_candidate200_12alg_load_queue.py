@@ -1115,6 +1115,14 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
             _probe_host(host, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, session_prefix=args.session_prefix)
             for host in ready_hosts
         ]
+        _append_event(
+            args.batch_name,
+            {
+                "event": "host_probe",
+                "hosts": host_states,
+            },
+            args.queue_root_path,
+        )
 
         dispatched = 0
         for host_state in sorted(host_states, key=lambda item: float(item.get("load_ratio") or 99.0)):
