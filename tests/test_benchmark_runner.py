@@ -58,6 +58,19 @@ class _FakeRegressor:
         }
 
 
+class _RecordingRegressor(_FakeRegressor):
+    last_fit_y = None
+    last_params = None
+
+    def __init__(self, tool_name, problem_name=None, seed=1314, **kwargs):
+        type(self).last_params = dict(kwargs)
+        super().__init__(tool_name, problem_name=problem_name, seed=seed, **kwargs)
+
+    def fit(self, X, y):
+        type(self).last_fit_y = np.asarray(y, dtype=float).reshape(-1).copy()
+        return super().fit(X, y)
+
+
 class _TimeoutFakeRegressor(_FakeRegressor):
     def fit(self, X, y):
         raise TimeoutError("fit timeout")
@@ -606,6 +619,90 @@ dataset:
             self.assertEqual(params["n_features"], 2)
             self.assertEqual(params["feature_names"], ["feature_a", "feature_b"])
             self.assertEqual(params["target_name"], "output")
+
+    def test_train_label_noise_only_affects_fit_labels_and_keeps_clean_metrics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            dataset_dir.mkdir()
+            (dataset_dir / "metadata.yaml").write_text(
+                """
+dataset:
+  target:
+    name: y
+  features:
+    - name: x0
+""".strip(),
+                encoding="utf-8",
+            )
+            for name, rows in {
+                "train.csv": "x0,y\n1,1\n2,2\n3,3\n4,4\n",
+                "valid.csv": "x0,y\n5,5\n",
+                "id_test.csv": "x0,y\n6,6\n",
+                "ood_test.csv": "x0,y\n7,7\n",
+            }.items():
+                (dataset_dir / name).write_text(rows, encoding="utf-8")
+
+            original_cls = runner.SymbolicRegressor
+            runner.SymbolicRegressor = _RecordingRegressor
+            try:
+                result_path = runner.run_benchmark_task(
+                    tool_name="gplearn",
+                    dataset_dir=dataset_dir,
+                    output_root=root / "bench_results",
+                    seed=42,
+                    params_override={
+                        "train_label_noise_enabled": True,
+                        "train_label_noise_sigma": 0.10,
+                    },
+                )
+            finally:
+                runner.SymbolicRegressor = original_cls
+
+            clean_y = np.asarray([1.0, 2.0, 3.0, 4.0])
+            self.assertIsNotNone(_RecordingRegressor.last_fit_y)
+            self.assertFalse(np.allclose(_RecordingRegressor.last_fit_y, clean_y))
+            self.assertNotIn("train_label_noise_enabled", _RecordingRegressor.last_params)
+            self.assertNotIn("train_label_noise_sigma", _RecordingRegressor.last_params)
+
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "ok")
+            self.assertTrue(result["train_label_noise"]["enabled"])
+            self.assertEqual(result["train_label_noise"]["sigma"], 0.10)
+            self.assertAlmostEqual(result["train_label_noise"]["scale"], 0.10 * float(np.std(clean_y)))
+            self.assertEqual(result["train"]["nmse"], 0.0)
+            self.assertEqual(result["valid"]["nmse"], 0.0)
+            self.assertEqual(result["id_test"]["nmse"], 0.0)
+            self.assertEqual(result["ood_test"]["nmse"], 0.0)
+
+    def test_train_label_noise_is_reproducible_for_same_dataset_seed_and_sigma(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            dataset_dir.mkdir()
+            (dataset_dir / "metadata.yaml").write_text(
+                """
+dataset:
+  target:
+    name: y
+  features:
+    - name: x0
+""".strip(),
+                encoding="utf-8",
+            )
+            (dataset_dir / "train.csv").write_text("x0,y\n1,1\n2,2\n3,3\n4,4\n", encoding="utf-8")
+
+            dataset = runner.load_canonical_dataset(dataset_dir)
+            params_1 = {"train_label_noise_sigma": 0.05}
+            params_2 = {"train_label_noise_sigma": 0.05}
+            config_1 = runner._resolve_train_label_noise_config(params_1, dataset=dataset, seed=7)
+            config_2 = runner._resolve_train_label_noise_config(params_2, dataset=dataset, seed=7)
+            np.testing.assert_allclose(
+                runner._train_labels_for_fit(dataset.train, config_1),
+                runner._train_labels_for_fit(dataset.train, config_2),
+            )
+            self.assertEqual(params_1, {})
+            self.assertEqual(params_2, {})
 
 
 class SrsdDistractorTest(unittest.TestCase):

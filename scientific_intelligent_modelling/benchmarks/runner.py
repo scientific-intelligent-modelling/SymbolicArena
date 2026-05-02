@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import math
 import re
@@ -60,6 +61,21 @@ _RUNNER_TASK_IDENTITY_PARAM_KEYS = {
 _NEUTRAL_SR_BACKGROUND = (
     "This is a symbolic regression task. "
     "Find a compact mathematical equation that predicts the target from the observed variables."
+)
+_TRAIN_LABEL_NOISE_ENABLED_KEYS = (
+    "train_label_noise_enabled",
+    "label_noise_enabled",
+    "add_train_label_noise",
+)
+_TRAIN_LABEL_NOISE_SIGMA_KEYS = (
+    "train_label_noise_sigma",
+    "label_noise_sigma",
+    "noise_sigma",
+)
+_TRAIN_LABEL_NOISE_SEED_KEYS = (
+    "train_label_noise_seed",
+    "label_noise_seed",
+    "noise_seed",
 )
 
 
@@ -233,6 +249,83 @@ def _as_bool(value: Any, default: bool = True) -> bool:
         if text in {"1", "true", "yes", "on"}:
             return True
     return bool(value)
+
+
+def _pop_first_key(params: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        if key in params:
+            return params.pop(key)
+    return None
+
+
+def _as_optional_nonnegative_float(value: Any, *, field_name: str) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        number = float(value)
+    except Exception as exc:
+        raise ValueError(f"{field_name} 必须是非负有限数值，当前为: {value!r}") from exc
+    if math.isnan(number) or math.isinf(number) or number < 0:
+        raise ValueError(f"{field_name} 必须是非负有限数值，当前为: {value!r}")
+    return number
+
+
+def _resolve_train_label_noise_config(
+    params: dict[str, Any],
+    *,
+    dataset: "LoadedDataset",
+    seed: int,
+) -> dict[str, Any]:
+    """解析训练标签噪声配置，并从算法参数中移除框架级噪声字段。
+
+    噪声只作用于传给 `fit()` 的训练标签；dataset 内部 split 保持 clean，
+    因此后续 train/valid/ID/OOD 指标仍按 clean labels 计算。
+    """
+    enabled_raw = _pop_first_key(params, _TRAIN_LABEL_NOISE_ENABLED_KEYS)
+    sigma_raw = _pop_first_key(params, _TRAIN_LABEL_NOISE_SIGMA_KEYS)
+    seed_raw = _pop_first_key(params, _TRAIN_LABEL_NOISE_SEED_KEYS)
+
+    sigma = _as_optional_nonnegative_float(sigma_raw, field_name="train_label_noise_sigma")
+    enabled = _as_bool(enabled_raw, default=(sigma is not None and sigma > 0))
+    if sigma is None:
+        sigma = 0.0
+    if not enabled:
+        sigma = 0.0
+
+    y_clean = np.asarray(dataset.train.y, dtype=float).reshape(-1)
+    y_std = float(np.std(y_clean)) if y_clean.size else 0.0
+    scale = float(sigma * y_std)
+
+    if seed_raw not in (None, ""):
+        try:
+            rng_seed = int(seed_raw) % (2**32)
+        except Exception as exc:
+            raise ValueError(f"train_label_noise_seed 必须是整数，当前为: {seed_raw!r}") from exc
+    else:
+        dataset_identity = _normalize_dataset_identity_path(dataset.dataset_dir) or dataset.dataset_name
+        digest = hashlib.sha256(
+            f"{dataset_identity}|seed={int(seed)}|sigma={sigma:.12g}|train_label_noise".encode("utf-8")
+        ).digest()
+        rng_seed = int.from_bytes(digest[:8], "big") % (2**32)
+
+    return {
+        "enabled": bool(enabled and sigma > 0 and scale > 0),
+        "requested": bool(enabled and sigma > 0),
+        "sigma": float(sigma),
+        "y_std": y_std,
+        "scale": scale,
+        "rng_seed": int(rng_seed),
+        "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation",
+    }
+
+
+def _train_labels_for_fit(split: DatasetSplit, noise_config: dict[str, Any]) -> np.ndarray:
+    y_clean = np.asarray(split.y, dtype=float).reshape(-1)
+    if not noise_config.get("enabled"):
+        return y_clean
+    rng = np.random.default_rng(int(noise_config["rng_seed"]))
+    noise = rng.normal(loc=0.0, scale=float(noise_config["scale"]), size=y_clean.shape)
+    return y_clean + noise
 
 
 def load_canonical_dataset(dataset_dir: str | Path) -> LoadedDataset:
@@ -1441,6 +1534,8 @@ def run_benchmark_task(
         params_override=params_override_clean,
     )
     progress_snapshot_interval_seconds = _resolve_progress_snapshot_interval_seconds(tool_name, params)
+    train_label_noise = _resolve_train_label_noise_config(params, dataset=dataset, seed=seed)
+    y_train_for_fit = _train_labels_for_fit(dataset.train, train_label_noise)
 
     started_at = time.time()
     status = "ok"
@@ -1489,7 +1584,7 @@ def run_benchmark_task(
         snapshot_thread.start()
 
     try:
-        reg.fit(dataset.train.X, dataset.train.y)
+        reg.fit(dataset.train.X, y_train_for_fit)
         experiment_dir = getattr(reg, "experiment_dir", experiment_dir)
         equation = reg.get_optimal_equation()
         canonical_artifact, canonical_artifact_error = safe_export_canonical_artifact(reg)
@@ -1578,6 +1673,7 @@ def run_benchmark_task(
     result["raw_timeout_error"] = raw_timeout_error
     result["recovered_from_timeout"] = timeout_type == "budget_exhausted_with_output"
     result["no_valid_output_reason"] = no_valid_output_reason
+    result["train_label_noise"] = train_label_noise
     if budget_exhausted:
         result["termination_reason"] = timeout_type
     elif status == "no_valid_output":
