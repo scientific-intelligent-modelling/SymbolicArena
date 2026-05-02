@@ -11,6 +11,7 @@ import numpy as np
 
 from ..base_wrapper import BaseWrapper
 from scientific_intelligent_modelling.benchmarks.normalizers import normalize_operon_artifact
+from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
 
 
 class OperonRegressor(BaseWrapper):
@@ -259,7 +260,9 @@ class OperonRegressor(BaseWrapper):
         )
 
     def fit(self, X, y):
-        from pyoperon.sklearn import SymbolicRegressor
+        import pyoperon.sklearn as pyoperon_sklearn
+
+        SymbolicRegressor = pyoperon_sklearn.SymbolicRegressor
         self._validate_explicit_dataset_contract(
             X,
             n_features=self._contract_n_features,
@@ -294,7 +297,8 @@ class OperonRegressor(BaseWrapper):
                     if remaining <= 0:
                         break
                     model.max_time = max(1, int(math.ceil(remaining)))
-                model.fit(X, y)
+                self._fit_pyoperon_model(pyoperon_sklearn, model, X, y)
+                self._select_finite_model_or_raise(model, X)
                 completed += 1
                 self._update_progress_state_from_model(model, completed)
                 if max_time is not None and time.time() - started_at >= max_time:
@@ -302,11 +306,75 @@ class OperonRegressor(BaseWrapper):
         else:
             model = SymbolicRegressor(**params)
             self.model = model
-            model.fit(X, y)
+            self._fit_pyoperon_model(pyoperon_sklearn, model, X, y)
+            self._select_finite_model_or_raise(model, X)
 
         self.best_model_str = self.model.get_model_string(self.model.model_)
         self.pareto_models = self._extract_pareto_models(self.model.pareto_front_)
         return self
+
+    @staticmethod
+    def _fit_pyoperon_model(pyoperon_sklearn, model, X, y):
+        """运行 PyOperon fit，并避免其 pareto 统计阶段因 NaN 候选直接崩溃。"""
+        original_mse = getattr(pyoperon_sklearn, "mean_squared_error", None)
+        if original_mse is None:
+            model.fit(X, y)
+            return
+
+        def finite_guarded_mse(y_true, y_pred, *args, **kwargs):
+            pred = np.asarray(y_pred, dtype=float)
+            true = np.asarray(y_true, dtype=float)
+            if pred.shape != true.shape or pred.size == 0:
+                return float("1e300")
+            if not np.all(np.isfinite(pred)) or not np.all(np.isfinite(true)):
+                return float("1e300")
+            return original_mse(y_true, y_pred, *args, **kwargs)
+
+        pyoperon_sklearn.mean_squared_error = finite_guarded_mse
+        try:
+            model.fit(X, y)
+        except ValueError as exc:
+            if "Input contains NaN" in str(exc):
+                raise NoValidOutputError("PyOperon 候选预测包含 NaN，未产生可有限评估的候选表达式") from exc
+            raise
+        finally:
+            pyoperon_sklearn.mean_squared_error = original_mse
+
+    @staticmethod
+    def _finite_prediction_for_model(model, X):
+        try:
+            pred = np.asarray(model.predict(X), dtype=float).reshape(-1)
+        except Exception:
+            return False
+        return pred.size == np.asarray(X).shape[0] and bool(np.all(np.isfinite(pred)))
+
+    def _select_finite_model_or_raise(self, model, X):
+        """优先保留可有限评估的 pareto 候选，避免 NaN 候选污染最终结果。"""
+        if self._finite_prediction_for_model(model, X):
+            return
+
+        front = getattr(model, "pareto_front_", None) or []
+        criterion = getattr(model, "model_selection_criterion", "minimum_description_length")
+        try:
+            front = sorted(front, key=lambda item: item.get(criterion, float("inf")))
+        except Exception:
+            front = list(front)
+
+        for item in front:
+            if not isinstance(item, dict) or item.get("tree") is None:
+                continue
+            original_model = getattr(model, "model_", None)
+            try:
+                model.model_ = item["tree"]
+                if self._finite_prediction_for_model(model, X):
+                    return
+            except Exception:
+                pass
+            finally:
+                if not self._finite_prediction_for_model(model, X):
+                    model.model_ = original_model
+
+        raise NoValidOutputError("PyOperon 未产生可有限评估的候选表达式")
 
     def predict(self, X):
         if self.model is None:
