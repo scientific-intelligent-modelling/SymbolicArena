@@ -46,13 +46,19 @@ epsilon ~ N(0, 1)
 每个噪声水平：
 
 ```text
-50 datasets x 12 algorithms x 5 seeds = 3000 runs
+50 datasets x 12 algorithms x 3 seeds = 1800 runs
 ```
 
 三个噪声水平总计：
 
 ```text
-9000 runs
+5400 runs
+```
+
+本实验 seed 固定为：
+
+```text
+0, 1, 2
 ```
 
 ## 目录约定
@@ -109,25 +115,25 @@ tool | seed | global_index | dataset_dir
 ```
 
 因此同一个 `tool x dataset x seed` 会稳定落到同一个桶；不同 seed 会自然交错。
-在 Core-50 的 5 seeds 设置下，单个 `tool x sigma` 的 250 条 LLM 任务会近似分成：
+在 Core-50 的 3 seeds 设置下，单个 `tool x sigma` 的 150 条 LLM 任务会近似分成：
 
 ```text
-base  ~= 125
-turbo ~= 125
+base  ~= 75
+turbo ~= 75
 ```
 
 两个 LLM 算法合计，每个 `sigma`：
 
 ```text
-llmsr: 250 runs -> base/turbo 各约 125
-drsr:  250 runs -> base/turbo 各约 125
-LLM total: 500 runs -> base/turbo 各约 250
+llmsr: 150 runs -> base/turbo 各约 75
+drsr:  150 runs -> base/turbo 各约 75
+LLM total: 300 runs -> base/turbo 各约 150
 ```
 
 三个噪声水平合计：
 
 ```text
-LLM total: 1500 runs -> base/turbo 各约 750
+LLM total: 900 runs -> base/turbo 各约 450
 ```
 
 注意：
