@@ -47,6 +47,7 @@ REMOTE_DATA_ROOT = Path("/home/zhangziwen/sim-datasets-data")
 DEFAULT_HOSTS = ("iaaccn23", "iaaccn24", "iaaccn25", "iaaccn26", "iaaccn27", "iaaccn28", "iaaccn29")
 DEFAULT_SEEDS = (1314,)
 DONE_STATUSES = {"ok", "timed_out", "no_valid_output"}
+LLM_TOOLS = {"llmsr", "drsr"}
 
 
 TOOL_CONFIG: dict[str, dict[str, Any]] = {
@@ -75,6 +76,8 @@ class QueueTask:
     task_index: int
     rows: list[dict[str, str]]
     slice_path: Path
+    params_name: str
+    llm_model_bucket: str | None = None
 
     @property
     def expected(self) -> int:
@@ -186,6 +189,116 @@ def _read_rows(path: Path, *, expected_rows: int | None = 200) -> list[dict[str,
     return rows
 
 
+def _parse_named_ints(raw: str) -> dict[str, int]:
+    limits: dict[str, int] = {}
+    if not raw.strip():
+        return limits
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            raise ValueError(f"键值格式错误，缺少 ':': {item!r}")
+        key, value = item.split(":", 1)
+        key = key.strip().lower()
+        if not key:
+            raise ValueError(f"键不能为空: {item!r}")
+        count = int(value)
+        if count < 0:
+            raise ValueError(f"{key} 的限制不能为负数: {count}")
+        limits[key] = count
+    return limits
+
+
+def _infer_llm_bucket_from_params(params_path: Path) -> str | None:
+    if not params_path.exists():
+        return None
+    try:
+        payload = json.loads(params_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    texts = [
+        payload.get("llm_model_assignment"),
+        payload.get("model"),
+        payload.get("llm_model"),
+        payload.get("llm_config_path"),
+    ]
+    llm_config_path = payload.get("llm_config_path")
+    if llm_config_path:
+        try:
+            config_path = Path(str(llm_config_path))
+            if not config_path.is_absolute():
+                config_path = REPO_ROOT / config_path
+            if config_path.exists():
+                config_payload = json.loads(config_path.read_text(encoding="utf-8"))
+                texts.extend(
+                    [
+                        config_payload.get("model"),
+                        config_payload.get("llm_model"),
+                        config_payload.get("llm_model_assignment"),
+                    ]
+                )
+        except Exception:
+            pass
+    joined = " ".join(str(text) for text in texts if text).lower()
+    if "turbo" in joined:
+        return "turbo"
+    if "llama" in joined or "deepinfra" in joined:
+        return "base"
+    return None
+
+
+def _stable_llm_bucket(task_identity: str, buckets: list[str]) -> str:
+    if not buckets:
+        raise ValueError("stable-half 需要至少一个 LLM model bucket")
+    digest = hashlib.sha256(task_identity.encode("utf-8")).digest()
+    return buckets[int.from_bytes(digest[:8], "big") % len(buckets)]
+
+
+def _resolve_task_params_and_bucket(
+    *,
+    tool: str,
+    seed: int,
+    row: dict[str, str],
+    task_index: int,
+    params_root: Path,
+    llm_model_assignment: str,
+    llm_model_buckets: list[str],
+    llm_default_bucket: str,
+) -> tuple[str, str | None]:
+    base_params_name = str(TOOL_CONFIG[tool]["params"])
+    if tool not in LLM_TOOLS:
+        return base_params_name, None
+
+    bucket: str | None = None
+    params_name = base_params_name
+    if llm_model_assignment == "none":
+        bucket = None
+    elif llm_model_assignment == "stable-half":
+        identity = "|".join(
+            [
+                tool,
+                str(seed),
+                str(row.get("global_index") or task_index),
+                str(row.get("dataset_dir") or row.get("dataset_name") or ""),
+            ]
+        )
+        bucket = _stable_llm_bucket(identity, llm_model_buckets)
+        params_name = f"{base_params_name}_{bucket}"
+        params_path = params_root / f"{params_name}.json"
+        if not params_path.exists():
+            raise FileNotFoundError(
+                f"LLM stable-half 模式需要参数文件存在: {params_path}. "
+                "请提供 llmsr_base/turbo.json 与 drsr_base/turbo.json，或改用 --llm-model-assignment from-params。"
+            )
+    elif llm_model_assignment == "from-params":
+        bucket = _infer_llm_bucket_from_params(params_root / f"{base_params_name}.json") or llm_default_bucket
+    else:
+        raise ValueError(f"未知 llm_model_assignment: {llm_model_assignment}")
+
+    return params_name, bucket
+
+
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
@@ -196,8 +309,19 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
-def _build_tasks(rows: list[dict[str, str]], *, tools: list[str], seeds: list[int], queue_root: Path) -> list[QueueTask]:
+def _build_tasks(
+    rows: list[dict[str, str]],
+    *,
+    tools: list[str],
+    seeds: list[int],
+    queue_root: Path,
+    params_root: Path,
+    llm_model_assignment: str = "from-params",
+    llm_model_buckets: list[str] | None = None,
+    llm_default_bucket: str = "base",
+) -> list[QueueTask]:
     tasks: list[QueueTask] = []
+    llm_model_buckets = [bucket.strip().lower() for bucket in (llm_model_buckets or ["base", "turbo"]) if bucket.strip()]
     for seed in seeds:
         for tool in tools:
             task_size = int(TOOL_CONFIG[tool]["task_size"])
@@ -206,6 +330,16 @@ def _build_tasks(rows: list[dict[str, str]], *, tools: list[str], seeds: list[in
                 global_index = task_rows[0].get("global_index", str(task_index))
                 task_id = f"{tool}_s{seed}_g{int(global_index):04d}"
                 slice_path = queue_root / "slices" / tool / f"seed{seed}" / f"{task_id}.csv"
+                params_name, llm_model_bucket = _resolve_task_params_and_bucket(
+                    tool=tool,
+                    seed=seed,
+                    row=task_rows[0],
+                    task_index=task_index,
+                    params_root=params_root,
+                    llm_model_assignment=llm_model_assignment,
+                    llm_model_buckets=llm_model_buckets,
+                    llm_default_bucket=llm_default_bucket,
+                )
                 tasks.append(
                     QueueTask(
                         task_id=task_id,
@@ -214,6 +348,8 @@ def _build_tasks(rows: list[dict[str, str]], *, tools: list[str], seeds: list[in
                         task_index=task_index,
                         rows=task_rows,
                         slice_path=slice_path,
+                        params_name=params_name,
+                        llm_model_bucket=llm_model_bucket,
                     )
                 )
     return tasks
@@ -310,6 +446,8 @@ def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
                 "seed": task.seed,
                 "task_index": task.task_index,
                 "expected": task.expected,
+                "params_name": task.params_name,
+                "llm_model_bucket": task.llm_model_bucket,
                 "state": "pending",
                 "attempts": 0,
                 "assigned_host": None,
@@ -335,6 +473,22 @@ def _load_or_init_state(batch_name: str, tasks: list[QueueTask], queue_root: Pat
                 f"已有 state 与当前任务集合不一致，避免混跑: {path}. "
                 "请换 batch-name，或确认后手动删除旧 state。"
             )
+        task_map = {task.task_id: task for task in tasks}
+        for task_id, task_state in state.get("tasks", {}).items():
+            expected = task_map[task_id]
+            # 旧 state 可能没有这些字段；补齐即可。若已有但不一致，拒绝混跑。
+            for key, expected_value in {
+                "params_name": expected.params_name,
+                "llm_model_bucket": expected.llm_model_bucket,
+            }.items():
+                current = task_state.get(key)
+                if current in (None, ""):
+                    task_state[key] = expected_value
+                elif current != expected_value:
+                    raise SystemExit(
+                        f"已有 state 与当前任务参数不一致，避免混跑: {path}; "
+                        f"task={task_id}, field={key}, state={current!r}, expected={expected_value!r}"
+                    )
         return state
     state = _initial_state(batch_name, tasks)
     _save_state(state, queue_root)
@@ -372,15 +526,17 @@ def _selected_envs(tools: list[str]) -> list[str]:
     return sorted({str(TOOL_CONFIG[tool]["env"]) for tool in tools})
 
 
-def _selected_params(tools: list[str], params_root: Path) -> list[tuple[Path, Path]]:
+def _selected_params(tasks: list[QueueTask], params_root: Path) -> list[tuple[Path, Path]]:
     pairs: list[tuple[Path, Path]] = []
     seen: set[str] = set()
-    for tool in tools:
-        params_name = str(TOOL_CONFIG[tool]["params"])
+    for task in tasks:
+        params_name = task.params_name
         if params_name in seen:
             continue
         seen.add(params_name)
         local_param = params_root / f"{params_name}.json"
+        if not local_param.exists():
+            raise FileNotFoundError(f"参数文件不存在: {local_param}")
         remote_param = REMOTE_ROOT / local_param.relative_to(REPO_ROOT)
         pairs.append((local_param, remote_param))
     return pairs
@@ -390,6 +546,7 @@ def _sync_support_to_host(
     host: str,
     *,
     tools: list[str],
+    tasks: list[QueueTask],
     queue_root: Path,
     params_root: Path,
     controller_host: str,
@@ -401,7 +558,7 @@ def _sync_support_to_host(
     local_launcher = REPO_ROOT / "check/launch_e1_benchmark.py"
     local_slices = queue_root / "slices"
     remote_slices = REMOTE_ROOT / local_slices.relative_to(REPO_ROOT)
-    param_pairs = _selected_params(tools, params_root)
+    param_pairs = _selected_params(tasks, params_root)
 
     _remote_mkdir(host, remote_support.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     _remote_mkdir(host, remote_launcher.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
@@ -693,7 +850,7 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
     support_rel = _remote_support_script_path(args.queue_root_path).relative_to(REPO_ROOT)
     support_remote = REMOTE_ROOT / support_rel
     slice_rel = _sync_task_slice(task)
-    params_rel = str((args.params_root_path / f"{config['params']}.json").relative_to(REPO_ROOT))
+    params_rel = str((args.params_root_path / f"{task.params_name}.json").relative_to(REPO_ROOT))
     retry = "retry" if int(state_task.get("attempts") or 0) > 0 else "noretry"
     command = (
         f"cd {shlex.quote(str(REMOTE_ROOT))} && "
@@ -724,6 +881,8 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
             "ended_at": None,
             "error": None,
             "batch_name": args.batch_name,
+            "params_name": task.params_name,
+            "llm_model_bucket": task.llm_model_bucket,
         }
     )
 
@@ -791,14 +950,21 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
 def _summarize_state(state: dict[str, Any], host_states: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     counts = Counter(task["state"] for task in state["tasks"].values())
     by_tool_state: dict[str, Counter[str]] = {}
+    by_llm_bucket_state: dict[str, Counter[str]] = {}
     for task in state["tasks"].values():
         tool = str(task["tool"])
         by_tool_state.setdefault(tool, Counter())[str(task["state"])] += 1
+        bucket = task.get("llm_model_bucket")
+        if bucket:
+            by_llm_bucket_state.setdefault(str(bucket), Counter())[str(task["state"])] += 1
     return {
         "batch_name": state["batch_name"],
         "time": _now(),
         "task_states": dict(sorted(counts.items())),
         "by_tool": {tool: dict(sorted(counter.items())) for tool, counter in sorted(by_tool_state.items())},
+        "by_llm_model_bucket": {
+            bucket: dict(sorted(counter.items())) for bucket, counter in sorted(by_llm_bucket_state.items())
+        },
         "hosts": host_states or [],
     }
 
@@ -825,22 +991,93 @@ def _running_count_for_tool(state: dict[str, Any], tool: str) -> int:
     return sum(1 for task in state["tasks"].values() if task.get("state") == "running" and task.get("tool") == tool)
 
 
+def _running_count_for_llm_bucket(state: dict[str, Any], bucket: str) -> int:
+    return sum(
+        1
+        for task in state["tasks"].values()
+        if task.get("state") == "running" and str(task.get("llm_model_bucket") or "") == bucket
+    )
+
+
+def _task_within_global_limits(state: dict[str, Any], task_id: str, args: argparse.Namespace) -> tuple[bool, str]:
+    task = state["tasks"][task_id]
+    tool = str(task.get("tool") or "")
+    max_running = int(TOOL_CONFIG[tool].get("max_running") or args.default_max_running_per_tool)
+    if max_running > 0 and _running_count_for_tool(state, tool) >= max_running:
+        return False, f"tool_running_limit:{tool}>={max_running}"
+    bucket = task.get("llm_model_bucket")
+    if bucket:
+        bucket = str(bucket)
+        limit = int(args.llm_model_bucket_limits_parsed.get(bucket, 0))
+        if limit > 0 and _running_count_for_llm_bucket(state, bucket) >= limit:
+            return False, f"llm_bucket_limit:{bucket}>={limit}"
+    return True, "ok"
+
+
+def _first_eligible_pending(pending: list[str], state: dict[str, Any], args: argparse.Namespace) -> str | None:
+    for task_id in pending:
+        ok, _ = _task_within_global_limits(state, task_id, args)
+        if ok:
+            return task_id
+    return None
+
+
+def _ordered_pending_ids_for_tools(state: dict[str, Any], tools: list[str], start: int = 0) -> list[str]:
+    ordered: list[str] = []
+    if not tools:
+        return ordered
+    for offset in range(len(tools)):
+        tool = tools[(start + offset) % len(tools)]
+        ordered.extend(_pending_task_ids_by_tool(state, tool))
+    return ordered
+
+
 def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> str | None:
+    if args.prioritize_llm:
+        llm_tools = [tool for tool in args.tools if tool in LLM_TOOLS]
+        if args.round_robin_tools:
+            llm_start = int(state.get("llm_round_robin_cursor") or 0)
+            llm_pending = _ordered_pending_ids_for_tools(state, llm_tools, start=llm_start)
+        else:
+            llm_pending = [
+                task_id
+                for task_id, task in state["tasks"].items()
+                if task.get("state") == "pending" and task.get("tool") in LLM_TOOLS
+            ]
+        picked = _first_eligible_pending(llm_pending, state, args)
+        if picked is not None:
+            if args.round_robin_tools and llm_tools:
+                picked_tool = str(state["tasks"][picked]["tool"])
+                state["llm_round_robin_cursor"] = (llm_tools.index(picked_tool) + 1) % len(llm_tools)
+            return picked
+        # LLM 还有 pending 但模型桶已满时，继续派发非 LLM，避免整机空转。
+
+    non_llm_tools = [tool for tool in args.tools if tool not in LLM_TOOLS]
     if not args.round_robin_tools:
-        pending = _pending_task_ids(state)
-        return pending[0] if pending else None
+        pending = [
+            task_id
+            for task_id, task in state["tasks"].items()
+            if task.get("state") == "pending" and (not args.prioritize_llm or task.get("tool") not in LLM_TOOLS)
+        ]
+        picked = _first_eligible_pending(pending, state, args)
+        if picked is not None:
+            return picked
+        if args.prioritize_llm:
+            return None
+        return _first_eligible_pending(_pending_task_ids(state), state, args)
+
     tools = list(args.tools)
+    if args.prioritize_llm:
+        tools = non_llm_tools
     start = int(state.get("round_robin_cursor") or 0)
     for offset in range(len(tools)):
         idx = (start + offset) % len(tools)
         tool = tools[idx]
-        max_running = int(TOOL_CONFIG[tool].get("max_running") or args.default_max_running_per_tool)
-        if max_running > 0 and _running_count_for_tool(state, tool) >= max_running:
-            continue
         pending = _pending_task_ids_by_tool(state, tool)
-        if pending:
+        picked = _first_eligible_pending(pending, state, args)
+        if picked:
             state["round_robin_cursor"] = (idx + 1) % len(tools)
-            return pending[0]
+            return picked
     return None
 
 
@@ -859,6 +1096,7 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
             _sync_support_to_host(
                 host,
                 tools=args.tools,
+                tasks=tasks,
                 queue_root=args.queue_root_path,
                 params_root=args.params_root_path,
                 controller_host=args.controller_host,
@@ -899,7 +1137,19 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                     _start_task_on_host(task, host, state_task, args)
                     dispatched += 1
                     host_dispatched += 1
-                    _append_event(args.batch_name, {"event": "task_started", "task_id": task_id, "host": host, "tool": task.tool, "seed": task.seed}, args.queue_root_path)
+                    _append_event(
+                        args.batch_name,
+                        {
+                            "event": "task_started",
+                            "task_id": task_id,
+                            "host": host,
+                            "tool": task.tool,
+                            "seed": task.seed,
+                            "params_name": task.params_name,
+                            "llm_model_bucket": task.llm_model_bucket,
+                        },
+                        args.queue_root_path,
+                    )
                 except Exception as exc:
                     state_task["error"] = repr(exc)
                     _append_event(args.batch_name, {"event": "task_start_failed", "task_id": task_id, "host": host, "error": repr(exc)}, args.queue_root_path)
@@ -1347,6 +1597,37 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--min-free-mem-gb", type=float, default=0.0)
     parser.add_argument("--session-prefix", default="e1_c200_12alg_queue_")
     parser.add_argument("--round-robin-tools", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--prioritize-llm",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="优先派发 llmsr/drsr；若 LLM 模型桶限流占满，则继续派发非 LLM 任务。",
+    )
+    parser.add_argument(
+        "--llm-model-assignment",
+        choices=["from-params", "stable-half", "none"],
+        default="from-params",
+        help=(
+            "LLM 任务模型桶来源。from-params 从 llmsr/drsr 参数文件推断；"
+            "stable-half 按 task identity 稳定分到 base/turbo 并使用 <tool>_<bucket>.json；"
+            "none 表示不做 LLM 模型桶限流。"
+        ),
+    )
+    parser.add_argument(
+        "--llm-model-buckets",
+        default="base,turbo",
+        help="stable-half 可用的模型桶，默认 base,turbo。",
+    )
+    parser.add_argument(
+        "--llm-model-bucket-limits",
+        default="base:100,turbo:100",
+        help="全局 LLM 模型桶 running 上限，例如 base:100,turbo:100；0 表示该桶不限制。",
+    )
+    parser.add_argument(
+        "--llm-default-bucket",
+        default="base",
+        help="from-params 无法从参数文件推断模型时使用的默认桶。",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--preflight-only", action="store_true")
@@ -1354,6 +1635,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--preflight-host-timeout", type=int, default=900)
     args = parser.parse_args()
     args.load_tier_new_jobs_parsed = _parse_load_tiers(args.load_tier_new_jobs)
+    args.llm_model_buckets_parsed = [
+        item.strip().lower() for item in str(args.llm_model_buckets).split(",") if item.strip()
+    ]
+    args.llm_model_bucket_limits_parsed = _parse_named_ints(args.llm_model_bucket_limits)
+    args.llm_default_bucket = str(args.llm_default_bucket).strip().lower()
     args.tools = [str(tool).strip().lower() for tool in args.tools]
     args.source_csv_path = Path(args.source_csv).expanduser()
     if not args.source_csv_path.is_absolute():
@@ -1368,13 +1654,24 @@ def _parse_args() -> argparse.Namespace:
     unknown = sorted(set(args.tools) - set(TOOL_CONFIG))
     if unknown:
         raise SystemExit(f"未知工具: {unknown}")
+    if args.llm_model_assignment == "stable-half" and not args.llm_model_buckets_parsed:
+        raise SystemExit("--llm-model-assignment stable-half 需要 --llm-model-buckets 至少包含一个桶")
     return args
 
 
 def main() -> None:
     args = _parse_args()
     rows = _read_rows(args.source_csv_path, expected_rows=args.expected_rows_value)
-    tasks = _build_tasks(rows, tools=args.tools, seeds=args.seeds, queue_root=args.queue_root_path)
+    tasks = _build_tasks(
+        rows,
+        tools=args.tools,
+        seeds=args.seeds,
+        queue_root=args.queue_root_path,
+        params_root=args.params_root_path,
+        llm_model_assignment=args.llm_model_assignment,
+        llm_model_buckets=args.llm_model_buckets_parsed,
+        llm_default_bucket=args.llm_default_bucket,
+    )
     print(
         json.dumps(
             {
@@ -1389,6 +1686,10 @@ def main() -> None:
                 "tasks": len(tasks),
                 "tool_config": {tool: TOOL_CONFIG[tool] for tool in args.tools},
                 "load_tier_new_jobs": args.load_tier_new_jobs,
+                "prioritize_llm": args.prioritize_llm,
+                "llm_model_assignment": args.llm_model_assignment,
+                "llm_model_buckets": args.llm_model_buckets_parsed,
+                "llm_model_bucket_limits": args.llm_model_bucket_limits_parsed,
                 "dry_run": args.dry_run,
                 "preflight_only": args.preflight_only,
                 "time": _now(),
