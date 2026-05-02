@@ -80,6 +80,62 @@ turbo <= 100 running tasks
 - 优先派发 `llmsr/drsr`。
 - 如果对应 LLM 模型桶已满，则继续派发非 LLM 算法，避免机器空转。
 
+## LLM base/turbo 分发规则
+
+`base` 和 `turbo` 在本实验中视为同一个 Llama-3.1-8B 模型的两个 API 并发桶。
+它们不作为独立算法变体进入 leaderboard。
+
+分发目标：
+
+- `llmsr` 在 `base/turbo` 之间均匀。
+- `drsr` 在 `base/turbo` 之间均匀。
+- 每个 `sigma` 内部均匀。
+- 每个 `seed` 内部均匀。
+- 数据集顺序上交错均匀，避免某个 family 或难度段集中落到同一个桶。
+
+推荐使用调度器参数：
+
+```bash
+--llm-model-assignment stable-half
+--llm-model-buckets base,turbo
+--llm-model-bucket-limits base:100,turbo:100
+--prioritize-llm
+```
+
+`stable-half` 会按如下任务身份做稳定哈希：
+
+```text
+tool | seed | global_index | dataset_dir
+```
+
+因此同一个 `tool x dataset x seed` 会稳定落到同一个桶；不同 seed 会自然交错。
+在 Core-50 的 5 seeds 设置下，单个 `tool x sigma` 的 250 条 LLM 任务会近似分成：
+
+```text
+base  ~= 125
+turbo ~= 125
+```
+
+两个 LLM 算法合计，每个 `sigma`：
+
+```text
+llmsr: 250 runs -> base/turbo 各约 125
+drsr:  250 runs -> base/turbo 各约 125
+LLM total: 500 runs -> base/turbo 各约 250
+```
+
+三个噪声水平合计：
+
+```text
+LLM total: 1500 runs -> base/turbo 各约 750
+```
+
+注意：
+
+- 汇总结果时不要把 `base/turbo` 当作两个模型。
+- `result.json` 中可保留 `params.llm_model_assignment` 或参数文件名用于审计。
+- 如果后续发现某个桶有 API 限流，只需要调低对应 `--llm-model-bucket-limits`，不需要改任务定义。
+
 ## 远端原始结果
 
 远端原始运行目录仍建议使用：
