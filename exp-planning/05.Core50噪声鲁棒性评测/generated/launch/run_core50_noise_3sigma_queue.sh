@@ -33,6 +33,7 @@ COMMON_ARGS=(
   --load-tier-new-jobs "0.50:10,0.70:5,0.80:2"
   --max-load-ratio 0.80
   --max-memory-used-ratio 0.80
+  --host-session-count-prefix core50_noise_
   --llm-model-assignment stable-half
   --llm-model-buckets base,turbo
   --llm-model-bucket-limits base:80,turbo:80
@@ -59,6 +60,22 @@ run_sigma() {
   echo "[$(date '+%F %T')] DONE ${batch_name}" | tee -a "$log_path"
 }
 
-run_sigma sigma001
-run_sigma sigma005
-run_sigma sigma010
+SIGMAS=(${SIGMAS:-sigma001 sigma005 sigma010})
+PARALLEL_SIGMAS="${PARALLEL_SIGMAS:-1}"
+
+if [ "$PARALLEL_SIGMAS" = "1" ]; then
+  pids=()
+  for sigma in "${SIGMAS[@]}"; do
+    run_sigma "$sigma" &
+    pids+=("$!")
+    # 轻微错峰，降低多个控制器首轮同时探测导致的超发概率。
+    sleep 20
+  done
+  for pid in "${pids[@]}"; do
+    wait "$pid"
+  done
+else
+  for sigma in "${SIGMAS[@]}"; do
+    run_sigma "$sigma"
+  done
+fi

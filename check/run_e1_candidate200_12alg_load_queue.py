@@ -736,7 +736,14 @@ def _sync_directory_to_host(
     return result
 
 
-def _probe_host(host: str, *, controller_host: str, use_internal_ips: bool, session_prefix: str) -> dict[str, Any]:
+def _probe_host(
+    host: str,
+    *,
+    controller_host: str,
+    use_internal_ips: bool,
+    session_prefix: str,
+    host_session_count_prefix: str | None = None,
+) -> dict[str, Any]:
     script = rf"""
 import json
 import os
@@ -771,7 +778,7 @@ def session_count(pattern):
 load1, load5, load15 = os.getloadavg()
 cpu_count = os.cpu_count() or 1
 memory = mem_info()
-prefix = {session_prefix!r}
+prefix = {(host_session_count_prefix or session_prefix)!r}
 print(json.dumps({{
     "load1": load1,
     "load5": load5,
@@ -1286,7 +1293,13 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
     while True:
         _update_running_tasks(state, args)
         host_states = [
-            _probe_host(host, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, session_prefix=args.session_prefix)
+            _probe_host(
+                host,
+                controller_host=args.controller_host,
+                use_internal_ips=args.use_internal_ips,
+                session_prefix=args.session_prefix,
+                host_session_count_prefix=args.host_session_count_prefix,
+            )
             for host in ready_hosts
         ]
         _append_event(
@@ -1790,6 +1803,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--max-memory-used-ratio", type=float, default=0.80)
     parser.add_argument("--min-free-mem-gb", type=float, default=0.0)
     parser.add_argument("--session-prefix", default="e1_c200_12alg_queue_")
+    parser.add_argument(
+        "--host-session-count-prefix",
+        default=None,
+        help=(
+            "机器可接收任务判断时统计的 tmux session 前缀。默认等于 --session-prefix；"
+            "多 sigma 并行调度时可设为全局前缀，例如 core50_noise_，避免各控制器互相看不见。"
+        ),
+    )
     parser.add_argument("--round-robin-tools", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
         "--seed-dispatch-mode",
@@ -1845,6 +1866,7 @@ def _parse_args() -> argparse.Namespace:
     args.host_remote_root_overrides_parsed = _parse_host_path_overrides(args.host_remote_root_overrides)
     args.host_remote_data_root_overrides_parsed = _parse_host_path_overrides(args.host_remote_data_root_overrides)
     args.llm_default_bucket = str(args.llm_default_bucket).strip().lower()
+    args.host_session_count_prefix = args.host_session_count_prefix or args.session_prefix
     args.tools = [str(tool).strip().lower() for tool in args.tools]
     args.source_csv_path = Path(args.source_csv).expanduser()
     if not args.source_csv_path.is_absolute():
