@@ -977,6 +977,7 @@ def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: b
 def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> None:
     config = TOOL_CONFIG[task.tool]
     session = f"{args.session_prefix}{task.task_id}"
+    start_log = Path("/tmp") / f"{session}.start.log"
     remote_root = _remote_root_for_host(host, args)
     remote_data_root = _remote_data_root_for_host(host, args)
     support_rel = _remote_support_script_path(args.queue_root_path).relative_to(REPO_ROOT)
@@ -1000,7 +1001,11 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
         f"{shlex.quote(host)} "
         f"{shlex.quote(str(remote_root))} "
         f"{shlex.quote(str(remote_data_root))} "
-        f"{shlex.quote(retry)}"
+        f"{shlex.quote(retry)} "
+        f"</dev/null >{shlex.quote(str(start_log))} 2>&1; "
+        "rc=$?; "
+        f"if [ $rc -ne 0 ]; then cat {shlex.quote(str(start_log))}; fi; "
+        "exit $rc"
     )
     result = _ssh(host, command, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, timeout=30)
     if result.returncode != 0:
