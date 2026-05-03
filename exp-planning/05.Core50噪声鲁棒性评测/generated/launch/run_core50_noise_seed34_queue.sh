@@ -41,6 +41,10 @@ COMMON_ARGS=(
   --seed-dispatch-mode sequential
 )
 
+if [ "${SKIP_SUPPORT_SYNC:-0}" = "1" ]; then
+  COMMON_ARGS+=(--skip-support-sync)
+fi
+
 run_sigma() {
   local sigma_label="$1"
   local batch_name="core50_noise_${sigma_label}_12alg_seed34_${BATCH_SUFFIX}"
