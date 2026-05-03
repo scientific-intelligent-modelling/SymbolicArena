@@ -103,6 +103,10 @@ iaaccn49: /data3/zhangziwen
 `--host-remote-data-root-overrides` 显式注入上述路径，worker 通过
 `SIM_DATA_ROOT` 解析 `sim-datasets-data/...`。
 
+由于部分 48~55 机器的非交互 shell 会污染 `scp/rsync` 协议，本轮采用
+`tar|ssh` 预同步 `params/slices/support`，正式 controller 使用
+`--skip-support-sync` 只负责状态更新与任务派发。
+
 ## LLM 并发约束
 
 `llmsr` 和 `drsr` 需要遵守全局模型桶并发限制：

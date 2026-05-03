@@ -1251,22 +1251,30 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
         return
 
     ready_hosts: list[str] = []
-    for host in args.hosts:
-        try:
-            _sync_support_to_host(
-                host,
-                tools=args.tools,
-                tasks=tasks,
-                queue_root=args.queue_root_path,
-                params_root=args.params_root_path,
-                remote_root=_remote_root_for_host(host, args),
-                controller_host=args.controller_host,
-                use_internal_ips=args.use_internal_ips,
-            )
-            _append_event(args.batch_name, {"event": "support_synced", "host": host}, args.queue_root_path)
-            ready_hosts.append(host)
-        except Exception as exc:
-            _append_event(args.batch_name, {"event": "support_sync_failed", "host": host, "error": repr(exc)}, args.queue_root_path)
+    if args.skip_support_sync:
+        ready_hosts = list(args.hosts)
+        _append_event(
+            args.batch_name,
+            {"event": "support_sync_skipped", "hosts": ready_hosts},
+            args.queue_root_path,
+        )
+    else:
+        for host in args.hosts:
+            try:
+                _sync_support_to_host(
+                    host,
+                    tools=args.tools,
+                    tasks=tasks,
+                    queue_root=args.queue_root_path,
+                    params_root=args.params_root_path,
+                    remote_root=_remote_root_for_host(host, args),
+                    controller_host=args.controller_host,
+                    use_internal_ips=args.use_internal_ips,
+                )
+                _append_event(args.batch_name, {"event": "support_synced", "host": host}, args.queue_root_path)
+                ready_hosts.append(host)
+            except Exception as exc:
+                _append_event(args.batch_name, {"event": "support_sync_failed", "host": host, "error": repr(exc)}, args.queue_root_path)
     if not ready_hosts:
         raise SystemExit("没有任何机器完成支持文件和队列切片同步，停止调度。")
 
@@ -1817,6 +1825,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--skip-support-sync", action="store_true", help="跳过远端 support/slice/params 同步；仅在已手动预同步后使用。")
     parser.add_argument("--preflight-only", action="store_true")
     parser.add_argument("--preflight-report", default=None)
     parser.add_argument("--preflight-host-timeout", type=int, default=900)
@@ -1885,6 +1894,7 @@ def main() -> None:
                 "llm_model_assignment": args.llm_model_assignment,
                 "llm_model_buckets": args.llm_model_buckets_parsed,
                 "llm_model_bucket_limits": args.llm_model_bucket_limits_parsed,
+                "skip_support_sync": args.skip_support_sync,
                 "dry_run": args.dry_run,
                 "preflight_only": args.preflight_only,
                 "time": _now(),

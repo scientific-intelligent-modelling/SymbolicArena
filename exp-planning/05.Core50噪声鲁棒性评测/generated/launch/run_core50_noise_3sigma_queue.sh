@@ -38,6 +38,7 @@ COMMON_ARGS=(
   --llm-model-bucket-limits base:80,turbo:80
   --prioritize-llm
   --seed-dispatch-mode sequential
+  --skip-support-sync
 )
 
 run_sigma() {
