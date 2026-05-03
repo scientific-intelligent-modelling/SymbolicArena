@@ -1593,10 +1593,16 @@ def run_benchmark_task(
             equation_count = len(equations) if isinstance(equations, list) else None
         except Exception:
             equation_count = None
-        train_metrics = _evaluate_split(reg, dataset.train)
-        valid_metrics = _evaluate_split(reg, dataset.valid)
-        id_metrics = _evaluate_split(reg, dataset.id_test)
-        ood_metrics = _evaluate_split(reg, dataset.ood_test)
+        try:
+            train_metrics = _evaluate_split(reg, dataset.train)
+            valid_metrics = _evaluate_split(reg, dataset.valid)
+            id_metrics = _evaluate_split(reg, dataset.id_test)
+            ood_metrics = _evaluate_split(reg, dataset.ood_test)
+        except Exception as exc:
+            # 训练已结束但最终表达式无法预测，属于算法无可评估输出，
+            # 不应被调度器视为系统错误而阻断整轮实验。
+            no_valid_output_reason = f"evaluation_failed: {exc!r}"
+            raise NoValidOutputError(no_valid_output_reason) from exc
     except TimeoutError as exc:
         budget_exhausted = True
         raw_timeout_error = repr(exc)
