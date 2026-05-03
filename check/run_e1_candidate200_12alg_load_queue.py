@@ -985,6 +985,7 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
     config = TOOL_CONFIG[task.tool]
     session = f"{args.session_prefix}{task.task_id}"
     start_log = Path("/tmp") / f"{session}.start.log"
+    submit_log = Path("/tmp") / f"{session}.submit.log"
     remote_root = _remote_root_for_host(host, args)
     remote_data_root = _remote_data_root_for_host(host, args)
     support_rel = _remote_support_script_path(args.queue_root_path).relative_to(REPO_ROOT)
@@ -992,7 +993,7 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
     slice_rel = _sync_task_slice(task)
     params_rel = str((args.params_root_path / f"{task.params_name}.json").relative_to(REPO_ROOT))
     retry = "retry" if int(state_task.get("attempts") or 0) > 0 else "noretry"
-    command = (
+    tmux_command = (
         f"cd {shlex.quote(str(remote_root))} && "
         f"tmux new-session -d -s {shlex.quote(session)} "
         f"/bin/bash {shlex.quote(str(support_remote))} "
@@ -1009,10 +1010,13 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
         f"{shlex.quote(str(remote_root))} "
         f"{shlex.quote(str(remote_data_root))} "
         f"{shlex.quote(retry)} "
-        f"</dev/null >{shlex.quote(str(start_log))} 2>&1; "
-        "rc=$?; "
-        f"if [ $rc -ne 0 ]; then cat {shlex.quote(str(start_log))}; fi; "
-        "exit $rc"
+        f"</dev/null >{shlex.quote(str(start_log))} 2>&1"
+    )
+    command = (
+        # tmux 启动在个别机器上可能很慢；这里让 SSH 只提交后台启动命令，
+        # 避免单台慢机器阻塞整轮 dispatch。
+        f"nohup bash -lc {shlex.quote(tmux_command)} "
+        f"</dev/null >{shlex.quote(str(submit_log))} 2>&1 &"
     )
     result = _ssh(host, command, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, timeout=30)
     if result.returncode != 0:
