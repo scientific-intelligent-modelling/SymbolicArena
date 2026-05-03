@@ -61,6 +61,16 @@ epsilon ~ N(0, 1)
 0, 1, 2
 ```
 
+分发时按 seed 分层派发：
+
+```text
+先派发 seed 0 的所有 pending 任务，
+再派发 seed 1，
+最后派发 seed 2。
+```
+
+该策略控制的是“派发顺序”，不是等待上一个 seed 全部运行结束后才开始下一个 seed。
+
 ## 目录约定
 
 ```text
@@ -106,6 +116,7 @@ turbo <= 100 running tasks
 --llm-model-buckets base,turbo
 --llm-model-bucket-limits base:100,turbo:100
 --prioritize-llm
+--seed-dispatch-mode sequential
 ```
 
 `stable-half` 会按如下任务身份做稳定哈希：

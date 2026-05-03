@@ -975,15 +975,21 @@ def _write_summary(state: dict[str, Any], host_states: list[dict[str, Any]] | No
     path.write_text(json.dumps(_summarize_state(state, host_states), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _pending_task_ids(state: dict[str, Any]) -> list[str]:
-    return [task_id for task_id, task in state["tasks"].items() if task.get("state") == "pending"]
-
-
-def _pending_task_ids_by_tool(state: dict[str, Any], tool: str) -> list[str]:
+def _pending_task_ids(state: dict[str, Any], dispatch_seed: int | None = None) -> list[str]:
     return [
         task_id
         for task_id, task in state["tasks"].items()
-        if task.get("state") == "pending" and task.get("tool") == tool
+        if task.get("state") == "pending" and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
+    ]
+
+
+def _pending_task_ids_by_tool(state: dict[str, Any], tool: str, dispatch_seed: int | None = None) -> list[str]:
+    return [
+        task_id
+        for task_id, task in state["tasks"].items()
+        if task.get("state") == "pending"
+        and task.get("tool") == tool
+        and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
     ]
 
 
@@ -1022,27 +1028,44 @@ def _first_eligible_pending(pending: list[str], state: dict[str, Any], args: arg
     return None
 
 
-def _ordered_pending_ids_for_tools(state: dict[str, Any], tools: list[str], start: int = 0) -> list[str]:
+def _ordered_pending_ids_for_tools(
+    state: dict[str, Any],
+    tools: list[str],
+    start: int = 0,
+    dispatch_seed: int | None = None,
+) -> list[str]:
     ordered: list[str] = []
     if not tools:
         return ordered
     for offset in range(len(tools)):
         tool = tools[(start + offset) % len(tools)]
-        ordered.extend(_pending_task_ids_by_tool(state, tool))
+        ordered.extend(_pending_task_ids_by_tool(state, tool, dispatch_seed))
     return ordered
 
 
+def _active_dispatch_seed(state: dict[str, Any], args: argparse.Namespace) -> int | None:
+    if args.seed_dispatch_mode != "sequential":
+        return None
+    for seed in args.seeds:
+        if _pending_task_ids(state, int(seed)):
+            return int(seed)
+    return None
+
+
 def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> str | None:
+    dispatch_seed = _active_dispatch_seed(state, args)
     if args.prioritize_llm:
         llm_tools = [tool for tool in args.tools if tool in LLM_TOOLS]
         if args.round_robin_tools:
             llm_start = int(state.get("llm_round_robin_cursor") or 0)
-            llm_pending = _ordered_pending_ids_for_tools(state, llm_tools, start=llm_start)
+            llm_pending = _ordered_pending_ids_for_tools(state, llm_tools, start=llm_start, dispatch_seed=dispatch_seed)
         else:
             llm_pending = [
                 task_id
                 for task_id, task in state["tasks"].items()
-                if task.get("state") == "pending" and task.get("tool") in LLM_TOOLS
+                if task.get("state") == "pending"
+                and task.get("tool") in LLM_TOOLS
+                and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
             ]
         picked = _first_eligible_pending(llm_pending, state, args)
         if picked is not None:
@@ -1057,14 +1080,16 @@ def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> st
         pending = [
             task_id
             for task_id, task in state["tasks"].items()
-            if task.get("state") == "pending" and (not args.prioritize_llm or task.get("tool") not in LLM_TOOLS)
+            if task.get("state") == "pending"
+            and (not args.prioritize_llm or task.get("tool") not in LLM_TOOLS)
+            and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
         ]
         picked = _first_eligible_pending(pending, state, args)
         if picked is not None:
             return picked
         if args.prioritize_llm:
             return None
-        return _first_eligible_pending(_pending_task_ids(state), state, args)
+        return _first_eligible_pending(_pending_task_ids(state, dispatch_seed), state, args)
 
     tools = list(args.tools)
     if args.prioritize_llm:
@@ -1073,7 +1098,7 @@ def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> st
     for offset in range(len(tools)):
         idx = (start + offset) % len(tools)
         tool = tools[idx]
-        pending = _pending_task_ids_by_tool(state, tool)
+        pending = _pending_task_ids_by_tool(state, tool, dispatch_seed)
         picked = _first_eligible_pending(pending, state, args)
         if picked:
             state["round_robin_cursor"] = (idx + 1) % len(tools)
@@ -1605,6 +1630,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--min-free-mem-gb", type=float, default=0.0)
     parser.add_argument("--session-prefix", default="e1_c200_12alg_queue_")
     parser.add_argument("--round-robin-tools", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--seed-dispatch-mode",
+        choices=["mixed", "sequential"],
+        default="mixed",
+        help="任务派发 seed 策略。mixed 保持原有混合派发；sequential 会先派完较早 seed 的 pending 任务，再派下一个 seed。",
+    )
     parser.add_argument(
         "--prioritize-llm",
         action=argparse.BooleanOptionalAction,
