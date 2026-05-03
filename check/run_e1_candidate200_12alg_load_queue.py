@@ -161,6 +161,36 @@ def _ssh(host: str, command: str, *, controller_host: str, use_internal_ips: boo
     )
 
 
+def _ssh_script(
+    host: str,
+    script: str,
+    *,
+    controller_host: str,
+    use_internal_ips: bool,
+    timeout: int = 60,
+) -> subprocess.CompletedProcess[str]:
+    if _is_local_host(host, controller_host):
+        return _run_bytes(["bash", "-s"], input_bytes=script.encode("utf-8"), timeout=timeout)
+    target = _target_for_host(host, controller_host=controller_host, use_internal_ips=use_internal_ips)
+    return _run_bytes(
+        [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            target,
+            "bash -s",
+        ],
+        input_bytes=script.encode("utf-8"),
+        timeout=timeout,
+    )
+
+
 def _scp(local_path: Path, host: str, remote_path: Path, *, controller_host: str, use_internal_ips: bool, timeout: int = 60) -> subprocess.CompletedProcess[str]:
     if _is_local_host(host, controller_host):
         if local_path.resolve() == remote_path.resolve():
@@ -981,7 +1011,7 @@ def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: b
     return {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
 
-def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> None:
+def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> tuple[str, str]:
     config = TOOL_CONFIG[task.tool]
     session = f"{args.session_prefix}{task.task_id}"
     start_log = Path("/tmp") / f"{session}.start.log"
@@ -1018,6 +1048,11 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
         f"nohup bash -lc {shlex.quote(tmux_command)} "
         f"</dev/null >{shlex.quote(str(submit_log))} 2>&1 &"
     )
+    return command, session
+
+
+def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> None:
+    command, session = _task_submit_line(task, host, state_task, args)
     result = _ssh(host, command, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, timeout=30)
     if result.returncode != 0:
         raise RuntimeError(f"{host} 启动 {task.task_id} 失败: {result.stderr or result.stdout}")
@@ -1035,6 +1070,64 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
             "llm_model_bucket": task.llm_model_bucket,
         }
     )
+
+
+def _start_tasks_on_host(
+    task_items: list[tuple[str, QueueTask, dict[str, Any]]],
+    host: str,
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
+    if not task_items:
+        return []
+    script_lines = [
+        "set -u",
+        f"echo batch_start host={shlex.quote(host)} count={len(task_items)} time=$(date -Is) >&2",
+    ]
+    sessions: dict[str, str] = {}
+    for task_id, task, state_task in task_items:
+        command, session = _task_submit_line(task, host, state_task, args)
+        script_lines.append(command)
+        sessions[task_id] = session
+    script = "\n".join(script_lines) + "\n"
+    result = _ssh_script(
+        host,
+        script,
+        controller_host=args.controller_host,
+        use_internal_ips=args.use_internal_ips,
+        timeout=max(30, min(180, 10 + 3 * len(task_items))),
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"{host} 批量启动 {len(task_items)} 个任务失败: {result.stderr or result.stdout}")
+
+    started_at = _now()
+    events: list[dict[str, Any]] = []
+    for task_id, task, state_task in task_items:
+        state_task.update(
+            {
+                "state": "running",
+                "attempts": int(state_task.get("attempts") or 0) + 1,
+                "assigned_host": host,
+                "session": sessions[task_id],
+                "started_at": started_at,
+                "ended_at": None,
+                "error": None,
+                "batch_name": args.batch_name,
+                "params_name": task.params_name,
+                "llm_model_bucket": task.llm_model_bucket,
+            }
+        )
+        events.append(
+            {
+                "event": "task_started",
+                "task_id": task_id,
+                "host": host,
+                "tool": task.tool,
+                "seed": task.seed,
+                "params_name": task.params_name,
+                "llm_model_bucket": task.llm_model_bucket,
+            }
+        )
+    return events
 
 
 def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> None:
@@ -1145,14 +1238,19 @@ def _pending_task_ids_by_tool(state: dict[str, Any], tool: str, dispatch_seed: i
 
 
 def _running_count_for_tool(state: dict[str, Any], tool: str) -> int:
-    return sum(1 for task in state["tasks"].values() if task.get("state") == "running" and task.get("tool") == tool)
+    return sum(
+        1
+        for task in state["tasks"].values()
+        if task.get("state") in {"running", "dispatching"} and task.get("tool") == tool
+    )
 
 
 def _running_count_for_llm_bucket(state: dict[str, Any], bucket: str) -> int:
     return sum(
         1
         for task in state["tasks"].values()
-        if task.get("state") == "running" and str(task.get("llm_model_bucket") or "") == bucket
+        if task.get("state") in {"running", "dispatching"}
+        and str(task.get("llm_model_bucket") or "") == bucket
     )
 
 
@@ -1325,35 +1423,49 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
             available_slots, dispatch_limit_reason = _max_new_jobs_for_host(host_state, args)
             host_state["dispatch_limit_reason"] = dispatch_limit_reason
             host_state["available_slots"] = available_slots
-            host_dispatched = 0
+            selected_items: list[tuple[str, QueueTask, dict[str, Any]]] = []
             for _ in range(available_slots):
                 task_id = _next_pending_task_id(state, args)
                 if task_id is None:
                     break
                 task = task_map[task_id]
                 state_task = state["tasks"][task_id]
+                state_task["state"] = "dispatching"
+                selected_items.append((task_id, task, state_task))
+            host_dispatched = 0
+            if selected_items:
                 try:
-                    _start_task_on_host(task, host, state_task, args)
-                    dispatched += 1
-                    host_dispatched += 1
+                    start_events = _start_tasks_on_host(selected_items, host, args)
+                    dispatched += len(selected_items)
+                    host_dispatched = len(selected_items)
                     _append_event(
                         args.batch_name,
                         {
-                            "event": "task_started",
-                            "task_id": task_id,
+                            "event": "host_batch_started",
                             "host": host,
-                            "tool": task.tool,
-                            "seed": task.seed,
-                            "params_name": task.params_name,
-                            "llm_model_bucket": task.llm_model_bucket,
+                            "task_ids": [task_id for task_id, _, _ in selected_items],
+                            "count": len(selected_items),
                         },
                         args.queue_root_path,
                     )
+                    for event in start_events:
+                        _append_event(args.batch_name, event, args.queue_root_path)
                 except Exception as exc:
-                    state_task["error"] = repr(exc)
-                    _append_event(args.batch_name, {"event": "task_start_failed", "task_id": task_id, "host": host, "error": repr(exc)}, args.queue_root_path)
+                    for task_id, _, state_task in selected_items:
+                        state_task["state"] = "pending"
+                        state_task["error"] = repr(exc)
+                    _append_event(
+                        args.batch_name,
+                        {
+                            "event": "host_batch_start_failed",
+                            "host": host,
+                            "task_ids": [task_id for task_id, _, _ in selected_items],
+                            "count": len(selected_items),
+                            "error": repr(exc),
+                        },
+                        args.queue_root_path,
+                    )
                     # 启动失败不立即丢弃任务，下轮继续尝试。
-                    break
             host_state["dispatched"] = host_dispatched
 
         _save_state(state, args.queue_root_path)
