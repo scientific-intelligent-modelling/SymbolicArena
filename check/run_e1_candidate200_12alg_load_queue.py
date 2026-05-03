@@ -98,7 +98,7 @@ def _safe_text(value: object) -> str:
 
 def _run(cmd: list[str], *, timeout: int = 60) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(cmd, text=True, capture_output=True, timeout=timeout, check=False)
+        return subprocess.run(cmd, text=True, capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout, check=False)
     except subprocess.TimeoutExpired as exc:
         return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), _safe_text(exc.stderr) or "timeout")
 
@@ -765,7 +765,7 @@ def mem_info():
         }}
 
 def session_count(pattern):
-    proc = subprocess.run(["bash", "-lc", "tmux ls 2>/dev/null || true"], text=True, capture_output=True)
+    proc = subprocess.run(["bash", "-lc", "timeout 30 tmux ls 2>/dev/null || true"], text=True, capture_output=True, timeout=35)
     return sum(1 for line in proc.stdout.splitlines() if pattern in line)
 
 load1, load5, load15 = os.getloadavg()
@@ -782,7 +782,7 @@ print(json.dumps({{
     "queue_sessions": session_count(prefix),
 }}))
 """
-    result = _ssh(host, f"python - <<'PY'\n{script}\nPY", controller_host=controller_host, use_internal_ips=use_internal_ips, timeout=25)
+    result = _ssh(host, f"python - <<'PY'\n{script}\nPY", controller_host=controller_host, use_internal_ips=use_internal_ips, timeout=60)
     if result.returncode != 0:
         return {"host": host, "ok": False, "error": (result.stderr or result.stdout).strip()}
     try:
@@ -964,10 +964,10 @@ def _session_running(host: str, session: str, *, controller_host: str, use_inter
 def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: bool, session_prefix: str) -> set[str] | None:
     result = _ssh(
         host,
-        f"tmux ls 2>/dev/null | cut -d: -f1 | grep '^{shlex.quote(session_prefix)}' || true",
+        f"timeout 30 tmux ls 2>/dev/null | cut -d: -f1 | grep '^{shlex.quote(session_prefix)}' || true",
         controller_host=controller_host,
         use_internal_ips=use_internal_ips,
-        timeout=25,
+        timeout=45,
     )
     if result.returncode != 0:
         return None
