@@ -103,6 +103,19 @@ def _run(cmd: list[str], *, timeout: int = 60) -> subprocess.CompletedProcess[st
         return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), _safe_text(exc.stderr) or "timeout")
 
 
+def _run_bytes(cmd: list[str], *, input_bytes: bytes, timeout: int = 60) -> subprocess.CompletedProcess[str]:
+    try:
+        proc = subprocess.run(cmd, input=input_bytes, capture_output=True, timeout=timeout, check=False)
+        return subprocess.CompletedProcess(
+            cmd,
+            proc.returncode,
+            _safe_text(proc.stdout),
+            _safe_text(proc.stderr),
+        )
+    except subprocess.TimeoutExpired as exc:
+        return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), _safe_text(exc.stderr) or "timeout")
+
+
 def _host_number(host: str) -> str | None:
     suffix = host.removeprefix("iaaccn")
     return suffix if suffix.isdigit() else None
@@ -155,7 +168,7 @@ def _scp(local_path: Path, host: str, remote_path: Path, *, controller_host: str
         remote_path.parent.mkdir(parents=True, exist_ok=True)
         return _run(["cp", str(local_path), str(remote_path)], timeout=timeout)
     target = _target_for_host(host, controller_host=controller_host, use_internal_ips=use_internal_ips)
-    return _run(
+    result = _run(
         [
             "scp",
             "-o",
@@ -171,6 +184,37 @@ def _scp(local_path: Path, host: str, remote_path: Path, *, controller_host: str
         ],
         timeout=timeout,
     )
+    if result.returncode == 0:
+        return result
+
+    # 某些远端 shell 会在非交互会话向 stdout 打印内容，破坏 scp/rsync
+    # 协议。小文件同步失败时退回到 ssh stdin 写文件，不依赖 scp 协议。
+    tmp_remote = remote_path.with_name(f".{remote_path.name}.tmp.{os.getpid()}")
+    command = (
+        f"mkdir -p {shlex.quote(str(remote_path.parent))} && "
+        f"cat > {shlex.quote(str(tmp_remote))} && "
+        f"mv {shlex.quote(str(tmp_remote))} {shlex.quote(str(remote_path))}"
+    )
+    fallback = _run_bytes(
+        [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            target,
+            command,
+        ],
+        input_bytes=local_path.read_bytes(),
+        timeout=timeout,
+    )
+    if fallback.returncode == 0:
+        return fallback
+    return result
 
 
 def _read_rows(path: Path, *, expected_rows: int | None = 200) -> list[dict[str, str]]:
@@ -602,24 +646,14 @@ def _sync_support_to_host(
         if result.returncode != 0:
             raise RuntimeError(f"{host} 同步 {local_path} 失败: {result.stderr or result.stdout}")
 
-    if _is_local_host(host, controller_host):
-        if local_slices.resolve() != remote_slices.resolve():
-            result = _run(["rsync", "-a", f"{local_slices}/", f"{remote_slices}/"], timeout=180)
-        else:
-            result = subprocess.CompletedProcess(["rsync", str(local_slices), str(remote_slices)], 0, "same dir", "")
-    else:
-        target = _target_for_host(host, controller_host=controller_host, use_internal_ips=use_internal_ips)
-        result = _run(
-            [
-                "rsync",
-                "-a",
-                "-e",
-                "ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
-                f"{local_slices}/",
-                f"{target}:{remote_slices}/",
-            ],
-            timeout=300,
-        )
+    result = _sync_directory_to_host(
+        local_slices,
+        host,
+        remote_slices,
+        controller_host=controller_host,
+        use_internal_ips=use_internal_ips,
+        timeout=300,
+    )
     if result.returncode != 0:
         raise RuntimeError(f"{host} 同步 queue slices 失败: {result.stderr or result.stdout}")
 
@@ -636,6 +670,70 @@ def _sync_support_to_host(
 
 def _sync_task_slice(task: QueueTask) -> str:
     return str(task.slice_path.relative_to(REPO_ROOT))
+
+
+def _sync_directory_to_host(
+    local_dir: Path,
+    host: str,
+    remote_dir: Path,
+    *,
+    controller_host: str,
+    use_internal_ips: bool,
+    timeout: int = 300,
+) -> subprocess.CompletedProcess[str]:
+    if _is_local_host(host, controller_host):
+        if local_dir.resolve() != remote_dir.resolve():
+            return _run(["rsync", "-a", f"{local_dir}/", f"{remote_dir}/"], timeout=timeout)
+        return subprocess.CompletedProcess(["rsync", str(local_dir), str(remote_dir)], 0, "same dir", "")
+
+    target = _target_for_host(host, controller_host=controller_host, use_internal_ips=use_internal_ips)
+    result = _run(
+        [
+            "rsync",
+            "-a",
+            "-e",
+            "ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
+            f"{local_dir}/",
+            f"{target}:{remote_dir}/",
+        ],
+        timeout=timeout,
+    )
+    if result.returncode == 0:
+        return result
+
+    archive = subprocess.run(
+        ["tar", "-czf", "-", "-C", str(local_dir), "."],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if archive.returncode != 0:
+        return subprocess.CompletedProcess(
+            ["tar", "-czf", "-", "-C", str(local_dir), "."],
+            archive.returncode,
+            _safe_text(archive.stdout),
+            _safe_text(archive.stderr),
+        )
+    fallback = _run_bytes(
+        [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            target,
+            f"mkdir -p {shlex.quote(str(remote_dir))} && cd {shlex.quote(str(remote_dir))} && tar -xzf -",
+        ],
+        input_bytes=archive.stdout,
+        timeout=timeout,
+    )
+    if fallback.returncode == 0:
+        return fallback
+    return result
 
 
 def _probe_host(host: str, *, controller_host: str, use_internal_ips: bool, session_prefix: str) -> dict[str, Any]:
