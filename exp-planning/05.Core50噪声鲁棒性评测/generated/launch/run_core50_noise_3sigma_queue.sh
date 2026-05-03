@@ -24,7 +24,7 @@ COMMON_ARGS=(
   --max-memory-used-ratio 0.80
   --llm-model-assignment stable-half
   --llm-model-buckets base,turbo
-  --llm-model-bucket-limits base:100,turbo:100
+  --llm-model-bucket-limits base:80,turbo:80
   --prioritize-llm
   --seed-dispatch-mode sequential
 )
@@ -50,4 +50,3 @@ run_sigma() {
 run_sigma sigma001
 run_sigma sigma005
 run_sigma sigma010
-

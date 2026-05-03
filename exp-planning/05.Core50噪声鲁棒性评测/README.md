@@ -87,8 +87,8 @@ results/
 `llmsr` 和 `drsr` 需要遵守全局模型桶并发限制：
 
 ```text
-base  <= 100 running tasks
-turbo <= 100 running tasks
+base  <= 80 running tasks
+turbo <= 80 running tasks
 ```
 
 调度策略：
@@ -114,7 +114,7 @@ turbo <= 100 running tasks
 ```bash
 --llm-model-assignment stable-half
 --llm-model-buckets base,turbo
---llm-model-bucket-limits base:100,turbo:100
+--llm-model-bucket-limits base:80,turbo:80
 --prioritize-llm
 --seed-dispatch-mode sequential
 ```
