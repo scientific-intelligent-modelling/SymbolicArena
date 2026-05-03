@@ -9,13 +9,24 @@ BATCH_SUFFIX="${BATCH_SUFFIX:-$(date +%Y%m%d-%H%M%S)}"
 RUN_LOG_ROOT="experiments/core50_noise_12alg_3seed_${BATCH_SUFFIX}"
 mkdir -p "$RUN_LOG_ROOT"
 
+HOSTS=(
+  iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29
+  iaaccn48 iaaccn49 iaaccn50 iaaccn51 iaaccn52 iaaccn53 iaaccn54 iaaccn55
+)
+HOST_REMOTE_ROOT_OVERRIDES="iaaccn48=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn49=/data3/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn50=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn51=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn52=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn53=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn54=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn55=/data1/zhangziwen/workplace/scientific-intelligent-modelling"
+HOST_REMOTE_DATA_ROOT_OVERRIDES="iaaccn48=/data1/zhangziwen/sim-datasets-data,iaaccn49=/data3/zhangziwen/sim-datasets-data,iaaccn50=/data1/zhangziwen/sim-datasets-data,iaaccn51=/data1/zhangziwen/sim-datasets-data,iaaccn52=/data1/zhangziwen/sim-datasets-data,iaaccn53=/data1/zhangziwen/sim-datasets-data,iaaccn54=/data1/zhangziwen/sim-datasets-data,iaaccn55=/data1/zhangziwen/sim-datasets-data"
+
 COMMON_ARGS=(
   --source-csv "exp-planning/04.Core50正式全量评测/core50_datasets.csv"
   --expected-rows 50
-  --hosts iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29
+  --hosts "${HOSTS[@]}"
   --seeds 0 1 2
   --controller-host iaaccn23
   --use-internal-ips
+  --remote-root "/home/zhangziwen/workplace/scientific-intelligent-modelling"
+  --remote-data-root "/home/zhangziwen/sim-datasets-data"
+  --host-remote-root-overrides "$HOST_REMOTE_ROOT_OVERRIDES"
+  --host-remote-data-root-overrides "$HOST_REMOTE_DATA_ROOT_OVERRIDES"
   --poll-seconds 60
   --retry-limit 1
   --max-jobs-per-host 100

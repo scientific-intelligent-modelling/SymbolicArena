@@ -82,6 +82,27 @@ results/
   不放远端训练过程文件。
 ```
 
+## 当前调度机器
+
+本轮噪声实验使用：
+
+```text
+iaaccn23~29
+iaaccn48~55
+```
+
+目录布局：
+
+```text
+iaaccn23~29: /home/zhangziwen
+iaaccn48,50~55: /data1/zhangziwen
+iaaccn49: /data3/zhangziwen
+```
+
+调度器通过 `--host-remote-root-overrides` 和
+`--host-remote-data-root-overrides` 显式注入上述路径，worker 通过
+`SIM_DATA_ROOT` 解析 `sim-datasets-data/...`。
+
 ## LLM 并发约束
 
 `llmsr` 和 `drsr` 需要遵守全局模型桶并发限制：

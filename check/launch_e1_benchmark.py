@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -73,14 +74,19 @@ def _task_label(row: dict[str, str]) -> str:
 def _resolve_dataset_dir(dataset_dir: str) -> str:
     path = Path(dataset_dir)
     candidates: list[Path] = []
+    env_data_root = Path(os.environ["SIM_DATA_ROOT"]).expanduser() if os.environ.get("SIM_DATA_ROOT") else None
     if path.is_absolute():
         candidates.append(path)
     else:
         if path.parts and path.parts[0] == "sim-datasets-data":
+            if env_data_root is not None:
+                candidates.append(env_data_root.joinpath(*path.parts[1:]))
             candidates.append(Path.home() / path)
             candidates.append(Path.cwd() / path)
         else:
             candidates.append(Path.cwd() / path)
+            if env_data_root is not None:
+                candidates.append(env_data_root / path)
             candidates.append(Path.home() / path)
 
     for candidate in candidates:

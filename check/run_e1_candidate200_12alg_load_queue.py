@@ -210,6 +210,25 @@ def _parse_named_ints(raw: str) -> dict[str, int]:
     return limits
 
 
+def _parse_host_path_overrides(raw: str) -> dict[str, Path]:
+    overrides: dict[str, Path] = {}
+    if not raw.strip():
+        return overrides
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if "=" not in item:
+            raise ValueError(f"host 路径覆盖格式错误，缺少 '=': {item!r}")
+        host, path = item.split("=", 1)
+        host = host.strip()
+        path = path.strip()
+        if not host or not path:
+            raise ValueError(f"host 路径覆盖不能为空: {item!r}")
+        overrides[host] = Path(path).expanduser()
+    return overrides
+
+
 def _infer_llm_bucket_from_params(params_path: Path) -> str | None:
     if not params_path.exists():
         return None
@@ -370,8 +389,8 @@ def _write_remote_support_script(queue_root: Path) -> Path:
     content = f"""#!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 10 ]; then
-  echo "Usage: $0 <batch> <task_id> <tool_key> <tool_arg> <seed> <workers> <env> <slice_rel> <params_rel> <host_label> [retry]" >&2
+if [ "$#" -lt 12 ]; then
+  echo "Usage: $0 <batch> <task_id> <tool_key> <tool_arg> <seed> <workers> <env> <slice_rel> <params_rel> <host_label> <remote_root> <remote_data_root> [retry]" >&2
   exit 2
 fi
 
@@ -385,8 +404,9 @@ ENV_NAME="$7"
 SLICE_REL="$8"
 PARAMS_REL="$9"
 HOST_LABEL="${{10}}"
-RETRY_MODE="${{11:-}}"
-REMOTE_ROOT="{REMOTE_ROOT}"
+REMOTE_ROOT="${{11}}"
+REMOTE_DATA_ROOT="${{12}}"
+RETRY_MODE="${{13:-}}"
 EXTRA_ARGS=()
 if [ "$RETRY_MODE" = "retry" ]; then
   EXTRA_ARGS+=(--retry-failed)
@@ -394,6 +414,7 @@ fi
 
 cd "$REMOTE_ROOT"
 export PYTHONPATH=.
+export SIM_DATA_ROOT="$REMOTE_DATA_ROOT"
 export OMP_NUM_THREADS=1
 export OMP_THREAD_LIMIT=1
 export OPENBLAS_NUM_THREADS=1
@@ -526,8 +547,16 @@ def _selected_envs(tools: list[str]) -> list[str]:
     return sorted({str(TOOL_CONFIG[tool]["env"]) for tool in tools})
 
 
-def _selected_params(tasks: list[QueueTask], params_root: Path) -> list[tuple[Path, Path]]:
-    pairs: list[tuple[Path, Path]] = []
+def _remote_root_for_host(host: str, args: argparse.Namespace) -> Path:
+    return args.host_remote_root_overrides_parsed.get(host, args.remote_root_path)
+
+
+def _remote_data_root_for_host(host: str, args: argparse.Namespace) -> Path:
+    return args.host_remote_data_root_overrides_parsed.get(host, args.remote_data_root_path)
+
+
+def _selected_params(tasks: list[QueueTask], params_root: Path) -> list[Path]:
+    paths: list[Path] = []
     seen: set[str] = set()
     for task in tasks:
         params_name = task.params_name
@@ -537,9 +566,8 @@ def _selected_params(tasks: list[QueueTask], params_root: Path) -> list[tuple[Pa
         local_param = params_root / f"{params_name}.json"
         if not local_param.exists():
             raise FileNotFoundError(f"参数文件不存在: {local_param}")
-        remote_param = REMOTE_ROOT / local_param.relative_to(REPO_ROOT)
-        pairs.append((local_param, remote_param))
-    return pairs
+        paths.append(local_param)
+    return paths
 
 
 def _sync_support_to_host(
@@ -549,23 +577,26 @@ def _sync_support_to_host(
     tasks: list[QueueTask],
     queue_root: Path,
     params_root: Path,
+    remote_root: Path,
     controller_host: str,
     use_internal_ips: bool,
 ) -> None:
     support = _write_remote_support_script(queue_root)
-    remote_support = REMOTE_ROOT / support.relative_to(REPO_ROOT)
-    remote_launcher = REMOTE_ROOT / "check/launch_e1_benchmark.py"
+    remote_support = remote_root / support.relative_to(REPO_ROOT)
+    remote_launcher = remote_root / "check/launch_e1_benchmark.py"
     local_launcher = REPO_ROOT / "check/launch_e1_benchmark.py"
     local_slices = queue_root / "slices"
-    remote_slices = REMOTE_ROOT / local_slices.relative_to(REPO_ROOT)
-    param_pairs = _selected_params(tasks, params_root)
+    remote_slices = remote_root / local_slices.relative_to(REPO_ROOT)
+    local_params = _selected_params(tasks, params_root)
 
     _remote_mkdir(host, remote_support.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     _remote_mkdir(host, remote_launcher.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     _remote_mkdir(host, remote_slices.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
-    for _, remote_path in param_pairs:
+    for local_param in local_params:
+        remote_path = remote_root / local_param.relative_to(REPO_ROOT)
         _remote_mkdir(host, remote_path.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
 
+    param_pairs = [(local_param, remote_root / local_param.relative_to(REPO_ROOT)) for local_param in local_params]
     for local_path, remote_path in ((support, remote_support), (local_launcher, remote_launcher), *param_pairs):
         result = _scp(local_path, host, remote_path, controller_host=controller_host, use_internal_ips=use_internal_ips, timeout=60)
         if result.returncode != 0:
@@ -719,6 +750,7 @@ def _read_task_statuses_bulk(
     host: str,
     tasks: list[dict[str, Any]],
     *,
+    remote_root: Path,
     controller_host: str,
     use_internal_ips: bool,
 ) -> dict[str, dict[str, Any]]:
@@ -739,7 +771,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
-REMOTE_ROOT = Path({str(REMOTE_ROOT)!r})
+REMOTE_ROOT = Path({str(remote_root)!r})
 DONE_STATUSES = {sorted(DONE_STATUSES)!r}
 TASKS = json.loads({json.dumps(task_specs, ensure_ascii=False)!r})
 out = {{}}
@@ -847,13 +879,15 @@ def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: b
 def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> None:
     config = TOOL_CONFIG[task.tool]
     session = f"{args.session_prefix}{task.task_id}"
+    remote_root = _remote_root_for_host(host, args)
+    remote_data_root = _remote_data_root_for_host(host, args)
     support_rel = _remote_support_script_path(args.queue_root_path).relative_to(REPO_ROOT)
-    support_remote = REMOTE_ROOT / support_rel
+    support_remote = remote_root / support_rel
     slice_rel = _sync_task_slice(task)
     params_rel = str((args.params_root_path / f"{task.params_name}.json").relative_to(REPO_ROOT))
     retry = "retry" if int(state_task.get("attempts") or 0) > 0 else "noretry"
     command = (
-        f"cd {shlex.quote(str(REMOTE_ROOT))} && "
+        f"cd {shlex.quote(str(remote_root))} && "
         f"tmux new-session -d -s {shlex.quote(session)} "
         f"/bin/bash {shlex.quote(str(support_remote))} "
         f"{shlex.quote(args.batch_name)} "
@@ -866,6 +900,8 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
         f"{shlex.quote(slice_rel)} "
         f"{shlex.quote(params_rel)} "
         f"{shlex.quote(host)} "
+        f"{shlex.quote(str(remote_root))} "
+        f"{shlex.quote(str(remote_data_root))} "
         f"{shlex.quote(retry)}"
     )
     result = _ssh(host, command, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, timeout=30)
@@ -921,6 +957,7 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         host_statuses = _read_task_statuses_bulk(
             host,
             [task for _, task in items],
+            remote_root=_remote_root_for_host(host, args),
             controller_host=args.controller_host,
             use_internal_ips=args.use_internal_ips,
         )
@@ -1124,6 +1161,7 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                 tasks=tasks,
                 queue_root=args.queue_root_path,
                 params_root=args.params_root_path,
+                remote_root=_remote_root_for_host(host, args),
                 controller_host=args.controller_host,
                 use_internal_ips=args.use_internal_ips,
             )
@@ -1615,6 +1653,18 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--seeds", nargs="+", type=int, default=list(DEFAULT_SEEDS))
     parser.add_argument("--controller-host", default="iaaccn23")
     parser.add_argument("--use-internal-ips", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--remote-root", default=str(REMOTE_ROOT), help="默认远端仓库根目录。")
+    parser.add_argument("--remote-data-root", default=str(REMOTE_DATA_ROOT), help="默认远端真实数据根目录。")
+    parser.add_argument(
+        "--host-remote-root-overrides",
+        default="",
+        help="按 host 覆盖远端仓库根目录，例如 'iaaccn48=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn49=/data3/...'。",
+    )
+    parser.add_argument(
+        "--host-remote-data-root-overrides",
+        default="",
+        help="按 host 覆盖远端数据根目录，例如 'iaaccn48=/data1/zhangziwen/sim-datasets-data,iaaccn49=/data3/...'。",
+    )
     parser.add_argument("--poll-seconds", type=int, default=60)
     parser.add_argument("--retry-limit", type=int, default=1)
     parser.add_argument("--max-jobs-per-host", type=int, default=100)
@@ -1678,6 +1728,10 @@ def _parse_args() -> argparse.Namespace:
         item.strip().lower() for item in str(args.llm_model_buckets).split(",") if item.strip()
     ]
     args.llm_model_bucket_limits_parsed = _parse_named_ints(args.llm_model_bucket_limits)
+    args.remote_root_path = Path(args.remote_root).expanduser()
+    args.remote_data_root_path = Path(args.remote_data_root).expanduser()
+    args.host_remote_root_overrides_parsed = _parse_host_path_overrides(args.host_remote_root_overrides)
+    args.host_remote_data_root_overrides_parsed = _parse_host_path_overrides(args.host_remote_data_root_overrides)
     args.llm_default_bucket = str(args.llm_default_bucket).strip().lower()
     args.tools = [str(tool).strip().lower() for tool in args.tools]
     args.source_csv_path = Path(args.source_csv).expanduser()
@@ -1720,6 +1774,10 @@ def main() -> None:
                 "queue_root": str(args.queue_root_path),
                 "params_root": str(args.params_root_path),
                 "hosts": args.hosts,
+                "remote_root": str(args.remote_root_path),
+                "remote_data_root": str(args.remote_data_root_path),
+                "host_remote_root_overrides": {k: str(v) for k, v in args.host_remote_root_overrides_parsed.items()},
+                "host_remote_data_root_overrides": {k: str(v) for k, v in args.host_remote_data_root_overrides_parsed.items()},
                 "tools": args.tools,
                 "seeds": args.seeds,
                 "tasks": len(tasks),
