@@ -1,0 +1,121 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0025_strogatz_barmag2",
+  "task_global_index": 25,
+  "dataset": "strogatz_barmag2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed4/tasks/pyoperon_s4_g0025/iaaccn28/pyoperon/g0025_strogatz_barmag2/experiments/g0025_strogatz_barmag2_pyoperon_seed4_20260502-110710",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 13.226,
+  "equation": "((-0.660) + (0.417 * (exp(sin(((-0.856) * X2))) - sin((((-0.128) * X1) - (1.455 * X2))))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "((-0.660) + (0.417 * (exp(sin(((-0.856) * X2))) - sin((((-0.128) * X1) - (1.455 * X2))))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.417*sin(0.128*x0 + 1.455*x1) - 0.66 + 0.417*exp(-sin(0.856*x1))\n",
+    "return_expression_source": "0.417*sin(0.128*x0 + 1.455*x1) - 0.66 + 0.417*exp(-sin(0.856*x1))",
+    "normalized_expression": "0.417*sin(0.128*x0 + 1.455*x1) - 0.66 + 0.417*exp(-sin(0.856*x1))",
+    "instantiated_expression": "0.417*sin(0.128*x0 + 1.455*x1) - 0.66 + 0.417*exp(-sin(0.856*x1))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 21,
+    "tree_depth": 7,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.417*sin(0.128*x0 + 1.455*x1) - 0.66 + 0.417*exp(-sin(0.856*x1))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.18152198551756807,
+    "r2": 0.5665904658074976,
+    "nmse": 0.42691655377705096,
+    "acc_0_1": 0.57421875
+  },
+  "valid": {
+    "rmse": 0.21411189155493238,
+    "r2": 0.7255404666228231,
+    "nmse": 0.27153395777707084,
+    "acc_0_1": 0.46875
+  },
+  "id_test": {
+    "rmse": 0.18777623215556363,
+    "r2": 0.15503910580256297,
+    "nmse": 0.8376213942075847,
+    "acc_0_1": 0.5
+  },
+  "ood_test": {
+    "rmse": 0.23879909872493787,
+    "r2": 0.21121091610780196,
+    "nmse": 0.788729473534834,
+    "acc_0_1": 0.398
+  },
+  "finished_at": "2026-05-02 11:07:23",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed4/tasks/pyoperon_s4_g0025/iaaccn28/pyoperon/g0025_strogatz_barmag2/experiments",
+    "exp_name": "g0025_strogatz_barmag2_pyoperon_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,120 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0017_strogatz_shearflow1",
+  "task_global_index": 17,
+  "dataset": "strogatz_shearflow1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed3/tasks/pyoperon_s3_g0017/iaaccn29/pyoperon/g0017_strogatz_shearflow1/experiments/g0017_strogatz_shearflow1_pyoperon_seed3_20260502-095156",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 8.313,
+  "equation": "(0.873 + (0.622 * log((((-0.333) * X2) ^ 2))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(0.873 + (0.622 * log((((-0.333) * X2) ^ 2))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return 0.622*log(0.110889*x0**2) + 0.873\n",
+    "return_expression_source": "0.622*log(0.110889*x0**2) + 0.873",
+    "normalized_expression": "0.622*log(0.110889*x0**2) + 0.873",
+    "instantiated_expression": "0.622*log(0.110889*x0**2) + 0.873",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 10,
+    "tree_depth": 6,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.622*log(0.110889*x0**2) + 0.873"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.3580287756945695,
+    "r2": 0.6023409095809718,
+    "nmse": 0.39703412290917234,
+    "acc_0_1": 0.36328125
+  },
+  "valid": {
+    "rmse": 0.1870504652282934,
+    "r2": 0.9079109466966927,
+    "nmse": 0.08780433494589501,
+    "acc_0_1": 0.40625
+  },
+  "id_test": {
+    "rmse": 0.5221506060799043,
+    "r2": 0.7057997438018617,
+    "nmse": 0.2895438760305381,
+    "acc_0_1": 0.34375
+  },
+  "ood_test": {
+    "rmse": 2.164241458267196,
+    "r2": -1.0041363863503685,
+    "nmse": 1.625778595769624,
+    "acc_0_1": 0.081
+  },
+  "finished_at": "2026-05-02 09:52:04",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed3/tasks/pyoperon_s3_g0017/iaaccn29/pyoperon/g0017_strogatz_shearflow1/experiments",
+    "exp_name": "g0017_strogatz_shearflow1_pyoperon_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

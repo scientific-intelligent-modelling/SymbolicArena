@@ -1,0 +1,154 @@
+{
+  "tool": "drsr",
+  "task_label": "g0048_MatSci21",
+  "task_global_index": 48,
+  "dataset": "MatSci21",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed4/tasks/drsr_s4_g0048/iaaccn27/drsr/g0048_MatSci21/experiments/g0048_MatSci21_drsr_seed4_20260502-111420",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "epsilon",
+    "T"
+  ],
+  "target_name": "sigma",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3901.013,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Stress given Strain and Temperature\n\n    Variables:\n    - Independents:\n  - x0: Strain\n  - x1: Temperature\n- Dependent:\n  - y: Stress\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x0**2 + params[3] * x1 + params[4] * x1**2 + params[5] * x0 * x1 + params[6] * x0**3 + params[7] * x1**3 + params[8] * x0**2 * x1**2",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Stress given Strain and Temperature\n\n    Variables:\n    - Independents:\n  - x0: Strain\n  - x1: Temperature\n- Dependent:\n  - y: Stress\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x0**2 + params[3] * x1 + params[4] * x1**2 + params[5] * x0 * x1 + params[6] * x0**3 + params[7] * x1**3 + params[8] * x0**2 * x1**2",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Stress given Strain and Temperature\n\n    Variables:\n    - Independents:\n  - x0: Strain\n  - x1: Temperature\n- Dependent:\n  - y: Stress\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x0**2 + params[3] * x1 + params[4] * x1**2 + params[5] * x0 * x1 + params[6] * x0**3 + params[7] * x1**3 + params[8] * x0**2 * x1**2",
+    "return_expression_source": "params[0] + params[1] * x0 + params[2] * x0 ** 2 + params[3] * x1 + params[4] * x1 ** 2 + params[5] * x0 * x1 + params[6] * x0 ** 3 + params[7] * x1 ** 3 + params[8] * x0 ** 2 * x1 ** 2",
+    "normalized_expression": "c0 + c1*x0 + c2*x0**2 + c3*x1 + c4*x1**2 + c5*x0*x1 + c6*x0**3 + c7*x1**3 + c8*x0**2*x1**2",
+    "instantiated_expression": "212.7598937007038 + -132.08780512183694*x0 + 14.509567235676272*x0**2 + -1.7695354576663014*x1 + 0.008913756584619488*x1**2 + 2.1683370750466278*x0*x1 + 7.872206032328427*x0**3 + -1.9241563226159922e-05*x1**3 + 0.008610256585755089*x0**2*x1**2",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      212.7598937007038,
+      -132.08780512183694,
+      14.509567235676272,
+      -1.7695354576663014,
+      0.008913756584619488,
+      2.1683370750466278,
+      7.872206032328427,
+      -1.9241563226159922e-05,
+      0.008610256585755089,
+      -0.5530975005544534
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 40,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0 + c2*x0**2 + c3*x1 + c4*x1**2 + c5*x0*x1 + c6*x0**3 + c7*x1**3 + c8*x0**2*x1**2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.017820075348639608,
+    "r2": 0.9999996829006046,
+    "nmse": 3.1620579226180087e-07,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.01803847006812574,
+    "r2": 0.9999996896753179,
+    "nmse": 3.101369535459259e-07,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.017828363772756317,
+    "r2": 0.9999996898867736,
+    "nmse": 3.086939676376271e-07,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.1338460034605575,
+    "r2": 0.9999712889804153,
+    "nmse": 7.697094830170528e-07,
+    "acc_0_1": 0.312
+  },
+  "finished_at": "2026-05-02 12:19:21",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed4/tasks/drsr_s4_g0048/iaaccn27/drsr/g0048_MatSci21/experiments",
+    "exp_name": "g0048_MatSci21_drsr_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "epsilon",
+      "T"
+    ],
+    "target_name": "sigma",
+    "original_feature_names": [
+      "epsilon",
+      "T"
+    ],
+    "original_target_name": "sigma",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate Stress given Strain and Temperature",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21/metadata.yaml",
+    "feature_descriptions": [
+      "Strain",
+      "Temperature"
+    ],
+    "target_description": "Stress"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

@@ -1,0 +1,155 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0026_strogatz_barmag1",
+  "task_global_index": 26,
+  "dataset": "strogatz_barmag1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0026/iaaccn23/llmsr/g0026_strogatz_barmag1/experiments/g0026_strogatz_barmag1_llmsr_seed4_20260502-110739",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3607.501,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Coupled dynamics of the first magnetic dipole. Calculate the Angular velocity of the first magnet (dtheta/dt) given Angle of the first magnet and Angle of the second magnet\n\n    Variables:\n    - Independents:\n  - x0: Angle of the first magnet\n  - x1: Angle of the second magnet\n- Dependent:\n  - y: Angular velocity of the first magnet (dtheta/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * np.sin(x0 - x1) + params[1] * np.cos(x0 + x1) + params[2] * np.sin(x0) + params[3] * np.cos(x0) + params[4] * np.sin(x1) + params[5] * np.cos(x1) + params[6] * x0 * x1\n\n",
+  "equation_count": 8,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Coupled dynamics of the first magnetic dipole. Calculate the Angular velocity of the first magnet (dtheta/dt) given Angle of the first magnet and Angle of the second magnet\n\n    Variables:\n    - Independents:\n  - x0: Angle of the first magnet\n  - x1: Angle of the second magnet\n- Dependent:\n  - y: Angular velocity of the first magnet (dtheta/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * np.sin(x0 - x1) + params[1] * np.cos(x0 + x1) + params[2] * np.sin(x0) + params[3] * np.cos(x0) + params[4] * np.sin(x1) + params[5] * np.cos(x1) + params[6] * x0 * x1\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Coupled dynamics of the first magnetic dipole. Calculate the Angular velocity of the first magnet (dtheta/dt) given Angle of the first magnet and Angle of the second magnet\n\n    Variables:\n    - Independents:\n  - x0: Angle of the first magnet\n  - x1: Angle of the second magnet\n- Dependent:\n  - y: Angular velocity of the first magnet (dtheta/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * np.sin(x0 - x1) + params[1] * np.cos(x0 + x1) + params[2] * np.sin(x0) + params[3] * np.cos(x0) + params[4] * np.sin(x1) + params[5] * np.cos(x1) + params[6] * x0 * x1\n\n",
+    "return_expression_source": "params[0] * np.sin(x0 - x1) + params[1] * np.cos(x0 + x1) + params[2] * np.sin(x0) + params[3] * np.cos(x0) + params[4] * np.sin(x1) + params[5] * np.cos(x1) + params[6] * x0 * x1",
+    "normalized_expression": "c0*sin(x0 - x1) + c1*cos(x0 + x1) + c2*sin(x0) + c3*cos(x0) + c4*sin(x1) + c5*cos(x1) + c6*x0*x1",
+    "instantiated_expression": "0.5000000034094501*sin(x0 - x1) + 7.431670149483981e-08*cos(x0 + x1) + -1.0000003171407224*sin(x0) + 2.7565087683399993e-07*cos(x0) + -4.0852417559553416e-07*sin(x1) + -1.5413062382884477e-07*cos(x1) + -1.3202777804029833e-08*x0*x1",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.5000000034094501,
+      7.431670149483981e-08,
+      -1.0000003171407224,
+      2.7565087683399993e-07,
+      -4.0852417559553416e-07,
+      -1.5413062382884477e-07,
+      -1.3202777804029833e-08,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 35,
+    "tree_depth": 6,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*sin(x0 - x1) + c1*cos(x0 + x1) + c2*sin(x0) + c3*cos(x0) + c4*sin(x1) + c5*cos(x1) + c6*x0*x1"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.8266537669952358e-07,
+    "r2": 0.99999999999931,
+    "nmse": 4.826209491311745e-13,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 1.5550483917832022e-07,
+    "r2": 0.9999999999995675,
+    "nmse": 2.351681722515226e-13,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 1.8183700362824084e-07,
+    "r2": 0.9999999999990957,
+    "nmse": 4.405917279847623e-13,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 4.1238208339351555e-07,
+    "r2": 0.9999999999977596,
+    "nmse": 1.3132108507329577e-12,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 12:07:47",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0026/iaaccn23/llmsr/g0026_strogatz_barmag1/experiments",
+    "exp_name": "g0026_strogatz_barmag1_llmsr_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "x",
+      "y"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "This formula is about Coupled dynamics of the first magnetic dipole. Calculate the Angular velocity of the first magnet (dtheta/dt) given Angle of the first magnet and Angle of the second magnet",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1/metadata.yaml",
+    "feature_descriptions": [
+      "Angle of the first magnet",
+      "Angle of the second magnet"
+    ],
+    "target_description": "Angular velocity of the first magnet (dtheta/dt)"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

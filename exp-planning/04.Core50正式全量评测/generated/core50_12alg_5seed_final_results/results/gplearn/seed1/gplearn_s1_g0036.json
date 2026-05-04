@@ -1,0 +1,133 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0036_CRK10",
+  "task_global_index": 36,
+  "dataset": "CRK10",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed1/tasks/gplearn_s1_g0036/iaaccn28/gplearn/g0036_CRK10/experiments/g0036_CRK10_gplearn_seed1_20260502-081626",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3602.293,
+  "equation": "cos(sqrt(sub(X1, -0.792)))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "cos(sqrt(sub(X1, -0.792)))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return cos(sqrt(x1 + 0.792))\n",
+    "return_expression_source": "cos(sqrt(x1 + 0.792))",
+    "normalized_expression": "cos(sqrt(x1 + 0.792))",
+    "instantiated_expression": "cos(sqrt(x1 + 0.792))",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "pow"
+    ],
+    "ast_node_count": 6,
+    "tree_depth": 4,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "cos(sqrt(x1 + 0.792))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.005664046904532088,
+    "r2": 0.976606855966715,
+    "nmse": 0.020908554964387142,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.005599565956796144,
+    "r2": 0.9779762759616439,
+    "nmse": 0.019601419741219046,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.004726891015437504,
+    "r2": 0.9818481666755566,
+    "nmse": 0.01663230820656536,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.000984731518686454,
+    "r2": -81.17947241059454,
+    "nmse": 18.375105135000922,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 09:16:29",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed1/tasks/gplearn_s1_g0036/iaaccn28/gplearn/g0036_CRK10/experiments",
+    "exp_name": "g0036_CRK10_gplearn_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

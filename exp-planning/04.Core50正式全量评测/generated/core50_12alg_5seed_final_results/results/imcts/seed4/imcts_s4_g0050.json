@@ -1,0 +1,130 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0050_BPG9",
+  "task_global_index": 50,
+  "dataset": "BPG9",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed4/tasks/imcts_s4_g0050/iaaccn24/iMCTS/g0050_BPG9/experiments/g0050_BPG9_iMCTS_seed4_20260502-111432",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3601.651,
+  "equation": "1.4914657975346676e-5*x1**4 - 0.016625288057764342*x1**3 + 0.1786669321442256*x1**2",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "1.4914657975346676e-5*x1**4 - 0.016625288057764342*x1**3 + 0.1786669321442256*x1**2",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return 1.4914657975346676e-5*x0**4 - 0.016625288057764342*x0**3 + 0.1786669321442256*x0**2\n",
+    "return_expression_source": "1.4914657975346676e-5*x0**4 - 0.016625288057764342*x0**3 + 0.1786669321442256*x0**2",
+    "normalized_expression": "1.4914657975346676e-5*x0**4 - 0.016625288057764342*x0**3 + 0.1786669321442256*x0**2",
+    "instantiated_expression": "1.4914657975346676e-5*x0**4 - 0.016625288057764342*x0**3 + 0.1786669321442256*x0**2",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 16,
+    "tree_depth": 4,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.4914657975346676e-5*x0**4 - 0.016625288057764342*x0**3 + 0.1786669321442256*x0**2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 730.7266393490589,
+    "r2": -1689845.7929213648,
+    "nmse": 1524509.3786346242,
+    "acc_0_1": 0.018285714285714287
+  },
+  "valid": {
+    "rmse": 736.5723453029304,
+    "r2": -1959280.4624329417,
+    "nmse": 1801150.1311757804,
+    "acc_0_1": 0.02
+  },
+  "id_test": {
+    "rmse": 717.0370471429,
+    "r2": -1314894.9642234307,
+    "nmse": 1159817.0585244973,
+    "acc_0_1": 0.018
+  },
+  "ood_test": {
+    "rmse": 2365.639752237281,
+    "r2": -67299266687.59985,
+    "nmse": 62155027982.7422,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 12:14:34",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed4/tasks/imcts_s4_g0050/iaaccn24/iMCTS/g0050_BPG9/experiments",
+    "exp_name": "g0050_BPG9_iMCTS_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'iMCTS' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

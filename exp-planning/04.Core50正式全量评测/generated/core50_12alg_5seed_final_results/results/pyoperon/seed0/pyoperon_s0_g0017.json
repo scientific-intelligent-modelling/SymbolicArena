@@ -1,0 +1,121 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0017_strogatz_shearflow1",
+  "task_global_index": 17,
+  "dataset": "strogatz_shearflow1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0017/iaaccn25/pyoperon/g0017_strogatz_shearflow1/experiments/g0017_strogatz_shearflow1_pyoperon_seed0_20260502-070648",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 18.569,
+  "equation": "((-0.047) + ((-2.032) * (((0.269 - ((-1.388) * X2)) + exp(0.574)) / exp(((1.477 * X1) * (1.458 * X1))))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "((-0.047) + ((-2.032) * (((0.269 - ((-1.388) * X2)) + exp(0.574)) / exp(((1.477 * X1) * (1.458 * X1))))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return -2.032*(1.388*x1 + 2.04435428465627)*exp(-2.153466*x0**2) - 0.047\n",
+    "return_expression_source": "-2.032*(1.388*x1 + 2.04435428465627)*exp(-2.153466*x0**2) - 0.047",
+    "normalized_expression": "-2.032*(1.388*x1 + 2.04435428465627)*exp(-2.153466*x0**2) - 0.047",
+    "instantiated_expression": "-2.032*(1.388*x1 + 2.04435428465627)*exp(-2.153466*x0**2) - 0.047",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 15,
+    "tree_depth": 6,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-2.032*(1.388*x1 + 2.04435428465627)*exp(-2.153466*x0**2) - 0.047"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.2994074893319505,
+    "r2": 0.7219003982039354,
+    "nmse": 0.27766253592780227,
+    "acc_0_1": 0.5703125
+  },
+  "valid": {
+    "rmse": 0.46241576776194093,
+    "r2": 0.4371979223774234,
+    "nmse": 0.5366160293673424,
+    "acc_0_1": 0.5
+  },
+  "id_test": {
+    "rmse": 0.44193503622113045,
+    "r2": 0.7892496325386217,
+    "nmse": 0.20741476930778363,
+    "acc_0_1": 0.5
+  },
+  "ood_test": {
+    "rmse": 1.6774769041075637,
+    "r2": -0.20400682164437578,
+    "nmse": 0.9767042468375378,
+    "acc_0_1": 0.085
+  },
+  "finished_at": "2026-05-02 07:07:07",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0017/iaaccn25/pyoperon/g0017_strogatz_shearflow1/experiments",
+    "exp_name": "g0017_strogatz_shearflow1_pyoperon_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

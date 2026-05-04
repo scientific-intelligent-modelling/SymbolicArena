@@ -1,0 +1,142 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0046_II.6.15b_3_0",
+  "task_global_index": 46,
+  "dataset": "II.6.15b_3_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed4/tasks/gplearn_s4_g0046/iaaccn29/gplearn/g0046_II.6.15b_3_0/experiments/g0046_II.6.15b_3_0_gplearn_seed4_20260502-111123",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "Ef",
+    "epsilon",
+    "p_d",
+    "theta"
+  ],
+  "target_name": "r",
+  "train_rows": 39348,
+  "valid_rows": 5000,
+  "id_test_rows": 11087,
+  "ood_test_rows": 11087,
+  "seconds": 3602.461,
+  "equation": "sqrt(add(div(mul(log(X0), X3), add(X3, cos(log(add(log(X0), sub(X1, add(X2, cos(log(cos(X3)))))))))), cos(cos(log(sqrt(X0))))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "sqrt(add(div(mul(log(X0), X3), add(X3, cos(log(add(log(X0), sub(X1, add(X2, cos(log(cos(X3)))))))))), cos(cos(log(sqrt(X0))))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x3, params):\n    return sqrt(x3*log(x0)/(x3 + cos(log(x1 - x2 + log(x0) - cos(log(cos(x3)))))) + cos(cos(log(sqrt(x0)))))\n",
+    "return_expression_source": "sqrt(x3*log(x0)/(x3 + cos(log(x1 - x2 + log(x0) - cos(log(cos(x3)))))) + cos(cos(log(sqrt(x0)))))",
+    "normalized_expression": "sqrt(x3*log(x0)/(x3 + cos(log(x1 - x2 + log(x0) - cos(log(cos(x3)))))) + cos(cos(log(sqrt(x0)))))",
+    "instantiated_expression": "sqrt(x3*log(x0)/(x3 + cos(log(x1 - x2 + log(x0) - cos(log(cos(x3)))))) + cos(cos(log(sqrt(x0)))))",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "cos",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 32,
+    "tree_depth": 13,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "sqrt(x3*log(x0)/(x3 + cos(log(x1 - x2 + log(x0) - cos(log(cos(x3)))))) + cos(cos(log(sqrt(x0)))))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.5485915056079482,
+    "r2": 0.39998200946698215,
+    "nmse": 0.1652720841257717,
+    "acc_0_1": 0.49384975094032735
+  },
+  "valid": {
+    "rmse": 0.6235134005822762,
+    "r2": 0.3343902192625676,
+    "nmse": 0.20211373727852594,
+    "acc_0_1": 0.4862
+  },
+  "id_test": {
+    "rmse": 0.546482563836615,
+    "r2": 0.39714102093921333,
+    "nmse": 0.1643549603229463,
+    "acc_0_1": 0.4948137458284477
+  },
+  "ood_test": {
+    "rmse": 0.29125566390401264,
+    "r2": 0.3339602152586294,
+    "nmse": 0.11641132203580537,
+    "acc_0_1": 9.019572472264814e-05
+  },
+  "finished_at": "2026-05-02 12:11:26",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed4/tasks/gplearn_s4_g0046/iaaccn29/gplearn/g0046_II.6.15b_3_0/experiments",
+    "exp_name": "g0046_II.6.15b_3_0_gplearn_seed4",
+    "n_features": 4,
+    "feature_names": [
+      "Ef",
+      "epsilon",
+      "p_d",
+      "theta"
+    ],
+    "target_name": "r"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

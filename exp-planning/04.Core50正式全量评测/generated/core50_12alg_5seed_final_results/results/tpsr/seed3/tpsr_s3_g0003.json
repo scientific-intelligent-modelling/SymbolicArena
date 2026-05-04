@@ -1,0 +1,132 @@
+{
+  "tool": "tpsr",
+  "task_label": "g0003_feynman-ii.27.18",
+  "task_global_index": 3,
+  "dataset": "feynman-ii.27.18",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed3/tasks/tpsr_s3_g0003/iaaccn28/tpsr/g0003_feynman-ii.27.18/experiments/g0003_feynman-ii.27.18_tpsr_seed3_20260502-103851",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 2770.413,
+  "equation": "((0.0005000000526516254 + (0.6 * exp((20.0 + (-0.060000000000000005 * (((0.6 + (0.9 * x_0)) * ((-0.01 + (-9.0 * x_1)) + (0.01 + (6.0 * x_2)))))**2))))) + (-0.0004999999473483748 + (1.8973538018496328e-19 * x_0)))",
+  "equation_count": 2,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "tpsr",
+    "raw_equation": "((0.0005000000526516254 + (0.6 * exp((20.0 + (-0.060000000000000005 * (((0.6 + (0.9 * x_0)) * ((-0.01 + (-9.0 * x_1)) + (0.01 + (6.0 * x_2)))))**2))))) + (-0.0004999999473483748 + (1.8973538018496328e-19 * x_0)))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, params):\n    return 1.8973538018496328e-19*x0 + 1.053032506028242e-10 + 291099117.245874*exp(-0.060000000000000005*(0.9*x0 + 0.6)**2*(-9.0*x1 + 6.0*x2)**2)\n",
+    "return_expression_source": "1.8973538018496328e-19*x0 + 1.053032506028242e-10 + 291099117.245874*exp(-0.060000000000000005*(0.9*x0 + 0.6)**2*(-9.0*x1 + 6.0*x2)**2)",
+    "normalized_expression": "1.8973538018496328e-19*x0 + 1.053032506028242e-10 + 291099117.245874*exp(-0.060000000000000005*(0.9*x0 + 0.6)**2*(-9.0*x1 + 6.0*x2)**2)",
+    "instantiated_expression": "1.8973538018496328e-19*x0 + 1.053032506028242e-10 + 291099117.245874*exp(-0.060000000000000005*(0.9*x0 + 0.6)**2*(-9.0*x1 + 6.0*x2)**2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 26,
+    "tree_depth": 8,
+    "normalization_mode": "tpsr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.8973538018496328e-19*x0 + 1.053032506028242e-10 + 291099117.245874*exp(-0.060000000000000005*(0.9*x0 + 0.6)**2*(-9.0*x1 + 6.0*x2)**2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.8554577161213176e-10,
+    "r2": -0.0016196120382452328,
+    "nmse": 0.783422785909848,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 1.753294033472147e-10,
+    "r2": -0.005165160581741102,
+    "nmse": 0.784550141547435,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 1.9482567396514567e-10,
+    "r2": -0.00019562460963773454,
+    "nmse": 0.7649597525841711,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 1.0372748447694185e-09,
+    "r2": -38.65005509154653,
+    "nmse": 0.8259222691595624,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:25:02",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "backbone_model": "e2e",
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "beam_size": 10,
+    "beam_type": "sampling",
+    "no_seq_cache": false,
+    "no_prefix_cache": true,
+    "width": 3,
+    "num_beams": 1,
+    "rollout": 3,
+    "horizon": 200,
+    "lam": 0.1,
+    "train_value": false,
+    "reward_sample_limit": 2048,
+    "cpu": true,
+    "cpu_num_threads": 4,
+    "cpu_interop_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed3/tasks/tpsr_s3_g0003/iaaccn28/tpsr/g0003_feynman-ii.27.18/experiments",
+    "exp_name": "g0003_feynman-ii.27.18_tpsr_seed3",
+    "n_features": 3,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

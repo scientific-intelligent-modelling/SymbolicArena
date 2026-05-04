@@ -1,0 +1,167 @@
+{
+  "tool": "drsr",
+  "task_label": "g0032_feynman-i.13.12",
+  "task_global_index": 32,
+  "dataset": "feynman-i.13.12",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed2/tasks/drsr_s2_g0032/iaaccn27/drsr/g0032_feynman-i.13.12/experiments/g0032_feynman-i.13.12_drsr_seed2_20260502-092130",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3611.143,
+  "equation": "def equation(col0, col1, col2, col3, params):\n    return -params[0] * x0 * x1 * x2 / (x3**2)\n",
+  "equation_count": 216,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(col0, col1, col2, col3, params):\n    return -params[0] * x0 * x1 * x2 / (x3**2)\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(col0, col1, col2, col3, params):\n    return -params[0] * x0 * x1 * x2 / (x3**2)\n",
+    "return_expression_source": "-params[0] * x0 * x1 * x2 / x3 ** 2",
+    "normalized_expression": "-c0*x0*x1*x2/x3**2",
+    "instantiated_expression": "-1.5060410172485887e-12*x0*x1*x2/x3**2",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      1.5060410172485887e-12,
+      -0.9945229996597038,
+      0.7148085531751387,
+      -0.9328288493890713,
+      0.45931089285988813,
+      -0.648688758794882,
+      0.7263578446997732,
+      0.08292244049818343,
+      -0.40057621892523043,
+      -0.1546255576046831
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 9,
+    "tree_depth": 3,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [
+      "function_arg_map:col0->x0,col1->x1,col2->x2,col3->x3"
+    ],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-c0*x0*x1*x2/x3**2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.0226781968907328e-10,
+    "r2": 0.30035159324028604,
+    "nmse": 0.6995274968680013,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 1.5441344307599796e-10,
+    "r2": 0.32254884793684335,
+    "nmse": 0.6762812005480205,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 2.433802294677771e-10,
+    "r2": 0.2059456029564266,
+    "nmse": 0.793653793412828,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 1.7895488739429233e-09,
+    "r2": -1.451542180429553,
+    "nmse": 2.4515420325029065,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:21:41",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed2/tasks/drsr_s2_g0032/iaaccn27/drsr/g0032_feynman-i.13.12/experiments",
+    "exp_name": "g0032_feynman-i.13.12_drsr_seed2",
+    "n_features": 4,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Potential energy given Gravitational constant, Mass (The Earth), Mass, Distance",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12/metadata.yaml",
+    "feature_descriptions": [
+      "G, Gravitational constant",
+      "m_1, Mass (The Earth)",
+      "m_2, Mass",
+      "r_2, Distance"
+    ],
+    "target_description": "U, Potential energy"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

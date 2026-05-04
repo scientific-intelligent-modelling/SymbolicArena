@@ -1,0 +1,116 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0038_PO19",
+  "task_global_index": 38,
+  "dataset": "PO19",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "expected_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "actual_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO19"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0038/iaaccn25/QLattice/g0038_PO19/experiments/g0038_PO19_QLattice_seed1_20260502-082057",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x",
+    "t",
+    "v"
+  ],
+  "target_name": "dv_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 229.367,
+  "equation": "-0.6076*x2 - 1.015*(0.03264 - 0.001283*x1)*tanh(0.001294*x1 - 0.03292) - 1.015*tanh(2.454*x0 - 0.01986) - 0.03414",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "-0.6076*x2 - 1.015*(0.03264 - 0.001283*x1)*tanh(0.001294*x1 - 0.03292) - 1.015*tanh(2.454*x0 - 0.01986) - 0.03414",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, x2, params):\n    return -0.6076*x2 - (0.0331296 - 0.001302245*x1)*tanh(0.001294*x1 - 0.03292) - 1.015*tanh(2.454*x0 - 0.01986) - 0.03414\n",
+    "return_expression_source": "-0.6076*x2 - (0.0331296 - 0.001302245*x1)*tanh(0.001294*x1 - 0.03292) - 1.015*tanh(2.454*x0 - 0.01986) - 0.03414",
+    "normalized_expression": "-0.6076*x2 - (0.0331296 - 0.001302245*x1)*tanh(0.001294*x1 - 0.03292) - 1.015*tanh(2.454*x0 - 0.01986) - 0.03414",
+    "instantiated_expression": "-0.6076*x2 - (0.0331296 - 0.001302245*x1)*tanh(0.001294*x1 - 0.03292) - 1.015*tanh(2.454*x0 - 0.01986) - 0.03414",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "mul",
+      "tanh"
+    ],
+    "ast_node_count": 26,
+    "tree_depth": 6,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-0.6076*x2 - (0.0331296 - 0.001302245*x1)*tanh(0.001294*x1 - 0.03292) - 1.015*tanh(2.454*x0 - 0.01986) - 0.03414"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.014544586213796807,
+    "r2": 0.9961482198634393,
+    "nmse": 0.0038517694139038098,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.014637873899831176,
+    "r2": 0.9958213697443606,
+    "nmse": 0.004178528168713276,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.014334101207285795,
+    "r2": 0.9959680493488193,
+    "nmse": 0.004031463689597751,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.013716588081887025,
+    "r2": -504808.82971161406,
+    "nmse": 501648.12025649106,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:24:46",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0038/iaaccn25/QLattice/g0038_PO19/experiments",
+    "exp_name": "g0038_PO19_QLattice_seed1",
+    "n_features": 3,
+    "feature_names": [
+      "x",
+      "t",
+      "v"
+    ],
+    "target_name": "dv_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,223 @@
+{
+  "tool": "udsr",
+  "task_label": "g0034_CRK11",
+  "task_global_index": 34,
+  "dataset": "CRK11",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK11",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK11"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed1/tasks/udsr_s1_g0034/iaaccn23/udsr/g0034_CRK11/experiments/g0034_CRK11_udsr_seed1_20260502-081614",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 277.773,
+  "equation": "                    ⎛               2                                         \n2.71828182845905⋅log⎝6.0128e-5⋅x₁⋅x₂  - 8.58102e-5⋅x₁⋅x₂ + 3.06156e-5⋅x₁ + 0.1\n\n        3              2                        ⎞\n73124⋅x₂  - 0.683285⋅x₂  + 0.334482⋅x₂ + 1.04581⎠",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "udsr",
+    "raw_equation": "2.71828182845905*log(6.0128e-5*x1*x2**2 - 8.58102e-5*x1*x2 + 3.06156e-5*x1 + 0.173124*x2**3 - 0.683285*x2**2 + 0.334482*x2 + 1.04581)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 2.71828182845905*log(6.0128e-5*x0*x1**2 - 8.58102e-5*x0*x1 + 3.06156e-5*x0 + 0.173124*x1**3 - 0.683285*x1**2 + 0.334482*x1 + 1.04581)\n",
+    "return_expression_source": "2.71828182845905*log(6.0128e-5*x0*x1**2 - 8.58102e-5*x0*x1 + 3.06156e-5*x0 + 0.173124*x1**3 - 0.683285*x1**2 + 0.334482*x1 + 1.04581)",
+    "normalized_expression": "2.71828182845905*log(6.0128e-5*x0*x1**2 - 8.58102e-5*x0*x1 + 3.06156e-5*x0 + 0.173124*x1**3 - 0.683285*x1**2 + 0.334482*x1 + 1.04581)",
+    "instantiated_expression": "2.71828182845905*log(6.0128e-5*x0*x1**2 - 8.58102e-5*x0*x1 + 3.06156e-5*x0 + 0.173124*x1**3 - 0.683285*x1**2 + 0.334482*x1 + 1.04581)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 31,
+    "tree_depth": 6,
+    "normalization_mode": "udsr_dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "2.71828182845905*log(6.0128e-5*x0*x1**2 - 8.58102e-5*x0*x1 + 3.06156e-5*x0 + 0.173124*x1**3 - 0.683285*x1**2 + 0.334482*x1 + 1.04581)",
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "Benchmark uDSR trunk variant: DSO controller + LINEAR/poly token + GP-meld, without AIF recursive decomposition or LSPT pretraining."
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.8047850037985075e-07,
+    "r2": 0.9999999999232727,
+    "nmse": 7.42533263629695e-11,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 2.79612975176218e-07,
+    "r2": 0.9999999998443995,
+    "nmse": 1.5136480997618615e-10,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 2.782018058744691e-07,
+    "r2": 0.9999999998747816,
+    "nmse": 1.2159783705672495e-10,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 2.930527134710294e-07,
+    "r2": 0.999998729498454,
+    "nmse": 8.025275016017741e-07,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:20:51",
+  "params": {
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "保持 tool_name=udsr 与 wrapper_dir=udsr_wrapper；当前算法口径固定为 DSO controller + LINEAR/poly token + GP-meld，不标称 full uDSR。",
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log",
+        "sqrt",
+        1.0,
+        "const",
+        "poly"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false,
+      "poly_optimizer_params": {
+        "degree": 3,
+        "coef_tol": 1e-06,
+        "regressor": "dso_least_squares",
+        "regressor_params": {
+          "cutoff_p_value": 1.0,
+          "n_max_terms": null,
+          "coef_tol": 1e-06
+        }
+      }
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "baseline": "R_e",
+      "n_cores_batch": 1
+    },
+    "policy_optimizer": {
+      "policy_optimizer_type": "pg",
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "gp_meld": {
+      "run_gp_meld": true,
+      "population_size": 100,
+      "generations": 20,
+      "crossover_operator": "cxOnePoint",
+      "p_crossover": 0.5,
+      "mutation_operator": "multi_mutate",
+      "p_mutate": 0.5,
+      "tournament_size": 5,
+      "train_n": 50,
+      "mutate_tree_max": 3,
+      "verbose": false,
+      "parallel_eval": false
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 100,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": true
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed1/tasks/udsr_s1_g0034/iaaccn23/udsr/g0034_CRK11/experiments",
+    "exp_name": "g0034_CRK11_udsr_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

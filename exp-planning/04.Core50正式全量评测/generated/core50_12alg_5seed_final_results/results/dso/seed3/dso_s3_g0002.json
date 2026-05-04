@@ -1,0 +1,171 @@
+{
+  "tool": "dso",
+  "task_label": "g0002_first_principles_hubble",
+  "task_global_index": 2,
+  "dataset": "first_principles_hubble",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble",
+  "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble",
+  "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble",
+    "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble",
+    "expected_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble",
+    "actual_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_hubble"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed3/tasks/dso_s3_g0002/iaaccn26/dso/g0002_first_principles_hubble/experiments/g0002_first_principles_hubble_dso_seed3_20260502-094131",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "D"
+  ],
+  "target_name": "target",
+  "train_rows": 22,
+  "valid_rows": 3,
+  "id_test_rows": 3,
+  "ood_test_rows": 4,
+  "seconds": 2387.365,
+  "equation": "           6\n6⋅x₁ + x₁⋅ℯ ",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "6*x1 + x1*exp(6)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return 6*x0 + x0*exp(6)\n",
+    "return_expression_source": "6*x0 + x0*exp(6)",
+    "normalized_expression": "6*x0 + x0*exp(6)",
+    "instantiated_expression": "6*x0 + x0*exp(6)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul"
+    ],
+    "ast_node_count": 8,
+    "tree_depth": 4,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "6*x0 + x0*exp(6)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 195.53171802065484,
+    "r2": 0.5687902968873859,
+    "nmse": 0.16098866889419805,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 262.22164242322225,
+    "r2": -1.005915540314827,
+    "nmse": 0.10169722543813274,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 89.61863475368118,
+    "r2": 0.6466389677553167,
+    "nmse": 0.09541988542139736,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 146.69747225488766,
+    "r2": 0.9074158272088242,
+    "nmse": 0.04564010825955797,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 10:21:19",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed3/tasks/dso_s3_g0002/iaaccn26/dso/g0002_first_principles_hubble/experiments",
+    "exp_name": "g0002_first_principles_hubble_dso_seed3",
+    "n_features": 1,
+    "feature_names": [
+      "D"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,129 @@
+{
+  "tool": "tpsr",
+  "task_label": "g0031_II.11.27_1_0",
+  "task_global_index": 31,
+  "dataset": "II.11.27_1_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed0/tasks/tpsr_s0_g0031/iaaccn23/tpsr/g0031_II.11.27_1_0/experiments/g0031_II.11.27_1_0_tpsr_seed0_20260502-075448",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "Pol",
+    "n",
+    "epsilon",
+    "Ef"
+  ],
+  "target_name": "alpha",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 1119.664,
+  "equation": "(2.574280249406458 + x_0)",
+  "equation_count": 2,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "tpsr",
+    "raw_equation": "(2.574280249406458 + x_0)",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return x0 + 2.574280249406458\n",
+    "return_expression_source": "x0 + 2.574280249406458",
+    "normalized_expression": "x0 + 2.574280249406458",
+    "instantiated_expression": "x0 + 2.574280249406458",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add"
+    ],
+    "ast_node_count": 3,
+    "tree_depth": 2,
+    "normalization_mode": "tpsr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0 + 2.574280249406458"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 233.22703341735604,
+    "r2": -9.928079633270137e-05,
+    "nmse": 0.9987212917291314,
+    "acc_0_1": 0.00572
+  },
+  "valid": {
+    "rmse": 115.57160102974079,
+    "r2": 0.00017122095783983493,
+    "nmse": 0.9943443686762043,
+    "acc_0_1": 0.006
+  },
+  "id_test": {
+    "rmse": 202.76600728694743,
+    "r2": -4.4321850255713e-05,
+    "nmse": 0.9982276922890625,
+    "acc_0_1": 0.0059
+  },
+  "ood_test": {
+    "rmse": 1942.9695099179057,
+    "r2": -0.0007605371038423847,
+    "nmse": 1.000206946277991,
+    "acc_0_1": 0.00705
+  },
+  "finished_at": "2026-05-02 08:13:27",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "backbone_model": "e2e",
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "beam_size": 10,
+    "beam_type": "sampling",
+    "no_seq_cache": false,
+    "no_prefix_cache": true,
+    "width": 3,
+    "num_beams": 1,
+    "rollout": 3,
+    "horizon": 200,
+    "lam": 0.1,
+    "train_value": false,
+    "reward_sample_limit": 2048,
+    "cpu": true,
+    "cpu_num_threads": 4,
+    "cpu_interop_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed0/tasks/tpsr_s0_g0031/iaaccn23/tpsr/g0031_II.11.27_1_0/experiments",
+    "exp_name": "g0031_II.11.27_1_0_tpsr_seed0",
+    "n_features": 4,
+    "feature_names": [
+      "Pol",
+      "n",
+      "epsilon",
+      "Ef"
+    ],
+    "target_name": "alpha"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

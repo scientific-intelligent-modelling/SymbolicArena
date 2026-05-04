@@ -1,0 +1,120 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0046_II.6.15b_3_0",
+  "task_global_index": 46,
+  "dataset": "II.6.15b_3_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0046/iaaccn28/QLattice/g0046_II.6.15b_3_0/experiments/g0046_II.6.15b_3_0_QLattice_seed0_20260502-074118",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "Ef",
+    "epsilon",
+    "p_d",
+    "theta"
+  ],
+  "target_name": "r",
+  "train_rows": 39348,
+  "valid_rows": 5000,
+  "id_test_rows": 11087,
+  "ood_test_rows": 11087,
+  "seconds": 251.327,
+  "equation": "16.67*exp(-2.0*(-0.1434*x1 - 0.2636)**2 - 2.0*(8.438*x0 + 0.108*x3 + tanh(938.1*x0 - 0.1463) - 0.183)**2) + 0.8802",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "16.67*exp(-2.0*(-0.1434*x1 - 0.2636)**2 - 2.0*(8.438*x0 + 0.108*x3 + tanh(938.1*x0 - 0.1463) - 0.183)**2) + 0.8802",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x3, params):\n    return 16.67*exp(-2.0*(-0.1434*x1 - 0.2636)**2 - 2.0*(8.438*x0 + 0.108*x3 + tanh(938.1*x0 - 0.1463) - 0.183)**2) + 0.8802\n",
+    "return_expression_source": "16.67*exp(-2.0*(-0.1434*x1 - 0.2636)**2 - 2.0*(8.438*x0 + 0.108*x3 + tanh(938.1*x0 - 0.1463) - 0.183)**2) + 0.8802",
+    "normalized_expression": "16.67*exp(-2.0*(-0.1434*x1 - 0.2636)**2 - 2.0*(8.438*x0 + 0.108*x3 + tanh(938.1*x0 - 0.1463) - 0.183)**2) + 0.8802",
+    "instantiated_expression": "16.67*exp(-2.0*(-0.1434*x1 - 0.2636)**2 - 2.0*(8.438*x0 + 0.108*x3 + tanh(938.1*x0 - 0.1463) - 0.183)**2) + 0.8802",
+    "variables": [
+      "x0",
+      "x1",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "tanh"
+    ],
+    "ast_node_count": 33,
+    "tree_depth": 11,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "16.67*exp(-2.0*(-0.1434*x1 - 0.2636)**2 - 2.0*(8.438*x0 + 0.108*x3 + tanh(938.1*x0 - 0.1463) - 0.183)**2) + 0.8802"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.348541705944559,
+    "r2": 0.7577991740585619,
+    "nmse": 0.06671305846140632,
+    "acc_0_1": 0.3261665141811528
+  },
+  "valid": {
+    "rmse": 0.3814722738876552,
+    "r2": 0.7508539147371833,
+    "nmse": 0.07565370563664592,
+    "acc_0_1": 0.3262
+  },
+  "id_test": {
+    "rmse": 0.3735529930569099,
+    "r2": 0.7183125131975845,
+    "nmse": 0.07679529927381792,
+    "acc_0_1": 0.3310183097321187
+  },
+  "ood_test": {
+    "rmse": 0.36893995758100595,
+    "r2": -0.06871720125754899,
+    "nmse": 0.18679181804298223,
+    "acc_0_1": 0.07423108144673943
+  },
+  "finished_at": "2026-05-02 07:45:29",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0046/iaaccn28/QLattice/g0046_II.6.15b_3_0/experiments",
+    "exp_name": "g0046_II.6.15b_3_0_QLattice_seed0",
+    "n_features": 4,
+    "feature_names": [
+      "Ef",
+      "epsilon",
+      "p_d",
+      "theta"
+    ],
+    "target_name": "r"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

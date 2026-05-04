@@ -1,0 +1,160 @@
+{
+  "tool": "drsr",
+  "task_label": "g0012_feynman_I_27_6",
+  "task_global_index": 12,
+  "dataset": "feynman_I_27_6",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0012/iaaccn28/drsr/g0012_feynman_I_27_6/experiments/g0012_feynman_I_27_6_drsr_seed1_20260502-075515",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "d1",
+    "d2",
+    "n"
+  ],
+  "target_name": "target",
+  "train_rows": 80000,
+  "valid_rows": 10000,
+  "id_test_rows": 10000,
+  "ood_test_rows": 10000,
+  "seconds": 3902.772,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the focal length given the object distance, image distance, and refractive index.\n\n    Variables:\n    - Independents:\n  - x0: Distance\n  - x1: Distance\n  - x2: Refractive index\n- Dependent:\n  - y: Focal length\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * x0**2 + params[2] * x1**2 + params[3] * x2**2 + params[4] * x0 * x1 + params[5] * x0 * x2 + params[6] * x1 * x2 + params[7] * x0 + params[8] * x1 + params[9] * x2",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the focal length given the object distance, image distance, and refractive index.\n\n    Variables:\n    - Independents:\n  - x0: Distance\n  - x1: Distance\n  - x2: Refractive index\n- Dependent:\n  - y: Focal length\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * x0**2 + params[2] * x1**2 + params[3] * x2**2 + params[4] * x0 * x1 + params[5] * x0 * x2 + params[6] * x1 * x2 + params[7] * x0 + params[8] * x1 + params[9] * x2",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the focal length given the object distance, image distance, and refractive index.\n\n    Variables:\n    - Independents:\n  - x0: Distance\n  - x1: Distance\n  - x2: Refractive index\n- Dependent:\n  - y: Focal length\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * x0**2 + params[2] * x1**2 + params[3] * x2**2 + params[4] * x0 * x1 + params[5] * x0 * x2 + params[6] * x1 * x2 + params[7] * x0 + params[8] * x1 + params[9] * x2",
+    "return_expression_source": "params[0] + params[1] * x0 ** 2 + params[2] * x1 ** 2 + params[3] * x2 ** 2 + params[4] * x0 * x1 + params[5] * x0 * x2 + params[6] * x1 * x2 + params[7] * x0 + params[8] * x1 + params[9] * x2",
+    "normalized_expression": "c0 + c1*x0**2 + c2*x1**2 + c3*x2**2 + c4*x0*x1 + c5*x0*x2 + c6*x1*x2 + c7*x0 + c8*x1 + c9*x2",
+    "instantiated_expression": "0.2864697820075181 + -0.021698835012703366*x0**2 + -0.018576827646005826*x1**2 + 0.05380059135829658*x2**2 + 0.03882226017884927*x0*x1 + -0.045234102299309825*x0*x2 + -0.03177548455793376*x1*x2 + 0.2447734739468874*x0 + 0.2774455540848283*x1 + -0.2926467724026213*x2",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.2864697820075181,
+      -0.021698835012703366,
+      -0.018576827646005826,
+      0.05380059135829658,
+      0.03882226017884927,
+      -0.045234102299309825,
+      -0.03177548455793376,
+      0.2447734739468874,
+      0.2774455540848283,
+      -0.2926467724026213
+    ],
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 38,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0**2 + c2*x1**2 + c3*x2**2 + c4*x0*x1 + c5*x0*x2 + c6*x1*x2 + c7*x0 + c8*x1 + c9*x2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.04431480550412155,
+    "r2": 0.9846639976856177,
+    "nmse": 0.0027304392087141903,
+    "acc_0_1": 0.961
+  },
+  "valid": {
+    "rmse": 0.044366884631880335,
+    "r2": 0.9847534642415567,
+    "nmse": 0.0027217987849399473,
+    "acc_0_1": 0.9625
+  },
+  "id_test": {
+    "rmse": 0.044247173488830636,
+    "r2": 0.9842755166776748,
+    "nmse": 0.0027430899526720734,
+    "acc_0_1": 0.9614
+  },
+  "ood_test": {
+    "rmse": 0.2180289625333713,
+    "r2": 0.9168204155897803,
+    "nmse": 0.039266945443606344,
+    "acc_0_1": 0.4445
+  },
+  "finished_at": "2026-05-02 09:00:18",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0012/iaaccn28/drsr/g0012_feynman_I_27_6/experiments",
+    "exp_name": "g0012_feynman_I_27_6_drsr_seed1",
+    "n_features": 3,
+    "feature_names": [
+      "d1",
+      "d2",
+      "n"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "d1",
+      "d2",
+      "n"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the focal length given the object distance, image distance, and refractive index.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6/metadata.yaml",
+    "feature_descriptions": [
+      "Distance",
+      "Distance",
+      "Refractive index"
+    ],
+    "target_description": "Focal length"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

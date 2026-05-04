@@ -1,0 +1,113 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0048_MatSci21",
+  "task_global_index": 48,
+  "dataset": "MatSci21",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0048/iaaccn27/QLattice/g0048_MatSci21/experiments/g0048_MatSci21_QLattice_seed0_20260502-074150",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "epsilon",
+    "T"
+  ],
+  "target_name": "sigma",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 137.776,
+  "equation": "4.304*(0.1721 - 4.038*x0)*(-0.005091*x1 + (2.821*x0 - 2.405)*(6.325*x0 - 3.422) + 1.071)*exp(3.783*x0) - 3.388",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "4.304*(0.1721 - 4.038*x0)*(-0.005091*x1 + (2.821*x0 - 2.405)*(6.325*x0 - 3.422) + 1.071)*exp(3.783*x0) - 3.388",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (0.7407184 - 17.379552*x0)*(-0.005091*x1 + (2.821*x0 - 2.405)*(6.325*x0 - 3.422) + 1.071)*exp(3.783*x0) - 3.388\n",
+    "return_expression_source": "(0.7407184 - 17.379552*x0)*(-0.005091*x1 + (2.821*x0 - 2.405)*(6.325*x0 - 3.422) + 1.071)*exp(3.783*x0) - 3.388",
+    "normalized_expression": "(0.7407184 - 17.379552*x0)*(-0.005091*x1 + (2.821*x0 - 2.405)*(6.325*x0 - 3.422) + 1.071)*exp(3.783*x0) - 3.388",
+    "instantiated_expression": "(0.7407184 - 17.379552*x0)*(-0.005091*x1 + (2.821*x0 - 2.405)*(6.325*x0 - 3.422) + 1.071)*exp(3.783*x0) - 3.388",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul"
+    ],
+    "ast_node_count": 28,
+    "tree_depth": 7,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(0.7407184 - 17.379552*x0)*(-0.005091*x1 + (2.821*x0 - 2.405)*(6.325*x0 - 3.422) + 1.071)*exp(3.783*x0) - 3.388"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.16087753312243902,
+    "r2": 0.9999741555592775,
+    "nmse": 2.577160969598903e-05,
+    "acc_0_1": 0.5911428571428572
+  },
+  "valid": {
+    "rmse": 0.16156745097137878,
+    "r2": 0.9999751042814629,
+    "nmse": 2.488065806523347e-05,
+    "acc_0_1": 0.598
+  },
+  "id_test": {
+    "rmse": 0.16302870346855017,
+    "r2": 0.9999740686298156,
+    "nmse": 2.5812693128243064e-05,
+    "acc_0_1": 0.588
+  },
+  "ood_test": {
+    "rmse": 0.9742614078782904,
+    "r2": 0.9984787913056885,
+    "nmse": 4.0781859181450915e-05,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 07:44:08",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0048/iaaccn27/QLattice/g0048_MatSci21/experiments",
+    "exp_name": "g0048_MatSci21_QLattice_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "epsilon",
+      "T"
+    ],
+    "target_name": "sigma"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,176 @@
+{
+  "tool": "dso",
+  "task_label": "g0017_strogatz_shearflow1",
+  "task_global_index": 17,
+  "dataset": "strogatz_shearflow1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed0/tasks/dso_s0_g0017/iaaccn25/dso/g0017_strogatz_shearflow1/experiments/g0017_strogatz_shearflow1_dso_seed0_20260502-070657",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3617.004,
+  "equation": "sin(exp(x1))*cos(x2)/sin(x2)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "sin(exp(x1))*cos(x2)/sin(x2)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return sin(exp(x0))*cos(x1)/sin(x1)\n",
+    "return_expression_source": "sin(exp(x0))*cos(x1)/sin(x1)",
+    "normalized_expression": "sin(exp(x0))*cos(x1)/sin(x1)",
+    "instantiated_expression": "sin(exp(x0))*cos(x1)/sin(x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "cos",
+      "exp",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 10,
+    "tree_depth": 4,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "sin(exp(x0))*cos(x1)/sin(x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.25054238730650596,
+    "r2": 0.8052679344102517,
+    "nmse": 0.19442602150059526,
+    "acc_0_1": 0.5859375
+  },
+  "valid": {
+    "rmse": 0.2960252327298657,
+    "r2": 0.7693529600518214,
+    "nmse": 0.2199154972653169,
+    "acc_0_1": 0.65625
+  },
+  "id_test": {
+    "rmse": 0.36129384592146063,
+    "r2": 0.8591448916925916,
+    "nmse": 0.13862575969533225,
+    "acc_0_1": 0.59375
+  },
+  "ood_test": {
+    "rmse": 2.259687611540093,
+    "r2": -1.1848048842466667,
+    "nmse": 1.7723389690107598,
+    "acc_0_1": 0.152
+  },
+  "finished_at": "2026-05-02 08:07:14",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed0/tasks/dso_s0_g0017/iaaccn25/dso/g0017_strogatz_shearflow1/experiments",
+    "exp_name": "g0017_strogatz_shearflow1_dso_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'dso' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

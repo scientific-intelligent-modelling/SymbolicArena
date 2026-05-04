@@ -1,0 +1,112 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0029_strogatz_vdp1",
+  "task_global_index": 29,
+  "dataset": "strogatz_vdp1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed4/tasks/qlattice_s4_g0029/iaaccn28/QLattice/g0029_strogatz_vdp1/experiments/g0029_strogatz_vdp1_QLattice_seed4_20260502-105235",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 130.704,
+  "equation": "10.0*x1 + 5.252*(-0.655*x0 - 0.3688)*(0.7136*x0 + 0.4221)*(1.358*x0 - 1.568) - 1.282",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "10.0*x1 + 5.252*(-0.655*x0 - 0.3688)*(0.7136*x0 + 0.4221)*(1.358*x0 - 1.568) - 1.282",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 10.0*x1 + (-3.44006*x0 - 1.9369376)*(0.7136*x0 + 0.4221)*(1.358*x0 - 1.568) - 1.282\n",
+    "return_expression_source": "10.0*x1 + (-3.44006*x0 - 1.9369376)*(0.7136*x0 + 0.4221)*(1.358*x0 - 1.568) - 1.282",
+    "normalized_expression": "10.0*x1 + (-3.44006*x0 - 1.9369376)*(0.7136*x0 + 0.4221)*(1.358*x0 - 1.568) - 1.282",
+    "instantiated_expression": "10.0*x1 + (-3.44006*x0 - 1.9369376)*(0.7136*x0 + 0.4221)*(1.358*x0 - 1.568) - 1.282",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 21,
+    "tree_depth": 5,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "10.0*x1 + (-3.44006*x0 - 1.9369376)*(0.7136*x0 + 0.4221)*(1.358*x0 - 1.568) - 1.282"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.00029337027923056005,
+    "r2": 0.9999999645863701,
+    "nmse": 3.538468640582423e-08,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.00031825712130007644,
+    "r2": 0.9999999569055678,
+    "nmse": 4.05730901744609e-08,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.00031429500948605807,
+    "r2": 0.9999999801477274,
+    "nmse": 1.9836764848877886e-08,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.0005447648897965787,
+    "r2": 0.9999999983215052,
+    "nmse": 1.4368464521386667e-09,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:54:46",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed4/tasks/qlattice_s4_g0029/iaaccn28/QLattice/g0029_strogatz_vdp1/experiments",
+    "exp_name": "g0029_strogatz_vdp1_QLattice_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

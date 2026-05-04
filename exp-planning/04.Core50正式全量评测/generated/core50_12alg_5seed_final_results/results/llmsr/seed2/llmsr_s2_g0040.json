@@ -1,0 +1,167 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0040_feynman-i.29.16",
+  "task_global_index": 40,
+  "dataset": "feynman-i.29.16",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed2/tasks/llmsr_s2_g0040/iaaccn23/llmsr/g0040_feynman-i.29.16/experiments/g0040_feynman-i.29.16_llmsr_seed2_20260502-094439",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3614.005,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle\n\n    Variables:\n    - Independents:\n  - x0: x_1, Wavelength\n  - x1: x_2, Wavelength\n  - x2: theta_1, Angle\n  - x3: theta_2, Angle\n- Dependent:\n  - y: x, Wavelength\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return params[0] + params[1] * np.sin(x2) * np.sin(x3) + params[2] * np.cos(x2) * np.cos(x3) + params[3] * np.sin(x2) * np.cos(x3) + params[4] * np.cos(x2) * np.sin(x3) + params[5] * x0 + params[6] * x1 + params[7] * x0 * x1 + params[8] * x0 * np.sin(x2) * np.sin(x3) + params[9] * x1 * np.cos(x2) * np.cos(x3)\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle\n\n    Variables:\n    - Independents:\n  - x0: x_1, Wavelength\n  - x1: x_2, Wavelength\n  - x2: theta_1, Angle\n  - x3: theta_2, Angle\n- Dependent:\n  - y: x, Wavelength\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return params[0] + params[1] * np.sin(x2) * np.sin(x3) + params[2] * np.cos(x2) * np.cos(x3) + params[3] * np.sin(x2) * np.cos(x3) + params[4] * np.cos(x2) * np.sin(x3) + params[5] * x0 + params[6] * x1 + params[7] * x0 * x1 + params[8] * x0 * np.sin(x2) * np.sin(x3) + params[9] * x1 * np.cos(x2) * np.cos(x3)\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle\n\n    Variables:\n    - Independents:\n  - x0: x_1, Wavelength\n  - x1: x_2, Wavelength\n  - x2: theta_1, Angle\n  - x3: theta_2, Angle\n- Dependent:\n  - y: x, Wavelength\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return params[0] + params[1] * np.sin(x2) * np.sin(x3) + params[2] * np.cos(x2) * np.cos(x3) + params[3] * np.sin(x2) * np.cos(x3) + params[4] * np.cos(x2) * np.sin(x3) + params[5] * x0 + params[6] * x1 + params[7] * x0 * x1 + params[8] * x0 * np.sin(x2) * np.sin(x3) + params[9] * x1 * np.cos(x2) * np.cos(x3)\n\n",
+    "return_expression_source": "params[0] + params[1] * np.sin(x2) * np.sin(x3) + params[2] * np.cos(x2) * np.cos(x3) + params[3] * np.sin(x2) * np.cos(x3) + params[4] * np.cos(x2) * np.sin(x3) + params[5] * x0 + params[6] * x1 + params[7] * x0 * x1 + params[8] * x0 * np.sin(x2) * np.sin(x3) + params[9] * x1 * np.cos(x2) * np.cos(x3)",
+    "normalized_expression": "c0 + c1*sin(x2)*sin(x3) + c2*cos(x2)*cos(x3) + c3*sin(x2)*cos(x3) + c4*sin(x3)*cos(x2) + c5*x0 + c6*x1 + c7*x0*x1 + c8*x0*sin(x2)*sin(x3) + c9*x1*cos(x2)*cos(x3)",
+    "instantiated_expression": "-0.29552342951863664 + 0.34097581663007287*sin(x2)*sin(x3) + 0.31613788571166723*cos(x2)*cos(x3) + -0.0016824173848788775*sin(x2)*cos(x3) + -0.009603287040868524*sin(x3)*cos(x2) + 0.9896969054241354*x0 + 0.9900217886686357*x1 + -0.09238221023234992*x0*x1 + 0.23496082015941816*x0*sin(x2)*sin(x3) + 0.24507491276073592*x1*cos(x2)*cos(x3)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -0.29552342951863664,
+      0.34097581663007287,
+      0.31613788571166723,
+      -0.0016824173848788775,
+      -0.009603287040868524,
+      0.9896969054241354,
+      0.9900217886686357,
+      -0.09238221023234992,
+      0.23496082015941816,
+      0.24507491276073592
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 50,
+    "tree_depth": 4,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*sin(x2)*sin(x3) + c2*cos(x2)*cos(x3) + c3*sin(x2)*cos(x3) + c4*sin(x3)*cos(x2) + c5*x0 + c6*x1 + c7*x0*x1 + c8*x0*sin(x2)*sin(x3) + c9*x1*cos(x2)*cos(x3)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.7721458718977766,
+    "r2": 0.9351234275917201,
+    "nmse": 0.02767294211295395,
+    "acc_0_1": 0.23325
+  },
+  "valid": {
+    "rmse": 0.8157596186149877,
+    "r2": 0.9200907869032176,
+    "nmse": 0.03313230147074492,
+    "acc_0_1": 0.235
+  },
+  "id_test": {
+    "rmse": 0.849813882436846,
+    "r2": 0.9152820157854394,
+    "nmse": 0.03722651734382269,
+    "acc_0_1": 0.246
+  },
+  "ood_test": {
+    "rmse": 9.122107324200522,
+    "r2": -26.842664699984486,
+    "nmse": 0.16730053167965622,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 10:44:53",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed2/tasks/llmsr_s2_g0040/iaaccn23/llmsr/g0040_feynman-i.29.16/experiments",
+    "exp_name": "g0040_feynman-i.29.16_llmsr_seed2",
+    "n_features": 4,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16/metadata.yaml",
+    "feature_descriptions": [
+      "x_1, Wavelength",
+      "x_2, Wavelength",
+      "theta_1, Angle",
+      "theta_2, Angle"
+    ],
+    "target_description": "x, Wavelength"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

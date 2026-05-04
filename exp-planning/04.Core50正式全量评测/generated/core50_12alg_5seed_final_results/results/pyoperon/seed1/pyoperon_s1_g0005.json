@@ -1,0 +1,119 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0005_Keijzer-11",
+  "task_global_index": 5,
+  "dataset": "Keijzer-11",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-11",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-11"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed1/tasks/pyoperon_s1_g0005/iaaccn27/pyoperon/g0005_Keijzer-11/experiments/g0005_Keijzer-11_pyoperon_seed1_20260502-074748",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 18,
+  "valid_rows": 2,
+  "id_test_rows": 361201,
+  "ood_test_rows": 200,
+  "seconds": 12.529,
+  "equation": "(0.053 + ((-10.509) * (((0.359 * X1) / (sqrt(1 + (-0.823) ^ 2))) * ((-0.353) * X2))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(0.053 + ((-10.509) * (((0.359 * X1) / (sqrt(1 + (-0.823) ^ 2))) * ((-0.353) * X2))))",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 1.02830374657398*x0*x1 + 0.053\n",
+    "return_expression_source": "1.02830374657398*x0*x1 + 0.053",
+    "normalized_expression": "1.02830374657398*x0*x1 + 0.053",
+    "instantiated_expression": "1.02830374657398*x0*x1 + 0.053",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 6,
+    "tree_depth": 3,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.02830374657398*x0*x1 + 0.053"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.5465249516613155,
+    "r2": 0.953080212003174,
+    "nmse": 0.029869946974634413,
+    "acc_0_1": 0.16666666666666666
+  },
+  "valid": {
+    "rmse": 0.4397087000464412,
+    "r2": 0.9738173695660386,
+    "nmse": 0.02526271461471636,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 0.6745305596297517,
+    "r2": 0.953846966202333,
+    "nmse": 0.046152446720922065,
+    "acc_0_1": 0.09020739145240461
+  },
+  "ood_test": {
+    "rmse": 0.7034619817615874,
+    "r2": 0.9845979681226971,
+    "nmse": 0.015393743664439945,
+    "acc_0_1": 0.055
+  },
+  "finished_at": "2026-05-02 07:48:00",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed1/tasks/pyoperon_s1_g0005/iaaccn27/pyoperon/g0005_Keijzer-11/experiments",
+    "exp_name": "g0005_Keijzer-11_pyoperon_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

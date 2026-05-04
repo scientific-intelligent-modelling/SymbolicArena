@@ -1,0 +1,181 @@
+{
+  "tool": "dso",
+  "task_label": "g0007_Korns-2",
+  "task_global_index": 7,
+  "dataset": "Korns-2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-2",
+  "expected_dataset_rel": "sim-datasets-data/korns/Korns-2",
+  "expected_dataset_dir": "sim-datasets-data/korns/Korns-2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/korns/Korns-2",
+    "expected_dataset_dir": "sim-datasets-data/korns/Korns-2",
+    "expected_normalized": "sim-datasets-data/korns/Korns-2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-2",
+    "actual_normalized": "sim-datasets-data/korns/Korns-2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed4/tasks/dso_s4_g0007/iaaccn28/dso/g0007_Korns-2/experiments/g0007_Korns-2_dso_seed4_20260502-103329",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 90,
+  "valid_rows": 10,
+  "id_test_rows": 100,
+  "ood_test_rows": 1000,
+  "seconds": 3602.687,
+  "equation": "(x5*(5*x2 + 4*x4) - x5)/x5**2",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "(x5*(5*x2 + 4*x4) - x5)/x5**2",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x1, x3, x4, params):\n    return (x4*(5*x1 + 4*x3) - x4)/x4**2\n",
+    "return_expression_source": "(x4*(5*x1 + 4*x3) - x4)/x4**2",
+    "normalized_expression": "(x4*(5*x1 + 4*x3) - x4)/x4**2",
+    "instantiated_expression": "(x4*(5*x1 + 4*x3) - x4)/x4**2",
+    "variables": [
+      "x1",
+      "x3",
+      "x4"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 17,
+    "tree_depth": 6,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(x4*(5*x1 + 4*x3) - x4)/x4**2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.207255367080443,
+    "r2": 0.9987200258170187,
+    "nmse": 0.001261677452204939,
+    "acc_0_1": 0.07777777777777778
+  },
+  "valid": {
+    "rmse": 1.2503243060848352,
+    "r2": 0.968648776760809,
+    "nmse": 0.03123240195508785,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 6.405853805531186,
+    "r2": 0.9877064525419417,
+    "nmse": 0.012287879428283504,
+    "acc_0_1": 0.11
+  },
+  "ood_test": {
+    "rmse": 14.649333560684173,
+    "r2": 0.973961222882705,
+    "nmse": 0.026035915234090382,
+    "acc_0_1": 0.077
+  },
+  "finished_at": "2026-05-02 11:33:32",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed4/tasks/dso_s4_g0007/iaaccn28/dso/g0007_Korns-2/experiments",
+    "exp_name": "g0007_Korns-2_dso_seed4",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'dso' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

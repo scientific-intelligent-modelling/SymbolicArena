@@ -1,0 +1,136 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0042_feynman_test_15",
+  "task_global_index": 42,
+  "dataset": "feynman_test_15",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_test_15"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed3/tasks/imcts_s3_g0042/iaaccn28/iMCTS/g0042_feynman_test_15/experiments/g0042_feynman_test_15_iMCTS_seed3_20260502-101652",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "c",
+    "v",
+    "omega",
+    "theta"
+  ],
+  "target_name": "target",
+  "train_rows": 80000,
+  "valid_rows": 10000,
+  "id_test_rows": 10000,
+  "ood_test_rows": 10000,
+  "seconds": 3604.689,
+  "equation": "x2 - cos(x3)/(3.3962755928216732 - 0.49333827768249613*x2)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "x2 - cos(x3)/(3.3962755928216732 - 0.49333827768249613*x2)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, x2, params):\n    return x1 - cos(x2)/(3.3962755928216732 - 0.49333827768249613*x1)\n",
+    "return_expression_source": "x1 - cos(x2)/(3.3962755928216732 - 0.49333827768249613*x1)",
+    "normalized_expression": "x1 - cos(x2)/(3.3962755928216732 - 0.49333827768249613*x1)",
+    "instantiated_expression": "x1 - cos(x2)/(3.3962755928216732 - 0.49333827768249613*x1)",
+    "variables": [
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 6,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x1 - cos(x2)/(3.3962755928216732 - 0.49333827768249613*x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.6049157382764045,
+    "r2": -0.6141578329061477,
+    "nmse": 0.23977637662840168,
+    "acc_0_1": 0.0575
+  },
+  "valid": {
+    "rmse": 1.5947122650799865,
+    "r2": -0.6047564944505812,
+    "nmse": 0.23792477279537944,
+    "acc_0_1": 0.0577
+  },
+  "id_test": {
+    "rmse": 1.6092458605353515,
+    "r2": -0.6340707702389561,
+    "nmse": 0.2410556179303978,
+    "acc_0_1": 0.0588
+  },
+  "ood_test": {
+    "rmse": 2.2079119775102725,
+    "r2": -0.5692204294859684,
+    "nmse": 0.5777925859087545,
+    "acc_0_1": 0.1674
+  },
+  "finished_at": "2026-05-02 11:16:57",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed3/tasks/imcts_s3_g0042/iaaccn28/iMCTS/g0042_feynman_test_15/experiments",
+    "exp_name": "g0042_feynman_test_15_iMCTS_seed3",
+    "n_features": 4,
+    "feature_names": [
+      "c",
+      "v",
+      "omega",
+      "theta"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'iMCTS' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

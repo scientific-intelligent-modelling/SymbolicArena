@@ -1,0 +1,172 @@
+{
+  "tool": "drsr",
+  "task_label": "g0044_feynman-i.15.3t",
+  "task_global_index": 44,
+  "dataset": "feynman-i.15.3t",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0044/iaaccn29/drsr/g0044_feynman-i.15.3t/experiments/g0044_feynman-i.15.3t_drsr_seed0_20260502-074102",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3",
+    "x4"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3611.284,
+  "equation": "def equation(col0, col1, col2, col3, col4, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x4\n",
+  "equation_count": 175,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(col0, col1, col2, col3, col4, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x4\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(col0, col1, col2, col3, col4, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x4\n",
+    "return_expression_source": "params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x4",
+    "normalized_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x4",
+    "instantiated_expression": "0.017928493606108722 + -8.271667115566117e-13*x0 + 0.7148103120745308*x1 + -0.9328288493890713*x2 + 1.0391989543273076e-05*x4",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x4"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.017928493606108722,
+      -8.271667115566117e-13,
+      0.7148103120745308,
+      -0.9328288493890713,
+      1.0391989543273076e-05,
+      -0.648688758794882,
+      0.7263578446997732,
+      0.08292244049818343,
+      -0.40057621892523043,
+      -0.1546255576046831
+    ],
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 14,
+    "tree_depth": 3,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [
+      "function_arg_map:col0->x0,col1->x1,col2->x2,col3->x3,col4->x4"
+    ],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x4"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.020812039567916114,
+    "r2": -703420.5649502146,
+    "nmse": 404642.9480122067,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.02176246676135653,
+    "r2": -732108.4528748328,
+    "nmse": 433202.26119358407,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.020088035701465765,
+    "r2": -720212.760096881,
+    "nmse": 417735.87829566014,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.07570426062466272,
+    "r2": -43158545.723250955,
+    "nmse": 443922.5298684506,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:41:14",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0044/iaaccn29/drsr/g0044_feynman-i.15.3t/experiments",
+    "exp_name": "g0044_feynman-i.15.3t_drsr_seed0",
+    "n_features": 5,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Time given Time, Velocity, Position There are 5 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"t, Time\"; 1 variable with semantic role \"u, Velocity\"; 1 variable with semantic role \"x, Position\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t/metadata.yaml",
+    "feature_descriptions": [
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden"
+    ],
+    "target_description": "t_1, Time"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

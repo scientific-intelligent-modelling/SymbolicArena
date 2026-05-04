@@ -1,0 +1,136 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0004_Korns-4",
+  "task_global_index": 4,
+  "dataset": "Korns-4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-4",
+  "expected_dataset_rel": "sim-datasets-data/korns/Korns-4",
+  "expected_dataset_dir": "sim-datasets-data/korns/Korns-4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/korns/Korns-4",
+    "expected_dataset_dir": "sim-datasets-data/korns/Korns-4",
+    "expected_normalized": "sim-datasets-data/korns/Korns-4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-4",
+    "actual_normalized": "sim-datasets-data/korns/Korns-4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed2/tasks/imcts_s2_g0004/iaaccn26/iMCTS/g0004_Korns-4/experiments/g0004_Korns-4_iMCTS_seed2_20260502-083503",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 90,
+  "valid_rows": 10,
+  "id_test_rows": 100,
+  "ood_test_rows": 1000,
+  "seconds": 81.606,
+  "equation": "0.13000038914359272*sin(x2) - 2.3000000306946421",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "0.13000038914359272*sin(x2) - 2.3000000306946421",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return 0.13000038914359272*sin(x1) - 2.3000000306946421\n",
+    "return_expression_source": "0.13000038914359272*sin(x1) - 2.3000000306946421",
+    "normalized_expression": "0.13000038914359272*sin(x1) - 2.3000000306946421",
+    "instantiated_expression": "0.13000038914359272*sin(x1) - 2.3000000306946421",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 6,
+    "tree_depth": 4,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.13000038914359272*sin(x1) - 2.3000000306946421"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.843920304112362e-07,
+    "r2": 0.9999999999909109,
+    "nmse": 1.5249493663760466e-14,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 2.6182005995254006e-07,
+    "r2": 0.9999999999909924,
+    "nmse": 1.2984016501452237e-14,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 2.700887847546359e-07,
+    "r2": 0.9999999999909556,
+    "nmse": 1.3787462529843389e-14,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 2.7680637457659166e-07,
+    "r2": 0.9999999999910092,
+    "nmse": 1.452256100051655e-14,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:36:24",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed2/tasks/imcts_s2_g0004/iaaccn26/iMCTS/g0004_Korns-4/experiments",
+    "exp_name": "g0004_Korns-4_iMCTS_seed2",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

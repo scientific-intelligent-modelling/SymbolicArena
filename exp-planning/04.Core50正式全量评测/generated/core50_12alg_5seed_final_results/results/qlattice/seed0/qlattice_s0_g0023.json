@@ -1,0 +1,126 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0023_I.11.19_4_0",
+  "task_global_index": 23,
+  "dataset": "I.11.19_4_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0023/iaaccn25/QLattice/g0023_I.11.19_4_0/experiments/g0023_I.11.19_4_0_QLattice_seed0_20260502-071013",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "A",
+    "x1",
+    "x2",
+    "x3",
+    "y1",
+    "y3"
+  ],
+  "target_name": "y2",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 1513.145,
+  "equation": "-87.45*(1.119 - 0.06251*x1)*(1.247 - 0.0773*x4)*(0.02385*x0 + 0.09534)*exp(-2.0*(0.06003*x5 - 0.4601)**2 - 2.0*tanh(0.4221*x2 + 0.184)**2) + 2.864",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "-87.45*(1.119 - 0.06251*x1)*(1.247 - 0.0773*x4)*(0.02385*x0 + 0.09534)*exp(-2.0*(0.06003*x5 - 0.4601)**2 - 2.0*tanh(0.4221*x2 + 0.184)**2) + 2.864",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x4, x5, params):\n    return (1.247 - 0.0773*x4)*(0.02385*x0 + 0.09534)*(5.4664995*x1 - 97.85655)*exp(-2.0*(0.06003*x5 - 0.4601)**2 - 2.0*tanh(0.4221*x2 + 0.184)**2) + 2.864\n",
+    "return_expression_source": "(1.247 - 0.0773*x4)*(0.02385*x0 + 0.09534)*(5.4664995*x1 - 97.85655)*exp(-2.0*(0.06003*x5 - 0.4601)**2 - 2.0*tanh(0.4221*x2 + 0.184)**2) + 2.864",
+    "normalized_expression": "(1.247 - 0.0773*x4)*(0.02385*x0 + 0.09534)*(5.4664995*x1 - 97.85655)*exp(-2.0*(0.06003*x5 - 0.4601)**2 - 2.0*tanh(0.4221*x2 + 0.184)**2) + 2.864",
+    "instantiated_expression": "(1.247 - 0.0773*x4)*(0.02385*x0 + 0.09534)*(5.4664995*x1 - 97.85655)*exp(-2.0*(0.06003*x5 - 0.4601)**2 - 2.0*tanh(0.4221*x2 + 0.184)**2) + 2.864",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x4",
+      "x5"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 6,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "tanh"
+    ],
+    "ast_node_count": 39,
+    "tree_depth": 10,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(1.247 - 0.0773*x4)*(0.02385*x0 + 0.09534)*(5.4664995*x1 - 97.85655)*exp(-2.0*(0.06003*x5 - 0.4601)**2 - 2.0*tanh(0.4221*x2 + 0.184)**2) + 2.864"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.3113530468348564,
+    "r2": 0.943214620667563,
+    "nmse": 0.019497147529772878,
+    "acc_0_1": 0.038253333333333334
+  },
+  "valid": {
+    "rmse": 2.2443206053658162,
+    "r2": 0.9440789430776584,
+    "nmse": 0.01900881108142189,
+    "acc_0_1": 0.0396
+  },
+  "id_test": {
+    "rmse": 2.304202307170826,
+    "r2": 0.9432857071108303,
+    "nmse": 0.019594054812141926,
+    "acc_0_1": 0.0374
+  },
+  "ood_test": {
+    "rmse": 9.70463623835206,
+    "r2": 0.8802963450289519,
+    "nmse": 0.07513077505618132,
+    "acc_0_1": 0.0092
+  },
+  "finished_at": "2026-05-02 07:35:26",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0023/iaaccn25/QLattice/g0023_I.11.19_4_0/experiments",
+    "exp_name": "g0023_I.11.19_4_0_QLattice_seed0",
+    "n_features": 6,
+    "feature_names": [
+      "A",
+      "x1",
+      "x2",
+      "x3",
+      "y1",
+      "y3"
+    ],
+    "target_name": "y2"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

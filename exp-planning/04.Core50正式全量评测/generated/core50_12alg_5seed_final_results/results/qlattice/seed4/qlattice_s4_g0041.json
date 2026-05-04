@@ -1,0 +1,117 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0041_PO41",
+  "task_global_index": 41,
+  "dataset": "PO41",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO41",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO41",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO41",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO41",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO41",
+    "expected_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO41",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO41",
+    "actual_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO41"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed4/tasks/qlattice_s4_g0041/iaaccn26/QLattice/g0041_PO41/experiments/g0041_PO41_QLattice_seed4_20260502-110701",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "t",
+    "v"
+  ],
+  "target_name": "dv_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 156.583,
+  "equation": "0.01188 - 0.6065*tanh(1.142*x0 + (0.4597 - 0.5387*x0)*(1.51*x2 + exp(-2.0*(2.54*x0 - 0.6376)**2 - 2.0*(0.6235*x2 - 0.3901)**2) + 0.105) - 0.1815)",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "0.01188 - 0.6065*tanh(1.142*x0 + (0.4597 - 0.5387*x0)*(1.51*x2 + exp(-2.0*(2.54*x0 - 0.6376)**2 - 2.0*(0.6235*x2 - 0.3901)**2) + 0.105) - 0.1815)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x2, params):\n    return 0.01188 - 0.6065*tanh(1.142*x0 + (0.4597 - 0.5387*x0)*(1.51*x2 + exp(-2.0*(2.54*x0 - 0.6376)**2 - 2.0*(0.6235*x2 - 0.3901)**2) + 0.105) - 0.1815)\n",
+    "return_expression_source": "0.01188 - 0.6065*tanh(1.142*x0 + (0.4597 - 0.5387*x0)*(1.51*x2 + exp(-2.0*(2.54*x0 - 0.6376)**2 - 2.0*(0.6235*x2 - 0.3901)**2) + 0.105) - 0.1815)",
+    "normalized_expression": "0.01188 - 0.6065*tanh(1.142*x0 + (0.4597 - 0.5387*x0)*(1.51*x2 + exp(-2.0*(2.54*x0 - 0.6376)**2 - 2.0*(0.6235*x2 - 0.3901)**2) + 0.105) - 0.1815)",
+    "instantiated_expression": "0.01188 - 0.6065*tanh(1.142*x0 + (0.4597 - 0.5387*x0)*(1.51*x2 + exp(-2.0*(2.54*x0 - 0.6376)**2 - 2.0*(0.6235*x2 - 0.3901)**2) + 0.105) - 0.1815)",
+    "variables": [
+      "x0",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "tanh"
+    ],
+    "ast_node_count": 41,
+    "tree_depth": 13,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.01188 - 0.6065*tanh(1.142*x0 + (0.4597 - 0.5387*x0)*(1.51*x2 + exp(-2.0*(2.54*x0 - 0.6376)**2 - 2.0*(0.6235*x2 - 0.3901)**2) + 0.105) - 0.1815)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.003159577730185521,
+    "r2": 0.9993041284939145,
+    "nmse": 0.0006957681330659336,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.0033604827788936043,
+    "r2": 0.9992565416183053,
+    "nmse": 0.0007393032344484029,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.003591284118404588,
+    "r2": 0.9992221853315765,
+    "nmse": 0.0007777168680153882,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.001482784675428781,
+    "r2": -579.0648898816738,
+    "nmse": 380.99954146710445,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:09:38",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed4/tasks/qlattice_s4_g0041/iaaccn26/QLattice/g0041_PO41/experiments",
+    "exp_name": "g0041_PO41_QLattice_seed4",
+    "n_features": 3,
+    "feature_names": [
+      "x",
+      "t",
+      "v"
+    ],
+    "target_name": "dv_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,135 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0038_PO19",
+  "task_global_index": 38,
+  "dataset": "PO19",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "expected_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "actual_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO19"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed1/tasks/imcts_s1_g0038/iaaccn29/iMCTS/g0038_PO19/experiments/g0038_PO19_iMCTS_seed1_20260502-091613",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x",
+    "t",
+    "v"
+  ],
+  "target_name": "dv_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3601.663,
+  "equation": "-x0/(cos(x0) - 1.1210638093393517) - 0.5958796893472702*x2 - 1.2957851638292417*sin(x0) + 1.1527817741166289*sin(x0)/(cos(x0) - 1.1210638093393517)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "-x0/(cos(x0) - 1.1210638093393517) - 0.5958796893472702*x2 - 1.2957851638292417*sin(x0) + 1.1527817741166289*sin(x0)/(cos(x0) - 1.1210638093393517)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x2, params):\n    return -x0/(cos(x0) - 1.1210638093393517) - 0.5958796893472702*x2 - 1.2957851638292417*sin(x0) + 1.1527817741166289*sin(x0)/(cos(x0) - 1.1210638093393517)\n",
+    "return_expression_source": "-x0/(cos(x0) - 1.1210638093393517) - 0.5958796893472702*x2 - 1.2957851638292417*sin(x0) + 1.1527817741166289*sin(x0)/(cos(x0) - 1.1210638093393517)",
+    "normalized_expression": "-x0/(cos(x0) - 1.1210638093393517) - 0.5958796893472702*x2 - 1.2957851638292417*sin(x0) + 1.1527817741166289*sin(x0)/(cos(x0) - 1.1210638093393517)",
+    "instantiated_expression": "-x0/(cos(x0) - 1.1210638093393517) - 0.5958796893472702*x2 - 1.2957851638292417*sin(x0) + 1.1527817741166289*sin(x0)/(cos(x0) - 1.1210638093393517)",
+    "variables": [
+      "x0",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 27,
+    "tree_depth": 6,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-x0/(cos(x0) - 1.1210638093393517) - 0.5958796893472702*x2 - 1.2957851638292417*sin(x0) + 1.1527817741166289*sin(x0)/(cos(x0) - 1.1210638093393517)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.003140184390355809,
+    "r2": 0.999820456763583,
+    "nmse": 0.00017954273660123943,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.003160586329424674,
+    "r2": 0.999805189098534,
+    "nmse": 0.00019480614209634636,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.003517132009450046,
+    "r2": 0.9997572542622267,
+    "nmse": 0.00024271641999169526,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 1.7239096875782597e-06,
+    "r2": 0.9920262130071962,
+    "nmse": 0.007923845814473989,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:16:15",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed1/tasks/imcts_s1_g0038/iaaccn29/iMCTS/g0038_PO19/experiments",
+    "exp_name": "g0038_PO19_iMCTS_seed1",
+    "n_features": 3,
+    "feature_names": [
+      "x",
+      "t",
+      "v"
+    ],
+    "target_name": "dv_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'iMCTS' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

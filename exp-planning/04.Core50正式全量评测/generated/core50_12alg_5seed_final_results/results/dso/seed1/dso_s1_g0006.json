@@ -1,0 +1,171 @@
+{
+  "tool": "dso",
+  "task_label": "g0006_Keijzer-2",
+  "task_global_index": 6,
+  "dataset": "Keijzer-2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed1/tasks/dso_s1_g0006/iaaccn28/dso/g0006_Keijzer-2/experiments/g0006_Keijzer-2_dso_seed1_20260502-075117",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1"
+  ],
+  "target_name": "target",
+  "train_rows": 37,
+  "valid_rows": 4,
+  "id_test_rows": 4001,
+  "ood_test_rows": 410,
+  "seconds": 1537.821,
+  "equation": "  2                  \nx₁ ⋅cos(x₁)⋅cos(4⋅x₁)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "x1**2*cos(x1)*cos(4*x1)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return x0**2*cos(x0)*cos(4*x0)\n",
+    "return_expression_source": "x0**2*cos(x0)*cos(4*x0)",
+    "normalized_expression": "x0**2*cos(x0)*cos(4*x0)",
+    "instantiated_expression": "x0**2*cos(x0)*cos(4*x0)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 1,
+    "operator_set": [
+      "cos",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 10,
+    "tree_depth": 4,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0**2*cos(x0)*cos(4*x0)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.1850785753150212,
+    "r2": 0.42222260731379635,
+    "nmse": 0.5524487126415657,
+    "acc_0_1": 0.40540540540540543
+  },
+  "valid": {
+    "rmse": 0.20044794706218125,
+    "r2": -0.9817005479182195,
+    "nmse": 1.941059330138007,
+    "acc_0_1": 0.5
+  },
+  "id_test": {
+    "rmse": 0.18323109298962806,
+    "r2": 0.4123975076902958,
+    "nmse": 0.5650679493300732,
+    "acc_0_1": 0.42614346413396653
+  },
+  "ood_test": {
+    "rmse": 0.9647055726562637,
+    "r2": -25.593939519590077,
+    "nmse": 5.632846001503306,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:16:55",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed1/tasks/dso_s1_g0006/iaaccn28/dso/g0006_Keijzer-2/experiments",
+    "exp_name": "g0006_Keijzer-2_dso_seed1",
+    "n_features": 1,
+    "feature_names": [
+      "x1"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

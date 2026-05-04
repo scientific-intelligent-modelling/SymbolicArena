@@ -1,0 +1,171 @@
+{
+  "tool": "drsr",
+  "task_label": "g0004_Korns-4",
+  "task_global_index": 4,
+  "dataset": "Korns-4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-4",
+  "expected_dataset_rel": "sim-datasets-data/korns/Korns-4",
+  "expected_dataset_dir": "sim-datasets-data/korns/Korns-4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/korns/Korns-4",
+    "expected_dataset_dir": "sim-datasets-data/korns/Korns-4",
+    "expected_normalized": "sim-datasets-data/korns/Korns-4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-4",
+    "actual_normalized": "sim-datasets-data/korns/Korns-4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0004/iaaccn27/drsr/g0004_Korns-4/experiments/g0004_Korns-4_drsr_seed1_20260502-074749",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 90,
+  "valid_rows": 10,
+  "id_test_rows": 100,
+  "ood_test_rows": 1000,
+  "seconds": 3900.907,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This is an abstract symbolic regression problem.\n\n    Variables:\n    - Independents:\n  - x0: Independent variables (anonymized)\n  - x1: Independent variables (anonymized)\n  - x2: Independent variables (anonymized)\n  - x3: Independent variables (anonymized)\n  - x4: Independent variables (anonymized)\n- Dependent:\n  - y: Dependent variable (target)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x0 * x1 + params[7] * x0 * x2 + params[8] * x0 * x4 + params[9] * x1 * x2",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This is an abstract symbolic regression problem.\n\n    Variables:\n    - Independents:\n  - x0: Independent variables (anonymized)\n  - x1: Independent variables (anonymized)\n  - x2: Independent variables (anonymized)\n  - x3: Independent variables (anonymized)\n  - x4: Independent variables (anonymized)\n- Dependent:\n  - y: Dependent variable (target)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x0 * x1 + params[7] * x0 * x2 + params[8] * x0 * x4 + params[9] * x1 * x2",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This is an abstract symbolic regression problem.\n\n    Variables:\n    - Independents:\n  - x0: Independent variables (anonymized)\n  - x1: Independent variables (anonymized)\n  - x2: Independent variables (anonymized)\n  - x3: Independent variables (anonymized)\n  - x4: Independent variables (anonymized)\n- Dependent:\n  - y: Dependent variable (target)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x0 * x1 + params[7] * x0 * x2 + params[8] * x0 * x4 + params[9] * x1 * x2",
+    "return_expression_source": "params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x0 * x1 + params[7] * x0 * x2 + params[8] * x0 * x4 + params[9] * x1 * x2",
+    "normalized_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x3 + c5*x4 + c6*x0*x1 + c7*x0*x2 + c8*x0*x4 + c9*x1*x2",
+    "instantiated_expression": "-2.3018837060057304 + -5.316682535526645e-05*x0 + 0.00023718761164392353*x1 + -0.00018282527801652073*x2 + 0.0004586554444850691*x3 + 0.00012140886874741027*x4 + 1.8951212353657e-05*x0*x1 + 9.425764228676116e-06*x0*x2 + -2.0592661312659112e-05*x0*x4 + 1.716648803882486e-05*x1*x2",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -2.3018837060057304,
+      -5.316682535526645e-05,
+      0.00023718761164392353,
+      -0.00018282527801652073,
+      0.0004586554444850691,
+      0.00012140886874741027,
+      1.8951212353657e-05,
+      9.425764228676116e-06,
+      -2.0592661312659112e-05,
+      1.716648803882486e-05
+    ],
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 33,
+    "tree_depth": 3,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x3 + c5*x4 + c6*x0*x1 + c7*x0*x2 + c8*x0*x4 + c9*x1*x2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.08856809734738194,
+    "r2": 0.11846547797075968,
+    "nmse": 0.0014790239623859627,
+    "acc_0_1": 0.6222222222222222
+  },
+  "valid": {
+    "rmse": 0.08987827572758157,
+    "r2": -0.06148332789289035,
+    "nmse": 0.001530074886437114,
+    "acc_0_1": 0.7
+  },
+  "id_test": {
+    "rmse": 0.09743774244987015,
+    "r2": -0.17713201336789974,
+    "nmse": 0.0017944264820822437,
+    "acc_0_1": 0.6
+  },
+  "ood_test": {
+    "rmse": 0.10132584401152145,
+    "r2": -0.20471686396467215,
+    "nmse": 0.0019459491827059344,
+    "acc_0_1": 0.598
+  },
+  "finished_at": "2026-05-02 08:52:50",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0004/iaaccn27/drsr/g0004_Korns-4/experiments",
+    "exp_name": "g0004_Korns-4_drsr_seed1",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "prompt_target_name": "y",
+    "background": "This is an abstract symbolic regression problem.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/korns/Korns-4/metadata.yaml",
+    "feature_descriptions": [
+      "Independent variables (anonymized)",
+      "Independent variables (anonymized)",
+      "Independent variables (anonymized)",
+      "Independent variables (anonymized)",
+      "Independent variables (anonymized)"
+    ],
+    "target_description": "Dependent variable (target)"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

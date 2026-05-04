@@ -1,0 +1,117 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0049_BPG3",
+  "task_global_index": 49,
+  "dataset": "BPG3",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed2/tasks/e2esr_s2_g0049/iaaccn25/e2esr/g0049_BPG3/experiments/g0049_BPG3_e2esr_seed2_20260502-093328",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3627.813,
+  "equation": "(0.0029 - 3.34645331338148e-13*exp(-9.26*x_0))*(-0.0922*x_1 - 0.0217)*(x_1 - 53.800000000000004)*(0.061527430037341882*sqrt(-7.257309575520628e-5*x_1 + 1 + 0.0007963334208781885*exp(-16.0*x_0)) + 0.0059499999999999996)*(0.00509*sin(23.36 + 8.040000000000001/(0.545*x_0 + 0.0062499999999999995) + 3.2600000000000002/(0.0038 - 0.73*x_0)) + 0.0006799999999999999)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "(0.0029 - 3.34645331338148e-13*exp(-9.26*x_0))*(-0.0922*x_1 - 0.0217)*(x_1 - 53.800000000000004)*(0.061527430037341882*sqrt(-7.257309575520628e-5*x_1 + 1 + 0.0007963334208781885*exp(-16.0*x_0)) + 0.0059499999999999996)*(0.00509*sin(23.36 + 8.040000000000001/(0.545*x_0 + 0.0062499999999999995) + 3.2600000000000002/(0.0038 - 0.73*x_0)) + 0.0006799999999999999)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (0.0029 - 3.34645331338148e-13*exp(-9.26*x0))*(-0.0922*x1 - 0.0217)*(x1 - 53.800000000000004)*(0.061527430037341882*sqrt(-7.257309575520628e-5*x1 + 1 + 0.0007963334208781885*exp(-16.0*x0)) + 0.0059499999999999996)*(0.00509*sin(23.36 + 8.040000000000001/(0.545*x0 + 0.0062499999999999995) + 3.2600000000000002/(0.0038 - 0.73*x0)) + 0.0006799999999999999)\n",
+    "return_expression_source": "(0.0029 - 3.34645331338148e-13*exp(-9.26*x0))*(-0.0922*x1 - 0.0217)*(x1 - 53.800000000000004)*(0.061527430037341882*sqrt(-7.257309575520628e-5*x1 + 1 + 0.0007963334208781885*exp(-16.0*x0)) + 0.0059499999999999996)*(0.00509*sin(23.36 + 8.040000000000001/(0.545*x0 + 0.0062499999999999995) + 3.2600000000000002/(0.0038 - 0.73*x0)) + 0.0006799999999999999)",
+    "normalized_expression": "(0.0029 - 3.34645331338148e-13*exp(-9.26*x0))*(-0.0922*x1 - 0.0217)*(x1 - 53.800000000000004)*(0.061527430037341882*sqrt(-7.257309575520628e-5*x1 + 1 + 0.0007963334208781885*exp(-16.0*x0)) + 0.0059499999999999996)*(0.00509*sin(23.36 + 8.040000000000001/(0.545*x0 + 0.0062499999999999995) + 3.2600000000000002/(0.0038 - 0.73*x0)) + 0.0006799999999999999)",
+    "instantiated_expression": "(0.0029 - 3.34645331338148e-13*exp(-9.26*x0))*(-0.0922*x1 - 0.0217)*(x1 - 53.800000000000004)*(0.061527430037341882*sqrt(-7.257309575520628e-5*x1 + 1 + 0.0007963334208781885*exp(-16.0*x0)) + 0.0059499999999999996)*(0.00509*sin(23.36 + 8.040000000000001/(0.545*x0 + 0.0062499999999999995) + 3.2600000000000002/(0.0038 - 0.73*x0)) + 0.0006799999999999999)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 59,
+    "tree_depth": 10,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(0.0029 - 3.34645331338148e-13*exp(-9.26*x0))*(-0.0922*x1 - 0.0217)*(x1 - 53.800000000000004)*(0.061527430037341882*sqrt(-7.257309575520628e-5*x1 + 1 + 0.0007963334208781885*exp(-16.0*x0)) + 0.0059499999999999996)*(0.00509*sin(23.36 + 8.040000000000001/(0.545*x0 + 0.0062499999999999995) + 3.2600000000000002/(0.0038 - 0.73*x0)) + 0.0006799999999999999)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.07912570858702378,
+    "r2": -0.058727037097596524,
+    "nmse": 1.0000045424965818,
+    "acc_0_1": 0.946
+  },
+  "valid": {
+    "rmse": 0.08676827515438755,
+    "r2": -0.06676814087297722,
+    "nmse": 1.0000008331979977,
+    "acc_0_1": 0.942
+  },
+  "id_test": {
+    "rmse": 0.07487385698055611,
+    "r2": -0.060409439480825,
+    "nmse": 1.0000107111531733,
+    "acc_0_1": 0.948
+  },
+  "ood_test": {
+    "rmse": 9.438814431427069e-07,
+    "r2": -4.154409625594519,
+    "nmse": 4.490772560157809,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:33:55",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed2/tasks/e2esr_s2_g0049/iaaccn25/e2esr/g0049_BPG3/experiments",
+    "exp_name": "g0049_BPG3_e2esr_seed2",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'e2esr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

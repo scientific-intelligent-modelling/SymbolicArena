@@ -1,0 +1,133 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0010_Nguyen-9",
+  "task_global_index": 10,
+  "dataset": "Nguyen-9",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/nguyen/Nguyen-9",
+  "expected_dataset_rel": "sim-datasets-data/nguyen/Nguyen-9",
+  "expected_dataset_dir": "sim-datasets-data/nguyen/Nguyen-9",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/nguyen/Nguyen-9",
+    "expected_dataset_dir": "sim-datasets-data/nguyen/Nguyen-9",
+    "expected_normalized": "sim-datasets-data/nguyen/Nguyen-9",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/nguyen/Nguyen-9",
+    "actual_normalized": "sim-datasets-data/nguyen/Nguyen-9"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed0/tasks/imcts_s0_g0010/iaaccn24/iMCTS/g0010_Nguyen-9/experiments/g0010_Nguyen-9_iMCTS_seed0_20260502-070310",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 16,
+  "valid_rows": 2,
+  "id_test_rows": 2,
+  "ood_test_rows": 200,
+  "seconds": 147.502,
+  "equation": "sin(x1**2) - sin(x0 - 3.1415926515478428) - cos(1) + 0.54030230177549983",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "sin(x1**2) - sin(x0 - 3.1415926515478428) - cos(1) + 0.54030230177549983",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return sin(x1**2) - sin(x0 - 3.1415926515478428) - cos(1) + 0.54030230177549983\n",
+    "return_expression_source": "sin(x1**2) - sin(x0 - 3.1415926515478428) - cos(1) + 0.54030230177549983",
+    "normalized_expression": "sin(x1**2) - sin(x0 - 3.1415926515478428) - cos(1) + 0.54030230177549983",
+    "instantiated_expression": "sin(x1**2) - sin(x0 - 3.1415926515478428) - cos(1) + 0.54030230177549983",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 16,
+    "tree_depth": 5,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "sin(x1**2) - sin(x0 - 3.1415926515478428) - cos(1) + 0.54030230177549983"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.4619165266625977e-09,
+    "r2": 0.9999999999999999,
+    "nmse": 6.3014243797245215e-18,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 2.610298996418533e-09,
+    "r2": 0.9999999999999996,
+    "nmse": 1.154613964885269e-17,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 2.062504834951451e-09,
+    "r2": 0.9999999999997802,
+    "nmse": 1.4145081382715248e-16,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 2.7774692817943707e-09,
+    "r2": 0.9999999999999999,
+    "nmse": 4.679457925389597e-18,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 07:05:37",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed0/tasks/imcts_s0_g0010/iaaccn24/iMCTS/g0010_Nguyen-9/experiments",
+    "exp_name": "g0010_Nguyen-9_iMCTS_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

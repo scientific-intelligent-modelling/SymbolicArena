@@ -1,0 +1,168 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0042_feynman_test_15",
+  "task_global_index": 42,
+  "dataset": "feynman_test_15",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_test_15"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0042/iaaccn23/llmsr/g0042_feynman_test_15/experiments/g0042_feynman_test_15_llmsr_seed4_20260502-111533",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "c",
+    "v",
+    "omega",
+    "theta"
+  ],
+  "target_name": "target",
+  "train_rows": 80000,
+  "valid_rows": 10000,
+  "id_test_rows": 10000,
+  "ood_test_rows": 10000,
+  "seconds": 3609.488,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.\n\n    Variables:\n    - Independents:\n  - x0: Speed of light\n  - x1: Velocity\n  - x2: Frequency\n  - x3: Angle\n- Dependent:\n  - y: Frequency\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.\n\n    Variables:\n    - Independents:\n      - x0: Speed of light\n      - x1: Velocity\n      - x2: Frequency\n      - x3: Angle\n    - Dependent:\n      - y: Frequency\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return params[0] * x2 * (1 + (x1 / x0) * np.cos(x3)) + params[1] * x2 * (1 - (x1 / x0) * np.cos(x3)) + params[2] * x2 * np.sin(x3) + params[3] * x1 * np.cos(x3) + params[4] * x0 * np.sin(x3) + params[5] * x2 * np.cos(x3) + params[6] * x1 * np.sin(x3) + params[7] * x0 * np.cos(x3)\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.\n\n    Variables:\n    - Independents:\n  - x0: Speed of light\n  - x1: Velocity\n  - x2: Frequency\n  - x3: Angle\n- Dependent:\n  - y: Frequency\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.\n\n    Variables:\n    - Independents:\n      - x0: Speed of light\n      - x1: Velocity\n      - x2: Frequency\n      - x3: Angle\n    - Dependent:\n      - y: Frequency\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return params[0] * x2 * (1 + (x1 / x0) * np.cos(x3)) + params[1] * x2 * (1 - (x1 / x0) * np.cos(x3)) + params[2] * x2 * np.sin(x3) + params[3] * x1 * np.cos(x3) + params[4] * x0 * np.sin(x3) + params[5] * x2 * np.cos(x3) + params[6] * x1 * np.sin(x3) + params[7] * x0 * np.cos(x3)\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.\n\n    Variables:\n    - Independents:\n  - x0: Speed of light\n  - x1: Velocity\n  - x2: Frequency\n  - x3: Angle\n- Dependent:\n  - y: Frequency\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.\n\n    Variables:\n    - Independents:\n      - x0: Speed of light\n      - x1: Velocity\n      - x2: Frequency\n      - x3: Angle\n    - Dependent:\n      - y: Frequency\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return params[0] * x2 * (1 + (x1 / x0) * np.cos(x3)) + params[1] * x2 * (1 - (x1 / x0) * np.cos(x3)) + params[2] * x2 * np.sin(x3) + params[3] * x1 * np.cos(x3) + params[4] * x0 * np.sin(x3) + params[5] * x2 * np.cos(x3) + params[6] * x1 * np.sin(x3) + params[7] * x0 * np.cos(x3)\n\n",
+    "return_expression_source": "params[0] * x2 * (1 + x1 / x0 * np.cos(x3)) + params[1] * x2 * (1 - x1 / x0 * np.cos(x3)) + params[2] * x2 * np.sin(x3) + params[3] * x1 * np.cos(x3) + params[4] * x0 * np.sin(x3) + params[5] * x2 * np.cos(x3) + params[6] * x1 * np.sin(x3) + params[7] * x0 * np.cos(x3)",
+    "normalized_expression": "c0*x2*(1 + x1*cos(x3)/x0) + c1*x2*(1 - x1*cos(x3)/x0) + c2*x2*sin(x3) + c3*x1*cos(x3) + c4*x0*sin(x3) + c5*x2*cos(x3) + c6*x1*sin(x3) + c7*x0*cos(x3)",
+    "instantiated_expression": "-0.0580866321110825*x2*(1 + x1*cos(x3)/x0) + 1.0573055048450106*x2*(1 - x1*cos(x3)/x0) + 0.00021536277358246726*x2*sin(x3) + 0.013164549289354281*x1*cos(x3) + -1.7666635097646853e-05*x0*sin(x3) + 0.016050482622321977*x2*cos(x3) + 9.72821653360205e-05*x1*sin(x3) + -0.0021592344480580446*x0*cos(x3)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -0.0580866321110825,
+      1.0573055048450106,
+      0.00021536277358246726,
+      0.013164549289354281,
+      -1.7666635097646853e-05,
+      0.016050482622321977,
+      9.72821653360205e-05,
+      -0.0021592344480580446,
+      1.0,
+      1.0
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 56,
+    "tree_depth": 6,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x2*(1 + x1*cos(x3)/x0) + c1*x2*(1 - x1*cos(x3)/x0) + c2*x2*sin(x3) + c3*x1*cos(x3) + c4*x0*sin(x3) + c5*x2*cos(x3) + c6*x1*sin(x3) + c7*x0*cos(x3)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.08154344933741327,
+    "r2": 0.9958330366279375,
+    "nmse": 0.0006189849335226002,
+    "acc_0_1": 0.8919375
+  },
+  "valid": {
+    "rmse": 0.08263647924071477,
+    "r2": 0.9956908850021322,
+    "nmse": 0.00063887898903183,
+    "acc_0_1": 0.8886
+  },
+  "id_test": {
+    "rmse": 0.0826969687405373,
+    "r2": 0.9956847571489839,
+    "nmse": 0.0006365780178659635,
+    "acc_0_1": 0.8967
+  },
+  "ood_test": {
+    "rmse": 0.29642548930202856,
+    "r2": 0.9717153028217621,
+    "nmse": 0.01041452686772217,
+    "acc_0_1": 0.6421
+  },
+  "finished_at": "2026-05-02 12:15:42",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0042/iaaccn23/llmsr/g0042_feynman_test_15/experiments",
+    "exp_name": "g0042_feynman_test_15_llmsr_seed4",
+    "n_features": 4,
+    "feature_names": [
+      "c",
+      "v",
+      "omega",
+      "theta"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "c",
+      "v",
+      "omega",
+      "theta"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_test_15/metadata.yaml",
+    "feature_descriptions": [
+      "Speed of light",
+      "Velocity",
+      "Frequency",
+      "Angle"
+    ],
+    "target_description": "Frequency"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

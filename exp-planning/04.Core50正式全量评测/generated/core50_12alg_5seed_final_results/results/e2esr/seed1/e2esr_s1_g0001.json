@@ -1,0 +1,118 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0001_II.34.2_1_0",
+  "task_global_index": 1,
+  "dataset": "II.34.2_1_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed1/tasks/e2esr_s1_g0001/iaaccn28/e2esr/g0001_II.34.2_1_0/experiments/g0001_II.34.2_1_0_e2esr_seed1_20260502-074438",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "mom",
+    "q",
+    "r"
+  ],
+  "target_name": "v",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 350.921,
+  "equation": "(0.0017282905434956458 - 0.0033242294791956314*x_0)*(4.5200000000000005 - 0.372/((-0.021475632097038307*x_1 - 0.00025096807277214623)*(-0.026464565306335704*x_2 - 0.0016286570570799999)))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "(0.0017282905434956458 - 0.0033242294791956314*x_0)*(4.5200000000000005 - 0.372/((-0.021475632097038307*x_1 - 0.00025096807277214623)*(-0.026464565306335704*x_2 - 0.0016286570570799999)))",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, x2, params):\n    return (0.0017282905434956458 - 0.0033242294791956314*x0)*(4.5200000000000005 - 0.372/((-0.021475632097038307*x1 - 0.00025096807277214623)*(-0.026464565306335704*x2 - 0.0016286570570799999)))\n",
+    "return_expression_source": "(0.0017282905434956458 - 0.0033242294791956314*x0)*(4.5200000000000005 - 0.372/((-0.021475632097038307*x1 - 0.00025096807277214623)*(-0.026464565306335704*x2 - 0.0016286570570799999)))",
+    "normalized_expression": "(0.0017282905434956458 - 0.0033242294791956314*x0)*(4.5200000000000005 - 0.372/((-0.021475632097038307*x1 - 0.00025096807277214623)*(-0.026464565306335704*x2 - 0.0016286570570799999)))",
+    "instantiated_expression": "(0.0017282905434956458 - 0.0033242294791956314*x0)*(4.5200000000000005 - 0.372/((-0.021475632097038307*x1 - 0.00025096807277214623)*(-0.026464565306335704*x2 - 0.0016286570570799999)))",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 24,
+    "tree_depth": 7,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(0.0017282905434956458 - 0.0033242294791956314*x0)*(4.5200000000000005 - 0.372/((-0.021475632097038307*x1 - 0.00025096807277214623)*(-0.026464565306335704*x2 - 0.0016286570570799999)))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.23039690732212828,
+    "r2": 0.9994287860551851,
+    "nmse": 0.0002858726754433972,
+    "acc_0_1": 0.18012
+  },
+  "valid": {
+    "rmse": 0.22912350695463207,
+    "r2": 0.9994541020866815,
+    "nmse": 0.00027766523836623107,
+    "acc_0_1": 0.1766
+  },
+  "id_test": {
+    "rmse": 0.22922978743438832,
+    "r2": 0.9994339706619512,
+    "nmse": 0.0002849608698661963,
+    "acc_0_1": 0.18035
+  },
+  "ood_test": {
+    "rmse": 0.8335766651310461,
+    "r2": 0.9997038516619728,
+    "nmse": 0.00023093413221029566,
+    "acc_0_1": 0.1233
+  },
+  "finished_at": "2026-05-02 07:50:29",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed1/tasks/e2esr_s1_g0001/iaaccn28/e2esr/g0001_II.34.2_1_0/experiments",
+    "exp_name": "g0001_II.34.2_1_0_e2esr_seed1",
+    "n_features": 3,
+    "feature_names": [
+      "mom",
+      "q",
+      "r"
+    ],
+    "target_name": "v"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

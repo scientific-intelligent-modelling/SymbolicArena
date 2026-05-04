@@ -1,0 +1,135 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0047_BPG5",
+  "task_global_index": 47,
+  "dataset": "BPG5",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0047/iaaccn26/gplearn/g0047_BPG5/experiments/g0047_BPG5_gplearn_seed2_20260502-093246",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3601.838,
+  "equation": "div(mul(div(X1, X0), div(X1, add(add(X0, -0.289), -0.289))), mul(mul(div(add(X0, -0.289), log(mul(mul(add(X1, X0), div(0.904, X0)), div(X1, X0)))), sub(X0, log(mul(X0, X0)))), sub(X0, log(X1))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "div(mul(div(X1, X0), div(X1, add(add(X0, -0.289), -0.289))), mul(mul(div(add(X0, -0.289), log(mul(mul(add(X1, X0), div(0.904, X0)), div(X1, X0)))), sub(X0, log(mul(X0, X0)))), sub(X0, log(X1))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return x1**2*log(0.904*x1*(x0 + x1)/x0**2)/(x0*(x0 - 0.578)*(x0 - 0.289)*(x0 - log(x0**2))*(x0 - log(x1)))\n",
+    "return_expression_source": "x1**2*log(0.904*x1*(x0 + x1)/x0**2)/(x0*(x0 - 0.578)*(x0 - 0.289)*(x0 - log(x0**2))*(x0 - log(x1)))",
+    "normalized_expression": "x1**2*log(0.904*x1*(x0 + x1)/x0**2)/(x0*(x0 - 0.578)*(x0 - 0.289)*(x0 - log(x0**2))*(x0 - log(x1)))",
+    "instantiated_expression": "x1**2*log(0.904*x1*(x0 + x1)/x0**2)/(x0*(x0 - 0.578)*(x0 - 0.289)*(x0 - log(x0**2))*(x0 - log(x1)))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 45,
+    "tree_depth": 7,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x1**2*log(0.904*x1*(x0 + x1)/x0**2)/(x0*(x0 - 0.578)*(x0 - 0.289)*(x0 - log(x0**2))*(x0 - log(x1)))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.21399188911645664,
+    "r2": 0.9982360274163528,
+    "nmse": 0.0015812285471293276,
+    "acc_0_1": 0.7874285714285715
+  },
+  "valid": {
+    "rmse": 0.20174257062288273,
+    "r2": 0.9984938905463501,
+    "nmse": 0.0013191463428772429,
+    "acc_0_1": 0.804
+  },
+  "id_test": {
+    "rmse": 0.231020572081424,
+    "r2": 0.9981558846290449,
+    "nmse": 0.0016384667875433275,
+    "acc_0_1": 0.766
+  },
+  "ood_test": {
+    "rmse": 0.04583081552195086,
+    "r2": -0.1515287305687738,
+    "nmse": 0.9996338167801359,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:32:48",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0047/iaaccn26/gplearn/g0047_BPG5/experiments",
+    "exp_name": "g0047_BPG5_gplearn_seed2",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

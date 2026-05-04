@@ -1,0 +1,175 @@
+{
+  "tool": "dso",
+  "task_label": "g0024_strogatz_predprey2",
+  "task_global_index": 24,
+  "dataset": "strogatz_predprey2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed4/tasks/dso_s4_g0024/iaaccn29/dso/g0024_strogatz_predprey2/experiments/g0024_strogatz_predprey2_dso_seed4_20260502-105217",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 2606.195,
+  "equation": "        2                     \nx₁ - log (x₂) + log(2⋅log(x₂))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "x1 - log(x2)**2 + log(2*log(x2))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return x0 - log(x1)**2 + log(2*log(x1))\n",
+    "return_expression_source": "x0 - log(x1)**2 + log(2*log(x1))",
+    "normalized_expression": "x0 - log(x1)**2 + log(2*log(x1))",
+    "instantiated_expression": "x0 - log(x1)**2 + log(2*log(x1))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 5,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0 - log(x1)**2 + log(2*log(x1))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.5586311837022506,
+    "r2": 0.8696190691827523,
+    "nmse": 0.12525288670747436,
+    "acc_0_1": 0.171875
+  },
+  "valid": {
+    "rmse": 0.4212923285820017,
+    "r2": 0.9222433015834658,
+    "nmse": 0.05980359564336124,
+    "acc_0_1": 0.25
+  },
+  "id_test": {
+    "rmse": 0.5787758962523282,
+    "r2": 0.8860533745276811,
+    "nmse": 0.08801012207287942,
+    "acc_0_1": 0.1875
+  },
+  "ood_test": {
+    "rmse": 4.940399910921079,
+    "r2": 0.21473779148839733,
+    "nmse": 0.6332869848601412,
+    "acc_0_1": 0.005
+  },
+  "finished_at": "2026-05-02 11:35:43",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed4/tasks/dso_s4_g0024/iaaccn29/dso/g0024_strogatz_predprey2/experiments",
+    "exp_name": "g0024_strogatz_predprey2_dso_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

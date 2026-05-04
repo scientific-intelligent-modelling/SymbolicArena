@@ -1,0 +1,154 @@
+{
+  "tool": "drsr",
+  "task_label": "g0024_strogatz_predprey2",
+  "task_global_index": 24,
+  "dataset": "strogatz_predprey2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0024/iaaccn26/drsr/g0024_strogatz_predprey2/experiments/g0024_strogatz_predprey2_drsr_seed1_20260502-080544",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3900.911,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Predator dynamics based on prey availability. Calculate the Rate of change of predator population (dy/dt) given Prey population size and Predator population size\n\n    Variables:\n    - Independents:\n  - x0: Prey population size\n  - x1: Predator population size\n- Dependent:\n  - y: Rate of change of predator population (dy/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * x0 / (params[2] + x0) * params[1] * x1 - params[3] * x1**2",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Predator dynamics based on prey availability. Calculate the Rate of change of predator population (dy/dt) given Prey population size and Predator population size\n\n    Variables:\n    - Independents:\n  - x0: Prey population size\n  - x1: Predator population size\n- Dependent:\n  - y: Rate of change of predator population (dy/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * x0 / (params[2] + x0) * params[1] * x1 - params[3] * x1**2",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Predator dynamics based on prey availability. Calculate the Rate of change of predator population (dy/dt) given Prey population size and Predator population size\n\n    Variables:\n    - Independents:\n  - x0: Prey population size\n  - x1: Predator population size\n- Dependent:\n  - y: Rate of change of predator population (dy/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * x0 / (params[2] + x0) * params[1] * x1 - params[3] * x1**2",
+    "return_expression_source": "params[0] * x0 / (params[2] + x0) * params[1] * x1 - params[3] * x1 ** 2",
+    "normalized_expression": "c0*c1*x0*x1/(c2 + x0) - c3*x1**2",
+    "instantiated_expression": "-4.603008694825181*-0.21724920943520942*x0*x1/(0.9999999999530549 + x0) - 0.07499999999887698*x1**2",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -4.603008694825181,
+      -0.21724920943520942,
+      0.9999999999530549,
+      0.07499999999887698,
+      0.46465823911560733,
+      -0.5821227085422533,
+      -0.5201024007265558,
+      -0.7869047506253526,
+      -0.6723879279455764,
+      0.669491500400732
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 17,
+    "tree_depth": 5,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*c1*x0*x1/(c2 + x0) - c3*x1**2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 3.5583845596398363e-11,
+    "r2": 1.0,
+    "nmse": 5.08209940968345e-22,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 4.6533288591263905e-11,
+    "r2": 1.0,
+    "nmse": 7.296048063987313e-22,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 4.658235472036026e-11,
+    "r2": 1.0,
+    "nmse": 5.701047078966633e-22,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 5.510281166235627e-11,
+    "r2": 1.0,
+    "nmse": 7.87814321393213e-23,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 09:10:45",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0024/iaaccn26/drsr/g0024_strogatz_predprey2/experiments",
+    "exp_name": "g0024_strogatz_predprey2_drsr_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "x",
+      "y"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "This formula is about Predator dynamics based on prey availability. Calculate the Rate of change of predator population (dy/dt) given Prey population size and Predator population size",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2/metadata.yaml",
+    "feature_descriptions": [
+      "Prey population size",
+      "Predator population size"
+    ],
+    "target_description": "Rate of change of predator population (dy/dt)"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

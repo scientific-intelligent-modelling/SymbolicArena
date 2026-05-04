@@ -1,0 +1,138 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0031_II.11.27_1_0",
+  "task_global_index": 31,
+  "dataset": "II.11.27_1_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed3/tasks/imcts_s3_g0031/iaaccn24/iMCTS/g0031_II.11.27_1_0/experiments/g0031_II.11.27_1_0_iMCTS_seed3_20260502-100523",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "Pol",
+    "n",
+    "epsilon",
+    "Ef"
+  ],
+  "target_name": "alpha",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 3603.571,
+  "equation": "0.4858491335079865*x0*cos(0.228848840198765*x0 + x3 - 1.9470445619365794)/(x1*x2)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "0.4858491335079865*x0*cos(0.228848840198765*x0 + x3 - 1.9470445619365794)/(x1*x2)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x3, params):\n    return 0.4858491335079865*x0*cos(0.228848840198765*x0 + x3 - 1.9470445619365794)/(x1*x2)\n",
+    "return_expression_source": "0.4858491335079865*x0*cos(0.228848840198765*x0 + x3 - 1.9470445619365794)/(x1*x2)",
+    "normalized_expression": "0.4858491335079865*x0*cos(0.228848840198765*x0 + x3 - 1.9470445619365794)/(x1*x2)",
+    "instantiated_expression": "0.4858491335079865*x0*cos(0.228848840198765*x0 + x3 - 1.9470445619365794)/(x1*x2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 16,
+    "tree_depth": 5,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.4858491335079865*x0*cos(0.228848840198765*x0 + x3 - 1.9470445619365794)/(x1*x2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 14.233419936708739,
+    "r2": 0.9962751922340878,
+    "nmse": 0.003719675531065746,
+    "acc_0_1": 0.3974533333333333
+  },
+  "valid": {
+    "rmse": 16.46812332668553,
+    "r2": 0.9796992727930037,
+    "nmse": 0.020189370621684542,
+    "acc_0_1": 0.3998
+  },
+  "id_test": {
+    "rmse": 13.585724329022199,
+    "r2": 0.9955105354628956,
+    "nmse": 0.004481309204571762,
+    "acc_0_1": 0.3968
+  },
+  "ood_test": {
+    "rmse": 639.429312497669,
+    "r2": 0.8916114808258158,
+    "nmse": 0.10832856188408553,
+    "acc_0_1": 0.30115
+  },
+  "finished_at": "2026-05-02 11:05:26",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed3/tasks/imcts_s3_g0031/iaaccn24/iMCTS/g0031_II.11.27_1_0/experiments",
+    "exp_name": "g0031_II.11.27_1_0_iMCTS_seed3",
+    "n_features": 4,
+    "feature_names": [
+      "Pol",
+      "n",
+      "epsilon",
+      "Ef"
+    ],
+    "target_name": "alpha"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'iMCTS' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

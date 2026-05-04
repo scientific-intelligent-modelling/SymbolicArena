@@ -1,0 +1,120 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0037_CRK34",
+  "task_global_index": 37,
+  "dataset": "CRK34",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK34",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK34"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0037/iaaccn28/pyoperon/g0037_CRK34/experiments/g0037_CRK34_pyoperon_seed0_20260502-073251",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 9.623,
+  "equation": "(1.033 + ((-1.923) * (((((-0.051) * X2) + 0.241) / (sqrt(1 + sin((0.641 * X2)) ^ 2))) + (((-0.281) * X2) ^ 2))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(1.033 + ((-1.923) * (((((-0.051) * X2) + 0.241) / (sqrt(1 + sin((0.641 * X2)) ^ 2))) + (((-0.281) * X2) ^ 2))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return -0.151842003*x0**2 - 1.923*(0.241 - 0.051*x0)/sqrt(sin(0.641*x0)**2 + 1) + 1.033\n",
+    "return_expression_source": "-0.151842003*x0**2 - 1.923*(0.241 - 0.051*x0)/sqrt(sin(0.641*x0)**2 + 1) + 1.033",
+    "normalized_expression": "-0.151842003*x0**2 - 1.923*(0.241 - 0.051*x0)/sqrt(sin(0.641*x0)**2 + 1) + 1.033",
+    "instantiated_expression": "-0.151842003*x0**2 - 1.923*(0.241 - 0.051*x0)/sqrt(sin(0.641*x0)**2 + 1) + 1.033",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 24,
+    "tree_depth": 8,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-0.151842003*x0**2 - 1.923*(0.241 - 0.051*x0)/sqrt(sin(0.641*x0)**2 + 1) + 1.033"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.001197465296254581,
+    "r2": 0.9998225145573402,
+    "nmse": 0.0001640703534228537,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.001316398448867071,
+    "r2": 0.9998198267999038,
+    "nmse": 0.0001673170435118951,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.0012071895928139683,
+    "r2": 0.9998177114667353,
+    "nmse": 0.00016763392685738057,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.0005656004467046856,
+    "r2": -0.6195092275151726,
+    "nmse": 1.31504401484129,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 07:33:01",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0037/iaaccn28/pyoperon/g0037_CRK34/experiments",
+    "exp_name": "g0037_CRK34_pyoperon_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

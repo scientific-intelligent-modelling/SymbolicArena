@@ -1,0 +1,118 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0050_BPG9",
+  "task_global_index": 50,
+  "dataset": "BPG9",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed2/tasks/e2esr_s2_g0050/iaaccn24/e2esr/g0050_BPG9/experiments/g0050_BPG9_e2esr_seed2_20260502-093759",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 534.94,
+  "equation": "-0.0083675506851721084*x_1 + 0.084985244434939603 + 0.09140000000000001/(0.005196541186589505*x_0 + 8.35*cos(0.01266493706279352*x_0 + 1.366578146835969*x_1 - 9.23*Abs(0.003623216530850723*x_0 - 0.1000986102459832) + 31.78784400390321) - 0.1390848536140588) - 0.0787/(8.0885363886509701e-87*exp(23.78722924038009*x_1) - 0.0981)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "-0.0083675506851721084*x_1 + 0.084985244434939603 + 0.09140000000000001/(0.005196541186589505*x_0 + 8.35*cos(0.01266493706279352*x_0 + 1.366578146835969*x_1 - 9.23*Abs(0.003623216530850723*x_0 - 0.1000986102459832) + 31.78784400390321) - 0.1390848536140588) - 0.0787/(8.0885363886509701e-87*exp(23.78722924038009*x_1) - 0.0981)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return -0.0083675506851721084*x1 + 0.084985244434939603 + 0.09140000000000001/(0.005196541186589505*x0 + 8.35*cos(0.01266493706279352*x0 + 1.366578146835969*x1 - 9.23*Abs(0.003623216530850723*x0 - 0.1000986102459832) + 31.78784400390321) - 0.1390848536140588) - 0.0787/(8.0885363886509701e-87*exp(23.78722924038009*x1) - 0.0981)\n",
+    "return_expression_source": "-0.0083675506851721084*x1 + 0.084985244434939603 + 0.09140000000000001/(0.005196541186589505*x0 + 8.35*cos(0.01266493706279352*x0 + 1.366578146835969*x1 - 9.23*Abs(0.003623216530850723*x0 - 0.1000986102459832) + 31.78784400390321) - 0.1390848536140588) - 0.0787/(8.0885363886509701e-87*exp(23.78722924038009*x1) - 0.0981)",
+    "normalized_expression": "-0.0083675506851721084*x1 + 0.084985244434939603 + 0.09140000000000001/(0.005196541186589505*x0 + 8.35*cos(0.01266493706279352*x0 + 1.366578146835969*x1 - 9.23*Abs(0.003623216530850723*x0 - 0.1000986102459832) + 31.78784400390321) - 0.1390848536140588) - 0.0787/(8.0885363886509701e-87*exp(23.78722924038009*x1) - 0.0981)",
+    "instantiated_expression": "-0.0083675506851721084*x1 + 0.084985244434939603 + 0.09140000000000001/(0.005196541186589505*x0 + 8.35*cos(0.01266493706279352*x0 + 1.366578146835969*x1 - 9.23*Abs(0.003623216530850723*x0 - 0.1000986102459832) + 31.78784400390321) - 0.1390848536140588) - 0.0787/(8.0885363886509701e-87*exp(23.78722924038009*x1) - 0.0981)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "abs",
+      "add",
+      "cos",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 45,
+    "tree_depth": 12,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-0.0083675506851721084*x1 + 0.084985244434939603 + 0.09140000000000001/(0.005196541186589505*x0 + 8.35*cos(0.01266493706279352*x0 + 1.366578146835969*x1 - 9.23*Abs(0.003623216530850723*x0 - 0.1000986102459832) + 31.78784400390321) - 0.1390848536140588) - 0.0787/(8.0885363886509701e-87*exp(23.78722924038009*x1) - 0.0981)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.477752252819118,
+    "r2": 0.27765788147195336,
+    "nmse": 0.6516669670243026,
+    "acc_0_1": 0.834
+  },
+  "valid": {
+    "rmse": 2.903520754025595,
+    "r2": -29.444993132121986,
+    "nmse": 27.987813096273847,
+    "acc_0_1": 0.856
+  },
+  "id_test": {
+    "rmse": 5.347428743880806,
+    "r2": -72.13044479252416,
+    "nmse": 64.50543592469421,
+    "acc_0_1": 0.816
+  },
+  "ood_test": {
+    "rmse": 0.02585535440928758,
+    "r2": -7.039223514173575,
+    "nmse": 7.424719273614619,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 09:46:54",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed2/tasks/e2esr_s2_g0050/iaaccn24/e2esr/g0050_BPG9/experiments",
+    "exp_name": "g0050_BPG9_e2esr_seed2",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,178 @@
+{
+  "tool": "drsr",
+  "task_label": "g0018_feynman-i.18.16",
+  "task_global_index": 18,
+  "dataset": "feynman-i.18.16",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed2/tasks/drsr_s2_g0018/iaaccn24/drsr/g0018_feynman-i.18.16/experiments/g0018_feynman-i.18.16_drsr_seed2_20260502-085055",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3609.144,
+  "equation": "def equation(col0, col1, col2, col3, col4, col5, params):\n    return params[0] * x0 * x1 * x2 * x3 * np.sin(x4)\n",
+  "equation_count": 209,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(col0, col1, col2, col3, col4, col5, params):\n    return params[0] * x0 * x1 * x2 * x3 * np.sin(x4)\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(col0, col1, col2, col3, col4, col5, params):\n    return params[0] * x0 * x1 * x2 * x3 * np.sin(x4)\n",
+    "return_expression_source": "params[0] * x0 * x1 * x2 * x3 * np.sin(x4)",
+    "normalized_expression": "c0*x0*x1*x2*x3*sin(x4)",
+    "instantiated_expression": "-4.999999587729999e-13*x0*x1*x2*x3*sin(x4)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -4.999999587729999e-13,
+      -0.7514334470008721,
+      0.34124882938726064,
+      0.2943790231485002,
+      0.2307702229625077,
+      -0.23264489147623313,
+      0.994419871578422,
+      0.9616706775524602,
+      0.3710839689613894,
+      0.3009185525356326
+    ],
+    "expected_n_features": 6,
+    "operator_set": [
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 8,
+    "tree_depth": 3,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [
+      "function_arg_map:col0->x0,col1->x1,col2->x2,col3->x3,col4->x4,col5->x5"
+    ],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0*x1*x2*x3*sin(x4)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 446494072143.4349,
+    "r2": -3.315847869486159e+20,
+    "nmse": 3.3156586305994555e+20,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 824661951903.1545,
+    "r2": -5.355498656115248e+20,
+    "nmse": 5.35549863022578e+20,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 378801501297.88513,
+    "r2": -1.0883766000935828e+20,
+    "nmse": 1.0849378154968552e+20,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 1512670951402102.5,
+    "r2": -3.4517168818596265e+25,
+    "nmse": 3.4515544726034947e+25,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 09:51:04",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed2/tasks/drsr_s2_g0018/iaaccn24/drsr/g0018_feynman-i.18.16/experiments",
+    "exp_name": "g0018_feynman-i.18.16_drsr_seed2",
+    "n_features": 6,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Angular momentum given Mass, Distance, Velocity, Angle There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"m, Mass\"; 1 variable with semantic role \"r, Distance\"; 1 variable with semantic role \"theta, Angle\"; 1 variable with semantic role \"v, Velocity\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16/metadata.yaml",
+    "feature_descriptions": [
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden"
+    ],
+    "target_description": "L, Angular momentum"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

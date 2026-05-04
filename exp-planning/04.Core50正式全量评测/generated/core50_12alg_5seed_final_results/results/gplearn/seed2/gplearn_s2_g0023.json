@@ -1,0 +1,148 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0023_I.11.19_4_0",
+  "task_global_index": 23,
+  "dataset": "I.11.19_4_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0023/iaaccn28/gplearn/g0023_I.11.19_4_0/experiments/g0023_I.11.19_4_0_gplearn_seed2_20260502-085422",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "A",
+    "x1",
+    "x2",
+    "x3",
+    "y1",
+    "y3"
+  ],
+  "target_name": "y2",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 3604.678,
+  "equation": "sub(sub(sub(sub(X2, X3), sqrt(sub(X1, sub(sub(X1, sub(X5, X2)), mul(div(-0.454, X2), sub(mul(div(-0.454, add(X2, X4)), mul(sub(mul(div(-0.454, X2), mul(sub(sub(sub(X2, X3), sqrt(X0)), sqrt(X2)), X0)), X0), X0)), mul(div(-0.454, X2), mul(div(div(-0.454, X2), add(X2, X1)), mul(sub(mul(div(-0.454, X2), mul(sub(sub(sub(sub(X2, X3), sqrt(X0)), X5), sub(X5, sub(X4, X5))), X0)), X0), add(X0, X5)))))))))), sub(X5, X2)), sqrt(sub(sub(sub(sub(mul(div(-0.454, add(X2, X1)), mul(sub(sub(sub(sub(sub(X4, sin(div(X3, X5))), sub(X5, sub(sub(sub(X4, cos(sub(X5, X3))), sqrt(sub(X1, X4))), sqrt(sub(X1, X4))))), sub(cos(sub(X5, X3)), sub(X4, sqrt(sub(X1, X4))))), sub(sin(X4), sub(X4, sqrt(sub(X1, X4))))), X0), X0)), sub(X1, X2)), sub(sub(X1, X2), X2)), sub(sub(X4, sqrt(sub(sub(X2, X3), sub(sub(X2, X3), sqrt(X0))))), X2)), sub(X1, X2))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "sub(sub(sub(sub(X2, X3), sqrt(sub(X1, sub(sub(X1, sub(X5, X2)), mul(div(-0.454, X2), sub(mul(div(-0.454, add(X2, X4)), mul(sub(mul(div(-0.454, X2), mul(sub(sub(sub(X2, X3), sqrt(X0)), sqrt(X2)), X0)), X0), X0)), mul(div(-0.454, X2), mul(div(div(-0.454, X2), add(X2, X1)), mul(sub(mul(div(-0.454, X2), mul(sub(sub(sub(sub(X2, X3), sqrt(X0)), X5), sub(X5, sub(X4, X5))), X0)), X0), add(X0, X5)))))))))), sub(X5, X2)), sqrt(sub(sub(sub(sub(mul(div(-0.454, add(X2, X1)), mul(sub(sub(sub(sub(sub(X4, sin(div(X3, X5))), sub(X5, sub(sub(sub(X4, cos(sub(X5, X3))), sqrt(sub(X1, X4))), sqrt(sub(X1, X4))))), sub(cos(sub(X5, X3)), sub(X4, sqrt(sub(X1, X4))))), sub(sin(X4), sub(X4, sqrt(sub(X1, X4))))), X0), X0)), sub(X1, X2)), sub(sub(X1, X2), X2)), sub(sub(X4, sqrt(sub(sub(X2, X3), sub(sub(X2, X3), sqrt(X0))))), X2)), sub(X1, X2))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x3, x4, x5, params):\n    return 2*x2 - x3 - x5 - sqrt(-x2 + x5 - 0.454*(-0.454*x0*(-x0 - 0.454*x0*(-sqrt(x0) - sqrt(x2) + x2 - x3)/x2)/(x2 + x4) - 0.206116*(-x0 - 0.454*x0*(-sqrt(x0) + x2 - x3 + x4 - 3*x5)/x2)*(x0 + x5)/(x2**2*(x1 + x2)))/x2) - sqrt(x0**(1/4) - 0.454*x0*(-x0 + 4*x4 - x5 - 4*sqrt(x1 - x4) - sin(x4) - sin(x3/x5) - 2*cos(x3 - x5))/(x1 + x2) - 3*x1 + 5*x2 - x4)\n",
+    "return_expression_source": "2*x2 - x3 - x5 - sqrt(-x2 + x5 - 0.454*(-0.454*x0*(-x0 - 0.454*x0*(-sqrt(x0) - sqrt(x2) + x2 - x3)/x2)/(x2 + x4) - 0.206116*(-x0 - 0.454*x0*(-sqrt(x0) + x2 - x3 + x4 - 3*x5)/x2)*(x0 + x5)/(x2**2*(x1 + x2)))/x2) - sqrt(x0**(1/4) - 0.454*x0*(-x0 + 4*x4 - x5 - 4*sqrt(x1 - x4) - sin(x4) - sin(x3/x5) - 2*cos(x3 - x5))/(x1 + x2) - 3*x1 + 5*x2 - x4)",
+    "normalized_expression": "2*x2 - x3 - x5 - sqrt(-x2 + x5 - 0.454*(-0.454*x0*(-x0 - 0.454*x0*(-sqrt(x0) - sqrt(x2) + x2 - x3)/x2)/(x2 + x4) - 0.206116*(-x0 - 0.454*x0*(-sqrt(x0) + x2 - x3 + x4 - 3*x5)/x2)*(x0 + x5)/(x2**2*(x1 + x2)))/x2) - sqrt(x0**(1/4) - 0.454*x0*(-x0 + 4*x4 - x5 - 4*sqrt(x1 - x4) - sin(x4) - sin(x3/x5) - 2*cos(x3 - x5))/(x1 + x2) - 3*x1 + 5*x2 - x4)",
+    "instantiated_expression": "2*x2 - x3 - x5 - sqrt(-x2 + x5 - 0.454*(-0.454*x0*(-x0 - 0.454*x0*(-sqrt(x0) - sqrt(x2) + x2 - x3)/x2)/(x2 + x4) - 0.206116*(-x0 - 0.454*x0*(-sqrt(x0) + x2 - x3 + x4 - 3*x5)/x2)*(x0 + x5)/(x2**2*(x1 + x2)))/x2) - sqrt(x0**(1/4) - 0.454*x0*(-x0 + 4*x4 - x5 - 4*sqrt(x1 - x4) - sin(x4) - sin(x3/x5) - 2*cos(x3 - x5))/(x1 + x2) - 3*x1 + 5*x2 - x4)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 6,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 159,
+    "tree_depth": 13,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "2*x2 - x3 - x5 - sqrt(-x2 + x5 - 0.454*(-0.454*x0*(-x0 - 0.454*x0*(-sqrt(x0) - sqrt(x2) + x2 - x3)/x2)/(x2 + x4) - 0.206116*(-x0 - 0.454*x0*(-sqrt(x0) + x2 - x3 + x4 - 3*x5)/x2)*(x0 + x5)/(x2**2*(x1 + x2)))/x2) - sqrt(x0**(1/4) - 0.454*x0*(-x0 + 4*x4 - x5 - 4*sqrt(x1 - x4) - sin(x4) - sin(x3/x5) - 2*cos(x3 - x5))/(x1 + x2) - 3*x1 + 5*x2 - x4)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.2271361614412661,
+    "r2": 0.9839937547786057,
+    "nmse": 0.005495712596234813,
+    "acc_0_1": 0.11082666666666667
+  },
+  "valid": {
+    "rmse": 1.2007487755625748,
+    "r2": 0.9839930023046317,
+    "nmse": 0.005441134554995294,
+    "acc_0_1": 0.1116
+  },
+  "id_test": {
+    "rmse": 1.2373020645518118,
+    "r2": 0.9836467987059033,
+    "nmse": 0.005649819581400595,
+    "acc_0_1": 0.1103
+  },
+  "ood_test": {
+    "rmse": 9.638677871668284,
+    "r2": 0.8819179671707735,
+    "nmse": 0.07411298050017724,
+    "acc_0_1": 0.0131
+  },
+  "finished_at": "2026-05-02 09:54:26",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0023/iaaccn28/gplearn/g0023_I.11.19_4_0/experiments",
+    "exp_name": "g0023_I.11.19_4_0_gplearn_seed2",
+    "n_features": 6,
+    "feature_names": [
+      "A",
+      "x1",
+      "x2",
+      "x3",
+      "y1",
+      "y3"
+    ],
+    "target_name": "y2"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

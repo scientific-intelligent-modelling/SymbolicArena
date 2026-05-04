@@ -1,0 +1,115 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0008_Nguyen-12",
+  "task_global_index": 8,
+  "dataset": "Nguyen-12",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/nguyen/Nguyen-12",
+  "expected_dataset_rel": "sim-datasets-data/nguyen/Nguyen-12",
+  "expected_dataset_dir": "sim-datasets-data/nguyen/Nguyen-12",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/nguyen/Nguyen-12",
+    "expected_dataset_dir": "sim-datasets-data/nguyen/Nguyen-12",
+    "expected_normalized": "sim-datasets-data/nguyen/Nguyen-12",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/nguyen/Nguyen-12",
+    "actual_normalized": "sim-datasets-data/nguyen/Nguyen-12"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0008/iaaccn28/QLattice/g0008_Nguyen-12/experiments/g0008_Nguyen-12_QLattice_seed1_20260502-075120",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 16,
+  "valid_rows": 2,
+  "id_test_rows": 2,
+  "ood_test_rows": 200,
+  "seconds": 149.673,
+  "equation": "-0.6846*(1.123 - 1.114*x0)*exp(-2.0*(1.771 - 1.631*x0)**2) - 0.6846*tanh(1.7*x1 + 0.5138)**2 + 0.151",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "-0.6846*(1.123 - 1.114*x0)*exp(-2.0*(1.771 - 1.631*x0)**2) - 0.6846*tanh(1.7*x1 + 0.5138)**2 + 0.151",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (0.7626444*x0 - 0.7688058)*exp(-2.0*(1.771 - 1.631*x0)**2) - 0.6846*tanh(1.7*x1 + 0.5138)**2 + 0.151\n",
+    "return_expression_source": "(0.7626444*x0 - 0.7688058)*exp(-2.0*(1.771 - 1.631*x0)**2) - 0.6846*tanh(1.7*x1 + 0.5138)**2 + 0.151",
+    "normalized_expression": "(0.7626444*x0 - 0.7688058)*exp(-2.0*(1.771 - 1.631*x0)**2) - 0.6846*tanh(1.7*x1 + 0.5138)**2 + 0.151",
+    "instantiated_expression": "(0.7626444*x0 - 0.7688058)*exp(-2.0*(1.771 - 1.631*x0)**2) - 0.6846*tanh(1.7*x1 + 0.5138)**2 + 0.151",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "tanh"
+    ],
+    "ast_node_count": 28,
+    "tree_depth": 8,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(0.7626444*x0 - 0.7688058)*exp(-2.0*(1.771 - 1.631*x0)**2) - 0.6846*tanh(1.7*x1 + 0.5138)**2 + 0.151"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.002685365778772589,
+    "r2": 0.9997606728511789,
+    "nmse": 5.873409319616376e-05,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.008618117555017303,
+    "r2": 0.9968106446811668,
+    "nmse": 0.0003731133972245696,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.0020250142462384445,
+    "r2": 0.9915396402976112,
+    "nmse": 3.8205310569664926e-05,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.021885011839793578,
+    "r2": 0.9850677952000418,
+    "nmse": 0.002485771449932906,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 07:53:50",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0008/iaaccn28/QLattice/g0008_Nguyen-12/experiments",
+    "exp_name": "g0008_Nguyen-12_QLattice_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

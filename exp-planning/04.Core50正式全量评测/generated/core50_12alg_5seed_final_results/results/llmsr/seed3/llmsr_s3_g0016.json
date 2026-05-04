@@ -1,0 +1,159 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0016_feynman_II_15_4",
+  "task_global_index": 16,
+  "dataset": "feynman_II_15_4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0016/iaaccn23/llmsr/g0016_feynman_II_15_4/experiments/g0016_feynman_II_15_4_llmsr_seed3_20260502-100810",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "mom",
+    "B",
+    "theta"
+  ],
+  "target_name": "target",
+  "train_rows": 64000,
+  "valid_rows": 8000,
+  "id_test_rows": 8000,
+  "ood_test_rows": 10000,
+  "seconds": 3612.429,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the potential energy given the magnetic moment, magnetic field, and angle.\n\n    Variables:\n    - Independents:\n  - x0: Magnetic moment\n  - x1: Magnetic field\n  - x2: Angle\n- Dependent:\n  - y: Potential energy\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v0`.\"\"\"\n    return -params[0] * x0 * x1 * np.cos(x2)\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the potential energy given the magnetic moment, magnetic field, and angle.\n\n    Variables:\n    - Independents:\n  - x0: Magnetic moment\n  - x1: Magnetic field\n  - x2: Angle\n- Dependent:\n  - y: Potential energy\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v0`.\"\"\"\n    return -params[0] * x0 * x1 * np.cos(x2)\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the potential energy given the magnetic moment, magnetic field, and angle.\n\n    Variables:\n    - Independents:\n  - x0: Magnetic moment\n  - x1: Magnetic field\n  - x2: Angle\n- Dependent:\n  - y: Potential energy\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v0`.\"\"\"\n    return -params[0] * x0 * x1 * np.cos(x2)\n\n",
+    "return_expression_source": "-params[0] * x0 * x1 * np.cos(x2)",
+    "normalized_expression": "-c0*x0*x1*cos(x2)",
+    "instantiated_expression": "-1.0*x0*x1*cos(x2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "expected_n_features": 3,
+    "operator_set": [
+      "cos",
+      "mul"
+    ],
+    "ast_node_count": 7,
+    "tree_depth": 3,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-c0*x0*x1*cos(x2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 3.3204077147565353e-15,
+    "r2": 1.0,
+    "nmse": 2.5378204289119933e-31,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 3.38841392390352e-15,
+    "r2": 1.0,
+    "nmse": 2.6170181750538427e-31,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 3.258974790221654e-15,
+    "r2": 1.0,
+    "nmse": 2.5014480601663078e-31,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 1.6764939776178012e-15,
+    "r2": 1.0,
+    "nmse": 5.908606957084231e-32,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:08:23",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0016/iaaccn23/llmsr/g0016_feynman_II_15_4/experiments",
+    "exp_name": "g0016_feynman_II_15_4_llmsr_seed3",
+    "n_features": 3,
+    "feature_names": [
+      "mom",
+      "B",
+      "theta"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "mom",
+      "B",
+      "theta"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the potential energy given the magnetic moment, magnetic field, and angle.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_II_15_4/metadata.yaml",
+    "feature_descriptions": [
+      "Magnetic moment",
+      "Magnetic field",
+      "Angle"
+    ],
+    "target_description": "Potential energy"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

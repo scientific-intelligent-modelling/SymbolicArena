@@ -1,0 +1,155 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0028_feynman-ii.4.23",
+  "task_global_index": 28,
+  "dataset": "feynman-ii.4.23",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0028/iaaccn23/llmsr/g0028_feynman-ii.4.23/experiments/g0028_feynman-ii.4.23_llmsr_seed3_20260502-102022",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x0",
+    "x1"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3611.319,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Electric potential given Electric charge, Vacuum permittivity\n\n    Variables:\n    - Independents:\n  - x0: q, Electric charge\n  - x1: epsilon, Vacuum permittivity\n- Dependent:\n  - y: phi, Electric potential\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate the Electric potential given Electric charge, Vacuum permittivity\n\n    Variables:\n    - Independents:\n      - x0: q, Electric charge\n      - x1: epsilon, Vacuum permittivity\n    - Dependent:\n      - y: phi, Electric potential\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] * x0**2 / (4 * np.pi * x1) + params[1] * x0 / (4 * np.pi * x1**2)\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Electric potential given Electric charge, Vacuum permittivity\n\n    Variables:\n    - Independents:\n  - x0: q, Electric charge\n  - x1: epsilon, Vacuum permittivity\n- Dependent:\n  - y: phi, Electric potential\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate the Electric potential given Electric charge, Vacuum permittivity\n\n    Variables:\n    - Independents:\n      - x0: q, Electric charge\n      - x1: epsilon, Vacuum permittivity\n    - Dependent:\n      - y: phi, Electric potential\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] * x0**2 / (4 * np.pi * x1) + params[1] * x0 / (4 * np.pi * x1**2)\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Electric potential given Electric charge, Vacuum permittivity\n\n    Variables:\n    - Independents:\n  - x0: q, Electric charge\n  - x1: epsilon, Vacuum permittivity\n- Dependent:\n  - y: phi, Electric potential\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate the Electric potential given Electric charge, Vacuum permittivity\n\n    Variables:\n    - Independents:\n      - x0: q, Electric charge\n      - x1: epsilon, Vacuum permittivity\n    - Dependent:\n      - y: phi, Electric potential\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] * x0**2 / (4 * np.pi * x1) + params[1] * x0 / (4 * np.pi * x1**2)\n\n",
+    "return_expression_source": "params[0] * x0 ** 2 / (4 * np.pi * x1) + params[1] * x0 / (4 * np.pi * x1 ** 2)",
+    "normalized_expression": "c0*x0**2/(4*pi*x1) + c1*x0/(4*pi*x1**2)",
+    "instantiated_expression": "1.0*x0**2/(4*pi*x1) + 1.0*x0/(4*pi*x1**2)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pi",
+      "pow"
+    ],
+    "ast_node_count": 23,
+    "tree_depth": 4,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0**2/(4*pi*x1) + c1*x0/(4*pi*x1**2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 9711818118.251263,
+    "r2": -0.00011720896025702032,
+    "nmse": 0.9999999987978445,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 8778151294.411835,
+    "r2": -0.00025633670631663996,
+    "nmse": 0.999999998795809,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 10537419973.236567,
+    "r2": -0.001665375610276687,
+    "nmse": 0.9999999987416823,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 11532814504.246069,
+    "r2": -7.055633245456328e-05,
+    "nmse": 0.9999999979465733,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 11:20:33",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0028/iaaccn23/llmsr/g0028_feynman-ii.4.23/experiments",
+    "exp_name": "g0028_feynman-ii.4.23_llmsr_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "x0",
+      "x1"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Electric potential given Electric charge, Vacuum permittivity",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23/metadata.yaml",
+    "feature_descriptions": [
+      "q, Electric charge",
+      "epsilon, Vacuum permittivity"
+    ],
+    "target_description": "phi, Electric potential"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

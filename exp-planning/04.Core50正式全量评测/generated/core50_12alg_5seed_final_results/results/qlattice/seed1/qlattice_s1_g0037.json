@@ -1,0 +1,115 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0037_CRK34",
+  "task_global_index": 37,
+  "dataset": "CRK34",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK34",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK34",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK34"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0037/iaaccn27/QLattice/g0037_CRK34/experiments/g0037_CRK34_QLattice_seed1_20260502-081658",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 154.747,
+  "equation": "0.5169*tanh(-1.127*x1 + (0.02081*x0 + 0.414)*exp(-2.0*(1.515 - 0.1142*x0)**2 - 2.0*(0.165*x0 + 1.638*x1 - 3.646)**2) + 2.497) + 0.1037",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "0.5169*tanh(-1.127*x1 + (0.02081*x0 + 0.414)*exp(-2.0*(1.515 - 0.1142*x0)**2 - 2.0*(0.165*x0 + 1.638*x1 - 3.646)**2) + 2.497) + 0.1037",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.5169*tanh(-1.127*x1 + (0.02081*x0 + 0.414)*exp(-2.0*(1.515 - 0.1142*x0)**2 - 2.0*(0.165*x0 + 1.638*x1 - 3.646)**2) + 2.497) + 0.1037\n",
+    "return_expression_source": "0.5169*tanh(-1.127*x1 + (0.02081*x0 + 0.414)*exp(-2.0*(1.515 - 0.1142*x0)**2 - 2.0*(0.165*x0 + 1.638*x1 - 3.646)**2) + 2.497) + 0.1037",
+    "normalized_expression": "0.5169*tanh(-1.127*x1 + (0.02081*x0 + 0.414)*exp(-2.0*(1.515 - 0.1142*x0)**2 - 2.0*(0.165*x0 + 1.638*x1 - 3.646)**2) + 2.497) + 0.1037",
+    "instantiated_expression": "0.5169*tanh(-1.127*x1 + (0.02081*x0 + 0.414)*exp(-2.0*(1.515 - 0.1142*x0)**2 - 2.0*(0.165*x0 + 1.638*x1 - 3.646)**2) + 2.497) + 0.1037",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "tanh"
+    ],
+    "ast_node_count": 39,
+    "tree_depth": 12,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.5169*tanh(-1.127*x1 + (0.02081*x0 + 0.414)*exp(-2.0*(1.515 - 0.1142*x0)**2 - 2.0*(0.165*x0 + 1.638*x1 - 3.646)**2) + 2.497) + 0.1037"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.0007369846605939828,
+    "r2": 0.9999327714470552,
+    "nmse": 6.214713881016994e-05,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.0007392689608922524,
+    "r2": 0.9999431774901184,
+    "nmse": 5.276797189163692e-05,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.0007445176137448793,
+    "r2": 0.9999306640710549,
+    "nmse": 6.376184959745032e-05,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.00074576557105137,
+    "r2": -1.815584716032172,
+    "nmse": 2.2862591741929625,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:19:32",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0037/iaaccn27/QLattice/g0037_CRK34/experiments",
+    "exp_name": "g0037_CRK34_QLattice_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

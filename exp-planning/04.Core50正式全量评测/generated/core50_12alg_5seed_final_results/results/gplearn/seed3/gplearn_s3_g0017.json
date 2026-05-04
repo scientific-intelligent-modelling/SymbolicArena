@@ -1,0 +1,136 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0017_strogatz_shearflow1",
+  "task_global_index": 17,
+  "dataset": "strogatz_shearflow1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed3/tasks/gplearn_s3_g0017/iaaccn28/gplearn/g0017_strogatz_shearflow1/experiments/g0017_strogatz_shearflow1_gplearn_seed3_20260502-095505",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3603.116,
+  "equation": "mul(sin(cos(X1)), add(div(0.115, log(cos(sin(div(X1, cos(-0.293)))))), div(0.168, sub(0.757, X1))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "mul(sin(cos(X1)), add(div(0.115, log(cos(sin(div(X1, cos(-0.293)))))), div(0.168, sub(0.757, X1))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return (0.115/log(cos(sin(1.04451546505702*x1))) + 0.168/(0.757 - x1))*sin(cos(x1))\n",
+    "return_expression_source": "(0.115/log(cos(sin(1.04451546505702*x1))) + 0.168/(0.757 - x1))*sin(cos(x1))",
+    "normalized_expression": "(0.115/log(cos(sin(1.04451546505702*x1))) + 0.168/(0.757 - x1))*sin(cos(x1))",
+    "instantiated_expression": "(0.115/log(cos(sin(1.04451546505702*x1))) + 0.168/(0.757 - x1))*sin(cos(x1))",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "log",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 24,
+    "tree_depth": 9,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(0.115/log(cos(sin(1.04451546505702*x1))) + 0.168/(0.757 - x1))*sin(cos(x1))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.09225703875096838,
+    "r2": 0.9735957358286902,
+    "nmse": 0.026362766799248354,
+    "acc_0_1": 0.765625
+  },
+  "valid": {
+    "rmse": 0.09200506490979757,
+    "r2": 0.9777200662529828,
+    "nmse": 0.021243293259321536,
+    "acc_0_1": 0.78125
+  },
+  "id_test": {
+    "rmse": 0.1285472400918642,
+    "r2": 0.9821689471484991,
+    "nmse": 0.01754883637100523,
+    "acc_0_1": 0.71875
+  },
+  "ood_test": {
+    "rmse": 16.649492047251247,
+    "r2": -117.60904943628269,
+    "nmse": 96.21703151113697,
+    "acc_0_1": 0.074
+  },
+  "finished_at": "2026-05-02 10:55:08",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed3/tasks/gplearn_s3_g0017/iaaccn28/gplearn/g0017_strogatz_shearflow1/experiments",
+    "exp_name": "g0017_strogatz_shearflow1_gplearn_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

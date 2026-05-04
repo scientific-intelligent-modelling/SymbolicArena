@@ -1,0 +1,128 @@
+{
+  "tool": "tpsr",
+  "task_label": "g0030_feynman-iii.7.38",
+  "task_global_index": 30,
+  "dataset": "feynman-iii.7.38",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed0/tasks/tpsr_s0_g0030/iaaccn26/tpsr/g0030_feynman-iii.7.38/experiments/g0030_feynman-iii.7.38_tpsr_seed0_20260502-074735",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x0",
+    "x1"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 2128.405,
+  "equation": "(((-3.9231697486825095 + x_0) * (-0.0003 + exp((49.103780582584676 + x_1)))) * (-1.3102938609055608 + x_0))",
+  "equation_count": 2,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "tpsr",
+    "raw_equation": "(((-3.9231697486825095 + x_0) * (-0.0003 + exp((49.103780582584676 + x_1)))) * (-1.3102938609055608 + x_0))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (x0 - 3.9231697486825095)*(x0 - 1.3102938609055608)*(2.1159283020648359e+21*exp(x1) - 0.0003)\n",
+    "return_expression_source": "(x0 - 3.9231697486825095)*(x0 - 1.3102938609055608)*(2.1159283020648359e+21*exp(x1) - 0.0003)",
+    "normalized_expression": "(x0 - 3.9231697486825095)*(x0 - 1.3102938609055608)*(2.1159283020648359e+21*exp(x1) - 0.0003)",
+    "instantiated_expression": "(x0 - 3.9231697486825095)*(x0 - 1.3102938609055608)*(2.1159283020648359e+21*exp(x1) - 0.0003)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 5,
+    "normalization_mode": "tpsr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(x0 - 3.9231697486825095)*(x0 - 1.3102938609055608)*(2.1159283020648359e+21*exp(x1) - 0.0003)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.1049927888800776e+23,
+    "r2": -0.002435767020534829,
+    "nmse": 1.0024320824029829,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 2.03770592152836e+23,
+    "r2": -0.007267313011809273,
+    "nmse": 1.006157758272326,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 1.9280087181826217e+23,
+    "r2": -0.003592659859479763,
+    "nmse": 1.0035902761169695,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 1.0464305078920216e+25,
+    "r2": -0.000186002192993584,
+    "nmse": 1.0000228761600856,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:23:04",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "backbone_model": "e2e",
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "beam_size": 10,
+    "beam_type": "sampling",
+    "no_seq_cache": false,
+    "no_prefix_cache": true,
+    "width": 3,
+    "num_beams": 1,
+    "rollout": 3,
+    "horizon": 200,
+    "lam": 0.1,
+    "train_value": false,
+    "reward_sample_limit": 2048,
+    "cpu": true,
+    "cpu_num_threads": 4,
+    "cpu_interop_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed0/tasks/tpsr_s0_g0030/iaaccn26/tpsr/g0030_feynman-iii.7.38/experiments",
+    "exp_name": "g0030_feynman-iii.7.38_tpsr_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x0",
+      "x1"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

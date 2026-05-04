@@ -1,0 +1,115 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0036_CRK10",
+  "task_global_index": 36,
+  "dataset": "CRK10",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed3/tasks/e2esr_s3_g0036/iaaccn28/e2esr/g0036_CRK10/experiments/g0036_CRK10_e2esr_seed3_20260502-101033",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3604.616,
+  "equation": "0.029500000000000002*Abs((0.623*x_0 - 0.785)*(0.639*x_1 - 0.2)) - 0.0003",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "0.029500000000000002*Abs((0.623*x_0 - 0.785)*(0.639*x_1 - 0.2)) - 0.0003",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.029500000000000002*Abs((0.623*x0 - 0.785)*(0.639*x1 - 0.2)) - 0.0003\n",
+    "return_expression_source": "0.029500000000000002*Abs((0.623*x0 - 0.785)*(0.639*x1 - 0.2)) - 0.0003",
+    "normalized_expression": "0.029500000000000002*Abs((0.623*x0 - 0.785)*(0.639*x1 - 0.2)) - 0.0003",
+    "instantiated_expression": "0.029500000000000002*Abs((0.623*x0 - 0.785)*(0.639*x1 - 0.2)) - 0.0003",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "abs",
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 16,
+    "tree_depth": 7,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.029500000000000002*Abs((0.623*x0 - 0.785)*(0.639*x1 - 0.2)) - 0.0003"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.4811330876555544,
+    "r2": -167.79724789100254,
+    "nmse": 150.86926880562208,
+    "acc_0_1": 0.112
+  },
+  "valid": {
+    "rmse": 0.48460118165829974,
+    "r2": -163.9494854586416,
+    "nmse": 146.80732899404276,
+    "acc_0_1": 0.106
+  },
+  "id_test": {
+    "rmse": 0.49488277769223127,
+    "r2": -197.96376808520014,
+    "nmse": 182.3081257735231,
+    "acc_0_1": 0.082
+  },
+  "ood_test": {
+    "rmse": 0.893473097781949,
+    "r2": -67653555.53925657,
+    "nmse": 15127150.098438736,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 11:10:37",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed3/tasks/e2esr_s3_g0036/iaaccn28/e2esr/g0036_CRK10/experiments",
+    "exp_name": "g0036_CRK10_e2esr_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'e2esr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

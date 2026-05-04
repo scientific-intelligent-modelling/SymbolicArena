@@ -1,0 +1,157 @@
+{
+  "tool": "drsr",
+  "task_label": "g0036_CRK10",
+  "task_global_index": 36,
+  "dataset": "CRK10",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0036/iaaccn27/drsr/g0036_CRK10/experiments/g0036_CRK10_drsr_seed0_20260502-073252",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3900.842,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Rate of change of concentration in chemistry reaction kinetics given Time and Concentration at time t\n\n    Variables:\n    - Independents:\n  - x0: Time\n  - x1: Concentration at time t\n- Dependent:\n  - y: Rate of change of concentration in chemistry reaction kinetics\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * x0**2 + params[2] * np.exp(-x1) + params[3] * x0 * x1 + params[4] * x1**2 + params[5] * np.sin(x0) + params[6] * np.cos(x1)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Rate of change of concentration in chemistry reaction kinetics given Time and Concentration at time t\n\n    Variables:\n    - Independents:\n  - x0: Time\n  - x1: Concentration at time t\n- Dependent:\n  - y: Rate of change of concentration in chemistry reaction kinetics\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * x0**2 + params[2] * np.exp(-x1) + params[3] * x0 * x1 + params[4] * x1**2 + params[5] * np.sin(x0) + params[6] * np.cos(x1)",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Rate of change of concentration in chemistry reaction kinetics given Time and Concentration at time t\n\n    Variables:\n    - Independents:\n  - x0: Time\n  - x1: Concentration at time t\n- Dependent:\n  - y: Rate of change of concentration in chemistry reaction kinetics\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * x0**2 + params[2] * np.exp(-x1) + params[3] * x0 * x1 + params[4] * x1**2 + params[5] * np.sin(x0) + params[6] * np.cos(x1)",
+    "return_expression_source": "params[0] + params[1] * x0 ** 2 + params[2] * np.exp(-x1) + params[3] * x0 * x1 + params[4] * x1 ** 2 + params[5] * np.sin(x0) + params[6] * np.cos(x1)",
+    "normalized_expression": "c0 + c1*x0**2 + c2*exp(-x1) + c3*x0*x1 + c4*x1**2 + c5*sin(x0) + c6*cos(x1)",
+    "instantiated_expression": "0.6048495261939524 + -4.875436723003097e-10*x0**2 + -0.5849056903345243*exp(-x1) + 2.074205254053459e-08*x0*x1 + -0.17668441118761458*x1**2 + 1.0231042752831385e-08*sin(x0) + -0.018720012139590576*cos(x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.6048495261939524,
+      -4.875436723003097e-10,
+      -0.5849056903345243,
+      2.074205254053459e-08,
+      -0.17668441118761458,
+      1.0231042752831385e-08,
+      -0.018720012139590576,
+      0.1181072557503946,
+      -0.1589257281422789,
+      -0.6192788947071208
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "exp",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 30,
+    "tree_depth": 5,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0**2 + c2*exp(-x1) + c3*x0*x1 + c4*x1**2 + c5*sin(x0) + c6*cos(x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.6415971570084026e-07,
+    "r2": 0.9999999999803497,
+    "nmse": 1.7563194835617513e-11,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 1.7265315552587414e-07,
+    "r2": 0.9999999999790622,
+    "nmse": 1.8634933189747015e-11,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 1.5291824626245116e-07,
+    "r2": 0.9999999999810029,
+    "nmse": 1.7406841030439048e-11,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 1.5834198900933294e-07,
+    "r2": 0.9999978751911661,
+    "nmse": 4.7510144040583275e-07,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:37:53",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0036/iaaccn27/drsr/g0036_CRK10/experiments",
+    "exp_name": "g0036_CRK10_drsr_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt",
+    "original_feature_names": [
+      "t",
+      "A"
+    ],
+    "original_target_name": "dA_dt",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate Rate of change of concentration in chemistry reaction kinetics given Time and Concentration at time t",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10/metadata.yaml",
+    "feature_descriptions": [
+      "Time",
+      "Concentration at time t"
+    ],
+    "target_description": "Rate of change of concentration in chemistry reaction kinetics"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

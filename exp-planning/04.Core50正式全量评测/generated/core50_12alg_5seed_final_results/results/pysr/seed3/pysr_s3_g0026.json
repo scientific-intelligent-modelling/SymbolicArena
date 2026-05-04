@@ -1,0 +1,183 @@
+{
+  "tool": "pysr",
+  "task_label": "g0026_strogatz_barmag1",
+  "task_global_index": 26,
+  "dataset": "strogatz_barmag1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pysr/seed3/tasks/pysr_s3_g0026/iaaccn27/pysr/g0026_strogatz_barmag1/experiments/g0026_strogatz_barmag1_pysr_seed3_20260502-100432",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3602.218,
+  "equation": "square(sin(sin(-0.20552222 - x0))) / ((x0 * 0.099644594) * (sin(sin(cos(x1 * -1.2322265))) + 1.7824779))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pysr",
+    "raw_equation": "square(sin(sin(-0.20552222 - x0))) / ((x0 * 0.099644594) * (sin(sin(cos(x1 * -1.2322265))) + 1.7824779))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 10.0356673639515*sin(sin(x0 + 0.20552222))**2/(x0*(sin(sin(cos(1.2322265*x1))) + 1.7824779))\n",
+    "return_expression_source": "10.0356673639515*sin(sin(x0 + 0.20552222))**2/(x0*(sin(sin(cos(1.2322265*x1))) + 1.7824779))",
+    "normalized_expression": "10.0356673639515*sin(sin(x0 + 0.20552222))**2/(x0*(sin(sin(cos(1.2322265*x1))) + 1.7824779))",
+    "instantiated_expression": "10.0356673639515*sin(sin(x0 + 0.20552222))**2/(x0*(sin(sin(cos(1.2322265*x1))) + 1.7824779))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 22,
+    "tree_depth": 8,
+    "normalization_mode": "pysr_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "10.0356673639515*sin(sin(x0 + 0.20552222))**2/(x0*(sin(sin(cos(1.2322265*x1))) + 1.7824779))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.022264554096857972,
+    "r2": 0.9897482568798092,
+    "nmse": 0.007170041992767383,
+    "acc_0_1": 0.9921875
+  },
+  "valid": {
+    "rmse": 0.02887572467126392,
+    "r2": 0.9850842953495731,
+    "nmse": 0.008108798551217548,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.023954134204382506,
+    "r2": 0.9843071620592196,
+    "nmse": 0.007645973055517376,
+    "acc_0_1": 0.96875
+  },
+  "ood_test": {
+    "rmse": 0.2932330275737176,
+    "r2": -0.13280317663629182,
+    "nmse": 0.6639886481807773,
+    "acc_0_1": 0.265
+  },
+  "finished_at": "2026-05-02 11:04:34",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 10000000,
+    "population_size": 64,
+    "populations": 8,
+    "ncycles_per_iteration": 500,
+    "maxsize": 30,
+    "maxdepth": 10,
+    "parsimony": 0.001,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "square",
+      "cube",
+      "exp",
+      "log",
+      "sin",
+      "cos"
+    ],
+    "constraints": {
+      "/": [
+        -1,
+        9
+      ],
+      "square": 9,
+      "cube": 9,
+      "exp": 7,
+      "log": 7,
+      "sin": 9,
+      "cos": 9
+    },
+    "nested_constraints": {
+      "exp": {
+        "exp": 0,
+        "log": 1
+      },
+      "log": {
+        "exp": 0,
+        "log": 0
+      },
+      "square": {
+        "square": 1,
+        "cube": 1,
+        "exp": 0,
+        "log": 0
+      },
+      "cube": {
+        "square": 1,
+        "cube": 1,
+        "exp": 0,
+        "log": 0
+      }
+    },
+    "complexity_of_operators": {
+      "/": 2,
+      "square": 2,
+      "cube": 3,
+      "sin": 2,
+      "cos": 2,
+      "exp": 3,
+      "log": 3
+    },
+    "complexity_of_constants": 2,
+    "complexity_of_variables": 1,
+    "precision": 32,
+    "deterministic": true,
+    "parallelism": "serial",
+    "model_selection": "best",
+    "progress": true,
+    "verbosity": 1,
+    "procs": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pysr/seed3/tasks/pysr_s3_g0026/iaaccn27/pysr/g0026_strogatz_barmag1/experiments",
+    "exp_name": "g0026_strogatz_barmag1_pysr_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'pysr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

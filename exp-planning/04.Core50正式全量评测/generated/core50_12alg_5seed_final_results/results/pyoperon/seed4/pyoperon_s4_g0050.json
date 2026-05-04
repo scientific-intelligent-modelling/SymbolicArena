@@ -1,0 +1,120 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0050_BPG9",
+  "task_global_index": 50,
+  "dataset": "BPG9",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed4/tasks/pyoperon_s4_g0050/iaaccn24/pyoperon/g0050_BPG9/experiments/g0050_BPG9_pyoperon_seed4_20260502-112025",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 9.654,
+  "equation": "(0.788 + ((-1.642) * cos((sin(((-0.326) * X2)) + ((-0.512) * X2)))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(0.788 + ((-1.642) * cos((sin(((-0.326) * X2)) + ((-0.512) * X2)))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return 0.788 - 1.642*cos(0.512*x0 + sin(0.326*x0))\n",
+    "return_expression_source": "0.788 - 1.642*cos(0.512*x0 + sin(0.326*x0))",
+    "normalized_expression": "0.788 - 1.642*cos(0.512*x0 + sin(0.326*x0))",
+    "instantiated_expression": "0.788 - 1.642*cos(0.512*x0 + sin(0.326*x0))",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 7,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.788 - 1.642*cos(0.512*x0 + sin(0.326*x0))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.3380364537639995,
+    "r2": 0.6383699384257693,
+    "nmse": 0.3262475762746771,
+    "acc_0_1": 0.8488571428571429
+  },
+  "valid": {
+    "rmse": 0.31932849209459957,
+    "r2": 0.631751190498322,
+    "nmse": 0.33852787578342824,
+    "acc_0_1": 0.868
+  },
+  "id_test": {
+    "rmse": 0.3812780052705071,
+    "r2": 0.628215133053436,
+    "nmse": 0.32793653834092557,
+    "acc_0_1": 0.84
+  },
+  "ood_test": {
+    "rmse": 0.060224546161208495,
+    "r2": -42.61744127193975,
+    "nmse": 40.283400045609504,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:20:35",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed4/tasks/pyoperon_s4_g0050/iaaccn24/pyoperon/g0050_BPG9/experiments",
+    "exp_name": "g0050_BPG9_pyoperon_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

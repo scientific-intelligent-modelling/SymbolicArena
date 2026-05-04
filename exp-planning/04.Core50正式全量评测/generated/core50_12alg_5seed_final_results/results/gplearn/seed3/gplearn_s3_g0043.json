@@ -1,0 +1,135 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0043_CRK33",
+  "task_global_index": 43,
+  "dataset": "CRK33",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK33",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK33",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK33",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK33",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK33",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK33",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK33",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK33"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed3/tasks/gplearn_s3_g0043/iaaccn27/gplearn/g0043_CRK33/experiments/g0043_CRK33_gplearn_seed3_20260502-102006",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3602.223,
+  "equation": "div(cos(mul(div(X1, -0.938), cos(X1))), add(add(cos(mul(div(X1, -0.938), cos(X1))), X0), 0.992))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "div(cos(mul(div(X1, -0.938), cos(X1))), add(add(cos(mul(div(X1, -0.938), cos(X1))), X0), 0.992))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return cos(1.06609808102345*x1*cos(x1))/(x0 + cos(1.06609808102345*x1*cos(x1)) + 0.992)\n",
+    "return_expression_source": "cos(1.06609808102345*x1*cos(x1))/(x0 + cos(1.06609808102345*x1*cos(x1)) + 0.992)",
+    "normalized_expression": "cos(1.06609808102345*x1*cos(x1))/(x0 + cos(1.06609808102345*x1*cos(x1)) + 0.992)",
+    "instantiated_expression": "cos(1.06609808102345*x1*cos(x1))/(x0 + cos(1.06609808102345*x1*cos(x1)) + 0.992)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 18,
+    "tree_depth": 7,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "cos(1.06609808102345*x1*cos(x1))/(x0 + cos(1.06609808102345*x1*cos(x1)) + 0.992)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.011495376558870575,
+    "r2": 0.9671253018661802,
+    "nmse": 0.029166745213761485,
+    "acc_0_1": 0.9957142857142857
+  },
+  "valid": {
+    "rmse": 0.012294042925687186,
+    "r2": 0.9689083196293942,
+    "nmse": 0.027386154477887358,
+    "acc_0_1": 0.994
+  },
+  "id_test": {
+    "rmse": 0.014865671118090134,
+    "r2": 0.9565812685939856,
+    "nmse": 0.03822513053521884,
+    "acc_0_1": 0.99
+  },
+  "ood_test": {
+    "rmse": 0.0004468094381350888,
+    "r2": -4.6270080996502365,
+    "nmse": 1.777587269942362,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:20:08",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed3/tasks/gplearn_s3_g0043/iaaccn27/gplearn/g0043_CRK33/experiments",
+    "exp_name": "g0043_CRK33_gplearn_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

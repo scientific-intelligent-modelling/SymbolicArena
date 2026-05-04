@@ -1,0 +1,133 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0005_Keijzer-11",
+  "task_global_index": 5,
+  "dataset": "Keijzer-11",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-11",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-11"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed1/tasks/imcts_s1_g0005/iaaccn29/iMCTS/g0005_Keijzer-11/experiments/g0005_Keijzer-11_iMCTS_seed1_20260502-075037",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 18,
+  "valid_rows": 2,
+  "id_test_rows": 361201,
+  "ood_test_rows": 200,
+  "seconds": 3601.91,
+  "equation": "x0*x1 - log(cos(0.011973522588074924*x0)) + sin(1.000024696909506*x0*x1 - 0.9998478403759272*x0 - 1.0000061917076857*x1 + 0.99982933844679189)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "x0*x1 - log(cos(0.011973522588074924*x0)) + sin(1.000024696909506*x0*x1 - 0.9998478403759272*x0 - 1.0000061917076857*x1 + 0.99982933844679189)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return x0*x1 - log(cos(0.011973522588074924*x0)) + sin(1.000024696909506*x0*x1 - 0.9998478403759272*x0 - 1.0000061917076857*x1 + 0.99982933844679189)\n",
+    "return_expression_source": "x0*x1 - log(cos(0.011973522588074924*x0)) + sin(1.000024696909506*x0*x1 - 0.9998478403759272*x0 - 1.0000061917076857*x1 + 0.99982933844679189)",
+    "normalized_expression": "x0*x1 - log(cos(0.011973522588074924*x0)) + sin(1.000024696909506*x0*x1 - 0.9998478403759272*x0 - 1.0000061917076857*x1 + 0.99982933844679189)",
+    "instantiated_expression": "x0*x1 - log(cos(0.011973522588074924*x0)) + sin(1.000024696909506*x0*x1 - 0.9998478403759272*x0 - 1.0000061917076857*x1 + 0.99982933844679189)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "log",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 24,
+    "tree_depth": 6,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0*x1 - log(cos(0.011973522588074924*x0)) + sin(1.000024696909506*x0*x1 - 0.9998478403759272*x0 - 1.0000061917076857*x1 + 0.99982933844679189)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.00018570869246593128,
+    "r2": 0.9999999945824801,
+    "nmse": 3.4488866967342742e-09,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.0002686022497777008,
+    "r2": 0.9999999902298226,
+    "nmse": 9.426906305771248e-09,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.0003673695925016836,
+    "r2": 0.9999999863100013,
+    "nmse": 1.368982455307292e-08,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.0005873176268203102,
+    "r2": 0.999999989263992,
+    "nmse": 1.0730230680300515e-08,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:50:39",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed1/tasks/imcts_s1_g0005/iaaccn29/iMCTS/g0005_Keijzer-11/experiments",
+    "exp_name": "g0005_Keijzer-11_iMCTS_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'iMCTS' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

@@ -1,0 +1,118 @@
+{
+  "host": "iaaccn28",
+  "envs": [
+    "sim_e2esr",
+    "sim_qLattice",
+    "sim_ragsr",
+    "sim_tpsr"
+  ],
+  "env_configs": {
+    "sim_e2esr": {
+      "python_version": "3.7",
+      "conda_packages": [
+        "pip"
+      ],
+      "channels": [
+        "conda-forge",
+        "defaults"
+      ],
+      "pip_packages": [
+        "numpy==1.21.5",
+        "scipy==1.7.3",
+        "scikit-learn==1.0.2",
+        "pandas==1.3.5",
+        "sympy==1.10.1",
+        "numexpr==2.8.6",
+        "sympytorch==0.1.4",
+        "torch==1.11.0",
+        "torchaudio==0.11.0",
+        "torchvision==0.12.0",
+        "functorch==0.1.0",
+        "tqdm==4.64.0",
+        "pyyaml==6.0",
+        "requests==2.27.1"
+      ],
+      "post_install_commands": [
+        "pip install -e .",
+        "wget https://dl.fbaipublicfiles.com/symbolicregression/model1.pt -O ./scientific_intelligent_modelling/algorithms/e2esr_wrapper/model.pt"
+      ],
+      "comments": "e2e-symbolic-regression环境"
+    },
+    "sim_qLattice": {
+      "python_version": "3.10",
+      "conda_packages": [
+        "pip"
+      ],
+      "channels": [
+        "conda-forge"
+      ],
+      "pip_packages": [
+        "numpy",
+        "pandas",
+        "scikit-learn",
+        "sympy",
+        "feyn"
+      ],
+      "post_install_commands": [
+        "pip install -e ."
+      ],
+      "comments": "Feyn/Qlattice 符号建模环境"
+    },
+    "sim_ragsr": {
+      "python_version": "3.10",
+      "conda_packages": [
+        "pip"
+      ],
+      "channels": [
+        "conda-forge",
+        "pytorch"
+      ],
+      "pip_packages": [
+        "numpy",
+        "pandas",
+        "scikit-learn",
+        "sympy",
+        "networkx"
+      ],
+      "comments": "RAG-SR / EvolutionaryForest 环境；仓库通过 PYTHONPATH=. 暴露，post_install_commands 只安装外部依赖，避免 tpot/xgboost 最新依赖触发源码构建",
+      "post_install_commands": [
+        "pip install --timeout 120 --retries 5 torch --index-url https://download.pytorch.org/whl/cpu",
+        "pip install --timeout 120 --retries 5 PyYAML==6.0.3 category-encoders==2.8.1 deap==1.4.4 dill==0.4.1 lightgbm==3.3.5 linear-tree==0.3.5 mlxtend==0.23.4 sklearn2pmml==0.130.0 smt==2.13.0 umap-learn==0.5.12 hdfe==0.0.4 scorch==0.2.0 seaborn==0.13.2 matplotlib==3.10.9 cachetools==6.2.6 gplearn==0.4.2 faiss-cpu==1.13.0 skorch==1.2.0 shap==0.49.1 xgboost==2.1.4 pytest",
+        "pip install --no-deps evolutionary-forest==0.2.5"
+      ]
+    },
+    "sim_tpsr": {
+      "python_version": "3.9",
+      "conda_packages": [
+        "pip",
+        "pytorch",
+        "numpy",
+        "scikit-learn",
+        "matplotlib",
+        "pandas",
+        "sympy"
+      ],
+      "channels": [
+        "conda-forge",
+        "pytorch"
+      ],
+      "pip_packages": [
+        "timeout-decorator",
+        "numexpr",
+        "sympytorch",
+        "gym==0.26.2",
+        "gym-notices==0.0.8",
+        "tqdm==4.64.0",
+        "click==8.1.8",
+        "pytorch-lightning"
+      ],
+      "comments": "TPSR (Transformer-based Planning for Symbolic Regression)环境",
+      "post_install_commands": [
+        "pip install -e .",
+        "pip install -e ./scientific_intelligent_modelling/algorithms/tpsr_wrapper/tpsr/nesymres/src",
+        "python -c \"from pathlib import Path; import urllib.request; p=Path('scientific_intelligent_modelling/algorithms/e2esr_wrapper/model.pt'); p.parent.mkdir(parents=True, exist_ok=True); p.exists() or urllib.request.urlretrieve('https://dl.fbaipublicfiles.com/symbolicregression/model1.pt', str(p))\""
+      ]
+    }
+  },
+  "log_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_env_install_20260502-062026/iaaccn28.log"
+}

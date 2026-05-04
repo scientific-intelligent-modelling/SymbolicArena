@@ -1,0 +1,128 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0004_Korns-4",
+  "task_global_index": 4,
+  "dataset": "Korns-4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-4",
+  "expected_dataset_rel": "sim-datasets-data/korns/Korns-4",
+  "expected_dataset_dir": "sim-datasets-data/korns/Korns-4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/korns/Korns-4",
+    "expected_dataset_dir": "sim-datasets-data/korns/Korns-4",
+    "expected_normalized": "sim-datasets-data/korns/Korns-4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-4",
+    "actual_normalized": "sim-datasets-data/korns/Korns-4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed1/tasks/pyoperon_s1_g0004/iaaccn26/pyoperon/g0004_Korns-4/experiments/g0004_Korns-4_pyoperon_seed1_20260502-074728",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 90,
+  "valid_rows": 10,
+  "id_test_rows": 100,
+  "ood_test_rows": 1000,
+  "seconds": 11.445,
+  "equation": "((-2.513) + (0.290 * sin(sqrt(sin(exp(sin(cos(((-3.107) * X3)))))))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "((-2.513) + (0.290 * sin(sqrt(sin(exp(sin(cos(((-3.107) * X3)))))))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return 0.29*sin(sqrt(sin(exp(sin(cos(3.107*x1)))))) - 2.513\n",
+    "return_expression_source": "0.29*sin(sqrt(sin(exp(sin(cos(3.107*x1)))))) - 2.513",
+    "normalized_expression": "0.29*sin(sqrt(sin(exp(sin(cos(3.107*x1)))))) - 2.513",
+    "instantiated_expression": "0.29*sin(sqrt(sin(exp(sin(cos(3.107*x1)))))) - 2.513",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "cos",
+      "exp",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 14,
+    "tree_depth": 10,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.29*sin(sqrt(sin(exp(sin(cos(3.107*x1)))))) - 2.513"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.09132867153012847,
+    "r2": 0.062656061785759,
+    "nmse": 0.001572660072829348,
+    "acc_0_1": 0.6333333333333333
+  },
+  "valid": {
+    "rmse": 0.0770863226775412,
+    "r2": 0.2191666207826617,
+    "nmse": 0.0011255320857501325,
+    "acc_0_1": 0.8
+  },
+  "id_test": {
+    "rmse": 0.09235655001563149,
+    "r2": -0.05756275501190555,
+    "nmse": 0.0016121544503981714,
+    "acc_0_1": 0.65
+  },
+  "ood_test": {
+    "rmse": 0.09449129044065938,
+    "r2": -0.04767864080733353,
+    "nmse": 0.001692289247207948,
+    "acc_0_1": 0.624
+  },
+  "finished_at": "2026-05-02 07:47:39",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed1/tasks/pyoperon_s1_g0004/iaaccn26/pyoperon/g0004_Korns-4/experiments",
+    "exp_name": "g0004_Korns-4_pyoperon_seed1",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

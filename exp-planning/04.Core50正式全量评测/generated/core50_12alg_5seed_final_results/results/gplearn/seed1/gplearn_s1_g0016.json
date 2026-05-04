@@ -1,0 +1,141 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0016_feynman_II_15_4",
+  "task_global_index": 16,
+  "dataset": "feynman_II_15_4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed1/tasks/gplearn_s1_g0016/iaaccn29/gplearn/g0016_feynman_II_15_4/experiments/g0016_feynman_II_15_4_gplearn_seed1_20260502-075838",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "mom",
+    "B",
+    "theta"
+  ],
+  "target_name": "target",
+  "train_rows": 64000,
+  "valid_rows": 8000,
+  "id_test_rows": 8000,
+  "ood_test_rows": 10000,
+  "seconds": 3603.247,
+  "equation": "mul(X1, add(mul(cos(X2), sin(add(mul(cos(X2), sin(sin(sin(cos(X2))))), div(log(div(-0.309, div(log(div(-0.309, X0)), sqrt(-0.630)))), cos(-0.630))))), div(mul(sin(cos(X2)), sub(0.976, X0)), cos(-0.630))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "mul(X1, add(mul(cos(X2), sin(add(mul(cos(X2), sin(sin(sin(cos(X2))))), div(log(div(-0.309, div(log(div(-0.309, X0)), sqrt(-0.630)))), cos(-0.630))))), div(mul(sin(cos(X2)), sub(0.976, X0)), cos(-0.630))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, params):\n    return x1*(1.23758162898297*(0.976 - x0)*sin(cos(x2)) + sin(1.23758162898297*log(-0.245261146535688*I/log(-0.309/x0)) + sin(sin(sin(cos(x2))))*cos(x2))*cos(x2))\n",
+    "return_expression_source": "x1*(1.23758162898297*(0.976 - x0)*sin(cos(x2)) + sin(1.23758162898297*log(-0.245261146535688*I/log(-0.309/x0)) + sin(sin(sin(cos(x2))))*cos(x2))*cos(x2))",
+    "normalized_expression": "x1*(1.23758162898297*(0.976 - x0)*sin(cos(x2)) + sin(1.23758162898297*log(-0.245261146535688*I/log(-0.309/x0)) + sin(sin(sin(cos(x2))))*cos(x2))*cos(x2))",
+    "instantiated_expression": "x1*(1.23758162898297*(0.976 - x0)*sin(cos(x2)) + sin(1.23758162898297*log(-0.245261146535688*I/log(-0.309/x0)) + sin(sin(sin(cos(x2))))*cos(x2))*cos(x2))",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "cos",
+      "imaginaryunit",
+      "log",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 40,
+    "tree_depth": 13,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x1*(1.23758162898297*(0.976 - x0)*sin(cos(x2)) + sin(1.23758162898297*log(-0.245261146535688*I/log(-0.309/x0)) + sin(sin(sin(cos(x2))))*cos(x2))*cos(x2))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.08100278727815681,
+    "r2": 0.9997589249626213,
+    "nmse": 0.00015103513450236958,
+    "acc_0_1": 0.816578125
+  },
+  "valid": {
+    "rmse": 0.0831119991557869,
+    "r2": 0.9997491554357752,
+    "nmse": 0.0001574494982855862,
+    "acc_0_1": 0.8115
+  },
+  "id_test": {
+    "rmse": 0.08082548469998789,
+    "r2": 0.9997573935793522,
+    "nmse": 0.0001538601399276094,
+    "acc_0_1": 0.8185
+  },
+  "ood_test": {
+    "rmse": 0.16496500015444587,
+    "r2": 0.9990097910706641,
+    "nmse": 0.0005720904916585157,
+    "acc_0_1": 0.7464
+  },
+  "finished_at": "2026-05-02 08:58:42",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed1/tasks/gplearn_s1_g0016/iaaccn29/gplearn/g0016_feynman_II_15_4/experiments",
+    "exp_name": "g0016_feynman_II_15_4_gplearn_seed1",
+    "n_features": 3,
+    "feature_names": [
+      "mom",
+      "B",
+      "theta"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

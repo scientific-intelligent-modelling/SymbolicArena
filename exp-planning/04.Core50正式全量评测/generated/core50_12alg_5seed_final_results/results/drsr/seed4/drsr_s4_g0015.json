@@ -1,0 +1,166 @@
+{
+  "tool": "drsr",
+  "task_label": "g0015_III.21.20_3_0",
+  "task_global_index": 15,
+  "dataset": "III.21.20_3_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed4/tasks/drsr_s4_g0015/iaaccn27/drsr/g0015_III.21.20_3_0/experiments/g0015_III.21.20_3_0_drsr_seed4_20260502-104138",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "j",
+    "rho_c_0",
+    "q",
+    "A_vec"
+  ],
+  "target_name": "m",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 3902.465,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential\n\n    Variables:\n    - Independents:\n  - x0: the current density\n  - x1: the charge carrier density\n  - x2: the elementary charge\n  - x3: the vector potential\n- Dependent:\n  - y: the mass of a charge carrier\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v0`.\"\"\"\n    return params[0] + params[1] * x1 * x2 / (params[2] * x0 + params[3] * x3)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential\n\n    Variables:\n    - Independents:\n  - x0: the current density\n  - x1: the charge carrier density\n  - x2: the elementary charge\n  - x3: the vector potential\n- Dependent:\n  - y: the mass of a charge carrier\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v0`.\"\"\"\n    return params[0] + params[1] * x1 * x2 / (params[2] * x0 + params[3] * x3)",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential\n\n    Variables:\n    - Independents:\n  - x0: the current density\n  - x1: the charge carrier density\n  - x2: the elementary charge\n  - x3: the vector potential\n- Dependent:\n  - y: the mass of a charge carrier\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v0`.\"\"\"\n    return params[0] + params[1] * x1 * x2 / (params[2] * x0 + params[3] * x3)",
+    "return_expression_source": "params[0] + params[1] * x1 * x2 / (params[2] * x0 + params[3] * x3)",
+    "normalized_expression": "c0 + c1*x1*x2/(c2*x0 + c3*x3)",
+    "instantiated_expression": "0.25275898504402866 + -1.7489965654866975*x1*x2/(0.749216527438782*x0 + 0.03989790900159143*x3)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.25275898504402866,
+      -1.7489965654866975,
+      0.749216527438782,
+      0.03989790900159143,
+      0.8959317681014332,
+      -0.707619764762,
+      -0.5969250870839629,
+      -0.8698232842111455,
+      -0.365150657252868,
+      0.025053966823392892
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 15,
+    "tree_depth": 6,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x1*x2/(c2*x0 + c3*x3)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.6043403560349307,
+    "r2": 0.8978318951490144,
+    "nmse": 0.0924822847755295,
+    "acc_0_1": 0.17684
+  },
+  "valid": {
+    "rmse": 1.876344379184564,
+    "r2": 0.871449830282701,
+    "nmse": 0.11649274213724088,
+    "acc_0_1": 0.1692
+  },
+  "id_test": {
+    "rmse": 1.5471479646017818,
+    "r2": 0.8959087490706433,
+    "nmse": 0.09372466978362017,
+    "acc_0_1": 0.17895
+  },
+  "ood_test": {
+    "rmse": 5638.827859655463,
+    "r2": -0.2406037369979237,
+    "nmse": 1.2405927195425632,
+    "acc_0_1": 0.0268
+  },
+  "finished_at": "2026-05-02 11:46:40",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed4/tasks/drsr_s4_g0015/iaaccn27/drsr/g0015_III.21.20_3_0/experiments",
+    "exp_name": "g0015_III.21.20_3_0_drsr_seed4",
+    "n_features": 4,
+    "feature_names": [
+      "j",
+      "rho_c_0",
+      "q",
+      "A_vec"
+    ],
+    "target_name": "m",
+    "original_feature_names": [
+      "j",
+      "rho_c_0",
+      "q",
+      "A_vec"
+    ],
+    "original_target_name": "m",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0/metadata.yaml",
+    "feature_descriptions": [
+      "the current density",
+      "the charge carrier density",
+      "the elementary charge",
+      "the vector potential"
+    ],
+    "target_description": "the mass of a charge carrier"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

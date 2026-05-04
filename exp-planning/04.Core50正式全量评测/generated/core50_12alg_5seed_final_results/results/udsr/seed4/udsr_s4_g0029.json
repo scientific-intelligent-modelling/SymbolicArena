@@ -1,0 +1,222 @@
+{
+  "tool": "udsr",
+  "task_label": "g0029_strogatz_vdp1",
+  "task_global_index": 29,
+  "dataset": "strogatz_vdp1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed4/tasks/udsr_s4_g0029/iaaccn26/udsr/g0029_strogatz_vdp1/experiments/g0029_strogatz_vdp1_udsr_seed4_20260502-105531",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 27.386,
+  "equation": "            3                       \n- 3.33333⋅x₁  + 3.33333⋅x₁ + 10.0⋅x₂",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "udsr",
+    "raw_equation": "-3.33333*x1**3 + 3.33333*x1 + 10.0*x2",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return -3.33333*x0**3 + 3.33333*x0 + 10.0*x1\n",
+    "return_expression_source": "-3.33333*x0**3 + 3.33333*x0 + 10.0*x1",
+    "normalized_expression": "-3.33333*x0**3 + 3.33333*x0 + 10.0*x1",
+    "instantiated_expression": "-3.33333*x0**3 + 3.33333*x0 + 10.0*x1",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 12,
+    "tree_depth": 4,
+    "normalization_mode": "udsr_dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-3.33333*x0**3 + 3.33333*x0 + 10.0*x1",
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "Benchmark uDSR trunk variant: DSO controller + LINEAR/poly token + GP-meld, without AIF recursive decomposition or LSPT pretraining."
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.890693420187526e-06,
+    "r2": 0.9999999999965618,
+    "nmse": 3.435478147862133e-12,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 3.8193293634066265e-06,
+    "r2": 0.9999999999937936,
+    "nmse": 5.843271280522594e-12,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 3.406562648805733e-06,
+    "r2": 0.9999999999976678,
+    "nmse": 2.3303901468333432e-12,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 1.4764215251875199e-05,
+    "r2": 0.9999999999987671,
+    "nmse": 1.0553897637440555e-12,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:55:58",
+  "params": {
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "保持 tool_name=udsr 与 wrapper_dir=udsr_wrapper；当前算法口径固定为 DSO controller + LINEAR/poly token + GP-meld，不标称 full uDSR。",
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log",
+        "sqrt",
+        1.0,
+        "const",
+        "poly"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false,
+      "poly_optimizer_params": {
+        "degree": 3,
+        "coef_tol": 1e-06,
+        "regressor": "dso_least_squares",
+        "regressor_params": {
+          "cutoff_p_value": 1.0,
+          "n_max_terms": null,
+          "coef_tol": 1e-06
+        }
+      }
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "baseline": "R_e",
+      "n_cores_batch": 1
+    },
+    "policy_optimizer": {
+      "policy_optimizer_type": "pg",
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "gp_meld": {
+      "run_gp_meld": true,
+      "population_size": 100,
+      "generations": 20,
+      "crossover_operator": "cxOnePoint",
+      "p_crossover": 0.5,
+      "mutation_operator": "multi_mutate",
+      "p_mutate": 0.5,
+      "tournament_size": 5,
+      "train_n": 50,
+      "mutate_tree_max": 3,
+      "verbose": false,
+      "parallel_eval": false
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 100,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": true
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed4/tasks/udsr_s4_g0029/iaaccn26/udsr/g0029_strogatz_vdp1/experiments",
+    "exp_name": "g0029_strogatz_vdp1_udsr_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

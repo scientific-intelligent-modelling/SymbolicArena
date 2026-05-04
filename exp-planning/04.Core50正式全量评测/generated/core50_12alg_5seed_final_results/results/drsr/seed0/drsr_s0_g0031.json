@@ -1,0 +1,167 @@
+{
+  "tool": "drsr",
+  "task_label": "g0031_II.11.27_1_0",
+  "task_global_index": 31,
+  "dataset": "II.11.27_1_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0031/iaaccn26/drsr/g0031_II.11.27_1_0/experiments/g0031_II.11.27_1_0_drsr_seed0_20260502-072834",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "Pol",
+    "n",
+    "epsilon",
+    "Ef"
+  ],
+  "target_name": "alpha",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 3903.007,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the polarizability of a unit given the polarization of a material, the number density of polarizable units, the permittivity of free space or a constant and the external electric field\n\n    Variables:\n    - Independents:\n  - x0: the polarization of a material\n  - x1: the number density of polarizable units\n  - x2: the permittivity of free space or a constant\n  - x3: the external electric field\n- Dependent:\n  - y: the polarizability of a unit\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return (3 * x2 * x3**2) / (2 * np.pi * x1 * (x2 + 2 * params[0] * x0 * x3))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the polarizability of a unit given the polarization of a material, the number density of polarizable units, the permittivity of free space or a constant and the external electric field\n\n    Variables:\n    - Independents:\n  - x0: the polarization of a material\n  - x1: the number density of polarizable units\n  - x2: the permittivity of free space or a constant\n  - x3: the external electric field\n- Dependent:\n  - y: the polarizability of a unit\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return (3 * x2 * x3**2) / (2 * np.pi * x1 * (x2 + 2 * params[0] * x0 * x3))",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the polarizability of a unit given the polarization of a material, the number density of polarizable units, the permittivity of free space or a constant and the external electric field\n\n    Variables:\n    - Independents:\n  - x0: the polarization of a material\n  - x1: the number density of polarizable units\n  - x2: the permittivity of free space or a constant\n  - x3: the external electric field\n- Dependent:\n  - y: the polarizability of a unit\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return (3 * x2 * x3**2) / (2 * np.pi * x1 * (x2 + 2 * params[0] * x0 * x3))",
+    "return_expression_source": "3 * x2 * x3 ** 2 / (2 * np.pi * x1 * (x2 + 2 * params[0] * x0 * x3))",
+    "normalized_expression": "3*x2*x3**2/(2*pi*x1*(2*c0*x0*x3 + x2))",
+    "instantiated_expression": "3*x2*x3**2/(2*pi*x1*(2*0.3363127616482446*x0*x3 + x2))",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.3363127616482446,
+      -0.47382461531622333,
+      0.5369122355281204,
+      -0.5647865226138107,
+      -0.9274225349405552,
+      0.2554985431584462,
+      0.24525392065163332,
+      -0.4884874182180623,
+      0.8349875807327276,
+      0.03924153965915789
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "mul",
+      "pi",
+      "pow"
+    ],
+    "ast_node_count": 21,
+    "tree_depth": 5,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "3*x2*x3**2/(2*pi*x1*(2*c0*x0*x3 + x2))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 179.89469744562783,
+    "r2": 0.40499301625206285,
+    "nmse": 0.5941871520229707,
+    "acc_0_1": 0.04108
+  },
+  "valid": {
+    "rmse": 78.94955458326396,
+    "r2": 0.533423627473145,
+    "nmse": 0.464017038021153,
+    "acc_0_1": 0.0396
+  },
+  "id_test": {
+    "rmse": 122.15934810002915,
+    "r2": 0.6370202791504804,
+    "nmse": 0.36232035038302973,
+    "acc_0_1": 0.04045
+  },
+  "ood_test": {
+    "rmse": 1857.6823495922956,
+    "r2": 0.08516849998255027,
+    "nmse": 0.9143254425673077,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:33:37",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0031/iaaccn26/drsr/g0031_II.11.27_1_0/experiments",
+    "exp_name": "g0031_II.11.27_1_0_drsr_seed0",
+    "n_features": 4,
+    "feature_names": [
+      "Pol",
+      "n",
+      "epsilon",
+      "Ef"
+    ],
+    "target_name": "alpha",
+    "original_feature_names": [
+      "Pol",
+      "n",
+      "epsilon",
+      "Ef"
+    ],
+    "original_target_name": "alpha",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the polarizability of a unit given the polarization of a material, the number density of polarizable units, the permittivity of free space or a constant and the external electric field",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0/metadata.yaml",
+    "feature_descriptions": [
+      "the polarization of a material",
+      "the number density of polarizable units",
+      "the permittivity of free space or a constant",
+      "the external electric field"
+    ],
+    "target_description": "the polarizability of a unit"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

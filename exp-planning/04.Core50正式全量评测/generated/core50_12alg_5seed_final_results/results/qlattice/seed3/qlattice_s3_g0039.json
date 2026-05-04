@@ -1,0 +1,112 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0039_CRK0",
+  "task_global_index": 39,
+  "dataset": "CRK0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed3/tasks/qlattice_s3_g0039/iaaccn26/QLattice/g0039_CRK0/experiments/g0039_CRK0_QLattice_seed3_20260502-101106",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 140.241,
+  "equation": "-0.1436*tanh(3.691*x1 - 4.467) - 0.01935",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "-0.1436*tanh(3.691*x1 - 4.467) - 0.01935",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return -0.1436*tanh(3.691*x0 - 4.467) - 0.01935\n",
+    "return_expression_source": "-0.1436*tanh(3.691*x0 - 4.467) - 0.01935",
+    "normalized_expression": "-0.1436*tanh(3.691*x0 - 4.467) - 0.01935",
+    "instantiated_expression": "-0.1436*tanh(3.691*x0 - 4.467) - 0.01935",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "tanh"
+    ],
+    "ast_node_count": 10,
+    "tree_depth": 6,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-0.1436*tanh(3.691*x0 - 4.467) - 0.01935"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.00024329230308131565,
+    "r2": 0.9994805249363253,
+    "nmse": 0.0004781196218765255,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.0002388675041144019,
+    "r2": 0.9994721811110632,
+    "nmse": 0.0004879121721900998,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.00026770680743318313,
+    "r2": 0.9995127668977122,
+    "nmse": 0.00044071071714737987,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.00013743517117882384,
+    "r2": 0.3834398246579368,
+    "nmse": 0.16238740437236118,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:13:26",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed3/tasks/qlattice_s3_g0039/iaaccn26/QLattice/g0039_CRK0/experiments",
+    "exp_name": "g0039_CRK0_QLattice_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,116 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0017_strogatz_shearflow1",
+  "task_global_index": 17,
+  "dataset": "strogatz_shearflow1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed0/tasks/e2esr_s0_g0017/iaaccn25/e2esr/g0017_strogatz_shearflow1/experiments/g0017_strogatz_shearflow1_e2esr_seed0_20260502-070705",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 497.427,
+  "equation": "(0.00733 - 0.0279*tan(0.7028751151879682*x_1 + 1.354905334733608))*(0.523*cos(0.002978881270779785*x_0 + 3.96421564966014*x_1 + 92.82968856453022) - 0.511)*(-22.478005193429879*x_0 - 19.53992820222552*x_1 - 50.294021284642789)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "(0.00733 - 0.0279*tan(0.7028751151879682*x_1 + 1.354905334733608))*(0.523*cos(0.002978881270779785*x_0 + 3.96421564966014*x_1 + 92.82968856453022) - 0.511)*(-22.478005193429879*x_0 - 19.53992820222552*x_1 - 50.294021284642789)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (0.00733 - 0.0279*tan(0.7028751151879682*x1 + 1.354905334733608))*(0.523*cos(0.002978881270779785*x0 + 3.96421564966014*x1 + 92.82968856453022) - 0.511)*(-22.478005193429879*x0 - 19.53992820222552*x1 - 50.294021284642789)\n",
+    "return_expression_source": "(0.00733 - 0.0279*tan(0.7028751151879682*x1 + 1.354905334733608))*(0.523*cos(0.002978881270779785*x0 + 3.96421564966014*x1 + 92.82968856453022) - 0.511)*(-22.478005193429879*x0 - 19.53992820222552*x1 - 50.294021284642789)",
+    "normalized_expression": "(0.00733 - 0.0279*tan(0.7028751151879682*x1 + 1.354905334733608))*(0.523*cos(0.002978881270779785*x0 + 3.96421564966014*x1 + 92.82968856453022) - 0.511)*(-22.478005193429879*x0 - 19.53992820222552*x1 - 50.294021284642789)",
+    "instantiated_expression": "(0.00733 - 0.0279*tan(0.7028751151879682*x1 + 1.354905334733608))*(0.523*cos(0.002978881270779785*x0 + 3.96421564966014*x1 + 92.82968856453022) - 0.511)*(-22.478005193429879*x0 - 19.53992820222552*x1 - 50.294021284642789)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "tan"
+    ],
+    "ast_node_count": 32,
+    "tree_depth": 7,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(0.00733 - 0.0279*tan(0.7028751151879682*x1 + 1.354905334733608))*(0.523*cos(0.002978881270779785*x0 + 3.96421564966014*x1 + 92.82968856453022) - 0.511)*(-22.478005193429879*x0 - 19.53992820222552*x1 - 50.294021284642789)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.5135396759906405,
+    "r2": 0.18186861467693383,
+    "nmse": 0.816845596699244,
+    "acc_0_1": 0.31640625
+  },
+  "valid": {
+    "rmse": 0.4912983888490796,
+    "r2": 0.36469671235189294,
+    "nmse": 0.6057439039703897,
+    "acc_0_1": 0.40625
+  },
+  "id_test": {
+    "rmse": 0.604326759233233,
+    "r2": 0.6059102642061072,
+    "nmse": 0.38785238014465234,
+    "acc_0_1": 0.40625
+  },
+  "ood_test": {
+    "rmse": 1.702139976553322,
+    "r2": -0.23967085834291368,
+    "nmse": 1.0056353255296486,
+    "acc_0_1": 0.156
+  },
+  "finished_at": "2026-05-02 07:15:23",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed0/tasks/e2esr_s0_g0017/iaaccn25/e2esr/g0017_strogatz_shearflow1/experiments",
+    "exp_name": "g0017_strogatz_shearflow1_e2esr_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,179 @@
+{
+  "tool": "drsr",
+  "task_label": "g0023_I.11.19_4_0",
+  "task_global_index": 23,
+  "dataset": "I.11.19_4_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0023/iaaccn24/drsr/g0023_I.11.19_4_0/experiments/g0023_I.11.19_4_0_drsr_seed0_20260502-070955",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "A",
+    "x1",
+    "x2",
+    "x3",
+    "y1",
+    "y3"
+  ],
+  "target_name": "y2",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 3619.89,
+  "equation": "def equation(col0, col1, col2, col3, col4, col5, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5 + params[7] * x4 * x5\n",
+  "equation_count": 127,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(col0, col1, col2, col3, col4, col5, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5 + params[7] * x4 * x5\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(col0, col1, col2, col3, col4, col5, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5 + params[7] * x4 * x5\n",
+    "return_expression_source": "params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5 + params[7] * x4 * x5",
+    "normalized_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x3 + c5*x4 + c6*x5 + c7*x4*x5",
+    "instantiated_expression": "-15.729483440942365 + -0.4030939917183572*x0 + 1.2057051780864774*x1 + 5.165441868017831*x2 + -1.2015169913204895*x3 + 1.2768863913208985*x4 + -1.131085953287275*x5 + -0.02419695485290996*x4*x5",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -15.729483440942365,
+      -0.4030939917183572,
+      1.2057051780864774,
+      5.165441868017831,
+      -1.2015169913204895,
+      1.2768863913208985,
+      -1.131085953287275,
+      -0.02419695485290996,
+      -0.40057621892523043,
+      -0.1546255576046831
+    ],
+    "expected_n_features": 6,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 24,
+    "tree_depth": 3,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [
+      "function_arg_map:col0->x0,col1->x1,col2->x2,col3->x3,col4->x4,col5->x5"
+    ],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x3 + c5*x4 + c6*x5 + c7*x4*x5"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 4.119354223359625,
+    "r2": 0.8196308598397539,
+    "nmse": 0.06192938705111019,
+    "acc_0_1": 0.018186666666666667
+  },
+  "valid": {
+    "rmse": 4.001385767870428,
+    "r2": 0.8222431180239745,
+    "nmse": 0.06042351797100809,
+    "acc_0_1": 0.018
+  },
+  "id_test": {
+    "rmse": 4.116293149892139,
+    "r2": 0.8190061158878571,
+    "nmse": 0.06253104650156042,
+    "acc_0_1": 0.01875
+  },
+  "ood_test": {
+    "rmse": 18.560616266100222,
+    "r2": 0.5621416133058689,
+    "nmse": 0.2748173392461217,
+    "acc_0_1": 0.0012
+  },
+  "finished_at": "2026-05-02 08:10:15",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0023/iaaccn24/drsr/g0023_I.11.19_4_0/experiments",
+    "exp_name": "g0023_I.11.19_4_0_drsr_seed0",
+    "n_features": 6,
+    "feature_names": [
+      "A",
+      "x1",
+      "x2",
+      "x3",
+      "y1",
+      "y3"
+    ],
+    "target_name": "y2",
+    "original_feature_names": [
+      "A",
+      "x1",
+      "x2",
+      "x3",
+      "y1",
+      "y3"
+    ],
+    "original_target_name": "y2",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the second variable or value given the resulting sum of products, the first coefficient, the second coefficient, the third coefficient, the first variable or value and the third variable or value",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.11.19_4_0/metadata.yaml",
+    "feature_descriptions": [
+      "the resulting sum of products",
+      "the first coefficient",
+      "the second coefficient",
+      "the third coefficient",
+      "the first variable or value",
+      "the third variable or value"
+    ],
+    "target_description": "the second variable or value"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}
