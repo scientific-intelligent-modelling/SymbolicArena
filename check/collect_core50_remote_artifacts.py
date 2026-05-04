@@ -233,6 +233,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-noise", action="store_true")
     parser.add_argument("--skip-controller", action="store_true")
     parser.add_argument("--hosts", nargs="*", default=HOSTS)
+    parser.add_argument("--clean-batches", nargs="*", default=None)
+    parser.add_argument("--noise-batches", nargs="*", default=None)
     parser.add_argument("--retries", type=int, default=2)
     parser.add_argument(
         "--include-task-logs",
@@ -248,12 +250,14 @@ def main() -> None:
     outdir.mkdir(parents=True, exist_ok=True)
 
     jobs: list[tuple[str, str, str]] = []
+    clean_batches = args.clean_batches if args.clean_batches is not None else CLEAN_BATCHES
+    noise_batches = args.noise_batches if args.noise_batches is not None else NOISE_BATCHES
     if not args.skip_noise:
-        for batch in NOISE_BATCHES:
+        for batch in noise_batches:
             for host in args.hosts:
                 jobs.append((host, batch, "noise"))
     if not args.skip_clean:
-        for batch in CLEAN_BATCHES:
+        for batch in clean_batches:
             for host in args.hosts:
                 jobs.append((host, batch, "clean"))
 
@@ -290,8 +294,8 @@ def main() -> None:
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "outdir": str(outdir),
         "hosts": args.hosts,
-        "noise_batches": [] if args.skip_noise else NOISE_BATCHES,
-        "clean_batches": [] if args.skip_clean else CLEAN_BATCHES,
+        "noise_batches": [] if args.skip_noise else noise_batches,
+        "clean_batches": [] if args.skip_clean else clean_batches,
         "results": results,
         "controller_results": controller_results,
         "file_counts": summarize_files(outdir),
