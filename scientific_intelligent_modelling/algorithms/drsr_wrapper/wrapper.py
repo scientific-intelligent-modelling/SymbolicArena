@@ -14,6 +14,7 @@ import yaml
 
 from ..base_wrapper import BaseWrapper
 from scientific_intelligent_modelling.benchmarks.normalizers import normalize_drsr_artifact
+from scientific_intelligent_modelling.srkit import llm as srkit_llm
 from scientific_intelligent_modelling.srkit.llm import ClientFactory, parse_provider_model
 from scientific_intelligent_modelling.srkit.spec_builder import build_specification as build_shared_specification
 from typing import Tuple
@@ -401,6 +402,11 @@ class DRSRRegressor(BaseWrapper):
         dataset = {"data": {"inputs": X, "outputs": y}}
 
         # 由 Wrapper 构建并注入单例 LLM 客户端；LocalLLM 仅负责 prompt 组织
+        try:
+            srkit_llm.reset_global_tokens()
+            srkit_llm.reset_global_time()
+        except Exception:
+            pass
         llm_runtime = self._resolve_llm_client_config()
         client = ClientFactory.from_config(llm_runtime["client_config"])
         if isinstance(llm_runtime["generation_overrides"], dict):
