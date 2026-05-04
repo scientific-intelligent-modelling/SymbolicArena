@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="/home/family/workplace/scientific-intelligent-modelling"
-REMOTE_ROOT="/home/zhangziwen/projects/scientific-intelligent-modelling"
+REMOTE_ROOT="/home/zhangziwen/workplace/scientific-intelligent-modelling"
 STAMP="${STAMP:-$(date +%Y%m%d-%H%M%S)}"
 BATCH_NAME="${BATCH_NAME:-e1_candidate200_seed1314_w2_$STAMP}"
 echo "BATCH_NAME=${BATCH_NAME}"

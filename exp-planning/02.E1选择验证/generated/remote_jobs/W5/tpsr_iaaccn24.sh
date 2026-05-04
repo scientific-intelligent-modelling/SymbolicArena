@@ -9,7 +9,7 @@ fi
 BATCH_NAME="$1"
 WORKERS="$2"
 RETRY_MODE="${3:-}"
-REMOTE_ROOT="/home/zhangziwen/projects/scientific-intelligent-modelling"
+REMOTE_ROOT="/home/zhangziwen/workplace/scientific-intelligent-modelling"
 EXTRA_ARGS=()
 if [ "$RETRY_MODE" = "retry" ]; then
   EXTRA_ARGS+=(--retry-failed)

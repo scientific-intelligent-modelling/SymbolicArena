@@ -25,7 +25,7 @@
 ## 约定
 
 - 远端代码根：
-  - `/home/zhangziwen/projects/scientific-intelligent-modelling`
+  - `/home/zhangziwen/workplace/scientific-intelligent-modelling`
 - 远端数据根：
   - `/home/zhangziwen/sim-datasets-data`
 - 固定 seed：
