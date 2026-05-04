@@ -1,0 +1,93 @@
+{
+  "created_at": "2026-05-04T19:33:12",
+  "purpose": "Local manifest for Core50 clean/noise final artifacts and minute-level snapshots used by hexagon metrics.",
+  "used_artifact_dirs": [
+    {
+      "name": "remote_artifacts_20260504-183740",
+      "path": "exp-planning/05.Core50噪声鲁棒性评测/results/remote_artifacts_20260504-183740",
+      "exists": true,
+      "bytes": 742561785,
+      "size_gib": 0.692,
+      "counts": {
+        "result_json": 260,
+        "report_json": 130,
+        "progress_json": 132,
+        "minute_json": 16600,
+        "best_history_json": 1114,
+        "sample_top_json": 1287,
+        "task_status_jsonl": 130,
+        "state_json": 7,
+        "latest_json": 6,
+        "events_jsonl": 6
+      }
+    },
+    {
+      "name": "remote_artifacts_clean_retry_slim_20260504-193115",
+      "path": "exp-planning/05.Core50噪声鲁棒性评测/results/remote_artifacts_clean_retry_slim_20260504-193115",
+      "exists": true,
+      "bytes": 37839494,
+      "size_gib": 0.035,
+      "counts": {
+        "result_json": 60,
+        "report_json": 30,
+        "progress_json": 34,
+        "minute_json": 4236,
+        "best_history_json": 282,
+        "sample_top_json": 323,
+        "task_status_jsonl": 30,
+        "state_json": 0,
+        "latest_json": 0,
+        "events_jsonl": 0
+      }
+    },
+    {
+      "name": "remote_artifacts_noise_cpu_slim_20260504-185818",
+      "path": "exp-planning/05.Core50噪声鲁棒性评测/results/remote_artifacts_noise_cpu_slim_20260504-185818",
+      "exists": true,
+      "bytes": 3541875536,
+      "size_gib": 3.299,
+      "counts": {
+        "result_json": 10323,
+        "report_json": 5157,
+        "progress_json": 1337,
+        "minute_json": 425142,
+        "best_history_json": 9838,
+        "sample_top_json": 13022,
+        "task_status_jsonl": 5157,
+        "state_json": 0,
+        "latest_json": 0,
+        "events_jsonl": 0
+      }
+    },
+    {
+      "name": "remote_artifacts_noise_gpu_slim_20260504-191614",
+      "path": "exp-planning/05.Core50噪声鲁棒性评测/results/remote_artifacts_noise_gpu_slim_20260504-191614",
+      "exists": true,
+      "bytes": 2437043469,
+      "size_gib": 2.27,
+      "counts": {
+        "result_json": 8248,
+        "report_json": 4119,
+        "progress_json": 357,
+        "minute_json": 288379,
+        "best_history_json": 2534,
+        "sample_top_json": 3416,
+        "task_status_jsonl": 4119,
+        "state_json": 0,
+        "latest_json": 0,
+        "events_jsonl": 0
+      }
+    }
+  ],
+  "ignored_partial_or_superseded_dirs": [
+    "remote_artifacts_20260504-182437",
+    "remote_artifacts_20260504-183733",
+    "remote_artifacts_noise_20260504-184143",
+    "remote_artifacts_noise_cpu_20260504-184611"
+  ],
+  "notes": [
+    "Task logs under __launcher__/logs/*.log are intentionally excluded from slim noise collections because they are not needed for metric computation and can be hundreds of MB per run.",
+    "Clean DRSR retry directory supplements hosts that timed out during the first clean pull; iaaccn54 has no clean retry batch directory on remote and is treated as absent rather than failed.",
+    "Use result_json/report_json for final metrics, minute_json/progress_json for EFF anytime metrics, best_history/sample_top for LLM iteration and candidate audits, task_status_jsonl for completion audits."
+  ]
+}
