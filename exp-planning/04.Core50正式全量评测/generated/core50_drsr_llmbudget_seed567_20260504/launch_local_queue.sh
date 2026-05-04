@@ -21,8 +21,23 @@ HOSTS=(
   iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29
   iaaccn48 iaaccn49 iaaccn50 iaaccn51 iaaccn52 iaaccn53 iaaccn54 iaaccn55
 )
+if [ -n "${DISABLE_HOSTS:-}" ]; then
+  FILTERED_HOSTS=()
+  for host in "${HOSTS[@]}"; do
+    case " ${DISABLE_HOSTS} " in
+      *" ${host} "*) ;;
+      *) FILTERED_HOSTS+=("$host") ;;
+    esac
+  done
+  HOSTS=("${FILTERED_HOSTS[@]}")
+fi
 HOST_REMOTE_ROOT_OVERRIDES="iaaccn48=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn49=/data3/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn50=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn51=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn52=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn53=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn54=/data1/zhangziwen/workplace/scientific-intelligent-modelling,iaaccn55=/data1/zhangziwen/workplace/scientific-intelligent-modelling"
 HOST_REMOTE_DATA_ROOT_OVERRIDES="iaaccn48=/data1/zhangziwen/sim-datasets-data,iaaccn49=/data3/zhangziwen/sim-datasets-data,iaaccn50=/data1/zhangziwen/sim-datasets-data,iaaccn51=/data1/zhangziwen/sim-datasets-data,iaaccn52=/data1/zhangziwen/sim-datasets-data,iaaccn53=/data1/zhangziwen/sim-datasets-data,iaaccn54=/data1/zhangziwen/sim-datasets-data,iaaccn55=/data1/zhangziwen/sim-datasets-data"
+
+EXTRA_ARGS=()
+if [ "${SKIP_SUPPORT_SYNC:-0}" = "1" ]; then
+  EXTRA_ARGS+=(--skip-support-sync)
+fi
 
 python check/run_e1_candidate200_12alg_load_queue.py \
   --batch-name "$BATCH_NAME" \
@@ -52,4 +67,5 @@ python check/run_e1_candidate200_12alg_load_queue.py \
   --llm-model-bucket-limits base:80,turbo:80 \
   --prioritize-llm \
   --seed-dispatch-mode sequential \
+  "${EXTRA_ARGS[@]}" \
   2>&1 | tee -a "${RUN_LOG_ROOT}/controller.log"
