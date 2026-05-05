@@ -27,6 +27,20 @@ PAPER_IMGS = ROOT / "paper/Paper-SRInfra/imgs"
 AXES = ["ID_Q", "OOD_G", "SYM_F", "EFF", "ROB", "STAB"]
 AXIS_LABELS = ["ID-Q", "OOD-G", "SYM-F", "EFF", "ROBU", "STAB"]
 SCORE_COL = "HexaScore_formal_with_ROB"
+HIGHLIGHT_COLORS = [
+    "#005f73",
+    "#0a9396",
+    "#ee9b00",
+    "#ca6702",
+    "#9b2226",
+    "#3a0ca3",
+    "#4361ee",
+    "#2d6a4f",
+    "#6c757d",
+    "#7f4f24",
+    "#bc4749",
+    "#343a40",
+]
 
 
 def set_neurips_style() -> None:
@@ -95,38 +109,10 @@ def draw_axis_key(fig: plt.Figure, angles: np.ndarray) -> None:
     key_ax.axis("off")
 
 
-def main() -> None:
-    set_neurips_style()
-    if not SCORES.exists():
-        raise FileNotFoundError(SCORES)
-
-    df = pd.read_csv(SCORES)
-    required = {"algorithm", SCORE_COL, *AXES}
-    missing = sorted(required - set(df.columns))
-    if missing:
-        raise ValueError(f"missing required columns: {missing}")
-
-    df = df.sort_values(SCORE_COL, ascending=False).reset_index(drop=True)
+def render_small_multiples(df: pd.DataFrame, angles: np.ndarray, *, out_name: str, orientation: str) -> dict[str, object]:
     values = df[AXES].to_numpy(dtype=float)
     algorithms = df["algorithm"].astype(str).tolist()
     scores = df[SCORE_COL].to_numpy(dtype=float)
-
-    # 从顶部开始顺时针，视觉上更接近标准雷达图。
-    angles = np.linspace(np.pi / 2, np.pi / 2 - 2 * np.pi, len(AXES), endpoint=False)
-    highlight_colors = [
-        "#005f73",
-        "#0a9396",
-        "#ee9b00",
-        "#ca6702",
-        "#9b2226",
-        "#3a0ca3",
-        "#4361ee",
-        "#2d6a4f",
-        "#6c757d",
-        "#7f4f24",
-        "#bc4749",
-        "#343a40",
-    ]
 
     fig, axes = plt.subplots(3, 4, figsize=(7.05, 4.45))
     axes_flat = axes.ravel()
@@ -146,7 +132,7 @@ def main() -> None:
 
         # 当前算法：只让边框明显高亮，填充保持克制，避免遮住背景集合。
         x, y = polygon_points(values[rank], angles)
-        color = highlight_colors[rank % len(highlight_colors)]
+        color = HIGHLIGHT_COLORS[rank % len(HIGHLIGHT_COLORS)]
         ax.plot(x, y, color=color, lw=1.70, alpha=0.98, solid_joinstyle="round", solid_capstyle="round", zorder=4)
         ax.fill(x, y, color=color, alpha=0.055, zorder=3)
 
@@ -187,7 +173,7 @@ def main() -> None:
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
 
-    out_png = ANALYSIS_OUT / "fig_hexagon_small_multiples_neurips.png"
+    out_png = ANALYSIS_OUT / out_name
     out_pdf = out_png.with_suffix(".pdf")
     fig.savefig(out_png, dpi=300, bbox_inches="tight")
     fig.savefig(out_pdf, bbox_inches="tight")
@@ -204,6 +190,7 @@ def main() -> None:
         "analysis_pdf": str(out_pdf.relative_to(ROOT)),
         "paper_png": str(paper_png.relative_to(ROOT)),
         "paper_pdf": str(paper_pdf.relative_to(ROOT)),
+        "orientation": orientation,
         "order": [
             {"rank": int(i + 1), "algorithm": algorithms[i], "hexa_score": float(scores[i])}
             for i in range(len(algorithms))
@@ -213,11 +200,43 @@ def main() -> None:
         "highlight_linewidth": 1.70,
         "axis_labels": "shared_once",
     }
+    return manifest
+
+
+def main() -> None:
+    set_neurips_style()
+    if not SCORES.exists():
+        raise FileNotFoundError(SCORES)
+
+    df = pd.read_csv(SCORES)
+    required = {"algorithm", SCORE_COL, *AXES}
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise ValueError(f"missing required columns: {missing}")
+
+    df = df.sort_values(SCORE_COL, ascending=False).reset_index(drop=True)
+    point_up_angles = np.linspace(np.pi / 2, np.pi / 2 - 2 * np.pi, len(AXES), endpoint=False)
+    horizontal_angles = np.linspace(0.0, -2 * np.pi, len(AXES), endpoint=False)
+
+    manifests = [
+        render_small_multiples(
+            df,
+            point_up_angles,
+            out_name="fig_hexagon_small_multiples_neurips.png",
+            orientation="point_up",
+        ),
+        render_small_multiples(
+            df,
+            horizontal_angles,
+            out_name="fig_hexagon_small_multiples_neurips_horizontal.png",
+            orientation="horizontal",
+        ),
+    ]
     (ANALYSIS_OUT / "fig_hexagon_small_multiples_neurips_manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(manifests, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(json.dumps(manifest, ensure_ascii=False, indent=2))
+    print(json.dumps(manifests, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
