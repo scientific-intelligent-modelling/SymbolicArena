@@ -227,7 +227,6 @@ def main() -> None:
 
     df = df.sort_values(SCORE_COL, ascending=False).reset_index(drop=True)
     point_up_angles = np.linspace(np.pi / 2, np.pi / 2 - 2 * np.pi, len(AXES), endpoint=False)
-    horizontal_angles = np.linspace(0.0, -2 * np.pi, len(AXES), endpoint=False)
 
     manifests = [
         render_small_multiples(
@@ -238,12 +237,6 @@ def main() -> None:
             figsize=(5.92, 4.45),
             wspace=-0.46,
             hspace=-0.06,
-        ),
-        render_small_multiples(
-            df,
-            horizontal_angles,
-            out_name="fig_hexagon_small_multiples_neurips_horizontal.png",
-            orientation="horizontal",
         ),
     ]
     (ANALYSIS_OUT / "fig_hexagon_small_multiples_neurips_manifest.json").write_text(
