@@ -389,7 +389,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
 
     # 正文里这张图会被压到单页文本宽度。保持 1x4 结构，并压缩高度，
     # 避免在论文中占用过多纵向空间。
-    fig, axes = plt.subplots(1, 4, figsize=(12.4, 3.55))
+    fig, axes = plt.subplots(1, 4, figsize=(12.4, 3.25))
     family = dataset_level["family"].value_counts()
     family_labels = ["firstprinciples" if str(x) == "srbench2025/firstprinciples" else x for x in family.index]
     family_y = np.arange(len(family))
@@ -444,7 +444,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         ax.tick_params(axis="x", labelsize=8.8)
         ax.tick_params(axis="y", labelsize=8.8)
 
-    fig.subplots_adjust(left=0.070, right=0.985, top=0.72, bottom=0.12, wspace=0.58)
+    fig.subplots_adjust(left=0.070, right=0.985, top=0.70, bottom=0.11, wspace=0.38)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
     record.append(FigureRecord("Figure 2", "GT-Reservoir composition", "generated", ";".join(files)))
 
