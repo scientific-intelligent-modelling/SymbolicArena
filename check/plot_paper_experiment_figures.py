@@ -388,12 +388,17 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     fig, axes = plt.subplots(1, 4, figsize=(12.4, 4.9))
     family = dataset_level["family"].value_counts()
     family_labels = ["firstprinciples" if str(x) == "srbench2025/firstprinciples" else x for x in family.index]
-    axes[0].bar(np.arange(len(family)), family.values, color="#2a9d8f")
+    family_y = np.arange(len(family))
+    axes[0].barh(family_y, family.values, color="#2a9d8f")
     axes[0].set_title("Family", loc="center", x=0.5)
-    axes[0].set_xticks(np.arange(len(family)))
-    axes[0].set_xticklabels([wrap_label(x, 12) for x in family_labels], rotation=38, ha="right", rotation_mode="anchor")
-    axes[0].set_ylabel("# datasets")
-    add_bar_labels(axes[0], family.values)
+    axes[0].set_yticks(family_y)
+    axes[0].set_yticklabels([wrap_label(x, 14) for x in family_labels])
+    axes[0].invert_yaxis()
+    axes[0].set_xlabel("# datasets")
+    family_xmax = max(family.values) if len(family.values) else 0
+    axes[0].set_xlim(0, family_xmax * 1.18)
+    for idx, value in enumerate(family.values):
+        axes[0].text(value + family_xmax * 0.025, idx, f"{int(value)}", ha="left", va="center", fontsize=7.2, color="#333333")
 
     op = dataset_level["operator_group"].fillna("unknown").value_counts()
     op_label_map = {
@@ -402,11 +407,17 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         "mixed_elementary": "mixed",
     }
     op_labels = [op_label_map.get(str(x), x) for x in op.index]
-    axes[1].bar(np.arange(len(op)), op.values, color="#f4a261")
+    op_y = np.arange(len(op))
+    axes[1].barh(op_y, op.values, color="#f4a261")
     axes[1].set_title("Operator group", loc="center", x=0.5)
-    axes[1].set_xticks(np.arange(len(op)))
-    axes[1].set_xticklabels([wrap_label(x, 10) for x in op_labels], rotation=38, ha="right", rotation_mode="anchor")
-    add_bar_labels(axes[1], op.values)
+    axes[1].set_yticks(op_y)
+    axes[1].set_yticklabels([wrap_label(x, 14) for x in op_labels])
+    axes[1].invert_yaxis()
+    axes[1].set_xlabel("# datasets")
+    op_xmax = max(op.values) if len(op.values) else 0
+    axes[1].set_xlim(0, op_xmax * 1.18)
+    for idx, value in enumerate(op.values):
+        axes[1].text(value + op_xmax * 0.025, idx, f"{int(value)}", ha="left", va="center", fontsize=7.2, color="#333333")
 
     complexity_order = ["simple", "moderate", "complex"]
     complexity = dataset_level["complexity_bin"].fillna("unknown").value_counts().reindex(complexity_order + ["unknown"]).dropna()
@@ -425,13 +436,13 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     add_bar_labels(axes[3], difficulty.values)
 
     for ax in axes:
-        ax.grid(axis="y", alpha=0.28)
+        ax.grid(axis="x" if ax in axes[:2] else "y", alpha=0.28)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.tick_params(axis="x", labelsize=8.0)
         ax.tick_params(axis="y", labelsize=8.2)
 
-    fig.subplots_adjust(left=0.065, right=0.985, top=0.78, bottom=0.30, wspace=0.42)
+    fig.subplots_adjust(left=0.070, right=0.985, top=0.78, bottom=0.18, wspace=0.58)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
     record.append(FigureRecord("Figure 2", "GT-Reservoir composition", "generated", ";".join(files)))
 
