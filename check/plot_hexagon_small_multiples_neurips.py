@@ -15,6 +15,7 @@ import shutil
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.transforms import Bbox
 import numpy as np
 import pandas as pd
 
@@ -30,6 +31,7 @@ SCORE_COL = "HexaScore_formal_with_ROB"
 GRID_SCORE_LEVELS = [0.25, 0.50, 0.75, 1.00]
 HIGHLIGHT_FILL_ALPHA = 0.20
 SAVE_PAD_INCHES = 0.02
+SAVE_TOP_EXTRA_PAD_INCHES = 0.08
 SUBPLOTS_TOP = 0.935
 HIGHLIGHT_COLORS = [
     "#005f73",
@@ -103,6 +105,18 @@ def draw_grid(ax: plt.Axes, angles: np.ndarray, *, show_axis_labels: bool = Fals
         ax.text(x, y, label, ha=ha, va=va, fontsize=5.8, color="#4b4b4b")
 
 
+def tight_bbox_with_top_padding(fig: plt.Figure) -> Bbox:
+    """对 tight bbox 做非对称扩展：顶部额外留白，其他边保持紧凑。"""
+    fig.canvas.draw()
+    bbox = fig.get_tightbbox(fig.canvas.get_renderer())
+    return Bbox.from_extents(
+        bbox.x0 - SAVE_PAD_INCHES,
+        bbox.y0 - SAVE_PAD_INCHES,
+        bbox.x1 + SAVE_PAD_INCHES,
+        bbox.y1 + SAVE_PAD_INCHES + SAVE_TOP_EXTRA_PAD_INCHES,
+    )
+
+
 def render_small_multiples(
     df: pd.DataFrame,
     angles: np.ndarray,
@@ -159,8 +173,9 @@ def render_small_multiples(
 
     out_png = ANALYSIS_OUT / out_name
     out_pdf = out_png.with_suffix(".pdf")
-    fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=SAVE_PAD_INCHES)
-    fig.savefig(out_pdf, bbox_inches="tight", pad_inches=SAVE_PAD_INCHES)
+    export_bbox = tight_bbox_with_top_padding(fig)
+    fig.savefig(out_png, dpi=300, bbox_inches=export_bbox, pad_inches=0)
+    fig.savefig(out_pdf, bbox_inches=export_bbox, pad_inches=0)
     plt.close(fig)
 
     paper_png = PAPER_IMGS / out_png.name
@@ -187,6 +202,7 @@ def render_small_multiples(
         "layout_hspace": hspace,
         "layout_top": SUBPLOTS_TOP,
         "save_pad_inches": SAVE_PAD_INCHES,
+        "save_top_extra_pad_inches": SAVE_TOP_EXTRA_PAD_INCHES,
         "axis_labels": "caption_only",
         "axis_order_clockwise_from_top": AXIS_LABELS,
         "radial_scale": "linear: r=score/100",
