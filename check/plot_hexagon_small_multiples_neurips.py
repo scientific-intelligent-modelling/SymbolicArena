@@ -115,13 +115,14 @@ def render_small_multiples(
     *,
     out_name: str,
     orientation: str,
+    figsize: tuple[float, float] = (7.05, 4.45),
     wspace: float = 0.08,
 ) -> dict[str, object]:
     values = df[AXES].to_numpy(dtype=float)
     algorithms = df["algorithm"].astype(str).tolist()
     scores = df[SCORE_COL].to_numpy(dtype=float)
 
-    fig, axes = plt.subplots(3, 4, figsize=(7.05, 4.45))
+    fig, axes = plt.subplots(3, 4, figsize=figsize)
     axes_flat = axes.ravel()
 
     for rank, ax in enumerate(axes_flat):
@@ -231,7 +232,8 @@ def main() -> None:
             point_up_angles,
             out_name="fig_hexagon_small_multiples_neurips.png",
             orientation="point_up",
-            wspace=-0.22,
+            figsize=(5.92, 4.45),
+            wspace=-0.52,
         ),
         render_small_multiples(
             df,
