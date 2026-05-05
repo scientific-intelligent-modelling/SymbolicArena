@@ -109,7 +109,14 @@ def draw_axis_key(fig: plt.Figure, angles: np.ndarray) -> None:
     key_ax.axis("off")
 
 
-def render_small_multiples(df: pd.DataFrame, angles: np.ndarray, *, out_name: str, orientation: str) -> dict[str, object]:
+def render_small_multiples(
+    df: pd.DataFrame,
+    angles: np.ndarray,
+    *,
+    out_name: str,
+    orientation: str,
+    wspace: float = 0.08,
+) -> dict[str, object]:
     values = df[AXES].to_numpy(dtype=float)
     algorithms = df["algorithm"].astype(str).tolist()
     scores = df[SCORE_COL].to_numpy(dtype=float)
@@ -168,7 +175,7 @@ def render_small_multiples(df: pd.DataFrame, angles: np.ndarray, *, out_name: st
         fontsize=5.9,
         color="#444444",
     )
-    fig.subplots_adjust(left=0.025, right=0.985, top=0.850, bottom=0.030, wspace=0.08, hspace=0.00)
+    fig.subplots_adjust(left=0.025, right=0.985, top=0.850, bottom=0.030, wspace=wspace, hspace=0.00)
 
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
@@ -224,6 +231,7 @@ def main() -> None:
             point_up_angles,
             out_name="fig_hexagon_small_multiples_neurips.png",
             orientation="point_up",
+            wspace=-0.06,
         ),
         render_small_multiples(
             df,
