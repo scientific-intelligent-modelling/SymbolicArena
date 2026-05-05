@@ -30,6 +30,7 @@ SCORE_COL = "HexaScore_formal_with_ROB"
 GRID_SCORE_LEVELS = [0.25, 0.50, 0.75, 1.00]
 HIGHLIGHT_FILL_ALPHA = 0.20
 SAVE_PAD_INCHES = 0.02
+SUBPLOTS_TOP = 0.935
 HIGHLIGHT_COLORS = [
     "#005f73",
     "#0a9396",
@@ -151,7 +152,7 @@ def render_small_multiples(
             zorder=6,
         )
 
-    fig.subplots_adjust(left=0.025, right=0.985, top=0.955, bottom=0.030, wspace=wspace, hspace=hspace)
+    fig.subplots_adjust(left=0.025, right=0.985, top=SUBPLOTS_TOP, bottom=0.030, wspace=wspace, hspace=hspace)
 
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
@@ -184,6 +185,7 @@ def render_small_multiples(
         "highlight_fill_alpha": HIGHLIGHT_FILL_ALPHA,
         "layout_wspace": wspace,
         "layout_hspace": hspace,
+        "layout_top": SUBPLOTS_TOP,
         "save_pad_inches": SAVE_PAD_INCHES,
         "axis_labels": "caption_only",
         "axis_order_clockwise_from_top": AXIS_LABELS,
