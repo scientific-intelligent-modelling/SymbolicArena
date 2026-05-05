@@ -56,7 +56,7 @@ def polygon_points(values: np.ndarray, angles: np.ndarray) -> tuple[np.ndarray, 
     return np.r_[x, x[0]], np.r_[y, y[0]]
 
 
-def draw_grid(ax: plt.Axes, angles: np.ndarray) -> None:
+def draw_grid(ax: plt.Axes, angles: np.ndarray, *, show_axis_labels: bool = False) -> None:
     grid_color = "#d8d8d8"
     spoke_color = "#e5e5e5"
     for r in [0.25, 0.50, 0.75, 1.00]:
@@ -65,6 +65,9 @@ def draw_grid(ax: plt.Axes, angles: np.ndarray) -> None:
         ax.plot(np.r_[x, x[0]], np.r_[y, y[0]], color=grid_color, lw=0.45, zorder=0)
     for angle in angles:
         ax.plot([0, math.cos(angle)], [0, math.sin(angle)], color=spoke_color, lw=0.45, zorder=0)
+
+    if not show_axis_labels:
+        return
 
     for label, angle in zip(AXIS_LABELS, angles):
         x = 1.15 * math.cos(angle)
@@ -79,7 +82,17 @@ def draw_grid(ax: plt.Axes, angles: np.ndarray) -> None:
             va = "bottom"
         elif y < -0.7:
             va = "top"
-        ax.text(x, y, label, ha=ha, va=va, fontsize=5.6, color="#4b4b4b")
+        ax.text(x, y, label, ha=ha, va=va, fontsize=5.8, color="#4b4b4b")
+
+
+def draw_axis_key(fig: plt.Figure, angles: np.ndarray) -> None:
+    """在整张图顶部只画一次六轴方向说明，避免每个 panel 重复 6 个标签。"""
+    key_ax = fig.add_axes([0.815, 0.890, 0.125, 0.090])
+    draw_grid(key_ax, angles, show_axis_labels=True)
+    key_ax.set_aspect("equal")
+    key_ax.set_xlim(-1.45, 1.45)
+    key_ax.set_ylim(-1.35, 1.35)
+    key_ax.axis("off")
 
 
 def main() -> None:
@@ -115,14 +128,14 @@ def main() -> None:
         "#343a40",
     ]
 
-    fig, axes = plt.subplots(3, 4, figsize=(7.05, 5.65))
+    fig, axes = plt.subplots(3, 4, figsize=(7.05, 5.02))
     axes_flat = axes.ravel()
 
     for rank, ax in enumerate(axes_flat):
-        draw_grid(ax, angles)
+        draw_grid(ax, angles, show_axis_labels=False)
         ax.set_aspect("equal")
-        ax.set_xlim(-1.32, 1.32)
-        ax.set_ylim(-1.30, 1.30)
+        ax.set_xlim(-1.10, 1.10)
+        ax.set_ylim(-1.10, 1.10)
         ax.axis("off")
 
         # 背景：每个 panel 都显示全部算法的六边形，低透明度，便于比较覆盖范围。
@@ -139,23 +152,28 @@ def main() -> None:
         ax.scatter(x[:-1], y[:-1], s=8, color=color, edgecolor="white", linewidth=0.35, zorder=5)
 
         title = f"{rank + 1}. {algorithms[rank]}  ({scores[rank]:.1f})"
-        ax.set_title(title, fontsize=7.9, fontweight="bold", pad=1.5)
+        ax.set_title(title, fontsize=7.8, fontweight="bold", pad=1.2)
 
-    fig.suptitle(
-        "Core-50 Six-Axis Profiles: 12 Algorithms Ordered by HexaScore",
-        fontsize=9.6,
+    draw_axis_key(fig, angles)
+    fig.text(
+        0.025,
+        0.982,
+        "Core-50 six-axis profiles",
+        ha="left",
+        va="top",
+        fontsize=9.4,
         fontweight="bold",
-        y=0.990,
     )
     fig.text(
-        0.5,
-        0.010,
-        "Each panel overlays all 12 algorithms at low opacity; the highlighted outline marks the current algorithm.",
-        ha="center",
-        fontsize=6.4,
+        0.025,
+        0.957,
+        "Ordered by HexaScore. Pale profiles show all algorithms; colored outline highlights the current algorithm.",
+        ha="left",
+        va="top",
+        fontsize=5.9,
         color="#444444",
     )
-    fig.subplots_adjust(left=0.025, right=0.985, top=0.915, bottom=0.055, wspace=0.11, hspace=0.25)
+    fig.subplots_adjust(left=0.025, right=0.985, top=0.852, bottom=0.025, wspace=0.08, hspace=0.17)
 
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
@@ -184,6 +202,7 @@ def main() -> None:
         "axes": AXES,
         "background_alpha": 0.14,
         "highlight_linewidth": 2.35,
+        "axis_labels": "shared_once",
     }
     (ANALYSIS_OUT / "fig_hexagon_small_multiples_neurips_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
