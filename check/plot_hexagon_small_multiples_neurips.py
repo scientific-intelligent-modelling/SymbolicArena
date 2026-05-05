@@ -25,7 +25,7 @@ ANALYSIS_OUT = ROOT / "exp-planning/04.Core50正式全量评测/analysis/hexagon
 PAPER_IMGS = ROOT / "paper/Paper-SRInfra/imgs"
 
 AXES = ["ID_Q", "OOD_G", "SYM_F", "EFF", "ROB", "STAB"]
-AXIS_LABELS = ["ID-Q", "OOD-G", "SYM-F", "EFF", "ROB", "STAB"]
+AXIS_LABELS = ["ID-Q", "OOD-G", "SYM-F", "EFF", "ROBU", "STAB"]
 SCORE_COL = "HexaScore_formal_with_ROB"
 
 
@@ -141,15 +141,14 @@ def main() -> None:
         # 背景只提供整体形状感，不抢当前算法的视觉中心。
         for vals in values:
             x, y = polygon_points(vals, angles)
-            ax.plot(x, y, color="#1f2933", lw=0.52, alpha=0.095, zorder=1)
+            ax.plot(x, y, color="#1f2933", lw=0.52, alpha=0.095, solid_joinstyle="round", solid_capstyle="round", zorder=1)
             ax.fill(x, y, color="#1f2933", alpha=0.020, zorder=1)
 
         # 当前算法：只让边框明显高亮，填充保持克制，避免遮住背景集合。
         x, y = polygon_points(values[rank], angles)
         color = highlight_colors[rank % len(highlight_colors)]
-        ax.plot(x, y, color=color, lw=1.70, alpha=0.98, zorder=4)
+        ax.plot(x, y, color=color, lw=1.70, alpha=0.98, solid_joinstyle="round", solid_capstyle="round", zorder=4)
         ax.fill(x, y, color=color, alpha=0.055, zorder=3)
-        ax.scatter(x[:-1], y[:-1], s=6, color=color, edgecolor=color, linewidth=0.0, zorder=5)
 
         title = f"{rank + 1}. {algorithms[rank]}  ({scores[rank]:.1f})"
         ax.text(
