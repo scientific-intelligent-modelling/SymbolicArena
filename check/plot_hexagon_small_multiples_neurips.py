@@ -101,38 +101,6 @@ def draw_grid(ax: plt.Axes, angles: np.ndarray, *, show_axis_labels: bool = Fals
         ax.text(x, y, label, ha=ha, va=va, fontsize=5.8, color="#4b4b4b")
 
 
-def draw_axis_key(fig: plt.Figure, angles: np.ndarray) -> None:
-    """在整张图顶部只画一次六轴方向说明，避免每个 panel 重复 6 个标签。"""
-    key_ax = fig.add_axes([0.845, 0.908, 0.095, 0.066])
-    key_grid_color = "#dfdfdf"
-    key_spoke_color = "#ececec"
-    for r, lw in [(0.50, 0.35), (1.00, 0.55)]:
-        x = r * np.cos(angles)
-        y = r * np.sin(angles)
-        key_ax.plot(np.r_[x, x[0]], np.r_[y, y[0]], color=key_grid_color, lw=lw, zorder=0)
-    for angle in angles:
-        key_ax.plot([0, math.cos(angle)], [0, math.sin(angle)], color=key_spoke_color, lw=0.35, zorder=0)
-
-    for label, angle in zip(AXIS_LABELS, angles):
-        x = 1.19 * math.cos(angle)
-        y = 1.19 * math.sin(angle)
-        ha = "center"
-        if x < -0.2:
-            ha = "right"
-        elif x > 0.2:
-            ha = "left"
-        va = "center"
-        if y > 0.7:
-            va = "bottom"
-        elif y < -0.7:
-            va = "top"
-        key_ax.text(x, y, label, ha=ha, va=va, fontsize=4.9, color="#666666")
-    key_ax.set_aspect("equal")
-    key_ax.set_xlim(-1.45, 1.45)
-    key_ax.set_ylim(-1.35, 1.35)
-    key_ax.axis("off")
-
-
 def render_small_multiples(
     df: pd.DataFrame,
     angles: np.ndarray,
@@ -181,26 +149,7 @@ def render_small_multiples(
             zorder=6,
         )
 
-    draw_axis_key(fig, angles)
-    fig.text(
-        0.025,
-        0.982,
-        "Core-50 six-axis profiles",
-        ha="left",
-        va="top",
-        fontsize=9.4,
-        fontweight="bold",
-    )
-    fig.text(
-        0.025,
-        0.957,
-        "Ordered by HexaScore. Pale profiles show all algorithms; colored outline highlights the current algorithm.",
-        ha="left",
-        va="top",
-        fontsize=5.9,
-        color="#444444",
-    )
-    fig.subplots_adjust(left=0.025, right=0.985, top=0.850, bottom=0.030, wspace=wspace, hspace=0.00)
+    fig.subplots_adjust(left=0.025, right=0.985, top=0.955, bottom=0.030, wspace=wspace, hspace=0.00)
 
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
@@ -231,7 +180,8 @@ def render_small_multiples(
         "background_alpha": 0.095,
         "highlight_linewidth": 1.70,
         "highlight_fill_alpha": HIGHLIGHT_FILL_ALPHA,
-        "axis_labels": "shared_once",
+        "axis_labels": "caption_only",
+        "axis_order_clockwise_from_top": AXIS_LABELS,
         "radial_scale": "linear: r=score/100",
         "grid_score_levels": [int(level * 100) for level in GRID_SCORE_LEVELS],
         "grid_radius_levels": [float(level) for level in GRID_SCORE_LEVELS],
