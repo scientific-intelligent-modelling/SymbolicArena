@@ -29,6 +29,7 @@ AXIS_LABELS = ["ID-Q", "OOD-G", "SYM-F", "EFF", "ROBU", "STAB"]
 SCORE_COL = "HexaScore_formal_with_ROB"
 RADIAL_GAMMA = 0.65
 GRID_SCORE_LEVELS = [0.25, 0.50, 0.75, 1.00]
+HIGHLIGHT_FILL_ALPHA = 0.14
 HIGHLIGHT_COLORS = [
     "#005f73",
     "#0a9396",
@@ -151,7 +152,7 @@ def render_small_multiples(
         x, y = polygon_points(values[rank], angles)
         color = HIGHLIGHT_COLORS[rank % len(HIGHLIGHT_COLORS)]
         ax.plot(x, y, color=color, lw=1.70, alpha=0.98, solid_joinstyle="round", solid_capstyle="round", zorder=4)
-        ax.fill(x, y, color=color, alpha=0.055, zorder=3)
+        ax.fill(x, y, color=color, alpha=HIGHLIGHT_FILL_ALPHA, zorder=3)
 
         title = f"{rank + 1}. {algorithms[rank]}  ({scores[rank]:.1f})"
         ax.text(
@@ -215,6 +216,7 @@ def render_small_multiples(
         "axes": AXES,
         "background_alpha": 0.095,
         "highlight_linewidth": 1.70,
+        "highlight_fill_alpha": HIGHLIGHT_FILL_ALPHA,
         "axis_labels": "shared_once",
         "radial_scale": f"r=(score/100)^{RADIAL_GAMMA}",
         "grid_score_levels": [int(level * 100) for level in GRID_SCORE_LEVELS],
