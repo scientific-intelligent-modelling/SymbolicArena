@@ -90,10 +90,14 @@ def set_style() -> None:
             "axes.labelcolor": "#222222",
             "axes.titleweight": "bold",
             "axes.titlesize": 12,
+            "font.family": "DejaVu Sans",
             "font.size": 9,
             "grid.color": "#dddddd",
             "grid.linewidth": 0.7,
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
             "savefig.facecolor": "white",
+            "text.antialiased": True,
         }
     )
 
@@ -145,7 +149,7 @@ def tv_similarity(sub: pd.Series, full: pd.Series) -> float:
 
 def save(fig: plt.Figure, out: Path) -> list[str]:
     out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, dpi=240, bbox_inches="tight")
+    fig.savefig(out, dpi=360, bbox_inches="tight")
     pdf = out.with_suffix(".pdf")
     fig.savefig(pdf, bbox_inches="tight")
     plt.close(fig)
@@ -381,7 +385,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     def add_bar_labels(ax: plt.Axes, values: list[float] | np.ndarray) -> None:
         ymax = max(values) if len(values) else 0
         for idx, value in enumerate(values):
-            ax.text(idx, value + ymax * 0.025, f"{int(value)}", ha="center", va="bottom", fontsize=6.8, color="#333333")
+            ax.text(idx, value + ymax * 0.025, f"{int(value)}", ha="center", va="bottom", fontsize=8.0, fontweight="medium", color="#222222")
 
     # 正文里这张图会被压到单页文本宽度。保持 1x4 结构，并压缩高度，
     # 避免在论文中占用过多纵向空间。
@@ -390,14 +394,14 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     family_labels = ["firstprinciples" if str(x) == "srbench2025/firstprinciples" else x for x in family.index]
     family_y = np.arange(len(family))
     axes[0].barh(family_y, family.values, color="#2a9d8f")
-    axes[0].set_title("Family", loc="center", x=0.5)
+    axes[0].set_title("Family", loc="center", x=0.5, fontsize=13)
     axes[0].set_yticks(family_y)
     axes[0].set_yticklabels([wrap_label(x, 14) for x in family_labels])
     axes[0].invert_yaxis()
     family_xmax = max(family.values) if len(family.values) else 0
     axes[0].set_xlim(0, family_xmax * 1.18)
     for idx, value in enumerate(family.values):
-        axes[0].text(value + family_xmax * 0.025, idx, f"{int(value)}", ha="left", va="center", fontsize=7.2, color="#333333")
+        axes[0].text(value + family_xmax * 0.025, idx, f"{int(value)}", ha="left", va="center", fontsize=8.2, fontweight="medium", color="#222222")
 
     op = dataset_level["operator_group"].fillna("unknown").value_counts()
     op_label_map = {
@@ -408,19 +412,19 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     op_labels = [op_label_map.get(str(x), x) for x in op.index]
     op_y = np.arange(len(op))
     axes[1].barh(op_y, op.values, color="#f4a261")
-    axes[1].set_title("Operator group", loc="center", x=0.5)
+    axes[1].set_title("Operator group", loc="center", x=0.5, fontsize=13)
     axes[1].set_yticks(op_y)
     axes[1].set_yticklabels([wrap_label(x, 14) for x in op_labels])
     axes[1].invert_yaxis()
     op_xmax = max(op.values) if len(op.values) else 0
     axes[1].set_xlim(0, op_xmax * 1.18)
     for idx, value in enumerate(op.values):
-        axes[1].text(value + op_xmax * 0.025, idx, f"{int(value)}", ha="left", va="center", fontsize=7.2, color="#333333")
+        axes[1].text(value + op_xmax * 0.025, idx, f"{int(value)}", ha="left", va="center", fontsize=8.2, fontweight="medium", color="#222222")
 
     complexity_order = ["simple", "moderate", "complex"]
     complexity = dataset_level["complexity_bin"].fillna("unknown").value_counts().reindex(complexity_order + ["unknown"]).dropna()
     axes[2].bar(np.arange(len(complexity)), complexity.values, color="#e9c46a")
-    axes[2].set_title("Formula complexity", loc="center", x=0.5)
+    axes[2].set_title("Formula complexity", loc="center", x=0.5, fontsize=13)
     axes[2].set_xticks(np.arange(len(complexity)))
     axes[2].set_xticklabels([wrap_label(x, 12) for x in complexity.index], rotation=0)
     add_bar_labels(axes[2], complexity.values)
@@ -428,7 +432,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     difficulty_order = ["easy", "medium", "hard", "extreme"]
     difficulty = dataset_level["difficulty_bin"].fillna("unknown").value_counts().reindex(difficulty_order + ["unknown"]).dropna()
     axes[3].bar(np.arange(len(difficulty)), difficulty.values, color="#577590")
-    axes[3].set_title("Probe4 difficulty", loc="center", x=0.5)
+    axes[3].set_title("Probe4 difficulty", loc="center", x=0.5, fontsize=13)
     axes[3].set_xticks(np.arange(len(difficulty)))
     axes[3].set_xticklabels([wrap_label(x, 12) for x in difficulty.index], rotation=0)
     add_bar_labels(axes[3], difficulty.values)
@@ -437,8 +441,8 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         ax.grid(axis="x" if ax in axes[:2] else "y", alpha=0.28)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.tick_params(axis="x", labelsize=8.0)
-        ax.tick_params(axis="y", labelsize=7.8)
+        ax.tick_params(axis="x", labelsize=8.8)
+        ax.tick_params(axis="y", labelsize=8.8)
 
     fig.subplots_adjust(left=0.070, right=0.985, top=0.72, bottom=0.12, wspace=0.58)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
