@@ -385,16 +385,17 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
 
     fig, axes = plt.subplots(1, 4, figsize=(15.2, 3.9))
     family = dataset_level["family"].value_counts()
+    family_labels = ["firstprinciples" if str(x) == "srbench2025/firstprinciples" else x for x in family.index]
     axes[0].bar(np.arange(len(family)), family.values, color="#2a9d8f")
-    axes[0].set_title("Family")
+    axes[0].set_title("Family", loc="center", x=0.5)
     axes[0].set_xticks(np.arange(len(family)))
-    axes[0].set_xticklabels([wrap_label(x, 12) for x in family.index], rotation=38, ha="right", rotation_mode="anchor")
+    axes[0].set_xticklabels([wrap_label(x, 12) for x in family_labels], rotation=38, ha="right", rotation_mode="anchor")
     axes[0].set_ylabel("# datasets")
     add_bar_labels(axes[0], family.values)
 
     op = dataset_level["operator_group"].fillna("unknown").value_counts()
     axes[1].bar(np.arange(len(op)), op.values, color="#f4a261")
-    axes[1].set_title("Operator group")
+    axes[1].set_title("Operator group", loc="center", x=0.5)
     axes[1].set_xticks(np.arange(len(op)))
     axes[1].set_xticklabels([wrap_label(x, 12) for x in op.index], rotation=38, ha="right", rotation_mode="anchor")
     add_bar_labels(axes[1], op.values)
@@ -402,7 +403,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     complexity_order = ["simple", "moderate", "complex"]
     complexity = dataset_level["complexity_bin"].fillna("unknown").value_counts().reindex(complexity_order + ["unknown"]).dropna()
     axes[2].bar(np.arange(len(complexity)), complexity.values, color="#e9c46a")
-    axes[2].set_title("Formula complexity")
+    axes[2].set_title("Formula complexity", loc="center", x=0.5)
     axes[2].set_xticks(np.arange(len(complexity)))
     axes[2].set_xticklabels([wrap_label(x, 12) for x in complexity.index], rotation=0)
     axes[2].set_xlabel("operator-count bin")
@@ -411,7 +412,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     difficulty_order = ["easy", "medium", "hard", "extreme"]
     difficulty = dataset_level["difficulty_bin"].fillna("unknown").value_counts().reindex(difficulty_order + ["unknown"]).dropna()
     axes[3].bar(np.arange(len(difficulty)), difficulty.values, color="#577590")
-    axes[3].set_title("Probe4 difficulty")
+    axes[3].set_title("Probe4 difficulty", loc="center", x=0.5)
     axes[3].set_xticks(np.arange(len(difficulty)))
     axes[3].set_xticklabels([wrap_label(x, 12) for x in difficulty.index], rotation=0)
     axes[3].set_xlabel("difficulty bin")
@@ -424,8 +425,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         ax.tick_params(axis="x", labelsize=7.0)
         ax.tick_params(axis="y", labelsize=7.5)
 
-    fig.suptitle("GT-Reservoir-664 Composition", fontsize=14, fontweight="bold", y=1.03)
-    fig.subplots_adjust(left=0.055, right=0.99, top=0.82, bottom=0.27, wspace=0.35)
+    fig.subplots_adjust(left=0.055, right=0.99, top=0.78, bottom=0.27, wspace=0.35)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
     record.append(FigureRecord("Figure 2", "GT-Reservoir composition", "generated", ";".join(files)))
 
