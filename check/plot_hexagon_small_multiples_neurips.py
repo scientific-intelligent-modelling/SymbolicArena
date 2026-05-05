@@ -231,7 +231,7 @@ def main() -> None:
             point_up_angles,
             out_name="fig_hexagon_small_multiples_neurips.png",
             orientation="point_up",
-            wspace=-0.14,
+            wspace=-0.22,
         ),
         render_small_multiples(
             df,
