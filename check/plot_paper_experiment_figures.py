@@ -399,7 +399,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     op_label_map = {
         "trigonometric": "trig.",
         "exponential_log": "exp/log",
-        "mixed_elementary": "mixed elem.",
+        "mixed_elementary": "mixed",
     }
     op_labels = [op_label_map.get(str(x), x) for x in op.index]
     axes[1].bar(np.arange(len(op)), op.values, color="#f4a261")
