@@ -27,7 +27,6 @@ PAPER_IMGS = ROOT / "paper/Paper-SRInfra/imgs"
 AXES = ["ID_Q", "OOD_G", "SYM_F", "EFF", "ROB", "STAB"]
 AXIS_LABELS = ["ID-Q", "OOD-G", "SYM-F", "EFF", "ROBU", "STAB"]
 SCORE_COL = "HexaScore_formal_with_ROB"
-RADIAL_GAMMA = 0.65
 GRID_SCORE_LEVELS = [0.25, 0.50, 0.75, 1.00]
 HIGHLIGHT_FILL_ALPHA = 0.14
 HIGHLIGHT_COLORS = [
@@ -66,14 +65,8 @@ def set_neurips_style() -> None:
     )
 
 
-def scale_radius(score_fraction):
-    """把 0-1 分数映射到视觉半径；网格和 profile 必须共用同一尺度。"""
-    return np.power(np.clip(score_fraction, 0.0, 1.0), RADIAL_GAMMA)
-
-
 def polygon_points(values: np.ndarray, angles: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    # 用单调幂缩放改善小多图可读性：中低分不会全部挤在中心。
-    radius = scale_radius(values / 100.0)
+    radius = np.clip(values / 100.0, 0.0, 1.0)
     x = radius * np.cos(angles)
     y = radius * np.sin(angles)
     return np.r_[x, x[0]], np.r_[y, y[0]]
@@ -82,8 +75,7 @@ def polygon_points(values: np.ndarray, angles: np.ndarray) -> tuple[np.ndarray, 
 def draw_grid(ax: plt.Axes, angles: np.ndarray, *, show_axis_labels: bool = False) -> None:
     grid_color = "#d8d8d8"
     spoke_color = "#e5e5e5"
-    for score_level in GRID_SCORE_LEVELS:
-        r = scale_radius(score_level)
+    for r in GRID_SCORE_LEVELS:
         x = r * np.cos(angles)
         y = r * np.sin(angles)
         ax.plot(np.r_[x, x[0]], np.r_[y, y[0]], color=grid_color, lw=0.45, zorder=0)
@@ -218,9 +210,9 @@ def render_small_multiples(
         "highlight_linewidth": 1.70,
         "highlight_fill_alpha": HIGHLIGHT_FILL_ALPHA,
         "axis_labels": "shared_once",
-        "radial_scale": f"r=(score/100)^{RADIAL_GAMMA}",
+        "radial_scale": "linear: r=score/100",
         "grid_score_levels": [int(level * 100) for level in GRID_SCORE_LEVELS],
-        "grid_radius_levels": [float(scale_radius(level)) for level in GRID_SCORE_LEVELS],
+        "grid_radius_levels": [float(level) for level in GRID_SCORE_LEVELS],
     }
     return manifest
 
