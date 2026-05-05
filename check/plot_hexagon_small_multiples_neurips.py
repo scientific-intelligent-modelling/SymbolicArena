@@ -109,6 +109,7 @@ def render_small_multiples(
     orientation: str,
     figsize: tuple[float, float] = (7.05, 4.45),
     wspace: float = 0.08,
+    hspace: float = -0.06,
 ) -> dict[str, object]:
     values = df[AXES].to_numpy(dtype=float)
     algorithms = df["algorithm"].astype(str).tolist()
@@ -149,7 +150,7 @@ def render_small_multiples(
             zorder=6,
         )
 
-    fig.subplots_adjust(left=0.025, right=0.985, top=0.955, bottom=0.030, wspace=wspace, hspace=0.00)
+    fig.subplots_adjust(left=0.025, right=0.985, top=0.955, bottom=0.030, wspace=wspace, hspace=hspace)
 
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
@@ -180,6 +181,8 @@ def render_small_multiples(
         "background_alpha": 0.095,
         "highlight_linewidth": 1.70,
         "highlight_fill_alpha": HIGHLIGHT_FILL_ALPHA,
+        "layout_wspace": wspace,
+        "layout_hspace": hspace,
         "axis_labels": "caption_only",
         "axis_order_clockwise_from_top": AXIS_LABELS,
         "radial_scale": "linear: r=score/100",
@@ -211,7 +214,8 @@ def main() -> None:
             out_name="fig_hexagon_small_multiples_neurips.png",
             orientation="point_up",
             figsize=(5.92, 4.45),
-            wspace=-0.52,
+            wspace=-0.46,
+            hspace=-0.06,
         ),
         render_small_multiples(
             df,
