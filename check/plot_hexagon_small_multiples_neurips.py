@@ -134,22 +134,22 @@ def main() -> None:
     for rank, ax in enumerate(axes_flat):
         draw_grid(ax, angles, show_axis_labels=False)
         ax.set_aspect("equal")
-        ax.set_xlim(-1.10, 1.10)
-        ax.set_ylim(-1.10, 1.10)
+        ax.set_xlim(-1.34, 1.34)
+        ax.set_ylim(-1.30, 1.30)
         ax.axis("off")
 
-        # 背景：每个 panel 都显示全部算法的六边形，低透明度，便于比较覆盖范围。
+        # 背景只提供整体形状感，不抢当前算法的视觉中心。
         for vals in values:
             x, y = polygon_points(vals, angles)
-            ax.plot(x, y, color="#1f2933", lw=0.70, alpha=0.14, zorder=1)
-            ax.fill(x, y, color="#1f2933", alpha=0.035, zorder=1)
+            ax.plot(x, y, color="#1f2933", lw=0.52, alpha=0.095, zorder=1)
+            ax.fill(x, y, color="#1f2933", alpha=0.020, zorder=1)
 
         # 当前算法：只让边框明显高亮，填充保持克制，避免遮住背景集合。
         x, y = polygon_points(values[rank], angles)
         color = highlight_colors[rank % len(highlight_colors)]
-        ax.plot(x, y, color=color, lw=2.35, alpha=0.98, zorder=4)
-        ax.fill(x, y, color=color, alpha=0.10, zorder=3)
-        ax.scatter(x[:-1], y[:-1], s=8, color=color, edgecolor="white", linewidth=0.35, zorder=5)
+        ax.plot(x, y, color=color, lw=1.70, alpha=0.98, zorder=4)
+        ax.fill(x, y, color=color, alpha=0.055, zorder=3)
+        ax.scatter(x[:-1], y[:-1], s=6, color=color, edgecolor=color, linewidth=0.0, zorder=5)
 
         title = f"{rank + 1}. {algorithms[rank]}  ({scores[rank]:.1f})"
         ax.set_title(title, fontsize=7.8, fontweight="bold", pad=1.2)
@@ -200,8 +200,8 @@ def main() -> None:
             for i in range(len(algorithms))
         ],
         "axes": AXES,
-        "background_alpha": 0.14,
-        "highlight_linewidth": 2.35,
+        "background_alpha": 0.095,
+        "highlight_linewidth": 1.70,
         "axis_labels": "shared_once",
     }
     (ANALYSIS_OUT / "fig_hexagon_small_multiples_neurips_manifest.json").write_text(
