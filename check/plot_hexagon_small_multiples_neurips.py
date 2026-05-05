@@ -154,7 +154,7 @@ def render_small_multiples(
         ax.plot(x, y, color=color, lw=1.70, alpha=0.98, solid_joinstyle="round", solid_capstyle="round", zorder=4)
         ax.fill(x, y, color=color, alpha=HIGHLIGHT_FILL_ALPHA, zorder=3)
 
-        title = f"{rank + 1}. {algorithms[rank]}  ({scores[rank]:.1f})"
+        title = f"{algorithms[rank]}  ({scores[rank]:.1f})"
         ax.text(
             0.0,
             1.12,
