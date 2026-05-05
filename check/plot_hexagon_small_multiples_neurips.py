@@ -29,6 +29,7 @@ AXIS_LABELS = ["ID-Q", "OOD-G", "SYM-F", "EFF", "ROBU", "STAB"]
 SCORE_COL = "HexaScore_formal_with_ROB"
 GRID_SCORE_LEVELS = [0.25, 0.50, 0.75, 1.00]
 HIGHLIGHT_FILL_ALPHA = 0.20
+SAVE_PAD_INCHES = 0.02
 HIGHLIGHT_COLORS = [
     "#005f73",
     "#0a9396",
@@ -157,8 +158,8 @@ def render_small_multiples(
 
     out_png = ANALYSIS_OUT / out_name
     out_pdf = out_png.with_suffix(".pdf")
-    fig.savefig(out_png, dpi=300, bbox_inches="tight")
-    fig.savefig(out_pdf, bbox_inches="tight")
+    fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=SAVE_PAD_INCHES)
+    fig.savefig(out_pdf, bbox_inches="tight", pad_inches=SAVE_PAD_INCHES)
     plt.close(fig)
 
     paper_png = PAPER_IMGS / out_png.name
@@ -183,6 +184,7 @@ def render_small_multiples(
         "highlight_fill_alpha": HIGHLIGHT_FILL_ALPHA,
         "layout_wspace": wspace,
         "layout_hspace": hspace,
+        "save_pad_inches": SAVE_PAD_INCHES,
         "axis_labels": "caption_only",
         "axis_order_clockwise_from_top": AXIS_LABELS,
         "radial_scale": "linear: r=score/100",
