@@ -414,7 +414,6 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     axes[2].set_title("Formula complexity", loc="center", x=0.5)
     axes[2].set_xticks(np.arange(len(complexity)))
     axes[2].set_xticklabels([wrap_label(x, 12) for x in complexity.index], rotation=0)
-    axes[2].set_xlabel("operator-count bin")
     add_bar_labels(axes[2], complexity.values)
 
     difficulty_order = ["easy", "medium", "hard", "extreme"]
@@ -423,7 +422,6 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     axes[3].set_title("Probe4 difficulty", loc="center", x=0.5)
     axes[3].set_xticks(np.arange(len(difficulty)))
     axes[3].set_xticklabels([wrap_label(x, 12) for x in difficulty.index], rotation=0)
-    axes[3].set_xlabel("difficulty bin")
     add_bar_labels(axes[3], difficulty.values)
 
     for ax in axes:
@@ -433,7 +431,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         ax.tick_params(axis="x", labelsize=8.0)
         ax.tick_params(axis="y", labelsize=8.2)
 
-    fig.subplots_adjust(left=0.065, right=0.985, top=0.78, bottom=0.36, wspace=0.42)
+    fig.subplots_adjust(left=0.065, right=0.985, top=0.78, bottom=0.30, wspace=0.42)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
     record.append(FigureRecord("Figure 2", "GT-Reservoir composition", "generated", ";".join(files)))
 
