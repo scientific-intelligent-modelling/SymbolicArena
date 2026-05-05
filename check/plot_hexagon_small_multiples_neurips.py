@@ -152,7 +152,17 @@ def main() -> None:
         ax.scatter(x[:-1], y[:-1], s=6, color=color, edgecolor=color, linewidth=0.0, zorder=5)
 
         title = f"{rank + 1}. {algorithms[rank]}  ({scores[rank]:.1f})"
-        ax.set_title(title, fontsize=7.8, fontweight="bold", pad=1.2)
+        ax.text(
+            0.0,
+            1.12,
+            title,
+            ha="center",
+            va="bottom",
+            fontsize=7.8,
+            fontweight="bold",
+            clip_on=False,
+            zorder=6,
+        )
 
     draw_axis_key(fig, angles)
     fig.text(
@@ -173,7 +183,7 @@ def main() -> None:
         fontsize=5.9,
         color="#444444",
     )
-    fig.subplots_adjust(left=0.025, right=0.985, top=0.850, bottom=0.030, wspace=0.08, hspace=0.02)
+    fig.subplots_adjust(left=0.025, right=0.985, top=0.850, bottom=0.030, wspace=0.08, hspace=0.00)
 
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
