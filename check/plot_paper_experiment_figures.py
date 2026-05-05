@@ -361,27 +361,71 @@ def plot_pipeline(record: list[FigureRecord]) -> None:
 
 
 def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureRecord]) -> None:
-    fig, axes = plt.subplots(2, 2, figsize=(13, 8))
-    family = dataset_level["family"].value_counts()
-    axes[0, 0].bar(family.index, family.values, color="#2a9d8f")
-    axes[0, 0].set_title("Family distribution")
-    axes[0, 0].tick_params(axis="x", rotation=35)
-    axes[0, 0].set_ylabel("# datasets")
+    def wrap_label(text: Any, width: int = 13) -> str:
+        label = re.sub(r"[_/]+", " ", str(text))
+        label = re.sub(r"\s+", " ", label).strip()
+        words = label.split(" ")
+        lines: list[str] = []
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            if current and len(candidate) > width:
+                lines.append(current)
+                current = word
+            else:
+                current = candidate
+        if current:
+            lines.append(current)
+        return "\n".join(lines[:2]) if lines else label
 
-    axes[0, 1].hist(pd.to_numeric(dataset_level["formula_operator_count"], errors="coerce").dropna(), bins=24, color="#e9c46a", edgecolor="white")
-    axes[0, 1].set_title("Formula operator count")
-    axes[0, 1].set_xlabel("operators")
+    def add_bar_labels(ax: plt.Axes, values: list[float] | np.ndarray) -> None:
+        ymax = max(values) if len(values) else 0
+        for idx, value in enumerate(values):
+            ax.text(idx, value + ymax * 0.025, f"{int(value)}", ha="center", va="bottom", fontsize=6.8, color="#333333")
+
+    fig, axes = plt.subplots(1, 4, figsize=(15.2, 3.9))
+    family = dataset_level["family"].value_counts()
+    axes[0].bar(np.arange(len(family)), family.values, color="#2a9d8f")
+    axes[0].set_title("Family")
+    axes[0].set_xticks(np.arange(len(family)))
+    axes[0].set_xticklabels([wrap_label(x, 12) for x in family.index], rotation=38, ha="right", rotation_mode="anchor")
+    axes[0].set_ylabel("# datasets")
+    add_bar_labels(axes[0], family.values)
 
     op = dataset_level["operator_group"].fillna("unknown").value_counts()
-    axes[1, 0].bar(op.index, op.values, color="#f4a261")
-    axes[1, 0].set_title("Operator group")
-    axes[1, 0].tick_params(axis="x", rotation=35)
+    axes[1].bar(np.arange(len(op)), op.values, color="#f4a261")
+    axes[1].set_title("Operator group")
+    axes[1].set_xticks(np.arange(len(op)))
+    axes[1].set_xticklabels([wrap_label(x, 12) for x in op.index], rotation=38, ha="right", rotation_mode="anchor")
+    add_bar_labels(axes[1], op.values)
 
-    difficulty = dataset_level["difficulty_bin"].fillna("unknown").value_counts().reindex(["easy", "medium", "hard", "extreme"]).dropna()
-    axes[1, 1].bar(difficulty.index, difficulty.values, color="#577590")
-    axes[1, 1].set_title("Probe4-derived difficulty")
-    axes[1, 1].set_ylabel("# datasets")
-    fig.suptitle("GT-Reservoir-664 Composition", fontsize=15, fontweight="bold")
+    complexity_order = ["simple", "moderate", "complex"]
+    complexity = dataset_level["complexity_bin"].fillna("unknown").value_counts().reindex(complexity_order + ["unknown"]).dropna()
+    axes[2].bar(np.arange(len(complexity)), complexity.values, color="#e9c46a")
+    axes[2].set_title("Formula complexity")
+    axes[2].set_xticks(np.arange(len(complexity)))
+    axes[2].set_xticklabels([wrap_label(x, 12) for x in complexity.index], rotation=0)
+    axes[2].set_xlabel("operator-count bin")
+    add_bar_labels(axes[2], complexity.values)
+
+    difficulty_order = ["easy", "medium", "hard", "extreme"]
+    difficulty = dataset_level["difficulty_bin"].fillna("unknown").value_counts().reindex(difficulty_order + ["unknown"]).dropna()
+    axes[3].bar(np.arange(len(difficulty)), difficulty.values, color="#577590")
+    axes[3].set_title("Probe4 difficulty")
+    axes[3].set_xticks(np.arange(len(difficulty)))
+    axes[3].set_xticklabels([wrap_label(x, 12) for x in difficulty.index], rotation=0)
+    axes[3].set_xlabel("difficulty bin")
+    add_bar_labels(axes[3], difficulty.values)
+
+    for ax in axes:
+        ax.grid(axis="y", alpha=0.28)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(axis="x", labelsize=7.0)
+        ax.tick_params(axis="y", labelsize=7.5)
+
+    fig.suptitle("GT-Reservoir-664 Composition", fontsize=14, fontweight="bold", y=1.03)
+    fig.subplots_adjust(left=0.055, right=0.99, top=0.82, bottom=0.27, wspace=0.35)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
     record.append(FigureRecord("Figure 2", "GT-Reservoir composition", "generated", ";".join(files)))
 
