@@ -383,9 +383,9 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         for idx, value in enumerate(values):
             ax.text(idx, value + ymax * 0.025, f"{int(value)}", ha="center", va="bottom", fontsize=6.8, color="#333333")
 
-    # 正文里这张图会被压到单页文本宽度。保持 1x4 结构，但使用更高、
-    # 更紧凑的画布，避免超宽浅图在论文中缩得过小。
-    fig, axes = plt.subplots(1, 4, figsize=(12.4, 4.15))
+    # 正文里这张图会被压到单页文本宽度。保持 1x4 结构，并压缩高度，
+    # 避免在论文中占用过多纵向空间。
+    fig, axes = plt.subplots(1, 4, figsize=(12.4, 3.55))
     family = dataset_level["family"].value_counts()
     family_labels = ["firstprinciples" if str(x) == "srbench2025/firstprinciples" else x for x in family.index]
     family_y = np.arange(len(family))
@@ -394,7 +394,6 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     axes[0].set_yticks(family_y)
     axes[0].set_yticklabels([wrap_label(x, 14) for x in family_labels])
     axes[0].invert_yaxis()
-    axes[0].set_xlabel("# datasets")
     family_xmax = max(family.values) if len(family.values) else 0
     axes[0].set_xlim(0, family_xmax * 1.18)
     for idx, value in enumerate(family.values):
@@ -413,7 +412,6 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     axes[1].set_yticks(op_y)
     axes[1].set_yticklabels([wrap_label(x, 14) for x in op_labels])
     axes[1].invert_yaxis()
-    axes[1].set_xlabel("# datasets")
     op_xmax = max(op.values) if len(op.values) else 0
     axes[1].set_xlim(0, op_xmax * 1.18)
     for idx, value in enumerate(op.values):
@@ -442,7 +440,7 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         ax.tick_params(axis="x", labelsize=8.0)
         ax.tick_params(axis="y", labelsize=7.8)
 
-    fig.subplots_adjust(left=0.070, right=0.985, top=0.75, bottom=0.20, wspace=0.58)
+    fig.subplots_adjust(left=0.070, right=0.985, top=0.72, bottom=0.12, wspace=0.58)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
     record.append(FigureRecord("Figure 2", "GT-Reservoir composition", "generated", ";".join(files)))
 
