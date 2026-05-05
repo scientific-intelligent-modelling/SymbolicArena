@@ -128,7 +128,7 @@ def main() -> None:
         "#343a40",
     ]
 
-    fig, axes = plt.subplots(3, 4, figsize=(7.05, 5.02))
+    fig, axes = plt.subplots(3, 4, figsize=(7.05, 4.45))
     axes_flat = axes.ravel()
 
     for rank, ax in enumerate(axes_flat):
@@ -173,7 +173,7 @@ def main() -> None:
         fontsize=5.9,
         color="#444444",
     )
-    fig.subplots_adjust(left=0.025, right=0.985, top=0.852, bottom=0.025, wspace=0.08, hspace=0.17)
+    fig.subplots_adjust(left=0.025, right=0.985, top=0.850, bottom=0.030, wspace=0.08, hspace=0.02)
 
     ANALYSIS_OUT.mkdir(parents=True, exist_ok=True)
     PAPER_IMGS.mkdir(parents=True, exist_ok=True)
