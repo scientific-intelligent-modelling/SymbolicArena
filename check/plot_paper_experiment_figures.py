@@ -383,7 +383,9 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         for idx, value in enumerate(values):
             ax.text(idx, value + ymax * 0.025, f"{int(value)}", ha="center", va="bottom", fontsize=6.8, color="#333333")
 
-    fig, axes = plt.subplots(1, 4, figsize=(15.2, 3.9))
+    # 正文里这张图会被压到单页文本宽度。保持 1x4 结构，但使用更高、
+    # 更紧凑的画布，避免超宽浅图在论文中缩得过小。
+    fig, axes = plt.subplots(1, 4, figsize=(12.4, 4.9))
     family = dataset_level["family"].value_counts()
     family_labels = ["firstprinciples" if str(x) == "srbench2025/firstprinciples" else x for x in family.index]
     axes[0].bar(np.arange(len(family)), family.values, color="#2a9d8f")
@@ -394,10 +396,16 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
     add_bar_labels(axes[0], family.values)
 
     op = dataset_level["operator_group"].fillna("unknown").value_counts()
+    op_label_map = {
+        "trigonometric": "trig.",
+        "exponential_log": "exp/log",
+        "mixed_elementary": "mixed elem.",
+    }
+    op_labels = [op_label_map.get(str(x), x) for x in op.index]
     axes[1].bar(np.arange(len(op)), op.values, color="#f4a261")
     axes[1].set_title("Operator group", loc="center", x=0.5)
     axes[1].set_xticks(np.arange(len(op)))
-    axes[1].set_xticklabels([wrap_label(x, 12) for x in op.index], rotation=38, ha="right", rotation_mode="anchor")
+    axes[1].set_xticklabels([wrap_label(x, 10) for x in op_labels], rotation=38, ha="right", rotation_mode="anchor")
     add_bar_labels(axes[1], op.values)
 
     complexity_order = ["simple", "moderate", "complex"]
@@ -422,10 +430,10 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         ax.grid(axis="y", alpha=0.28)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.tick_params(axis="x", labelsize=7.0)
-        ax.tick_params(axis="y", labelsize=7.5)
+        ax.tick_params(axis="x", labelsize=8.0)
+        ax.tick_params(axis="y", labelsize=8.2)
 
-    fig.subplots_adjust(left=0.055, right=0.99, top=0.78, bottom=0.27, wspace=0.35)
+    fig.subplots_adjust(left=0.065, right=0.985, top=0.78, bottom=0.36, wspace=0.42)
     files = save(fig, OUTDIR / "figure02_reservoir_composition.png")
     record.append(FigureRecord("Figure 2", "GT-Reservoir composition", "generated", ";".join(files)))
 
