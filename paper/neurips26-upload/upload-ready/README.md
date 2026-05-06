@@ -20,13 +20,31 @@ The supplementary zip is intentionally small and contains only slim result table
 
 ## 2. Dataset URL
 
-Use files under:
+Upload this file to the anonymous dataset host:
+
+```text
+SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst
+```
+
+Also upload its checksum:
+
+```text
+SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst.sha256
+```
+
+The archive contains:
+
+```text
+dataset-url-full-standardized/
+```
+
+This is the real standardized dataset payload: 793 dataset directories and 4,629 copied dataset files. It excludes `.git/`, Git LFS object storage, `__pycache__/`, compiled Python files, local test caches, and redundant `package.tar.gz` archives.
+
+The small directory below contains metadata-only helper files and should not be used as the main Dataset URL payload:
 
 ```text
 upload-ready/anonymous-dataset-url/
 ```
-
-Upload these files to an anonymous dataset-hosting location, for example an anonymous Hugging Face Dataset, OSF anonymous project, or another reviewer-accessible anonymous host.
 
 After hosting, fill the OpenReview `Dataset URL` field with that anonymous URL and update the Croissant file.
 

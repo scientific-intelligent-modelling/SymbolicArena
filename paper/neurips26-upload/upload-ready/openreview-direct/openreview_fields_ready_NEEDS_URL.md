@@ -44,15 +44,15 @@ This submission includes a dataset: yes
 TODO_REPLACE_WITH_ANONYMOUS_DATASET_URL
 ```
 
-Use the anonymous URL created from `upload-ready/anonymous-dataset-url/`.
+Use the anonymous URL where `SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst` is hosted.
 
 ## Dataset Large URL
 
 ```text
-TODO_REPLACE_WITH_ANONYMOUS_EXTERNAL_ARTIFACT_OR_SAMPLE_URL
+Leave blank unless OpenReview requires it.
 ```
 
-If the hosted dataset exceeds the venue threshold, provide a reviewer-accessible sample URL here. Otherwise this can remain blank if OpenReview permits it.
+The compressed full dataset payload is approximately 1.1GB, which is below the 4GB large-dataset threshold shown in the OpenReview form. If OpenReview still requires a sample URL, use the same anonymous dataset-hosting page or a Core-50 sample page from the same host.
 
 ## Code URL
 

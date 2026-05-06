@@ -1,6 +1,21 @@
-# Anonymous Dataset URL Payload
+# Metadata-Only Helper Files
 
-Upload this directory to an anonymous reviewer-accessible dataset host.
+This directory contains metadata helper files only. It is not the full dataset payload.
+
+For the OpenReview `Dataset URL`, upload the full standardized dataset archive instead:
+
+```text
+../SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst
+../SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst.sha256
+```
+
+The full archive expands to:
+
+```text
+dataset-url-full-standardized/
+```
+
+It contains the real standardized dataset files for 793 dataset directories.
 
 Recommended hosts:
 
@@ -9,7 +24,7 @@ Recommended hosts:
 - Dataverse private preview URL.
 - Another anonymous static host accepted by the venue.
 
-## Required Hosted Files
+## Helper Files
 
 ```text
 README_dataset_metadata.md
@@ -18,7 +33,7 @@ core50_algorithm_hyperparameters_full.json
 croissant.TEMPLATE_NEEDS_URL.json
 ```
 
-If the final dataset host also stores standardized task split CSVs, place them next to these manifests and update the Croissant `distribution` entries accordingly.
+These files are already included inside the full dataset archive under `metadata/`.
 
 ## After Upload
 
