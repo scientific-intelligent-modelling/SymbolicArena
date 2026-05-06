@@ -55,7 +55,7 @@ ROBUSTNESS = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/hexa
 
 PROBE4_SELECTED = ["dso", "pyoperon", "imcts", "udsr"]
 AXES = ["ID_Q", "OOD_G", "SYM_F", "EFF", "ROB", "STAB"]
-DISPLAY = {"ID_Q": "ID-Q", "OOD_G": "OOD-G", "SYM_F": "SYM-F", "EFF": "EFF", "ROB": "ROB", "STAB": "STAB"}
+DISPLAY = {"ID_Q": "ID-Q", "OOD_G": "OOD-G", "SYM_F": "SYM-F", "EFF": "EFF", "ROB": "ROBU", "STAB": "STAB"}
 COLORS = [
     "#264653",
     "#2a9d8f",
@@ -1094,7 +1094,7 @@ def plot_search_dynamics(record: list[FigureRecord]) -> None:
 
 def plot_noise_stability_metric_design(record: list[FigureRecord]) -> None:
     copy_v2_figure("fig_noise_rob_by_sigma", "figure25_noise_robustness_curve", "Figure 25", "noise robustness curve", record)
-    copy_v2_figure("fig_noise_quality_by_sigma_heatmap", "figure26_noise_quality_heatmap", "Figure 26", "ROB heatmap", record)
+    copy_v2_figure("fig_noise_quality_by_sigma_heatmap", "figure26_noise_quality_heatmap", "Figure 26", "ROBU heatmap", record)
 
     comp = read_csv(HEXAGON_COMPONENTS)
     agg = (

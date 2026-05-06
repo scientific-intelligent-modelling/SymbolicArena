@@ -1,13 +1,13 @@
 # Core-50 hexagon v2 formal figures
 
-- Created at: `2026-05-07T00:24:52`
+- Created at: `2026-05-07T02:52:05`
 - `SYM-F` uses formal judge: CAS equivalence, independent probe numeric equivalence, variable/operator F1, and fast tree similarity.
-- `ID-Q`, `OOD-G`, `EFF`, `ROB`, `STAB` inherit the v1 clean/noise artifacts.
+- `ID-Q`, `OOD-G`, `EFF`, `ROBU`, `STAB` inherit the v1 clean/noise artifacts.
 - `EFF` and `STAB` are still proxy axes until full clean minute-level AUC and formal seed-level structural consistency are wired.
 
 ## Score Table
 
-| algorithm   |   ID_Q |   OOD_G |   SYM_F |   EFF |   ROB |   STAB |   HexaScore_formal_with_ROB |   SYM_F_proxy |
+| algorithm   |   ID_Q |   OOD_G |   SYM_F |   EFF |   ROBU |   STAB |   HexaScore_formal_with_ROB |   SYM_F_proxy |
 |:------------|-------:|--------:|--------:|------:|------:|-------:|----------------------------:|--------------:|
 | imcts       |  58.07 |   63.99 |   41.50 | 46.75 | 38.49 |  48.26 |                       48.73 |         72.20 |
 | udsr        |  63.76 |   59.86 |   36.83 | 41.05 | 41.14 |  45.86 |                       47.08 |         35.20 |

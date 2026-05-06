@@ -379,7 +379,7 @@ def table_hexagon_scores() -> pd.DataFrame:
             "OOD-G": df["OOD_G"].round(1),
             "SYM-F": df["SYM_F"].round(1),
             "EFF": df["EFF"].round(1),
-            "ROB": df["ROB"].round(1),
+            "ROBU": df["ROB"].round(1),
             "STAB": df["STAB"].round(1),
             "HexaScore [95% CI]": [
                 f"{score:.1f} [{lo:.1f}, {hi:.1f}]"
@@ -437,7 +437,8 @@ def table_noise_summary() -> pd.DataFrame:
             "noise_valid_rate": "Overall noise valid rate",
         }
     )
-    return out.sort_values("ROB", ascending=False)
+    out = out.rename(columns={"ROB": "ROBU"})
+    return out.sort_values("ROBU", ascending=False)
 
 
 def table_noise_by_sigma() -> pd.DataFrame:
@@ -499,7 +500,7 @@ def table_artifact_checklist() -> pd.DataFrame:
         ("Core-50 dataset manifest", "CSV", "exp-planning/04.Core50正式全量评测/core50_datasets.csv", "Frozen task list"),
         ("Clean Core-50 final runs", "CSV", "exp-planning/04.Core50正式全量评测/analysis/hexagon_v1_with_artifacts_20260504/clean_final_runs_updated.csv", "Leaderboard scoring"),
         ("Formal symbolic metrics", "CSV", "exp-planning/04.Core50正式全量评测/analysis/symf_formal_metrics_20260504/symbolic_metrics_formal.csv", "SYM-F axis"),
-        ("Noise robustness runs", "CSV", "exp-planning/04.Core50正式全量评测/analysis/hexagon_v1_with_artifacts_20260504/noise_final_runs.csv", "ROB axis"),
+        ("Noise robustness runs", "CSV", "exp-planning/04.Core50正式全量评测/analysis/hexagon_v1_with_artifacts_20260504/noise_final_runs.csv", "ROBU axis"),
         ("Final six-axis scores", "CSV", "exp-planning/04.Core50正式全量评测/analysis/hexagon_v2_formal_20260505/hexagon_scores_formal_with_ci.csv", "Main leaderboard table"),
         ("Paper figures", "PNG/PDF", "paper/Paper-SRInfra/imgs", "Publication figures"),
     ]

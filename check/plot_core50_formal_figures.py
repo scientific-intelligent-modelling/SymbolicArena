@@ -31,7 +31,7 @@ DISPLAY = {
     "OOD_G": "OOD-G",
     "SYM_F": "SYM-F",
     "EFF": "EFF",
-    "ROB": "ROB",
+    "ROB": "ROBU",
     "STAB": "STAB",
 }
 ALGORITHM_DISPLAY = {
@@ -364,7 +364,7 @@ def plot_noise_line(robustness: pd.DataFrame, out: Path) -> None:
             color=PALETTE[idx % len(PALETTE)],
         )
     ax.set_xlabel("Noise sigma")
-    ax.set_ylabel("ROB component")
+    ax.set_ylabel("ROBU component")
     ax.set_xticks([0.01, 0.05, 0.10], ["1%", "5%", "10%"])
     ax.set_ylim(0, 100)
     ax.grid(alpha=0.45)
@@ -415,7 +415,7 @@ def write_readme(outdir: Path, scores: pd.DataFrame, figure_files: list[str], wa
         "",
         f"- Created at: `{datetime.now().isoformat(timespec='seconds')}`",
         "- `SYM-F` uses formal judge: CAS equivalence, independent probe numeric equivalence, variable/operator F1, and fast tree similarity.",
-        "- `ID-Q`, `OOD-G`, `EFF`, `ROB`, `STAB` inherit the v1 clean/noise artifacts.",
+        "- `ID-Q`, `OOD-G`, `EFF`, `ROBU`, `STAB` inherit the v1 clean/noise artifacts.",
         "- `EFF` and `STAB` are still proxy axes until full clean minute-level AUC and formal seed-level structural consistency are wired.",
         "",
         "## Score Table",
@@ -485,11 +485,11 @@ def main() -> None:
 
     plot_hexagon_heatmap(scores, outdir / "fig_hexagon_heatmap_formal.png")
     plot_radar(scores, outdir / "fig_radar_top4_formal.png")
-    plot_bar(scores, "HexaScore_formal_with_ROB", outdir / "fig_hexascore_formal_bar.png", "Formal HexaScore with ROB")
+    plot_bar(scores, "HexaScore_formal_with_ROB", outdir / "fig_hexascore_formal_bar.png", "Formal HexaScore with ROBU")
     plot_axis_small_multiples(scores, outdir / "fig_axis_bars_formal.png")
     plot_scatter(scores, "ID_Q", "OOD_G", outdir / "fig_tradeoff_idq_oodg.png", "ID-Q vs OOD-G")
     plot_scatter(scores, "ID_Q", "SYM_F", outdir / "fig_tradeoff_idq_symf_formal.png", "ID-Q vs formal SYM-F")
-    plot_scatter(scores, "OOD_G", "ROB", outdir / "fig_tradeoff_oodg_rob.png", "OOD-G vs ROB")
+    plot_scatter(scores, "OOD_G", "ROB", outdir / "fig_tradeoff_oodg_rob.png", "OOD-G vs ROBU")
     plot_scatter(scores, "SYM_F", "EFF", outdir / "fig_tradeoff_symf_eff.png", "Formal SYM-F vs EFF")
     plot_scatter(scores, "EFF", "STAB", outdir / "fig_tradeoff_eff_stab.png", "EFF vs STAB")
     plot_proxy_vs_formal(scores, outdir / "fig_symf_proxy_vs_formal.png")
