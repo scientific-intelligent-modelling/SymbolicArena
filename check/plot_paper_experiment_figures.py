@@ -269,7 +269,7 @@ def subset_metrics(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame, subse
     if sub.empty:
         return {"subset": label}
     scores = method_scores_for_subset(dataset_alg, subset_ids)
-    return {
+    row = {
         "subset": label,
         "size": len(sub),
         "coverage": 0.35 * entropy_score(sub["family"]) + 0.25 * entropy_score(sub["subgroup"]) + 0.2 * entropy_score(sub["operator_group"]) + 0.2 * entropy_score(sub["feature_count_bin"]),
@@ -284,14 +284,107 @@ def subset_metrics(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame, subse
         "family_match": tv_similarity(sub["family"], dataset_level["family"]),
         "failure_match": tv_similarity(sub["failure_mode"], dataset_level["failure_mode"]),
     }
+    row.update(selection_score_terms(dataset_level, subset_ids, row))
+    return row
 
 
-def build_core_baselines(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame, core_names: set[str], rng: np.random.Generator) -> tuple[pd.DataFrame, dict[str, set[str]]]:
+def core_ids_from_manifest(dataset_level: pd.DataFrame, core50: pd.DataFrame) -> set[str]:
+    """精确使用冻结 manifest 中的 dataset_dir，避免跨来源同名任务误匹配。"""
+    if "dataset_dir" in core50 and "dataset_rel" in dataset_level:
+        core_dirs = set(core50["dataset_dir"].astype(str))
+        core_ids = set(dataset_level[dataset_level["dataset_rel"].astype(str).isin(core_dirs)]["dataset_id"])
+        if len(core_ids) >= 45:
+            return core_ids
+    core_names = set(core50["dataset_name"].astype(str)) if "dataset_name" in core50 else set()
+    core_ids = set(dataset_level[dataset_level["dataset_name"].astype(str).isin(core_names)]["dataset_id"])
+    if len(core_ids) < 45 and "basename" in dataset_level:
+        core_ids = set(dataset_level[dataset_level["basename"].astype(str).isin(core_names)]["dataset_id"])
+    return core_ids
+
+
+def family_quota_bounds(dataset_level: pd.DataFrame) -> dict[str, tuple[int, int]]:
+    counts = dataset_level["family"].astype(str).value_counts()
+    total = len(dataset_level)
+    n_families = len(counts)
+    bounds: dict[str, tuple[int, int]] = {}
+    for family, count in counts.items():
+        target = 50.0 * (0.6 * float(count) / total + 0.4 / n_families)
+        bounds[str(family)] = (max(1, math.floor(target - 1.0)), math.ceil(target + 2.0))
+    return bounds
+
+
+def hard_constraint_audit(dataset_level: pd.DataFrame, subset_ids: set[str]) -> dict[str, float]:
+    sub = dataset_level[dataset_level["dataset_id"].isin(subset_ids)].copy()
+    family_bounds = family_quota_bounds(dataset_level)
+
+    size_violation = abs(len(sub) - 50)
+    semantic_duplicate_excess = int((sub["semantic_duplicate_group"].astype(str).value_counts() - 1).clip(lower=0).sum()) if "semantic_duplicate_group" in sub else 0
+    basename_duplicate_excess = int((sub["basename"].astype(str).value_counts() - 1).clip(lower=0).sum()) if "basename" in sub else 0
+
+    family_quota_violation = 0
+    for family, (lo, hi) in family_bounds.items():
+        observed = int((sub["family"].astype(str) == family).sum())
+        if observed < lo:
+            family_quota_violation += lo - observed
+        elif observed > hi:
+            family_quota_violation += observed - hi
+
+    subgroup_cap = 5
+    subgroup_cap_violation = int((sub["subgroup"].astype(str).value_counts() - subgroup_cap).clip(lower=0).sum()) if "subgroup" in sub else 0
+
+    hard_constraint_violations = (
+        int(size_violation > 0)
+        + int(semantic_duplicate_excess > 0)
+        + int(basename_duplicate_excess > 0)
+        + int(family_quota_violation > 0)
+        + int(subgroup_cap_violation > 0)
+    )
+    hard_constraint_excess = size_violation + semantic_duplicate_excess + basename_duplicate_excess + family_quota_violation + subgroup_cap_violation
+    return {
+        "hard_constraint_violations": float(hard_constraint_violations),
+        "hard_constraint_excess": float(hard_constraint_excess),
+        "semantic_duplicate_excess": float(semantic_duplicate_excess),
+        "basename_duplicate_excess": float(basename_duplicate_excess),
+        "family_quota_violation": float(family_quota_violation),
+        "subgroup_cap_violation": float(subgroup_cap_violation),
+    }
+
+
+def selection_balance(dataset_level: pd.DataFrame, subset_ids: set[str]) -> float:
+    sub = dataset_level[dataset_level["dataset_id"].isin(subset_ids)].copy()
+    balance_cols = [
+        "family",
+        "subgroup",
+        "operator_group",
+        "feature_count_bin",
+        "sample_count_bin",
+        "complexity_bin",
+        "difficulty_bin",
+        "failure_mode",
+        "winner_probe",
+        "eligible_class",
+    ]
+    scores = [tv_similarity(sub[col], dataset_level[col]) for col in balance_cols if col in sub and col in dataset_level]
+    return float(np.mean(scores)) if scores else 0.0
+
+
+def selection_score_terms(dataset_level: pd.DataFrame, subset_ids: set[str], row: dict[str, Any]) -> dict[str, float]:
+    balance = selection_balance(dataset_level, subset_ids)
+    raw_score = 0.45 * float(row.get("coverage", 0.0)) + 0.35 * float(row.get("mean_info", 0.0)) + 0.20 * balance
+    audit = hard_constraint_audit(dataset_level, subset_ids)
+    feasible_score = raw_score if audit["hard_constraint_violations"] == 0 else 0.0
+    return {
+        "selection_balance": balance,
+        "raw_selection_score": raw_score,
+        "feasible_selection_score": feasible_score,
+        **audit,
+    }
+
+
+def build_core_baselines(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame, core50: pd.DataFrame, rng: np.random.Generator) -> tuple[pd.DataFrame, dict[str, set[str]]]:
     full_ids = set(dataset_level["dataset_id"])
     full_scores = method_scores_for_subset(dataset_alg, full_ids)
-    core_ids = set(dataset_level[dataset_level["dataset_name"].isin(core_names)]["dataset_id"])
-    if len(core_ids) < 45:
-        core_ids = set(dataset_level[dataset_level["basename"].isin(core_names)]["dataset_id"])
+    core_ids = core_ids_from_manifest(dataset_level, core50)
 
     top_info_ids = set(dataset_level.sort_values(["info_score", "stability_score"], ascending=False).head(50)["dataset_id"])
     difficulty_ids: set[str] = set()
@@ -612,7 +705,7 @@ def compute_e1_info_scores(e1: pd.DataFrame) -> pd.DataFrame:
 
 
 def plot_core50_validity(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame, core50: pd.DataFrame, record: list[FigureRecord]) -> tuple[pd.DataFrame, dict[str, set[str]]]:
-    core_names = set(core50["dataset_name"].astype(str))
+    core_ids = core_ids_from_manifest(dataset_level, core50)
     candidate = read_csv(STAGE1_CANDIDATE)
     candidate_names = set(candidate["dataset"].astype(str)) if "dataset" in candidate else set()
 
@@ -636,7 +729,7 @@ def plot_core50_validity(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame,
     dataset_level = dataset_level.copy()
     dataset_level["pc1"] = coords[:, 0]
     dataset_level["pc2"] = coords[:, 1]
-    dataset_level["is_core50"] = dataset_level["dataset_name"].astype(str).isin(core_names)
+    dataset_level["is_core50"] = dataset_level["dataset_id"].astype(str).isin(core_ids)
     dataset_level["is_candidate200"] = dataset_level["dataset_name"].astype(str).isin(candidate_names) | dataset_level["basename"].astype(str).isin(candidate_names)
 
     fig, ax = plt.subplots(figsize=(8.2, 6.2))
@@ -654,8 +747,10 @@ def plot_core50_validity(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame,
     record.append(FigureRecord("Figure 10", "Core-50 coverage map", "generated", ";".join(files), "PCA over structural + Probe4 response features."))
 
     rng = np.random.default_rng(20260505)
-    baseline, subsets = build_core_baselines(dataset_level, dataset_alg, core_names, rng)
-    baseline["validity_score"] = baseline[["coverage", "mean_info", "rank_fidelity", "stability", "non_redundancy", "difficulty_balance"]].mean(axis=1)
+    baseline, subsets = build_core_baselines(dataset_level, dataset_alg, core50, rng)
+    # This is only the unweighted radar-axis mean for plotting diagnostics.
+    # The actual selector objective is feasible_selection_score.
+    baseline["radar_mean_for_plot_only"] = baseline[["coverage", "mean_info", "rank_fidelity", "stability", "non_redundancy", "difficulty_balance"]].mean(axis=1)
     baseline.to_csv(OUTDIR / "core50_baseline_quality_metrics.csv", index=False)
 
     radar_cols = ["coverage", "mean_info", "rank_fidelity", "stability", "non_redundancy", "difficulty_balance"]
@@ -1121,16 +1216,17 @@ def plot_ablation_summary(baseline: pd.DataFrame, record: list[FigureRecord]) ->
         record.append(FigureRecord("Figure 31", "ablation summary", "missing", "", "No baseline metrics."))
         return
     df = baseline.copy()
-    df["validity_score"] = df[["coverage", "mean_info", "rank_fidelity", "stability", "non_redundancy", "difficulty_balance"]].mean(axis=1)
+    if "feasible_selection_score" not in df:
+        df["feasible_selection_score"] = 0.0
     fig, ax = plt.subplots(figsize=(9.2, 5.2))
-    df = df.sort_values("validity_score", ascending=True)
-    ax.barh(df["subset"], df["validity_score"], color="#2a9d8f")
+    df = df.sort_values("feasible_selection_score", ascending=True)
+    ax.barh(df["subset"], df["feasible_selection_score"], color="#2a9d8f")
     ax.set_xlim(0, 1)
-    ax.set_xlabel("validity score")
-    ax.set_title("Selection objective / baseline ablation summary")
+    ax.set_xlabel("feasible weighted selection score")
+    ax.set_title("Feasibility-gated selection objective / baseline ablation")
     ax.grid(axis="x", alpha=0.45)
     files = save(fig, OUTDIR / "figure31_ablation_summary.png")
-    record.append(FigureRecord("Figure 31", "ablation summary", "generated", ";".join(files), "Uses currently available subset baselines; full objective ablation can replace this later."))
+    record.append(FigureRecord("Figure 31", "ablation summary", "generated", ";".join(files), "Infeasible baselines receive zero feasible score after hard-constraint gating."))
 
 
 def write_report(records: list[FigureRecord]) -> None:

@@ -251,7 +251,11 @@ def table_core50_baseline_quality() -> pd.DataFrame:
         "difficulty_balance",
         "family_match",
         "failure_match",
-        "validity_score",
+        "selection_balance",
+        "raw_selection_score",
+        "hard_constraint_violations",
+        "hard_constraint_excess",
+        "feasible_selection_score",
     ]
     out = df[cols].copy()
     core50_manifest = ROOT / "exp-planning/04.Core50正式全量评测/core50_datasets.csv"
@@ -271,7 +275,11 @@ def table_core50_baseline_quality() -> pd.DataFrame:
             "difficulty_balance": "Difficulty balance",
             "family_match": "Family match",
             "failure_match": "Failure match",
-            "validity_score": "Validity score",
+            "selection_balance": "Selection balance",
+            "raw_selection_score": "Raw selection score",
+            "hard_constraint_violations": "Hard violations",
+            "hard_constraint_excess": "Hard violation excess",
+            "feasible_selection_score": "Feasible selection score",
         }
     )
 
@@ -492,7 +500,7 @@ def main() -> None:
             "table08_core50_baseline_quality",
             table_core50_baseline_quality(),
             "Core-50 representativeness compared with subset-selection baselines.",
-            "The Core-50 size is taken from the frozen core50_datasets.csv manifest. Other metrics are inherited from the current subset-quality analysis.",
+            "Core-50 is matched by dataset_dir against the frozen core50_datasets.csv manifest. Feasible selection score applies hard-constraint gating before the weighted objective.",
         )
     )
     registry.append(write_table("table09_k_scaling_metrics", table_k_scaling(), "Subset-size scaling metrics for Core-K selection."))
