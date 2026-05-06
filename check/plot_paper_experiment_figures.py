@@ -1190,7 +1190,7 @@ def plot_noise_stability_metric_design(record: list[FigureRecord]) -> None:
     record.append(FigureRecord("Figure 29", "axis correlation matrix", "generated", ";".join(files)))
 
     ci = read_csv(HEXAGON_SCORES_CI)
-    fig, axes = plt.subplots(2, 3, figsize=(15, 8.8), sharex=True)
+    fig, axes = plt.subplots(2, 3, figsize=(15.8, 8.8), sharex=True)
     order = scores["algorithm"].tolist()
     for ax, axis in zip(axes.ravel(), AXES, strict=False):
         merged = scores[["algorithm", axis]].merge(ci[["algorithm", f"{axis}_ci_low", f"{axis}_ci_high"]], on="algorithm", how="left")
@@ -1198,15 +1198,27 @@ def plot_noise_stability_metric_design(record: list[FigureRecord]) -> None:
         y = np.arange(len(merged))
         low = merged[axis] - merged[f"{axis}_ci_low"]
         high = merged[f"{axis}_ci_high"] - merged[axis]
-        ax.errorbar(merged[axis], y, xerr=[low, high], fmt="o", color="#2a9d8f", ecolor="#555", capsize=2)
+        ax.errorbar(
+            merged[axis],
+            y,
+            xerr=[low, high],
+            fmt="o",
+            color="#2a9d8f",
+            ecolor="#555",
+            capsize=4,
+            markersize=6,
+            elinewidth=1.35,
+        )
         ax.set_yticks(y, merged["algorithm"])
         ax.invert_yaxis()
         ax.set_xlim(0, 100)
-        ax.set_title(DISPLAY[axis])
+        ax.set_title(DISPLAY[axis], fontsize=17, pad=8)
+        ax.tick_params(axis="x", labelsize=12)
+        ax.tick_params(axis="y", labelsize=13)
         ax.grid(axis="x", alpha=0.45)
         if axis not in {"ID_Q", "EFF"}:
             ax.tick_params(labelleft=False)
-    fig.suptitle("Bootstrap 95% CI over Core-50 datasets", fontsize=14, fontweight="bold")
+    fig.subplots_adjust(wspace=0.16, hspace=0.28)
     files = save(fig, OUTDIR / "figure30_bootstrap_ci.png")
     record.append(FigureRecord("Figure 30", "bootstrap confidence interval", "generated", ";".join(files)))
 
