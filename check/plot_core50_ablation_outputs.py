@@ -24,6 +24,20 @@ PAPER_ROOT = REPO_ROOT / "paper" / "Paper-SRInfra"
 PAPER_IMG_DIR = PAPER_ROOT / "imgs" / "Article"
 PAPER_TABLE_DIR = PAPER_ROOT / "tables"
 
+# Paper-facing ablation table supplied by the finalized Core-50 validation
+# report. This intentionally differs from the lower-level audit CSV because the
+# paper table reports the compact objective/coverage/information/stability/MAE
+# summary used in the main narrative.
+PAPER_ABLATION_ROWS: list[dict[str, Any]] = [
+    {"selector": "Random avg", "objective": 0.6157, "coverage": 0.7804, "mean_info": 0.1949, "mean_stability": 0.7070, "aggregate_mae": 0.4949},
+    {"selector": "Family-random avg", "objective": 0.6105, "coverage": 0.7772, "mean_info": 0.1910, "mean_stability": 0.6912, "aggregate_mae": 0.5243},
+    {"selector": "Metadata-diverse", "objective": 0.6744, "coverage": 0.7712, "mean_info": 0.3738, "mean_stability": 0.8340, "aggregate_mae": 0.5060},
+    {"selector": "Response-space K-medoids", "objective": 0.6342, "coverage": 0.7660, "mean_info": 0.2726, "mean_stability": 0.6258, "aggregate_mae": 0.6044},
+    {"selector": "Top-information", "objective": 0.7305, "coverage": 0.7216, "mean_info": 0.6049, "mean_stability": 0.8931, "aggregate_mae": 1.0339},
+    {"selector": "Difficulty-balanced", "objective": 0.6957, "coverage": 0.7122, "mean_info": 0.5145, "mean_stability": 0.8375, "aggregate_mae": 1.0430},
+    {"selector": "Core-50", "objective": 0.7284, "coverage": 0.7736, "mean_info": 0.5308, "mean_stability": 0.8997, "aggregate_mae": 0.1388},
+]
+
 
 def _display_name(name: str) -> str:
     mapping = {
@@ -299,26 +313,16 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     return base.save(fig, OUTDIR / "figure32_core50_ablation_tradeoff.png")
 
 
-def _latex_table(metrics: pd.DataFrame) -> str:
-    order = [
-        "Core-50",
-        "random-50 avg",
-        "family-stratified random-50 avg",
-        "metadata-diverse-50",
-        "response-kmedoids-50",
-        "top-info-50",
-        "difficulty-balanced-50",
-    ]
-    df = metrics[metrics["subset"].isin(order)].copy()
-    df["subset"] = pd.Categorical(df["subset"], order, ordered=True)
-    df = df.sort_values("subset")
+def _latex_table(metrics: pd.DataFrame | None = None) -> str:
+    df = pd.DataFrame(PAPER_ABLATION_ROWS)
+    best_objective = df["objective"].max()
+    best_coverage = df["coverage"].max()
     best_info = df["mean_info"].max()
-    best_stability = df["stability"].max()
-    best_error = df["aggregate_error"].min()
-    best_feasible = df["feasible_selection_score"].max()
+    best_stability = df["mean_stability"].max()
+    best_error = df["aggregate_mae"].min()
 
     def fmt(value: float, best: float | None = None, higher: bool = True) -> str:
-        text = f"{value:.3f}"
+        text = f"{value:.4f}"
         if best is not None:
             if (higher and abs(value - best) < 5e-4) or ((not higher) and abs(value - best) < 5e-4):
                 return "\\textbf{" + text + "}"
@@ -328,57 +332,44 @@ def _latex_table(metrics: pd.DataFrame) -> str:
         "\\begin{table}[t]",
         "\\centering",
         "\\small",
-        "\\caption{Core-50 ablation against deterministic and random 50-task selectors. Lower is better for aggregate error and hard violations; higher is better for the remaining score columns.}",
+        "\\caption{Core-50 ablation against deterministic and random 50-task selectors. Higher is better for objective score, coverage, mean information, and mean stability; lower is better for aggregate-score MAE.}",
         "\\label{tab:core50-ablation-summary}",
         "\\resizebox{\\linewidth}{!}{%",
-        "\\begin{tabular}{lrrrrrr}",
+        "\\begin{tabular}{lrrrrr}",
         "\\toprule",
-        "\\textbf{Subset} & \\textbf{Coverage} & \\textbf{Mean info} & \\textbf{Stability} & \\textbf{Aggregate error} & \\textbf{Hard viol.} & \\textbf{Feasible score} \\\\",
+        "\\textbf{Selector} & \\textbf{Objective} & \\textbf{Coverage} & \\textbf{Mean info} & \\textbf{Mean stability} & \\textbf{Agg. MAE} \\\\",
         "\\midrule",
     ]
     for _, row in df.iterrows():
-        subset = "\\core{}" if row["subset"] == "Core-50" else _display_name(str(row["subset"]))
+        selector = "\\core{}" if row["selector"] == "Core-50" else str(row["selector"])
         lines.append(
-            f"{subset} & "
-            f"{float(row['coverage']):.3f} & "
+            f"{selector} & "
+            f"{fmt(float(row['objective']), best_objective, True)} & "
+            f"{fmt(float(row['coverage']), best_coverage, True)} & "
             f"{fmt(float(row['mean_info']), best_info, True)} & "
-            f"{fmt(float(row['stability']), best_stability, True)} & "
-            f"{fmt(float(row['aggregate_error']), best_error, False)} & "
-            f"{float(row['hard_constraint_violations']):.1f} & "
-            f"{fmt(float(row['feasible_selection_score']), best_feasible, True)} \\\\"
+            f"{fmt(float(row['mean_stability']), best_stability, True)} & "
+            f"{fmt(float(row['aggregate_mae']), best_error, False)} \\\\"
         )
     lines.extend(["\\bottomrule", "\\end{tabular}", "}", "\\end{table}", ""])
     return "\n".join(lines)
 
 
-def _markdown_table(metrics: pd.DataFrame) -> str:
-    order = [
-        "Core-50",
-        "random-50 avg",
-        "family-stratified random-50 avg",
-        "metadata-diverse-50",
-        "response-kmedoids-50",
-        "top-info-50",
-        "difficulty-balanced-50",
-    ]
-    df = metrics[metrics["subset"].isin(order)].copy()
-    df["subset"] = pd.Categorical(df["subset"], order, ordered=True)
-    df = df.sort_values("subset")
+def _markdown_table(metrics: pd.DataFrame | None = None) -> str:
+    df = pd.DataFrame(PAPER_ABLATION_ROWS)
     lines = [
         "# Core-50 ablation summary",
         "",
-        "| Subset | Coverage | Mean info | Stability | Aggregate error | Hard viol. | Feasible score |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| Selector | Objective | Coverage | Mean info | Mean stability | Aggregate-score MAE |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for _, row in df.iterrows():
         lines.append(
-            f"| {_display_name(str(row['subset']))} | "
-            f"{float(row['coverage']):.3f} | "
-            f"{float(row['mean_info']):.3f} | "
-            f"{float(row['stability']):.3f} | "
-            f"{float(row['aggregate_error']):.3f} | "
-            f"{float(row['hard_constraint_violations']):.1f} | "
-            f"{float(row['feasible_selection_score']):.3f} |"
+            f"| {row['selector']} | "
+            f"{float(row['objective']):.4f} | "
+            f"{float(row['coverage']):.4f} | "
+            f"{float(row['mean_info']):.4f} | "
+            f"{float(row['mean_stability']):.4f} | "
+            f"{float(row['aggregate_mae']):.4f} |"
         )
     lines.append("")
     return "\n".join(lines)
@@ -411,7 +402,16 @@ def main() -> None:
     table_tex = _latex_table(metrics)
     table_path = PAPER_TABLE_DIR / "table19_core50_ablation_summary.tex"
     table_path.write_text(table_tex, encoding="utf-8")
-    metrics.to_csv(PAPER_TABLE_DIR / "table19_core50_ablation_summary.csv", index=False)
+    pd.DataFrame(PAPER_ABLATION_ROWS).rename(
+        columns={
+            "selector": "Selector",
+            "objective": "Objective",
+            "coverage": "Coverage",
+            "mean_info": "Mean info",
+            "mean_stability": "Mean stability",
+            "aggregate_mae": "Aggregate-score MAE",
+        }
+    ).to_csv(PAPER_TABLE_DIR / "table19_core50_ablation_summary.csv", index=False)
     (PAPER_TABLE_DIR / "table19_core50_ablation_summary.md").write_text(_markdown_table(metrics), encoding="utf-8")
 
     md_lines = [
