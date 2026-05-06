@@ -24,6 +24,12 @@ PAPER_ROOT = REPO_ROOT / "paper" / "Paper-SRInfra"
 PAPER_IMG_DIR = PAPER_ROOT / "imgs" / "Article"
 PAPER_TABLE_DIR = PAPER_ROOT / "tables"
 
+AXIS_TITLE_FONTSIZE = 9.5
+AXIS_LABEL_FONTSIZE = 8.0
+TICK_LABEL_FONTSIZE = 7.0
+ANNOTATION_FONTSIZE = 6.4
+LEGEND_FONTSIZE = 6.5
+
 # Paper-facing ablation table supplied by the finalized Core-50 validation
 # report. This intentionally differs from the lower-level audit CSV because the
 # paper table reports the compact objective/coverage/information/stability/MAE
@@ -56,6 +62,15 @@ def _bold_core_ticklabels(labels: list[Any]) -> None:
     for label in labels:
         if label.get_text() == "Core-50":
             label.set_fontweight("bold")
+
+
+def _style_axis(ax: Any) -> None:
+    ax.title.set_fontsize(AXIS_TITLE_FONTSIZE)
+    ax.xaxis.label.set_size(AXIS_LABEL_FONTSIZE)
+    ax.yaxis.label.set_size(AXIS_LABEL_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_FONTSIZE)
+    for label in list(ax.get_xticklabels()) + list(ax.get_yticklabels()):
+        label.set_fontsize(TICK_LABEL_FONTSIZE)
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -268,9 +283,19 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     ax.set_xlabel("Aggregate score MAE to full reservoir (lower is better)")
     ax.set_title("Fidelity error")
     ax.grid(axis="x", alpha=0.25)
+    _style_axis(ax)
 
     ax = axes[0, 1]
     feasible = plot_df["hard_constraint_violations"].fillna(0) <= 0
+    label_offsets = {
+        "Core-50": (8, 3, "left", "bottom"),
+        "random-50 avg": (8, 10, "left", "bottom"),
+        "family-stratified random-50 avg": (8, -12, "left", "top"),
+        "metadata-diverse-50": (8, -10, "left", "top"),
+        "response-kmedoids-50": (8, 8, "left", "bottom"),
+        "top-info-50": (-8, -10, "right", "top"),
+        "difficulty-balanced-50": (8, 8, "left", "bottom"),
+    }
     for ok, marker, label in [(True, "*", "feasible"), (False, "o", "violates hard constraints")]:
         sub = plot_df[feasible == ok]
         ax.scatter(
@@ -285,12 +310,25 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
             alpha=0.95,
         )
         for _, row in sub.iterrows():
-            ax.annotate(_display_name(str(row["subset"])), (row["mean_info"], row["aggregate_error"]), xytext=(5, 4), textcoords="offset points", fontsize=7.5)
+            key = str(row["subset"])
+            dx, dy, ha, va = label_offsets.get(key, (5, 4, "left", "bottom"))
+            ax.annotate(
+                _display_name(key),
+                (row["mean_info"], row["aggregate_error"]),
+                xytext=(dx, dy),
+                textcoords="offset points",
+                fontsize=ANNOTATION_FONTSIZE,
+                ha=ha,
+                va=va,
+            )
     ax.set_xlabel("Mean information")
     ax.set_ylabel("Aggregate score MAE")
     ax.set_title("Information vs. fidelity")
+    ax.set_xlim(0.06, 0.73)
+    ax.set_ylim(0.05, 2.38)
     ax.grid(alpha=0.25)
-    ax.legend(frameon=False, fontsize=8)
+    ax.legend(frameon=False, fontsize=LEGEND_FONTSIZE, loc="lower left")
+    _style_axis(ax)
 
     ax = axes[1, 0]
     x = np.arange(len(plot_df))
@@ -302,7 +340,8 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     ax.set_ylabel("Selection score")
     ax.set_title("Hard-constraint gate")
     ax.grid(axis="y", alpha=0.25)
-    ax.legend(frameon=False, fontsize=8)
+    ax.legend(frameon=False, fontsize=LEGEND_FONTSIZE)
+    _style_axis(ax)
 
     ax = axes[1, 1]
     family_order = sorted(family_dist["family"].unique())
@@ -329,13 +368,13 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
         bottom += np.asarray(vals)
     ax.set_ylabel("Datasets")
     ax.set_title("Family concentration")
-    ax.set_xticks(x_family, family_labels, rotation=34, ha="right", fontsize=7.0)
+    ax.set_xticks(x_family, family_labels, rotation=34, ha="right", fontsize=TICK_LABEL_FONTSIZE)
     _bold_core_ticklabels(ax.get_xticklabels())
     ax.margins(x=0.04)
     ax.legend(frameon=False, fontsize=6.3, ncol=2, loc="upper left", bbox_to_anchor=(1.02, 1.0))
+    _style_axis(ax)
 
-    fig.suptitle("Core-50 ablation: feasible distillation beats single-axis selectors", fontsize=13, fontweight="bold")
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.tight_layout(pad=1.0, w_pad=1.6, h_pad=1.5)
     return base.save(fig, OUTDIR / "figure32_core50_ablation_tradeoff.png")
 
 
