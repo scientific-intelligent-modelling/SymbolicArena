@@ -23,6 +23,21 @@ P4 = ROOT / "exp-planning/03.四探针全量664三种子验证/generated/postpro
 E1 = ROOT / "exp-planning/02.E1选择验证/e1_final_results_current_20260429/digest"
 CAND = ROOT / "experiment-results/benchmark_selection_dossier_20260422/tables"
 
+ALGORITHM_DISPLAY = {
+    "dso": "DSO",
+    "drsr": "DRSR",
+    "e2esr": "E2ESR",
+    "gplearn": "gplearn",
+    "imcts": "iMCTS",
+    "llmsr": "LLM-SR",
+    "pyoperon": "PyOperon",
+    "pysr": "PySR",
+    "qlattice": "QLattice",
+    "ragsr": "RAG-SR",
+    "tpsr": "TPSR",
+    "udsr": "uDSR",
+}
+
 
 def read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
@@ -340,28 +355,29 @@ def table_clean_leaderboard() -> pd.DataFrame:
 
 def table_hexagon_scores() -> pd.DataFrame:
     df = read_csv(HEX / "hexagon_scores_formal_with_ci.csv")
-    cols = [
-        "algorithm",
-        "ID_Q",
-        "OOD_G",
-        "SYM_F",
-        "EFF",
-        "ROB",
-        "STAB",
-        "HexaScore_formal_with_ROB",
-        "HexaScore_formal_with_ROB_ci_low",
-        "HexaScore_formal_with_ROB_ci_high",
-    ]
-    out = df[cols].copy()
-    out = out.rename(
-        columns={
-            "algorithm": "Algorithm",
-            "HexaScore_formal_with_ROB": "HexaScore",
-            "HexaScore_formal_with_ROB_ci_low": "HexaScore CI low",
-            "HexaScore_formal_with_ROB_ci_high": "HexaScore CI high",
+    df = df.sort_values("HexaScore_formal_with_ROB", ascending=False).reset_index(drop=True)
+    out = pd.DataFrame(
+        {
+            "Rank": np.arange(1, len(df) + 1),
+            "Algorithm": df["algorithm"].map(lambda x: ALGORITHM_DISPLAY.get(str(x).lower(), str(x))),
+            "ID-Q": df["ID_Q"].round(1),
+            "OOD-G": df["OOD_G"].round(1),
+            "SYM-F": df["SYM_F"].round(1),
+            "EFF": df["EFF"].round(1),
+            "ROB": df["ROB"].round(1),
+            "STAB": df["STAB"].round(1),
+            "HexaScore [95% CI]": [
+                f"{score:.1f} [{lo:.1f}, {hi:.1f}]"
+                for score, lo, hi in zip(
+                    df["HexaScore_formal_with_ROB"],
+                    df["HexaScore_formal_with_ROB_ci_low"],
+                    df["HexaScore_formal_with_ROB_ci_high"],
+                    strict=True,
+                )
+            ],
         }
     )
-    return out.sort_values("HexaScore", ascending=False)
+    return out
 
 
 def table_symbolic_summary() -> pd.DataFrame:
@@ -505,7 +521,7 @@ def main() -> None:
     )
     registry.append(write_table("table09_k_scaling_metrics", table_k_scaling(), "Subset-size scaling metrics for Core-K selection."))
     registry.append(write_table("table10_clean_core50_leaderboard", table_clean_leaderboard(), "Clean Core-50 leaderboard summary over 12 algorithms and five seeds."))
-    registry.append(write_table("table11_hexagon_scores_formal", table_hexagon_scores(), "Formal six-axis Core-50 leaderboard scores with bootstrap confidence intervals."))
+    registry.append(write_table("table11_hexagon_scores_formal", table_hexagon_scores(), "Formal Core-50 six-axis scores with dataset-bootstrap 95% confidence intervals."))
     registry.append(write_table("table12_symbolic_fidelity_summary", table_symbolic_summary(), "Formal symbolic-fidelity metrics by algorithm."))
     registry.append(write_table("table13_noise_robustness_summary", table_noise_summary(), "Noise robustness summary by algorithm."))
     registry.append(write_table("table14_noise_by_sigma", table_noise_by_sigma(), "Noise-track completion and median clean-test NMSE by noise level."))

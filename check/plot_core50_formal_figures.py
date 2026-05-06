@@ -34,6 +34,20 @@ DISPLAY = {
     "ROB": "ROB",
     "STAB": "STAB",
 }
+ALGORITHM_DISPLAY = {
+    "dso": "DSO",
+    "drsr": "DRSR",
+    "e2esr": "E2ESR",
+    "gplearn": "gplearn",
+    "imcts": "iMCTS",
+    "llmsr": "LLM-SR",
+    "pyoperon": "PyOperon",
+    "pysr": "PySR",
+    "qlattice": "QLattice",
+    "ragsr": "RAG-SR",
+    "tpsr": "TPSR",
+    "udsr": "uDSR",
+}
 PALETTE = [
     "#264653",
     "#2a9d8f",
@@ -193,23 +207,38 @@ def bootstrap_ci(components: pd.DataFrame, n_boot: int, seed: int = 20260505) ->
     return pd.DataFrame(rows)
 
 
-def heatmap(data: pd.DataFrame, out: Path, title: str, cmap: str = "YlGnBu") -> None:
-    fig, ax = plt.subplots(figsize=(9.6, max(4.6, 0.43 * len(data))))
+def heatmap(data: pd.DataFrame, out: Path, title: str | None = None, cmap: str = "YlGnBu") -> None:
+    fig, ax = plt.subplots(figsize=(10.4, max(4.9, 0.45 * len(data))))
     mat = data.to_numpy(dtype=float)
     im = ax.imshow(mat, aspect="auto", vmin=0, vmax=100, cmap=cmap)
-    ax.set_xticks(range(data.shape[1]), data.columns)
-    ax.set_yticks(range(data.shape[0]), data.index)
+    xlabels = list(data.columns)
+    ylabels = [ALGORITHM_DISPLAY.get(str(name).lower(), str(name)) for name in data.index]
+    ax.set_xticks(range(data.shape[1]), xlabels, fontsize=14)
+    ax.set_yticks(range(data.shape[0]), ylabels, fontsize=13)
+    ax.tick_params(axis="both", length=0)
+    ax.set_xticks(np.arange(-0.5, data.shape[1], 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, data.shape[0], 1), minor=True)
+    ax.grid(which="minor", color="white", linewidth=1.25)
+    ax.tick_params(which="minor", bottom=False, left=False)
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
-            ax.text(j, i, f"{mat[i, j]:.1f}", ha="center", va="center", fontsize=7.5, color="#111111")
-    ax.set_title(title)
-    fig.colorbar(im, ax=ax, label="Score")
+            color = "white" if mat[i, j] >= 72 else "#111111"
+            ax.text(j, i, f"{mat[i, j]:.1f}", ha="center", va="center", fontsize=11.5, color=color)
+    for spine in ax.spines.values():
+        spine.set_color("#333333")
+        spine.set_linewidth(0.9)
+    if title:
+        ax.set_title(title, fontsize=16, pad=12)
+    cbar = fig.colorbar(im, ax=ax, label="Score", fraction=0.032, pad=0.035)
+    cbar.ax.tick_params(labelsize=12)
+    cbar.set_label("Score", fontsize=13)
+    fig.tight_layout(pad=0.4)
     save_figure(fig, out)
 
 
 def plot_hexagon_heatmap(scores: pd.DataFrame, out: Path) -> None:
     data = scores.set_index("algorithm")[AXES].rename(columns=DISPLAY)
-    heatmap(data, out, "Core-50 Six-Axis Scores v2 (formal SYM-F)")
+    heatmap(data, out, None)
 
 
 def plot_symbolic_components(symf_alg: pd.DataFrame, out: Path) -> None:
