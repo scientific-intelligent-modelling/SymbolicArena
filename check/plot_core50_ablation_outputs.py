@@ -52,6 +52,12 @@ def _display_name(name: str) -> str:
     return mapping.get(name, name)
 
 
+def _bold_core_ticklabels(labels: list[Any]) -> None:
+    for label in labels:
+        if label.get_text() == "Core-50":
+            label.set_fontweight("bold")
+
+
 def _safe_float(value: Any, default: float = 0.0) -> float:
     try:
         out = float(value)
@@ -292,6 +298,7 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     ax.bar(x - width / 2, plot_df["raw_selection_score"], width, label="raw", color="#6f95b8")
     ax.bar(x + width / 2, plot_df["feasible_selection_score"], width, label="feasible", color="#d65f3a")
     ax.set_xticks(x, labels, rotation=24, ha="right")
+    _bold_core_ticklabels(ax.get_xticklabels())
     ax.set_ylabel("Selection score")
     ax.set_title("Hard-constraint gate")
     ax.grid(axis="y", alpha=0.25)
@@ -300,13 +307,13 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     ax = axes[1, 1]
     family_order = sorted(family_dist["family"].unique())
     subset_order = [
+        "Core-50",
         "random-50 avg",
         "family-stratified random-50 avg",
         "metadata-diverse-50",
         "response-kmedoids-50",
         "top-info-50",
         "difficulty-balanced-50",
-        "Core-50",
     ]
     x_family = np.arange(len(subset_order))
     family_labels = [_display_name(s) for s in subset_order]
@@ -323,6 +330,7 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     ax.set_ylabel("Datasets")
     ax.set_title("Family concentration")
     ax.set_xticks(x_family, family_labels, rotation=34, ha="right", fontsize=7.0)
+    _bold_core_ticklabels(ax.get_xticklabels())
     ax.margins(x=0.04)
     ax.legend(frameon=False, fontsize=6.3, ncol=2, loc="upper left", bbox_to_anchor=(1.02, 1.0))
 
