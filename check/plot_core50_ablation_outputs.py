@@ -223,7 +223,13 @@ def _relative_rows(metrics: pd.DataFrame) -> list[dict[str, Any]]:
 
 def _family_distribution(dataset_level: pd.DataFrame, subsets: dict[str, set[str]]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
-    selected = ["Core-50", "top-info-50", "metadata-diverse-50", "response-kmedoids-50", "difficulty-balanced-50"]
+    full_counts = dataset_level["family"].astype(str).value_counts()
+    for subset in ["random-50 avg", "family-stratified random-50 avg"]:
+        for family, count in full_counts.items():
+            expected = float(50.0 * count / len(dataset_level))
+            rows.append({"subset": subset, "family": family, "count": expected, "fraction": expected / 50.0})
+
+    selected = ["metadata-diverse-50", "response-kmedoids-50", "top-info-50", "difficulty-balanced-50", "Core-50"]
     for subset in selected:
         ids = subsets[subset]
         sub = dataset_level[dataset_level["dataset_id"].astype(str).isin(ids)]
@@ -293,19 +299,31 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
 
     ax = axes[1, 1]
     family_order = sorted(family_dist["family"].unique())
-    bottom = np.zeros(5)
-    subset_order = ["Core-50", "top-info-50", "metadata-diverse-50", "response-kmedoids-50", "difficulty-balanced-50"]
+    subset_order = [
+        "random-50 avg",
+        "family-stratified random-50 avg",
+        "metadata-diverse-50",
+        "response-kmedoids-50",
+        "top-info-50",
+        "difficulty-balanced-50",
+        "Core-50",
+    ]
+    x_family = np.arange(len(subset_order))
+    family_labels = [_display_name(s) for s in subset_order]
+    bottom = np.zeros(len(subset_order))
+    family_bar_width = 0.52
     family_colors = plt.cm.tab20(np.linspace(0, 1, len(family_order)))
     for color, family in zip(family_colors, family_order):
         vals = []
         for subset in subset_order:
             match = family_dist[(family_dist["subset"] == subset) & (family_dist["family"] == family)]
             vals.append(float(match["count"].iloc[0]) if not match.empty else 0.0)
-        ax.bar([_display_name(s) for s in subset_order], vals, bottom=bottom, label=family, color=color, linewidth=0)
+        ax.bar(x_family, vals, width=family_bar_width, bottom=bottom, label=family, color=color, linewidth=0)
         bottom += np.asarray(vals)
     ax.set_ylabel("Datasets")
     ax.set_title("Family concentration")
-    ax.tick_params(axis="x", rotation=24)
+    ax.set_xticks(x_family, family_labels, rotation=34, ha="right", fontsize=7.0)
+    ax.margins(x=0.04)
     ax.legend(frameon=False, fontsize=6.3, ncol=2, loc="upper left", bbox_to_anchor=(1.02, 1.0))
 
     fig.suptitle("Core-50 ablation: feasible distillation beats single-axis selectors", fontsize=13, fontweight="bold")
