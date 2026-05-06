@@ -1,4 +1,4 @@
-"""将不同算法的公式输出归一化到 sympy 友好的统一表示。"""
+"""note sympy note """
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def _replace_symbolic_tokens(expr: str) -> str:
 
 
 def _shift_one_based_x_tokens(expr: str) -> str:
-    """若表达式仅出现 x1/x2/... 而不含 x0，则统一平移为零基索引。"""
+    """note x1/x2/... note x0 note """
     matches = sorted({int(m.group(1)) for m in re.finditer(r"\bx(\d+)\b", expr)})
     if not matches or 0 in matches:
         return expr
@@ -108,10 +108,10 @@ def _standardize_python_function_args_in_return(
     *,
     expected_n_features: int | None = None,
 ) -> tuple[str, list[str]]:
-    """按 equation 函数签名把任意特征名映射为 x0/x1/...。
+    """note equation note x0/x1/... 
 
-    DRSR 会根据数据集 metadata 在函数签名中生成 `r, m1, kappa` 等变量名。
-    benchmark 后处理只接受标准变量槽位，因此这里基于参数顺序做确定性映射。
+    DRSR note metadata note `r, m1, kappa` note 
+    benchmark note note 
     """
     func = _first_function_def(function_source)
     if func is None:
@@ -322,7 +322,7 @@ def _gplearn_ast_to_infix(node: ast.AST) -> str:
             return f"Abs({args[0]})"
         if fname in {"sqrt", "log", "exp", "sin", "cos", "tan"} and len(args) == 1:
             return f"{fname}({args[0]})"
-    raise ValueError(f"不支持的 gplearn 表达式节点: {ast.dump(node)}")
+    raise ValueError(f"unsupported note gplearn note: {ast.dump(node)}")
 
 
 def _infer_gplearn_prefix_variables(raw_equation: str) -> list[str]:
@@ -360,11 +360,11 @@ def _build_gplearn_prefix_fallback_artifact(
     expected_n_features: int | None,
     error: Exception,
 ) -> dict[str, Any]:
-    """保留不可被 Python AST 解析的 gplearn prefix 表达式。
+    """note Python AST note gplearn prefix note 
 
-    gplearn 可以生成非常深的 prefix 表达式，`ast.parse` 会先于我们触发
-    `too many nested parentheses`。这类表达式仍可用 gplearn protected 语义
-    回放，因此这里构造一个最小工件，后续由 runner 的专用 evaluator 执行。
+    gplearn note prefix note `ast.parse` note
+    `too many nested parentheses` note gplearn protected note
+    note note note runner note evaluator note 
     """
     variables = _infer_gplearn_prefix_variables(raw_equation)
     artifact = build_canonical_symbolic_program(
@@ -539,7 +539,7 @@ UDSR_TRUNK_COMPONENT_NOTES = (
 
 
 def annotate_udsr_trunk_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
-    """给 uDSR trunk 工件补充组件口径，避免和 full uDSR 混淆。"""
+    """note uDSR trunk note note full uDSR note """
     artifact["benchmark_variant"] = UDSR_TRUNK_VARIANT
     artifact["component_flags"] = dict(UDSR_TRUNK_COMPONENT_FLAGS)
     artifact["component_notes"] = UDSR_TRUNK_COMPONENT_NOTES
@@ -587,7 +587,7 @@ def _normalize_python_function_artifact(
     function_source = str(raw_equation)
     raw_return_expr = extract_return_expression_from_python_function(function_source)
     if not raw_return_expr:
-        raise ValueError(f"{tool_name} 原始函数中未找到 return 表达式")
+        raise ValueError(f"{tool_name} note return note")
 
     notes: list[str] = []
     return_expr = raw_return_expr

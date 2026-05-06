@@ -1,7 +1,7 @@
-"""统一符号工件协议。
+"""note 
 
-Phase 1 只负责定义一个稳定、可 JSON 序列化的最小协议，
-以及若干从现有 wrapper 输出过渡到该协议的基础工具函数。
+Phase 1 note note JSON note 
+note wrapper note 
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ CSP_VERSION = "csp_v1"
 
 
 def _normalize_float_list(values: Any) -> list[float] | None:
-    """把参数列表归一化为普通 float 列表。"""
+    """note float note """
     if values is None:
         return None
     if not isinstance(values, (list, tuple)):
@@ -30,7 +30,7 @@ def _normalize_float_list(values: Any) -> list[float] | None:
 
 
 def infer_raw_equation_kind(raw_equation: Any) -> str:
-    """粗粒度识别原始公式形态。"""
+    """note """
     if not isinstance(raw_equation, str):
         return "unknown"
     text = raw_equation.strip()
@@ -48,9 +48,9 @@ def infer_raw_equation_kind(raw_equation: Any) -> str:
 
 
 def infer_variable_names(expression: str | None) -> list[str]:
-    """从表达式文本中提取变量名。
+    """note 
 
-    这里不做复杂语义理解，只提取当前仓库常见的变量槽位：
+    note notecurrent note 
     - x0, x1, ...
     - col0, col1, ...
     """
@@ -66,7 +66,7 @@ def infer_variable_names(expression: str | None) -> list[str]:
 
 
 def infer_parameter_symbols(parameter_values: list[float] | None) -> list[str]:
-    """按参数个数生成统一常数符号。"""
+    """note """
     if not parameter_values:
         return []
     return [f"c{i}" for i in range(len(parameter_values))]
@@ -78,7 +78,7 @@ def instantiate_expression(
     parameter_symbols: list[str] | None,
     parameter_values: list[float] | None,
 ) -> str | None:
-    """将统一表达式中的参数符号替换成具体数值。"""
+    """note """
     if not isinstance(expression, str) or not expression.strip():
         return None
     text = expression.strip()
@@ -96,7 +96,7 @@ def instantiate_expression(
 
 
 def infer_variable_indices(variables: list[str] | None) -> list[int]:
-    """从变量名列表中提取 x{i} 的索引。"""
+    """note x{i} note """
     if not isinstance(variables, list):
         return []
     indices: set[int] = set()
@@ -110,7 +110,7 @@ def infer_variable_indices(variables: list[str] | None) -> list[int]:
 
 
 def extract_return_expression_from_python_function(source: str | None) -> str | None:
-    """从 def equation(...) 代码中抽取第一条 return 表达式。"""
+    """note def equation(...) note return note """
     if not isinstance(source, str) or not source.strip():
         return None
     try:
@@ -147,12 +147,12 @@ def build_canonical_symbolic_program(
     normalization_notes: list[str] | None = None,
     fidelity_check: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """构造最小 CanonicalSymbolicProgram。
+    """note CanonicalSymbolicProgram 
 
-    Phase 1 默认只保证：
-    - 字段结构稳定
-    - JSON 可序列化
-    - 可以承载后续 normalizer 的增量信息
+    Phase 1 default note 
+    - fieldnote
+    - JSON note
+    - note normalizer note
     """
     raw_equation_text = "" if raw_equation is None else str(raw_equation)
     raw_kind = infer_raw_equation_kind(raw_equation_text)
@@ -212,9 +212,9 @@ def validate_canonical_symbolic_program(
     *,
     require_complete: bool = False,
 ) -> dict[str, Any]:
-    """校验并返回规范化后的工件字典。"""
+    """note """
     if not isinstance(artifact, dict):
-        raise TypeError("CanonicalSymbolicProgram 必须是 dict")
+        raise TypeError("CanonicalSymbolicProgram note dict")
 
     required_fields = {
         "version": str,
@@ -232,31 +232,31 @@ def validate_canonical_symbolic_program(
     }
     for field_name, field_type in required_fields.items():
         if field_name not in artifact:
-            raise ValueError(f"CanonicalSymbolicProgram 缺少字段: {field_name}")
+            raise ValueError(f"CanonicalSymbolicProgram missing field: {field_name}")
         if not isinstance(artifact[field_name], field_type):
             raise TypeError(
-                f"CanonicalSymbolicProgram 字段 {field_name} 类型错误: "
-                f"期望 {field_type.__name__}, 实际 {type(artifact[field_name]).__name__}"
+                f"CanonicalSymbolicProgram field {field_name} type error: "
+                f"note {field_type.__name__}, note {type(artifact[field_name]).__name__}"
             )
 
     instantiated_expression = artifact.get("instantiated_expression")
     if instantiated_expression is not None and not isinstance(instantiated_expression, str):
         raise TypeError(
-            "CanonicalSymbolicProgram 字段 instantiated_expression 类型错误: "
-            f"期望 str 或 None, 实际 {type(instantiated_expression).__name__}"
+            "CanonicalSymbolicProgram field instantiated_expression type error: "
+            f"note str note None, note {type(instantiated_expression).__name__}"
         )
 
     if artifact["version"] != CSP_VERSION:
         raise ValueError(
-            f"CanonicalSymbolicProgram 版本不支持: {artifact['version']!r}, "
-            f"当前仅支持 {CSP_VERSION!r}"
+            f"CanonicalSymbolicProgram noteunsupported: {artifact['version']!r}, "
+            f"current note {CSP_VERSION!r}"
         )
 
     if require_complete:
         if not artifact["python_function_source"]:
-            raise ValueError("完整工件要求 python_function_source 非空")
+            raise ValueError("note python_function_source note")
         if not artifact["normalized_expression"]:
-            raise ValueError("完整工件要求 normalized_expression 非空")
+            raise ValueError("note normalized_expression note")
 
     validation_errors = list(artifact.get("validation_errors") or [])
     expected_n_features = artifact.get("expected_n_features")
@@ -264,14 +264,14 @@ def validate_canonical_symbolic_program(
         try:
             expected_n_features = int(expected_n_features)
         except Exception as err:
-            raise TypeError(f"expected_n_features 类型错误: {err}") from err
+            raise TypeError(f"expected_n_features type error: {err}") from err
         if expected_n_features < 0:
-            raise ValueError("expected_n_features 不能小于 0")
+            raise ValueError("expected_n_features cannot be less than 0")
         variable_indices = infer_variable_indices(artifact.get("variables"))
         overflow = [idx for idx in variable_indices if idx >= expected_n_features]
         if overflow:
             validation_errors.append(
-                "变量索引超出输入维度: "
+                "variable index exceeds input dimension: "
                 f"expected_n_features={expected_n_features}, "
                 f"found={artifact.get('variables')}"
             )

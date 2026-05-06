@@ -1,8 +1,8 @@
-# Core50 四探针：上一轮664结果 vs 当前重跑结果排序对比
+# Core-50 Probe-4: Previous GT-Reservoir-664 results vs current rerun ranking comparison
 
-口径：只比较 `udsr / imcts / dso / pyoperon`；上一轮从 664 结果中按 `dataset_rel` 限定到当前 Core50 的 50 个数据集；指标为 dataset×algorithm 的 seed-median OOD log10 NMSE，再跨 50 数据集取平均，越低越好。上一轮无指标 run 按 12 惩罚。
+Protocol: compare only `udsr / imcts / dso / pyoperon`; previous 664-task results are restricted by `dataset_rel` to the current Core-50 tasks; the metric is dataset-by-algorithm seed-median OOD log10 NMSE, averaged over 50 datasets, where lower is better. Previous runs without metrics are penalized as 12.
 
-## 排序
+## Ranking
 
 | scenario | rank | algorithm | mean OOD log NMSE | median OOD log NMSE |
 |---|---:|---|---:|---:|
@@ -15,11 +15,11 @@
 | previous_probe4_664_restricted_core50_3seed | 3 | dso | -1.848 | -0.512 |
 | previous_probe4_664_restricted_core50_3seed | 4 | pyoperon | 0.820 | -0.203 |
 
-## 一致性
+## Consistency
 
-- 上一轮排序：`udsr > imcts > dso > pyoperon`
-- 当前重跑排序：`udsr > imcts > dso > pyoperon`
-- Spearman：`1.000`
-- Kendall tau：`1.000`
-- 算法级 pairwise agreement：`6/6 = 1.000`
-- 数据集级 pairwise agreement：`271/300 = 0.903`
+- noteRanking `udsr > imcts > dso > pyoperon`
+- current noteRanking `udsr > imcts > dso > pyoperon`
+- Spearman `1.000`
+- Kendall tau `1.000`
+- Algorithm-level pairwise agreement `6/6 = 1.000`
+- Dataset-level pairwise agreement `271/300 = 0.903`

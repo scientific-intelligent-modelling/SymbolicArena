@@ -111,18 +111,18 @@ class PySRRegressor(BaseWrapper):
     def _validate_and_normalize_params(cls, raw_params):
         params = {}
         raw_params = dict(raw_params)
-        # 先保存元参数，便于后续复现性映射
+        # note note
         seed = raw_params.get("seed")
         exp_name = raw_params.get("exp_name")
         exp_path = raw_params.get("exp_path")
-        # 剥离系统参数
+        # note
         for key in cls._META_PARAMS:
             raw_params.pop(key, None)
 
-        # 复现性参数透传映射
+        # note
         if "random_state" not in raw_params and seed is not None:
             params["random_state"] = int(seed)
-        # 将框架统一实验目录映射为 PySR 原生输出目录。
+        # note PySR note 
         if "run_id" not in raw_params and isinstance(exp_name, str) and exp_name.strip():
             params["run_id"] = exp_name.strip()
         if "output_directory" not in raw_params and isinstance(exp_path, str) and exp_path.strip():
@@ -134,7 +134,7 @@ class PySRRegressor(BaseWrapper):
         unknown = sorted(set(raw_params) - cls._ALLOWED_PARAMS)
         if unknown:
             raise ValueError(
-                "PySR 参数不受支持: {}。当前允许的参数有: {}。".format(
+                "PySR note: {} current note: {} ".format(
                     ", ".join(unknown),
                     ", ".join(sorted(cls._ALLOWED_PARAMS)),
                 )
@@ -142,14 +142,14 @@ class PySRRegressor(BaseWrapper):
 
         for key, value in raw_params.items():
             if key == "n_jobs":
-                # 与 pysr 主参数兼容：统一使用 procs
+                # note pysr note note procs
                 params.setdefault("procs", int(value))
                 continue
             if key == "seed":
                 continue
             params[key] = value
 
-        # 默认打开进度与基础日志，便于远程实验观测。
+        # default note note 
         params.setdefault("progress", True)
         params.setdefault("verbosity", 1)
 
@@ -157,7 +157,7 @@ class PySRRegressor(BaseWrapper):
 
     @classmethod
     def _apply_fixed_thread_env(cls):
-        """固定 PySR/Julia 相关线程数，避免远程环境并行层叠失控。"""
+        """note PySR/Julia note noteenvironment note """
         for key in cls._THREAD_ENV_VARS:
             os.environ[key] = cls._FIXED_THREAD_COUNT
 
@@ -199,7 +199,7 @@ class PySRRegressor(BaseWrapper):
         if self.model is not None:
             return self.model
         if not self._exp_dir:
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
 
         self._apply_fixed_thread_env()
         from pysr import PySRRegressor as CorePySR
@@ -215,12 +215,12 @@ class PySRRegressor(BaseWrapper):
             target_name=self._contract_target_name,
             context="PySRRegressor.fit",
         )
-        # 必须在导入 pysr/juliacall 前固定线程环境，否则远程多核环境容易过度订阅。
+        # note pysr/juliacall noteenvironment noteenvironment note 
         self._apply_fixed_thread_env()
-        # 仅在需要时导入
+        # note
         from pysr import PySRRegressor as CorePySR
         
-        # 创建并训练模型
+        # note
         self.model = CorePySR(**self.params)
         self.model.fit(X, y)
         self._exp_dir = self._resolve_run_directory_from_model() or self._resolve_run_directory_from_params(self.params)
@@ -257,26 +257,26 @@ class PySRRegressor(BaseWrapper):
         return model.predict(X)
     
     def get_optimal_equation(self):
-        """返回模型拟合的数学方程"""
+        """note"""
         model = self._ensure_model()
         
-        # 返回模型的字符串表示，这就是拟合的方程
+        # note note
         # self.model.best()
         return str(model.sympy())
     
     def get_total_equations(self):
         """
-            获取模型学习到的所有符号方程
+            note
         """
         model = self._ensure_model()
         equations = model.equations_
         if hasattr(equations, "to_dict"):
-            # pandas.DataFrame 常见于 PySR：优先提取可读表达式列并保序
+            # pandas.DataFrame note PySR note
             if hasattr(equations, "columns"):
                 for col in ("sympy_format", "equation", "expr", "expression"):
                     if col in equations.columns:
                         return [str(item) for item in equations[col].dropna().tolist()]
-                # 最后兜底：每行转为字符串字典
+                # note note
                 return [
                     {k: str(v) for k, v in row.items()}
                     for row in equations.to_dict(orient="records")
@@ -295,19 +295,19 @@ class PySRRegressor(BaseWrapper):
 
 
 if __name__ == "__main__":
-    # 测试代码
+    # note
     import numpy as np
-    # 生成示例数据
+    # note
     X = np.random.rand(100, 2)
     y = X[:, 0]**2 + np.sin(X[:, 1]) + 0.1*np.random.randn(100)
 
-    # 创建并训练模型
+    # note
     model = PySRRegressor(niterations=5, population_size=1000)
     model.fit(X, y)
 
-    # 获取最优方程
+    # note
     equation = model.get_optimal_equation()
-    print(f"最优方程: {equation}")
+    print(f"note: {equation}")
 
     equations = model.get_total_equations()
-    print(f"所有方程: {equations}")
+    print(f"note: {equations}")

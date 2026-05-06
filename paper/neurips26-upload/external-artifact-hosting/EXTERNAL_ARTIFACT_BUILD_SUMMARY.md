@@ -22,7 +22,7 @@ Build status:
 - Prepared payload size: approximately 988MB after excluding scheduler-only directories, logs, and minute-level snapshots.
 - Main archive size: approximately 33MB.
 - Plain file manifest size: approximately 22MB.
-- Compressed file manifest size: approximately 457KB.
+- Compressed file manifest size: approximately 460KB.
 
 Anonymization status:
 
@@ -30,6 +30,7 @@ Anonymization status:
 - Removed `.log` files from the staging payload.
 - Removed `minute_*.json` progress snapshots from the staging payload.
 - Replaced local machine paths, private remote paths, internal hostnames, private IPs, API-key pattern, and personal identifiers in text artifacts.
+- Replaced non-English CJK text in copied text artifacts with English descriptions or neutral English placeholders.
 - Renamed internal host path segments to `host_XX`.
 
 Validation status:
@@ -38,10 +39,12 @@ Validation status:
 - Text-content sensitive scan over staging payload: passed.
 - SHA256 checksums generated in `dist/SHA256SUMS.txt`.
 
-Main archive checksum:
+Generated checksums:
 
 ```text
-10f91cfb4ec6f796741cb3fee39ea7c0cfaffcfb7ad7050e77ea57611ac69a34  SymbolicArena_NeurIPS26_ED_external_full_artifact.tar.zst
+499785ff5b96f13e7a85bf10c70916908d19616cced8e924df47a93ce394c613  EXTERNAL_ARTIFACT_FILE_MANIFEST.txt
+9d34c4b8a41ead188d9b2bb333c0d4d9ae2b304686ee9b415319b00dcf590001  EXTERNAL_ARTIFACT_FILE_MANIFEST.txt.zst
+ea54262e184ca88833d74856cba2b4a00272d0e1cb203332aa05be9360fcb3f0  SymbolicArena_NeurIPS26_ED_external_full_artifact.tar.zst
 ```
 
 Recommended external upload set:

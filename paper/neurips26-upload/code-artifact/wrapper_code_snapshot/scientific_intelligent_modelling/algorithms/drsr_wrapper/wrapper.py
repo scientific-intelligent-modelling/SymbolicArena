@@ -20,7 +20,7 @@ from scientific_intelligent_modelling.srkit.spec_builder import build_specificat
 from typing import Tuple
 
 try:
-    # 可选：用于参数拟合（与评估一致的 BFGS）
+    # note note note BFGS 
     from scipy.optimize import minimize
     _SCIPY_OK = True
 except Exception:
@@ -28,12 +28,12 @@ except Exception:
 
 
 def _default_benchmark_llm_config_path() -> str:
-    """返回 drsr / llmsr 共享的 benchmark LLM 配置路径。"""
+    """note drsr / llmsr note benchmark LLM note """
     repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
     return os.path.join(
         repo_root,
         "exp-planning",
-        "02.E1选择验证",
+        "02.e1_selection_validation",
         "llm_configs",
         "benchmark_llm.config",
     )
@@ -42,7 +42,7 @@ def _default_benchmark_llm_config_path() -> str:
 class DRSRRegressor(BaseWrapper):
     _DEFAULT_MAX_PARAMS = 10
     """
-    DRSR 封装对外接口对齐到 llmsr：
+    DRSR note llmsr 
     - llm_config_path
     - background
     - metadata_path
@@ -53,14 +53,14 @@ class DRSRRegressor(BaseWrapper):
     - exp_path
     - exp_name
 
-    内部预算映射：
+    note 
     - max_samples = niterations * samples_per_iteration
     - samples_per_prompt = samples_per_iteration
 
-    兼容说明：
-    - 旧参数 max_samples / samples_per_prompt / workdir 仅作为 fallback 保留；
-      如果显式提供了 niterations / samples_per_iteration / exp_path / exp_name，
-      一律优先使用新接口。
+    note 
+    - note max_samples / samples_per_prompt / workdir note fallback note 
+      note niterations / samples_per_iteration / exp_path / exp_name 
+      noteprefernote 
     """
 
     @staticmethod
@@ -97,13 +97,13 @@ class DRSRRegressor(BaseWrapper):
         self._all_bodies: List[str] = []
         self._equation_entries: List[dict] = []
         self._best_params: Optional[np.ndarray] = None
-        self._n_features: Optional[int] = self.params.pop("n_features", None)  # 记录特征数量
+        self._n_features: Optional[int] = self.params.pop("n_features", None)  # note
         self._feature_names: Optional[List[str]] = self.params.pop("feature_names", None)
         self._target_name: Optional[str] = self.params.pop("target_name", None)
         self._prompt_feature_names: Optional[List[str]] = self.params.pop("prompt_feature_names", None)
         self._prompt_target_name: Optional[str] = self.params.pop("prompt_target_name", None)
 
-        # 变量名匿名化只影响 prompt 命名；真实数据契约仍保存在 feature_names/target_name。
+        # note prompt note note feature_names/target_name 
         self._anonymize: bool = self._as_bool(self.params.pop("anonymize", False), default=False)
         if self._anonymize and not self._prompt_feature_names:
             n = len(self._feature_names) if self._feature_names else (self._n_features or 0)
@@ -112,12 +112,12 @@ class DRSRRegressor(BaseWrapper):
 
     def _resolve_experiment_layout(self) -> Tuple[str, str, str]:
         """
-        统一解析 DRSR 的实验目录布局，优先对齐 llmsr 的 exp_path / exp_name。
+        note DRSR note note llmsr note exp_path / exp_name 
 
-        返回：
-        - experiments_root: 实验根目录
-        - exp_name: 实验名
-        - workdir: drsr 实际写入目录
+        note 
+        - experiments_root: note
+        - exp_name: note
+        - workdir: drsr note
         """
         exp_path = self.params.get("exp_path")
         exp_name = self.params.get("exp_name")
@@ -144,13 +144,13 @@ class DRSRRegressor(BaseWrapper):
 
     def _resolve_search_budget(self) -> Tuple[int, int, int]:
         """
-        统一解析对外预算语义。
+        note 
 
-        主接口：
+        note 
         - niterations
         - samples_per_iteration
 
-        内部派生：
+        note 
         - max_samples = niterations * samples_per_iteration
         - samples_per_prompt = samples_per_iteration
         """
@@ -161,30 +161,30 @@ class DRSRRegressor(BaseWrapper):
             resolved_niterations = int(niterations if niterations is not None else 50)
             resolved_samples_per_iteration = int(samples_per_iteration if samples_per_iteration is not None else 4)
             if resolved_niterations <= 0:
-                raise ValueError("DRSRRegressor: niterations 必须大于 0")
+                raise ValueError("DRSRRegressor: niterations note 0")
             if resolved_samples_per_iteration <= 0:
-                raise ValueError("DRSRRegressor: samples_per_iteration 必须大于 0")
+                raise ValueError("DRSRRegressor: samples_per_iteration note 0")
             max_samples = resolved_niterations * resolved_samples_per_iteration
             return resolved_niterations, resolved_samples_per_iteration, max_samples
 
-        # fallback：兼容旧接口
+        # fallback note
         max_samples = int(self.params.get("max_samples", 2))
         samples_per_prompt = int(self.params.get("samples_per_prompt", 4))
         if samples_per_prompt <= 0:
-            raise ValueError("DRSRRegressor: samples_per_prompt 必须大于 0")
+            raise ValueError("DRSRRegressor: samples_per_prompt note 0")
         resolved_niterations = max(1, max_samples // samples_per_prompt)
         return resolved_niterations, samples_per_prompt, max_samples
 
     def _resolve_prompt_semantics(self, n_features: int) -> Tuple[List[str], List[Optional[str]], Optional[str]]:
         """
-        为 spec 与外层 prompt 统一解析变量命名与物理语义。
+        note spec note prompt note 
 
-        约定：
-        - 外层 prompt 与 spec 一律使用 x0/x1/.../y
-        - 若 metadata 中存在 description，则优先使用 description
-        - 否则退化到 name
+        note 
+        - note prompt note spec note x0/x1/.../y
+        - note metadata note description noteprefer description
+        - note name
         """
-        # 匿名化模式：prompt 使用 x1..xN/y，不加载任何描述；真实数据契约不改名。
+        # note prompt note x1..xN/y note note 
         if self._anonymize:
             prompt_names = self._prompt_feature_names
             if not isinstance(prompt_names, list) or len(prompt_names) != n_features:
@@ -243,7 +243,7 @@ class DRSRRegressor(BaseWrapper):
 
     @staticmethod
     def _resolve_api_key_from_config(api_key_cfg, model_name: str, provider: str):
-        """兼容 llm.config 中 api_key 为字符串或字典两种形式。"""
+        """note llm.config note api_key note """
         if isinstance(api_key_cfg, dict):
             def _get_case_insensitive(d: dict, key: str):
                 for kk, vv in d.items():
@@ -260,7 +260,7 @@ class DRSRRegressor(BaseWrapper):
 
     @staticmethod
     def _normalize_base_url(base_url: Optional[str], host: Optional[str]) -> Optional[str]:
-        """兼容 llm.config 中使用 host 或 base_url 两种字段。"""
+        """note llm.config note host note base_url notefield """
         if isinstance(base_url, str) and base_url.strip():
             return base_url.strip()
         if not isinstance(host, str) or not host.strip():
@@ -272,12 +272,12 @@ class DRSRRegressor(BaseWrapper):
 
     def _resolve_llm_client_config(self) -> dict:
         """
-        统一解析 drsr 的 LLM 配置。
+        note drsr note LLM note 
 
-        优先级：
-        1. 显式传入的 wrapper 参数
-        2. llm_config_path 指向的 JSON 配置
-        3. 环境变量兜底
+        note 
+        1. note wrapper note
+        2. llm_config_path note JSON note
+        3. environment note
         """
         cfg = {}
         llm_config_path = self.params.get("llm_config_path")
@@ -287,7 +287,7 @@ class DRSRRegressor(BaseWrapper):
 
         model_name = self.params.get("api_model") or cfg.get("model")
         if not model_name or not isinstance(model_name, str):
-            raise ValueError("DRSRRegressor: 缺少 LLM 模型配置，请提供 api_model 或 llm_config_path")
+            raise ValueError("DRSRRegressor: note LLM note note api_model note llm_config_path")
 
         provider, _ = parse_provider_model(model_name)
         api_key = self.params.get("api_key")
@@ -342,24 +342,24 @@ class DRSRRegressor(BaseWrapper):
         X = np.asarray(X)
         y = np.asarray(y).reshape(-1)
         
-        # 记录特征数量
+        # note
         self._n_features = X.shape[1] if X.ndim == 2 else 1
 
         _, _, self._workdir = self._resolve_experiment_layout()
         os.makedirs(self._workdir, exist_ok=True)
         try:
-            print(f"[DRSR] 使用工作目录: {os.path.abspath(self._workdir)}")
+            print(f"[DRSR] note: {os.path.abspath(self._workdir)}")
         except Exception:
             pass
 
         niterations, samples_per_iteration, max_samples = self._resolve_search_budget()
 
-        # 导入 drsr_420 模块
+        # note drsr_420 note
         drsr_dir = os.path.join(os.path.dirname(__file__), "drsr")
         sys.path.insert(0, drsr_dir)
         from drsr_420 import pipeline, config as config_lib, sampler, evaluator, evaluate_on_problems, data_analyse_real, prompt_config as prompt_config_lib
 
-        # 优先从已有实验目录复用结果，避免再次调用 LLM/API（用于离线验收和快速恢复）。
+        # note note LLM/API note  
         existing_exp_dir = self._existing_exp_dir
         if isinstance(existing_exp_dir, str):
             existing_exp_dir = existing_exp_dir.strip()
@@ -368,21 +368,21 @@ class DRSRRegressor(BaseWrapper):
             try:
                 bodies, entries = self._read_experiment_outputs(self._workdir)
                 if self._restore_from_experiences(X, y, bodies, entries):
-                    print(f"[DRSR] 离线复用实验: {self._workdir}")
+                    print(f"[DRSR] note: {self._workdir}")
                     self.model_ready = True
                     return self
             except Exception:
-                # 兼容路径不完整/内容不规范时，回退到正常训练流程
+                # note/note note
                 pass
-            print(f"[DRSR] 未找到可恢复的实验结果，回退到全量训练: {self._workdir}")
+            print(f"[DRSR] note note: {self._workdir}")
 
-        # 规范文本：
-        # 优先使用用户提供的背景描述自动生成通用 spec；否则回退到默认/显式 spec_path
+        # note 
+        # prefernote spec note default/note spec_path
         specification = None
         background = self.params.get("background")
         if isinstance(background, str) and background.strip():
             specification = self._build_spec_from_background(X, y, background)
-            # 将生成的 spec 保存到工作目录，便于复现
+            # note spec note note
             try:
                 gen_spec_dir = os.path.join(self._workdir, "specs")
                 os.makedirs(gen_spec_dir, exist_ok=True)
@@ -398,10 +398,10 @@ class DRSRRegressor(BaseWrapper):
             with open(spec_path, "r", encoding="utf-8") as f:
                 specification = f.read()
 
-        # 数据（直接传给 pipeline，避免文件依赖）
+        # note note pipeline note 
         dataset = {"data": {"inputs": X, "outputs": y}}
 
-        # 由 Wrapper 构建并注入单例 LLM 客户端；LocalLLM 仅负责 prompt 组织
+        # note Wrapper note LLM note LocalLLM note prompt note
         try:
             srkit_llm.reset_global_tokens()
             srkit_llm.reset_global_time()
@@ -412,8 +412,8 @@ class DRSRRegressor(BaseWrapper):
         if isinstance(llm_runtime["generation_overrides"], dict):
             client.kwargs.update(llm_runtime["generation_overrides"])
 
-        # 注入到 drsr 的 sampler 和 analyzer。
-        # 兼容不同版本 drsr：若存在旧版本 set_shared_* 接口则使用，不存在则走现代 pipeline llm_client 注入路径。
+        # note drsr note sampler note analyzer 
+        # note drsr note set_shared_* note note pipeline llm_client note 
         for _mod in (sampler, data_analyse_real):
             setter = getattr(_mod, "set_shared_llm_client", None)
             if callable(setter):
@@ -423,7 +423,7 @@ class DRSRRegressor(BaseWrapper):
                     pass
         llm_class = sampler.LocalLLM
 
-        # 经验文件预创建（相对 self._workdir）
+        # note note self._workdir 
         exp_dir = os.path.join(self._workdir, "equation_experiences")
         os.makedirs(exp_dir, exist_ok=True)
         exp_file = os.path.join(exp_dir, "experiences.json")
@@ -431,9 +431,9 @@ class DRSRRegressor(BaseWrapper):
             with open(exp_file, "w", encoding="utf-8") as f:
                 json.dump({"None": [], "Good": [], "Bad": []}, f)
 
-        # 组装配置并运行。
-        # DRSR 现在默认不再使用 wall_time_limit_seconds 截断实验，
-        # 统一按预算（niterations * samples_per_iteration）跑完。
+        # note 
+        # DRSR note default note wall_time_limit_seconds note 
+        # note niterations * samples_per_iteration note 
         cls_cfg = config_lib.ClassConfig(llm_class=llm_class, sandbox_class=evaluator.LocalSandbox)
         cfg = config_lib.Config(
             num_samplers=1,
@@ -457,7 +457,7 @@ class DRSRRegressor(BaseWrapper):
             max_params=self._max_params(),
         )
 
-        # 切换 cwd 到工作目录，确保 drsr 相对路径输出写入其中
+        # note cwd note note drsr note
         cwd_backup = os.getcwd()
         os.chdir(self._workdir)
         try:
@@ -475,7 +475,7 @@ class DRSRRegressor(BaseWrapper):
         finally:
             os.chdir(cwd_backup)
 
-        # 读取经验，选取最佳/首个方程
+        # note note/note
         bodies: List[str] = []
         try:
             bodies, entries = self._read_experiment_outputs(self._workdir)
@@ -495,11 +495,11 @@ class DRSRRegressor(BaseWrapper):
         self._equation_func = self._compile_equation(self._equation_body, self._n_features)
         self._best_params = None
         try:
-            print("[DRSR Wrapper] 采用内置默认方程，正在拟合参数...")
+            print("[DRSR Wrapper] note default note note...")
             self._best_params = self._fit_params(X, y, n_params=self._max_params(), n_starts=3)
-            print("[DRSR Wrapper] 参数拟合完成")
+            print("[DRSR Wrapper] note")
         except Exception as e:
-            print(f"[DRSR Wrapper] 参数拟合失败: {e}")
+            print(f"[DRSR Wrapper] note: {e}")
             self._best_params = np.ones(self._max_params())
         
         self.model_ready = True
@@ -530,7 +530,7 @@ class DRSRRegressor(BaseWrapper):
 
     @staticmethod
     def _extract_equation_body(text: str) -> str:
-        """兼容“仅函数体”和“完整 def equation(...) 定义”两种持久化格式。"""
+        """note note note note def equation(...) note note """
         if not isinstance(text, str):
             return ""
 
@@ -639,7 +639,7 @@ class DRSRRegressor(BaseWrapper):
         return bodies, entries
 
     def _read_experiment_outputs(self, base_dir: str) -> tuple[List[str], List[dict]]:
-        """兼容 DRSR 多种结果落盘路径与 JSON 协议。"""
+        """note DRSR note JSON note """
         groups: List[tuple[List[str], List[dict]]] = []
 
         aggregate_files = [
@@ -701,11 +701,11 @@ class DRSRRegressor(BaseWrapper):
             self._best_params = best_params
         elif _SCIPY_OK:
             try:
-                print("[DRSR Wrapper] 未找到训练期参数，正在重新拟合...")
+                print("[DRSR Wrapper] note note...")
                 self._best_params = self._fit_params(X, y, n_params=self._max_params(), n_starts=3)
-                print(f"[DRSR Wrapper] 参数拟合完成")
+                print(f"[DRSR Wrapper] note")
             except Exception as e:
-                print(f"[DRSR Wrapper] 参数拟合失败: {e}")
+                print(f"[DRSR Wrapper] note: {e}")
                 self._best_params = None
         if not isinstance(self._best_params, np.ndarray):
             self._best_params = np.ones(self._max_params())
@@ -740,23 +740,23 @@ class DRSRRegressor(BaseWrapper):
 
     def predict(self, X):
         if not self.model_ready or self._equation_func is None:
-            raise ValueError("模型尚未训练或方程不可用")
+            raise ValueError("note")
         X = np.asarray(X)
         if X.ndim != 2:
-            raise ValueError("DRSR 预测需要二维输入数组")
+            raise ValueError("DRSR note")
         if not isinstance(self._best_params, np.ndarray):
-            raise RuntimeError("DRSRRegressor: 未找到训练期最优参数（fitted_params）。请检查 experiences.json 是否包含 fitted_params，或训练流程是否按期望运行。")
+            raise RuntimeError("DRSRRegressor: note fitted_params  note experiences.json note fitted_params note ")
         params = self._best_params
-        # 动态传递所有列
+        # note
         return self._equation_func(*X.T, params)
 
     @staticmethod
     def _validate_compiled_equation(equation_func, X: np.ndarray, params: Optional[np.ndarray]) -> bool:
         """
-        校验候选方程在 wrapper 的最终执行语境下能否独立预测。
+        note wrapper note 
 
-        只要编译后的方程在一个很小的样本切片上无法正常执行、返回形状异常、
-        或产生非有限值，就视为坏候选并直接淘汰。
+        note note 
+        note note 
         """
         if not callable(equation_func):
             return False
@@ -780,7 +780,7 @@ class DRSRRegressor(BaseWrapper):
     def get_optimal_equation(self):
         if not self._equation_body:
             return ""
-        # 清理方程体再包装显示
+        # note
         cleaned_body = self._clean_equation_body(self._equation_body)
         return self._wrap_equation(cleaned_body, self._n_features)
 
@@ -806,8 +806,8 @@ class DRSRRegressor(BaseWrapper):
 
     def get_total_equations_with_params(self, n: Optional[int] = None) -> List[dict]:
         """
-        返回包含方程、训练期拟合参数、分数等的列表（按分数降序）。
-        每个元素包含：{'equation': def字符串, 'params': List[float]|None, 'score': float|None, 'category': str, 'sample_order': int|None}
+        note note note note  
+        note {'equation': defnote, 'params': List[float]|None, 'score': float|None, 'category': str, 'sample_order': int|None}
         """
         items = self._equation_entries or []
         if n is not None:
@@ -828,13 +828,13 @@ class DRSRRegressor(BaseWrapper):
         return out
 
     def get_fitted_params(self):
-        """返回最佳方程的训练期拟合参数（列表形式），若不存在则返回 None。"""
+        """note note  note None """
         try:
             if isinstance(self._best_params, np.ndarray):
                 return self._best_params.tolist()
         except Exception:
             pass
-        # 尝试从 entries 的首项获取
+        # note entries note
         if getattr(self, '_equation_entries', None):
             p = self._equation_entries[0].get('params')
             return p
@@ -843,7 +843,7 @@ class DRSRRegressor(BaseWrapper):
     def export_canonical_symbolic_program(self):
         eq_str = self.get_optimal_equation()
         if not eq_str:
-            raise ValueError("DRSR 当前没有可导出的最优方程")
+            raise ValueError("DRSR current note")
         return normalize_drsr_artifact(
             eq_str,
             parameter_values=self.get_fitted_params(),
@@ -855,19 +855,19 @@ class DRSRRegressor(BaseWrapper):
         try:
             eq_str = self.get_optimal_equation()
             if eq_str:
-                lines.append("最佳方程:")
+                lines.append("note:")
                 lines.append(eq_str.rstrip())
         except Exception:
             pass
         try:
             if isinstance(self._best_params, np.ndarray):
                 np.set_printoptions(precision=8, suppress=False)
-                lines.append(f"最佳参数: {np.array2string(self._best_params, precision=8, suppress_small=False)}")
+                lines.append(f"note: {np.array2string(self._best_params, precision=8, suppress_small=False)}")
         except Exception:
             pass
         if self._equation_entries:
             k = min(3, len(self._equation_entries))
-            lines.append(f"Top-{k} 候选（方程+分数简要）:")
+            lines.append(f"Top-{k} note note+note :")
             for i, e in enumerate(self._equation_entries[:k], 1):
                 score = e.get('score')
                 eq = e.get('equation') or ''
@@ -879,10 +879,10 @@ class DRSRRegressor(BaseWrapper):
 
     @staticmethod
     def _wrap_equation(body: str, n_features: Optional[int] = None) -> str:
-        """将方程体包装为完整的函数定义，动态适配特征数量。
+        """note note 
 
-        重要：统一使用 (col0, col1, ..., params) 的签名，以与采样产生的变量名保持一致，
-        避免 body 中引用 col0/col1 而签名却是 (x, v) 导致的 NameError。
+        note note (col0, col1, ..., params) note note 
+        note body note col0/col1 note (x, v) note NameError 
         """
         body = textwrap.dedent(body.rstrip("\n"))
         indented_lines = []
@@ -899,12 +899,12 @@ class DRSRRegressor(BaseWrapper):
     @staticmethod
     def _clean_equation_body(body: str) -> str:
         """
-        清理方程体，只接受“单行 return 公式”。
+        note note note return note  
 
-        约束：
-        - 仅允许一个有效语句；
-        - 该语句必须是单行 `return ...`；
-        - 多行 return、赋值后再 return、示例代码等一律拒绝。
+        note 
+        - note 
+        - note `return ...` 
+        - note return note return note 
         """
         if not isinstance(body, str):
             return ""
@@ -931,7 +931,7 @@ class DRSRRegressor(BaseWrapper):
     @staticmethod
     def _inject_feature_aliases(body: str, n_features: Optional[int] = None) -> str:
         """
-        当已有方程体仍使用旧版变量名（x/v/x0/x1）时，注入别名变量提升兼容性。
+        note x/v/x0/x1 note note 
         """
         if not isinstance(body, str):
             return body
@@ -945,8 +945,8 @@ class DRSRRegressor(BaseWrapper):
                 if match is not None
             }
         )
-        # 匿名化或部分上游 prompt 会生成 x1..xN。若表达式没有 x0，
-        # 按 one-based 约定平移到 col0..colN-1，避免最后一个变量无法回放。
+        # note prompt note x1..xN note x0 
+        # note one-based note col0..colN-1 note 
         one_based_x = bool(x_indices) and 0 not in x_indices and min(x_indices) >= 1 and max(x_indices) <= n
         aliases = []
         alias_map = {}
@@ -965,7 +965,7 @@ class DRSRRegressor(BaseWrapper):
         for old_name, new_name in alias_map.items():
             if old_name in names and old_name not in ("col" + new_name[3:] if new_name.startswith("col") else ""):
                 aliases.append(f"{old_name} = {new_name}")
-        # 去重，保持固定注入顺序
+        # note note
         aliases = list(dict.fromkeys(aliases))
         if not aliases:
             return body
@@ -974,7 +974,7 @@ class DRSRRegressor(BaseWrapper):
         if not lines:
             return '\n'.join(aliases) + body
 
-        # 若开头是 docstring，优先在 docstring 后注入别名，避免污染注释
+        # note docstring note docstring note note
         insert_at = 0
         first_non_empty = 0
         while first_non_empty < len(lines) and lines[first_non_empty].strip() == "":
@@ -997,7 +997,7 @@ class DRSRRegressor(BaseWrapper):
 
     @staticmethod
     def _collect_variable_names(body: str) -> set:
-        """提取方程体中读取的变量名（仅局部变量表达），用于判断别名注入。"""
+        """note note  note """
         if not isinstance(body, str):
             return set()
         try:
@@ -1013,13 +1013,13 @@ class DRSRRegressor(BaseWrapper):
 
     @staticmethod
     def _compile_equation(body: str, n_features: Optional[int] = None):
-        """编译方程，动态适配特征数量"""
-        # 清理方程体，移除测试代码
+        """note note"""
+        # note note
         cleaned_body = DRSRRegressor._clean_equation_body(body)
         body_with_aliases = DRSRRegressor._inject_feature_aliases(cleaned_body, n_features)
         code = DRSRRegressor._wrap_equation(body_with_aliases, n_features)
         ns = {}
-        # 提供 numpy 命名以支持方程体中的 np.sin/np.cos 等写法
+        # note numpy note np.sin/np.cos note
         try:
             import numpy as _np
             ns["np"] = _np
@@ -1030,14 +1030,14 @@ class DRSRRegressor(BaseWrapper):
 
     def _build_spec_from_background(self, X: np.ndarray, y: np.ndarray, background: str) -> str:
         """
-        基于用户的背景知识动态生成通用 spec 文本（无需为每个数据集手写 spec 文件）。
+        note spec note note spec note  
 
-        约定：
-        - evaluate.run 不直接执行，在当前实现中 evaluator 使用统一的 `evaluate_on_problems.evaluate`，
-          但仍需提供以满足解析与流程约束。
-        - equation 接口为 `equation(*cols, params)`，pipeline/评估会以 `equation(*X.T, params)` 调用，
-          从而适配任意特征维度。
-        - 初始骨架为“少量线性项 + 偏置”的可运行实现，供 LLM 在此基础上演化。
+        note 
+        - evaluate.run note notecurrent note evaluator note `evaluate_on_problems.evaluate` 
+          note 
+        - equation note `equation(*cols, params)` pipeline/note `equation(*X.T, params)` note 
+          note 
+        - note note + note note note LLM note 
         """
         try:
             n_features = int(X.shape[1]) if isinstance(X, np.ndarray) and X.ndim == 2 else 2
@@ -1058,8 +1058,8 @@ class DRSRRegressor(BaseWrapper):
 
     def _fit_params(self, X: np.ndarray, y: np.ndarray, n_params: int = 10, n_starts: int = 5) -> np.ndarray:
         """
-        使用与评估相同思想的 BFGS 在训练集上拟合参数，并返回最优参数。
-        动态适配特征数量。
+        note BFGS note note 
+        note 
         """
         eq = self._equation_func
         if not callable(eq):
@@ -1067,11 +1067,11 @@ class DRSRRegressor(BaseWrapper):
 
         def loss_fn(p: np.ndarray) -> float:
             try:
-                # 动态传递所有列
+                # note
                 y_pred = eq(*X.T, p)
                 return float(np.mean((y_pred - y) ** 2))
             except Exception:
-                # 不可导的坏点，返回大损失
+                # note note
                 return 1e6
 
         best_p = None

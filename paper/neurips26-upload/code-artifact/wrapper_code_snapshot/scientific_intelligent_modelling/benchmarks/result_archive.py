@@ -1,4 +1,4 @@
-"""实验结果归档辅助函数。"""
+"""note """
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ def write_result_payload(
     experiment_dir: str | Path | None = None,
     experiment_filename: str = "result.json",
 ) -> list[Path]:
-    """将结果同时写到外层结果路径和实验目录内。
+    """note 
 
-    返回实际写入的唯一文件路径列表。
+    note 
     """
     paths: list[Path] = [Path(primary_path).resolve()]
     if experiment_dir:

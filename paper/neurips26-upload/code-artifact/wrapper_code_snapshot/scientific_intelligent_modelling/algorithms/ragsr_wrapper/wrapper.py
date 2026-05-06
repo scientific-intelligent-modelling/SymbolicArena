@@ -1,8 +1,8 @@
 """RAG-SR wrapper backed by EvolutionaryForestRegressor.
 
-RAG-SR 的公开仓库只是薄封装；真实实现位于 `evolutionary_forest` 包中。
-默认参数尽量贴近官方 `rag_sr.py`，同时在集成层显式声明当前数值型
-benchmark 没有分类特征。
+RAG-SR note note `evolutionary_forest` note 
+default note `rag_sr.py` notecurrent note
+benchmark note 
 """
 
 from __future__ import annotations
@@ -53,9 +53,9 @@ class RAGSRRegressor(BaseWrapper):
         "change_semantic_after_deletion": True,
         "include_subtree_to_lib": True,
         "library_updating_mode": "Recent",
-        # 官方 RAG-SR 默认使用 Target encoding，并在 fit 时传入
-        # categorical_features=np.zeros(X.shape[1])。当前 benchmark 全是数值型
-        # 特征，因此 wrapper 会在 fit 入口自动补齐全 False 的特征类型掩码。
+        # note RAG-SR default note Target encoding note fit note
+        # categorical_features=np.zeros(X.shape[1]) current benchmark note
+        # note note wrapper note fit note False note 
         "categorical_encoding": "Target",
         "root_crossover": True,
         "scaling_before_replacement": False,
@@ -137,7 +137,7 @@ class RAGSRRegressor(BaseWrapper):
         self._experiment_dir = self._resolve_experiment_dir(raw_kwargs)
         self.params, self._fit_kwargs = self._validate_and_normalize_params(raw_kwargs)
         if self._timeout_in_seconds is not None and self.params.get("time_limit") is None:
-            # 给 EvolutionaryForest 一个软超时，让它有机会在外层硬杀前正常返回。
+            # note EvolutionaryForest note note 
             self.params["time_limit"] = max(1.0, self._timeout_in_seconds - 5.0)
         self.model = None
         self._equation = None
@@ -220,7 +220,7 @@ class RAGSRRegressor(BaseWrapper):
         unknown = sorted(set(params) - cls._ALLOWED_PARAMS)
         if unknown:
             raise ValueError(
-                "RAG-SR 参数不受支持: {}。当前允许的参数有: {}".format(
+                "RAG-SR note: {} current note: {}".format(
                     ", ".join(unknown),
                     ", ".join(sorted(cls._ALLOWED_PARAMS)),
                 )
@@ -312,20 +312,20 @@ class RAGSRRegressor(BaseWrapper):
         if self._equation:
             return self._predict_from_equation(X)
         else:
-            raise RuntimeError("RAG-SR 模型尚未训练")
+            raise RuntimeError("RAG-SR note")
 
     def _predict_from_equation(self, X):
-        """反序列化后用最终符号表达式回放预测，避免 pickle 底层 EF 模型。"""
+        """note note pickle note EF note """
         artifact = self.export_canonical_symbolic_program()
         expression = artifact.get("normalized_expression")
         variables = artifact.get("variables") or []
         if not expression:
-            raise RuntimeError("RAG-SR canonical 表达式为空，无法预测")
+            raise RuntimeError("RAG-SR canonical note note")
 
         try:
             import sympy as sp
         except ModuleNotFoundError as exc:
-            raise RuntimeError("RAG-SR 表达式回放需要 sympy") from exc
+            raise RuntimeError("RAG-SR note sympy") from exc
 
         X_arr = np.asarray(X, dtype=float)
         if X_arr.ndim == 1:
@@ -392,12 +392,12 @@ class RAGSRRegressor(BaseWrapper):
 
     def _extract_model_expression(self) -> str:
         if self.model is None:
-            raise RuntimeError("RAG-SR 模型尚未训练")
+            raise RuntimeError("RAG-SR note")
         if hasattr(self.model, "model"):
             value = self.model.model()
             if value is not None:
                 return str(value)
-        raise RuntimeError("RAG-SR 未能导出模型表达式")
+        raise RuntimeError("RAG-SR note")
 
     def get_optimal_equation(self):
         if self._equation is None:
@@ -417,7 +417,7 @@ class RAGSRRegressor(BaseWrapper):
         return deepcopy(self._canonical_artifact)
 
     def serialize(self):
-        """只序列化轻量状态，规避 EvolutionaryForestRegressor 内部闭包不可 pickle。"""
+        """note note EvolutionaryForestRegressor note pickle """
         state = {
             "params": self.params,
             "fit_kwargs": self._fit_kwargs,

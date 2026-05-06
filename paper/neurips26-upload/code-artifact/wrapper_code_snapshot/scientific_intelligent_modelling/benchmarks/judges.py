@@ -1,9 +1,9 @@
-"""Benchmark 级别的符号一致性 Judge。
+"""Benchmark noteConsistency Judge 
 
-当前主要面向 LLM-SRBench 的 symbolic accuracy 场景：
-- 输入 gold equation 与 predicted equation/program。
-- 调用 OpenAI-compatible LLM 做等价性判断。
-- 带 JSON 缓存，避免重复消耗 API。
+current note LLM-SRBench note symbolic accuracy note 
+- note gold equation note predicted equation/program 
+- note OpenAI-compatible LLM note 
+- note JSON note note API 
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def _answer_to_bool(value: Any) -> bool | None:
 
 
 class LLMSymbolicJudge:
-    """带缓存的 LLM 符号一致性评估器。"""
+    """note LLM noteConsistencynote """
 
     def __init__(
         self,
@@ -192,7 +192,7 @@ Return JSON with this schema:
             return cached
 
         if not self.available():
-            raise RuntimeError("LLM judge 当前不可用：缺少 model 或 API key")
+            raise RuntimeError("LLM judge currently unavailable note model note API key")
 
         client = self._get_client()
         prompt = self._build_prompt(
@@ -232,7 +232,7 @@ def llm_srbench_symbolic_accuracy(
     *,
     judge: LLMSymbolicJudge,
 ) -> dict[str, Any]:
-    """对单个样本计算 LLM-SRBench 风格 symbolic accuracy。"""
+    """note LLM-SRBench note symbolic accuracy """
     judged = judge.judge(
         gold_equation=gold_equation,
         predicted_equation=predicted_equation,

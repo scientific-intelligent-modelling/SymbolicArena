@@ -72,28 +72,28 @@ ITEMS = [
     ),
     ArtifactItem(
         "core50_formal_analysis",
-        Path("exp-planning/04.Core50正式全量评测/analysis"),
+        Path("exp-planning/04.Core50\u6b63\u5f0f\u5168\u91cf\u8bc4\u6d4b/analysis"),
         Path("derived_analysis/core50_formal_analysis"),
         True,
         "Derived formal metrics, symbolic fidelity, hexagon scores, and ablation analysis.",
     ),
     ArtifactItem(
         "core50_collection_manifest",
-        Path("exp-planning/04.Core50正式全量评测/generated/core50_12alg_5seed_final_results"),
+        Path("exp-planning/04.Core50\u6b63\u5f0f\u5168\u91cf\u8bc4\u6d4b/generated/core50_12alg_5seed_final_results"),
         Path("derived_analysis/core50_final_result_collection"),
         True,
         "Local collection summary and manifest for clean Core-50 runs.",
     ),
     ArtifactItem(
         "noise_robustness_raw",
-        Path("exp-planning/05.Core50噪声鲁棒性评测/results"),
+        Path("exp-planning/05.Core50\u566a\u58f0\u9c81\u68d2\u6027\u8bc4\u6d4b/results"),
         Path("raw_results/noise_robustness"),
         True,
         "Raw noisy-train clean-test robustness outputs, excluding minute-level snapshots.",
     ),
     ArtifactItem(
         "noise_experiment_docs",
-        Path("exp-planning/05.Core50噪声鲁棒性评测/README.md"),
+        Path("exp-planning/05.Core50\u566a\u58f0\u9c81\u68d2\u6027\u8bc4\u6d4b/README.md"),
         Path("docs/noise_experiment_README.md"),
         True,
         "Noise robustness experiment description.",
@@ -162,9 +162,22 @@ SENSITIVE_SCAN_PATTERNS = [
     re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"),
 ]
 
+CJK_PATTERN = re.compile(r"[\u3400-\u9fff\uf900-\ufaff]+")
+CJK_PUNCT_PATTERN = re.compile(r"[\u3000-\u303f\uff00-\uffef]")
+
 
 def rel(path: Path) -> Path:
     return path if path.is_absolute() else REPO_ROOT / path
+
+
+def public_source_path(item: ArtifactItem) -> str:
+    public_paths = {
+        "core50_formal_analysis": "LOCAL_SOURCE/core50_formal_full_evaluation/analysis",
+        "core50_collection_manifest": "LOCAL_SOURCE/core50_formal_full_evaluation/generated/core50_12alg_5seed_final_results",
+        "noise_robustness_raw": "LOCAL_SOURCE/core50_noise_robustness/results",
+        "noise_experiment_docs": "LOCAL_SOURCE/core50_noise_robustness/README.md",
+    }
+    return public_paths.get(item.artifact_id, item.source.as_posix())
 
 
 def human_size(size: int) -> str:
@@ -212,6 +225,43 @@ def path_for_artifact(path: Path) -> Path:
 def sanitize_text(text: str) -> str:
     replacements = [
         ("scientific-intelligent-modelling", "scientific-intelligent-modelling"),
+        ("\u566a\u58f0\u9c81\u68d2\u6027\u8bc4\u6d4b", "Noise robustness evaluation"),
+        ("\u5b9e\u9a8c\u76ee\u6807", "Experiment objective"),
+        ("\u5728 Core-50 \u4e0a\u8bc4\u4f30 12 \u4e2a\u7b26\u53f7\u56de\u5f52\u7b97\u6cd5\u5bf9\u8bad\u7ec3\u6807\u7b7e\u566a\u58f0\u7684\u9c81\u68d2\u6027\u3002", "Evaluate the robustness of 12 symbolic regression algorithms to noisy training labels on Core-50."),
+        ("\u672c\u5b9e\u9a8c\u53ea\u5bf9\u8bad\u7ec3\u6807\u7b7e\u52a0\u566a\uff0c\u8bc4\u6d4b\u96c6\u4fdd\u6301\u5e72\u51c0", "Only training labels are perturbed; evaluation splits remain clean"),
+        ("\u566a\u58f0\u534f\u8bae", "Noise protocol"),
+        ("\u566a\u58f0\u6c34\u5e73", "Noise levels"),
+        ("\u8bad\u7ec3\u6807\u7b7e", "Training labels"),
+        ("\u5b9e\u73b0\u5165\u53e3\u53c2\u6570", "Runtime parameters"),
+        ("\u4efb\u52a1\u89c4\u6a21", "Task scale"),
+        ("\u4e09\u4e2a\u566a\u58f0\u6c34\u5e73\u603b\u8ba1", "Total across three noise levels"),
+        ("\u76ee\u5f55\u7ea6\u5b9a", "Directory convention"),
+        ("\u5f53\u524d\u8c03\u5ea6\u673a\u5668", "Current scheduling hosts"),
+        ("\u76ee\u5f55\u5e03\u5c40", "Directory layout"),
+        ("LLM \u5e76\u53d1\u7ea6\u675f", "LLM concurrency limits"),
+        ("\u8c03\u5ea6\u7b56\u7565", "Scheduling policy"),
+        ("LLM base/turbo \u5206\u53d1\u89c4\u5219", "LLM base/turbo dispatch rule"),
+        ("\u5206\u53d1\u76ee\u6807", "Dispatch target"),
+        ("\u63a8\u8350\u4f7f\u7528\u8c03\u5ea6\u5668\u53c2\u6570", "Recommended scheduler arguments"),
+        ("\u6ce8\u610f", "Note"),
+        ("\u8fdc\u7aef\u539f\u59cb\u7ed3\u679c", "Remote raw results"),
+        ("\u672c\u5730\u6700\u7ec8\u6c47\u603b\u7ed3\u679c\u7edf\u4e00\u56de\u6536\u5230\u672c\u76ee\u5f55\u7684", "Final local collected results are stored under"),
+        ("\u6c47\u603b\u7ed3\u679c\u65f6\u4e0d\u8981\u628a", "Do not treat"),
+        ("\u5f53\u4f5c\u4e24\u4e2a\u6a21\u578b", "as two separate models during aggregation"),
+        ("\u5982\u679c\u540e\u7eed\u53d1\u73b0\u67d0\u4e2a\u6876\u6709 API \u9650\u6d41", "If one API bucket is rate limited later"),
+        ("\u4e0d\u9700\u8981\u6539\u4efb\u52a1\u5b9a\u4e49", "do not change the task definition"),
+        ("\u53ea\u9700\u8981\u8c03\u4f4e\u5bf9\u5e94", "only reduce the corresponding"),
+        ("\u7b97\u6cd5", "algorithm"),
+        ("\u7684\u5b50\u8fdb\u7a0b\u6267\u884c\u8d85\u65f6", "subprocess timed out"),
+        ("\u4fdd\u6301", "keep"),
+        ("\u5f53\u524d\u7b97\u6cd5\u53e3\u5f84\u56fa\u5b9a\u4e3a", "current algorithm scope is fixed as"),
+        ("\u4e0d\u6807\u79f0", "not reported as"),
+        ("\u53e3\u5f84", "configuration"),
+        ("\u5bf9\u9f50\u5b98\u65b9", "aligned with official"),
+        ("\u9ed8\u8ba4\u503c", "defaults"),
+        ("\u5e76\u5728 benchmark \u4e2d\u542f\u7528\u5206\u949f\u7ea7 best-so-far \u5feb\u7167\u6062\u590d", "and enables minute-level best-so-far snapshot recovery in the benchmark"),
+        ("\u672a\u4f7f\u7528\u5927\u6a21\u578b API\uff1b\u4ec5\u505a\u672c\u5730 metadata/formula/csv \u5ba1\u8ba1\u3002", "No LLM API was used; this is a local metadata/formula/CSV audit only."),
+        ("\u542b protected ops \u7684\u6570\u636e\u96c6\u4e0d\u5efa\u8bae\u53ea\u9760 CAS\uff0c\u540e\u7eed formal judge \u5fc5\u987b\u4ee5 formula.py \u6570\u503c\u8bed\u4e49\u505a numeric equivalence fallback\u3002", "Datasets with protected operators should not rely only on CAS; the formal judge must use formula.py numerical semantics as the numeric-equivalence fallback."),
     ]
     for src, dst in replacements:
         text = text.replace(src, dst)
@@ -224,6 +274,8 @@ def sanitize_text(text: str) -> str:
     text = re.sub(r"10\\.10\\.100\\.\\d+", "ANONYMIZED_PRIVATE_IP", text)
     text = re.sub(r"(?i)(api[_-]?key|authorization|bearer)[^,\\n\\r]*", "ANONYMIZED_API_CREDENTIAL", text)
     text = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "ANONYMIZED_EMAIL", text)
+    text = CJK_PATTERN.sub("non-English text removed", text)
+    text = CJK_PUNCT_PATTERN.sub(" ", text)
     return text
 
 
@@ -251,7 +303,7 @@ def command_inventory() -> None:
                 "artifact_id": item.artifact_id,
                 "required": str(item.required).lower(),
                 "exists": str(source.exists()).lower(),
-                "source_path": str(item.source),
+                "source_path": public_source_path(item),
                 "artifact_path": str(item.target),
                 "file_count_after_exclusions": file_count,
                 "bytes_after_exclusions": bytes_total,
@@ -379,6 +431,8 @@ def scan_text_file(path: Path) -> list[str]:
     except UnicodeDecodeError:
         return []
     hits = []
+    if CJK_PATTERN.search(text) or CJK_PUNCT_PATTERN.search(text):
+        hits.append("non_english_cjk_text")
     for pattern in SENSITIVE_SCAN_PATTERNS:
         if pattern.search(text):
             hits.append(pattern.pattern)

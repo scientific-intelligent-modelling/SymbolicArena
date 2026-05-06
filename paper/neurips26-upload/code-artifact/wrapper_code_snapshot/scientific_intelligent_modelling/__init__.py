@@ -1,10 +1,10 @@
-"""科学智能建模工具箱(SIM)"""
+"""Scientific Intelligent Modelling toolkit(SIM)"""
 
 __version__ = "1.0.0"
 
-# 在__init__.py中修改工具导入
+# note__init__.pynote
 class LazyToolLoader:
-    """延迟加载工具，直到实际使用时才初始化"""
+    """note note"""
     
     def __init__(self, tool_name, cuda_version=None):
         self.tool_name = tool_name
@@ -17,9 +17,9 @@ class LazyToolLoader:
             self._tool = ToolProxy(self.tool_name)
         return getattr(self._tool, name)
 
-# 使用延迟加载
+# note
 sklearn_tool = LazyToolLoader('sklearn_tool')
 torch_tool = LazyToolLoader('torch_1_8_tool')
 
-# 导出工具
+# note
 __all__ = ['sklearn_tool', 'torch_tool']

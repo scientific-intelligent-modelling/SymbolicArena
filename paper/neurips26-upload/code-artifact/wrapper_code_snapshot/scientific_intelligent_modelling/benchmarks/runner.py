@@ -1,4 +1,4 @@
-"""统一 benchmark/result runner。"""
+"""note benchmark/result runner """
 
 from __future__ import annotations
 
@@ -188,7 +188,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     if not isinstance(data, dict):
-        raise ValueError(f"metadata.yaml 格式非法: {path}")
+        raise ValueError(f"metadata.yaml note: {path}")
     return data
 
 
@@ -206,7 +206,7 @@ def _load_split(dataset_dir: Path, filename: str, target_name: str) -> DatasetSp
             rows=0,
         )
     if target_name not in df.columns:
-        raise ValueError(f"{split_path} 中缺少目标列 {target_name}")
+        raise ValueError(f"{split_path} note {target_name}")
     X = df.drop(columns=[target_name]).values
     y = df[target_name].values
     return DatasetSplit(
@@ -264,9 +264,9 @@ def _as_optional_nonnegative_float(value: Any, *, field_name: str) -> float | No
     try:
         number = float(value)
     except Exception as exc:
-        raise ValueError(f"{field_name} 必须是非负有限数值，当前为: {value!r}") from exc
+        raise ValueError(f"{field_name} note current note: {value!r}") from exc
     if math.isnan(number) or math.isinf(number) or number < 0:
-        raise ValueError(f"{field_name} 必须是非负有限数值，当前为: {value!r}")
+        raise ValueError(f"{field_name} note current note: {value!r}")
     return number
 
 
@@ -276,10 +276,10 @@ def _resolve_train_label_noise_config(
     dataset: "LoadedDataset",
     seed: int,
 ) -> dict[str, Any]:
-    """解析训练标签噪声配置，并从算法参数中移除框架级噪声字段。
+    """note notefield 
 
-    噪声只作用于传给 `fit()` 的训练标签；dataset 内部 split 保持 clean，
-    因此后续 train/valid/ID/OOD 指标仍按 clean labels 计算。
+    note `fit()` note dataset note split note clean 
+    note train/valid/ID/OOD note clean labels note 
     """
     enabled_raw = _pop_first_key(params, _TRAIN_LABEL_NOISE_ENABLED_KEYS)
     sigma_raw = _pop_first_key(params, _TRAIN_LABEL_NOISE_SIGMA_KEYS)
@@ -300,7 +300,7 @@ def _resolve_train_label_noise_config(
         try:
             rng_seed = int(seed_raw) % (2**32)
         except Exception as exc:
-            raise ValueError(f"train_label_noise_seed 必须是整数，当前为: {seed_raw!r}") from exc
+            raise ValueError(f"train_label_noise_seed note current note: {seed_raw!r}") from exc
     else:
         dataset_identity = _normalize_dataset_identity_path(dataset.dataset_dir) or dataset.dataset_name
         digest = hashlib.sha256(
@@ -331,27 +331,27 @@ def _train_labels_for_fit(split: DatasetSplit, noise_config: dict[str, Any]) -> 
 def load_canonical_dataset(dataset_dir: str | Path) -> LoadedDataset:
     dataset_path = Path(dataset_dir).resolve()
     if not dataset_path.is_dir():
-        raise FileNotFoundError(f"数据集目录不存在: {dataset_path}")
+        raise FileNotFoundError(f"note: {dataset_path}")
 
     meta_root = _load_yaml(dataset_path / "metadata.yaml")
     dataset_meta = meta_root.get("dataset", meta_root)
     if not isinstance(dataset_meta, dict):
-        raise ValueError(f"metadata.yaml 中 dataset 字段格式非法: {dataset_path}")
+        raise ValueError(f"metadata.yaml note dataset fieldnote: {dataset_path}")
 
     target_meta = dataset_meta.get("target") or {}
     target_name = target_meta.get("name")
     if not isinstance(target_name, str) or not target_name.strip():
         train_path = dataset_path / "train.csv"
         if not train_path.exists():
-            raise ValueError(f"metadata.yaml 缺少 target.name，且不存在 train.csv: {dataset_path}")
+            raise ValueError(f"metadata.yaml note target.name note train.csv: {dataset_path}")
         train_df = pd.read_csv(train_path, nrows=1)
         if train_df.empty:
-            raise ValueError(f"无法从空 train.csv 推断目标列: {train_path}")
+            raise ValueError(f"note train.csv note: {train_path}")
         target_name = str(train_df.columns[-1])
 
     train = _load_split(dataset_path, "train.csv", target_name)
     if train is None:
-        raise FileNotFoundError(f"缺少 train.csv: {dataset_path}")
+        raise FileNotFoundError(f"note train.csv: {dataset_path}")
 
     feature_names = list(pd.read_csv(dataset_path / "train.csv", nrows=1).drop(columns=[target_name]).columns)
     features_meta = dataset_meta.get("features") or []
@@ -413,7 +413,7 @@ def _split_metrics_are_usable(split: DatasetSplit | None, metrics: dict[str, Any
         return True
     if not isinstance(metrics, dict):
         return False
-    # NMSE 是后续 benchmark 排名最依赖的字段；它有限即可视为该 split 可评估。
+    # NMSE note benchmark notefield note split note 
     return _safe_float(metrics.get("nmse")) is not None
 
 
@@ -471,7 +471,7 @@ _GPLEARN_TOKEN_RE = re.compile(
 
 
 class _GPLearnPrefixParser:
-    """轻量解析 gplearn prefix 表达式，避开 Python AST 括号深度限制。"""
+    """note gplearn prefix note note Python AST note """
 
     def __init__(self, text: str):
         self.text = text
@@ -487,17 +487,17 @@ class _GPLearnPrefixParser:
                 break
             match = _GPLEARN_TOKEN_RE.match(text, pos)
             if not match:
-                raise ValueError(f"无法解析 gplearn token: {text[pos:pos + 40]!r}")
+                raise ValueError(f"note gplearn token: {text[pos:pos + 40]!r}")
             tokens.append(match.group(1))
             pos = match.end()
         return tokens
 
     def parse(self) -> Any:
         if not self.tokens:
-            raise ValueError("空 gplearn 表达式")
+            raise ValueError("note gplearn note")
         node = self._parse_expr()
         if self.pos != len(self.tokens):
-            raise ValueError(f"gplearn 表达式存在未消费 token: {self.tokens[self.pos]!r}")
+            raise ValueError(f"gplearn note token: {self.tokens[self.pos]!r}")
         return node
 
     def _peek(self) -> str | None:
@@ -506,9 +506,9 @@ class _GPLearnPrefixParser:
     def _consume(self, expected: str | None = None) -> str:
         token = self._peek()
         if token is None:
-            raise ValueError("gplearn 表达式意外结束")
+            raise ValueError("gplearn note")
         if expected is not None and token != expected:
-            raise ValueError(f"gplearn 表达式期望 {expected!r}，实际 {token!r}")
+            raise ValueError(f"gplearn note {expected!r} note {token!r}")
         self.pos += 1
         return token
 
@@ -532,7 +532,7 @@ class _GPLearnPrefixParser:
         try:
             return ("const", float(token))
         except Exception as exc:
-            raise ValueError(f"不支持的 gplearn 叶子节点: {token!r}") from exc
+            raise ValueError(f"unsupported note gplearn note: {token!r}") from exc
 
 
 def _broadcast_gplearn_value(value: Any, rows: int) -> np.ndarray:
@@ -549,10 +549,10 @@ def _eval_gplearn_prefix_node(node: Any, X_arr: np.ndarray) -> Any:
     if kind == "var":
         idx = int(node[1])
         if idx >= X_arr.shape[1]:
-            raise ValueError(f"表达式变量索引越界: x{idx}, 输入维度={X_arr.shape[1]}")
+            raise ValueError(f"note: x{idx}, note={X_arr.shape[1]}")
         return X_arr[:, idx]
     if kind != "call":
-        raise ValueError(f"不支持的 gplearn 节点类型: {kind!r}")
+        raise ValueError(f"unsupported note gplearn note: {kind!r}")
 
     op = str(node[1]).lower()
     values = [_eval_gplearn_prefix_node(arg, X_arr) for arg in node[2]]
@@ -596,13 +596,13 @@ def _eval_gplearn_prefix_node(node: Any, X_arr: np.ndarray) -> Any:
         if op == "min" and len(values) == 2:
             return np.minimum(values[0], values[1])
 
-    raise ValueError(f"不支持的 gplearn 算子或参数个数: {op}/{len(values)}")
+    raise ValueError(f"unsupported note gplearn note: {op}/{len(values)}")
 
 
 def _predict_gplearn_prefix_expression(raw_equation: str, X: np.ndarray) -> np.ndarray:
     X_arr = np.asarray(X, dtype=float)
     if X_arr.ndim != 2:
-        raise ValueError("gplearn prefix 预测要求二维输入")
+        raise ValueError("gplearn prefix note")
     required_recursion_limit = min(50000, max(10000, str(raw_equation).count("(") + 1000))
     if sys.getrecursionlimit() < required_recursion_limit:
         sys.setrecursionlimit(required_recursion_limit)
@@ -612,9 +612,9 @@ def _predict_gplearn_prefix_expression(raw_equation: str, X: np.ndarray) -> np.n
 
 
 def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) -> np.ndarray:
-    """基于统一工件中的代值表达式做轻量预测。
+    """note 
 
-    这里只服务 runner 的中间最优快照，不依赖具体算法 wrapper 或子进程环境。
+    note runner note note wrapper noteenvironment 
     """
     if str(artifact.get("tool_name") or "").strip().lower() == "gplearn":
         raw_equation = artifact.get("raw_equation")
@@ -631,11 +631,11 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
         or artifact.get("return_expression_source")
     )
     if not isinstance(expr_text, str) or not expr_text.strip():
-        raise ValueError("canonical_artifact 中缺少可执行表达式")
+        raise ValueError("canonical_artifact note")
 
     X_arr = np.asarray(X, dtype=float)
     if X_arr.ndim != 2:
-        raise ValueError("中间快照预测要求二维输入")
+        raise ValueError("note")
 
     expr = sp.sympify(expr_text, locals=_sympy_locals())
     free_symbols = sorted(
@@ -656,10 +656,10 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
     for sym in free_symbols:
         name = str(sym)
         if not name.startswith("x") or not name[1:].isdigit():
-            raise ValueError(f"表达式包含非标准变量: {name}")
+            raise ValueError(f"note: {name}")
         idx = int(name[1:])
         if idx >= X_arr.shape[1]:
-            raise ValueError(f"表达式变量索引越界: {name}, 输入维度={X_arr.shape[1]}")
+            raise ValueError(f"note: {name}, note={X_arr.shape[1]}")
         args.append(X_arr[:, idx])
 
     fn = sp.lambdify(free_symbols, expr, modules="numpy")
@@ -779,11 +779,11 @@ def _with_drsr_candidate_params(
     candidate: dict[str, Any],
     candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """确保 DRSR best candidate 携带可用于 canonical artifact 的参数。
+    """note DRSR best candidate note canonical artifact note 
 
-    历史结果中出现过 best candidate 的公式被写入 `result.json`，但对应 `params`
-    没有随 canonical artifact 带出的问题。这里按 function 精确匹配同目录其它
-    best/sample 文件补齐参数，避免 timeout 恢复时留下未实例化的 c0/c1 常数。
+    note best candidate note `result.json` note `params`
+    note canonical artifact note note function note
+    best/sample note note timeout note c0/c1 note 
     """
     if _candidate_parameter_values(candidate) is not None:
         out = dict(candidate)
@@ -879,7 +879,7 @@ def _extract_dso_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any
                 score_val = float(score)
             except Exception:
                 continue
-            # DSO 的 reward 越大越好，这里统一转成“越小越优”的排序键。
+            # DSO note reward note note note noteRankingnote 
             key_val = -score_val
             if best_key is None or key_val < best_key:
                 best_key = key_val
@@ -1134,10 +1134,10 @@ def _recover_timeout_payload_from_candidate(
     dataset: LoadedDataset,
     experiment_dir: str | Path | None,
 ) -> dict[str, Any] | None:
-    """在训练超时后，直接从实验目录里的已落盘候选恢复可分析结果。
+    """note note 
 
-    对 `pysr` 来说，这里会优先利用 `hall_of_fame.csv/.bak`；
-    对其他已接入周期快照的算法，则复用各自的候选提取逻辑。
+    note `pysr` note note `hall_of_fame.csv/.bak` 
+    note note 
     """
     if not experiment_dir:
         return None
@@ -1212,11 +1212,11 @@ def _recover_timeout_payload_from_progress_snapshots(
     dataset: LoadedDataset,
     experiment_dir: str | Path,
 ) -> dict[str, Any] | None:
-    """从最近的可评估分钟级快照回退恢复超时结果。
+    """note 
 
-    有些工具的 current-best 会在最后一分钟更新为数值不稳定表达式，导致最终
-    `result.json` 有公式但没有有限指标。此时应优先保留最近一个可有限评估的
-    best-so-far 快照，而不是把整条 run 降级成无效输出。
+    note current-best note note
+    `result.json` note note
+    best-so-far note note run note 
     """
     progress_dir = Path(experiment_dir) / _PROGRESS_DIRNAME
     if not progress_dir.is_dir():
@@ -1294,10 +1294,10 @@ def _build_srsd_distractor_summary(
     feature_names: list[str],
     feature_descriptions: list[str | None],
 ) -> str | None:
-    """为含 distractor 的 SRSD 数据集构建变量汇总描述。
+    """note distractor note SRSD note 
 
-    注意：这里不能列出哪个 x_i 对应哪个语义，否则会把 dummy 变量答案直接泄露给 LLM。
-    允许暴露无序语义集合：有哪些物理含义、各出现多少个、dummy 有多少个。
+    note note x_i note note dummy note LLM 
+    note note note dummy note 
     """
     semantic_counts: dict[str, int] = {}
     n_distractors = 0
@@ -1311,7 +1311,7 @@ def _build_srsd_distractor_summary(
         semantic_counts[text] = semantic_counts.get(text, 0) + 1
 
     if n_distractors == 0:
-        return None  # 无 distractor，无需汇总
+        return None  # note distractor note
 
     n_total = len(feature_names)
     role_parts = []
@@ -1342,20 +1342,20 @@ def build_runner_params(
 ) -> dict[str, Any]:
     output_path = Path(output_dir).resolve()
     params = dict(params_override or {})
-    # runner 在外层统一传 seed，避免 params_override 中重复注入导致构造器冲突。
+    # runner note seed note params_override note 
     params.pop("seed", None)
     params.setdefault("exp_path", str(output_path / "experiments"))
     exp_label = task_label or dataset.dataset_name
     params.setdefault("exp_name", f"{exp_label}_{tool_name}_seed{seed}")
-    # 显式注入当前任务的数据契约，避免 wrapper 只能从 X.shape[1] 隐式猜维度。
-    # 这些字段属于框架元参数；具体算法可选择消费或忽略，但不应再缺席。
+    # notecurrent note note wrapper note X.shape[1] note 
+    # notefieldnote note note 
     params.setdefault("n_features", len(dataset.feature_names))
     params.setdefault("feature_names", list(dataset.feature_names))
     params.setdefault("target_name", dataset.target_name)
 
-    # `feature_names` / `target_name` 始终表示真实数据契约；
-    # LLM prompt 中的变量命名另用 `prompt_feature_names` / `prompt_target_name` 显式表达。
-    # 对 llmsr/drsr 可通过 params_override 中的 anonymize 开关切到 x1..xN/y 且隐藏描述。
+    # `feature_names` / `target_name` note 
+    # LLM prompt note `prompt_feature_names` / `prompt_target_name` note 
+    # note llmsr/drsr note params_override note anonymize note x1..xN/y note 
     anonymize = _as_bool(params.pop("anonymize", None), default=False)
     if anonymize:
         params["anonymize"] = True
@@ -1387,13 +1387,13 @@ def build_runner_params(
             params.setdefault("background", background)
             params.setdefault("metadata_path", str(dataset.dataset_dir / "metadata.yaml"))
 
-            # 匿名化模式下不注入变量/目标描述。
+            # note/note 
             if params.get("anonymize"):
                 params.pop("feature_descriptions", None)
                 params.pop("target_description", None)
             elif dataset.feature_descriptions:
-                # SRSD 含 distractor 的数据集：变量描述统一标 "meaning or meaningless"，
-                # 汇总信息追加到 background。
+                # SRSD note distractor note note "meaning or meaningless" 
+                # note background 
                 srsd_summary = _build_srsd_distractor_summary(
                     dataset.feature_names, dataset.feature_descriptions
                 )
@@ -1599,8 +1599,8 @@ def run_benchmark_task(
             id_metrics = _evaluate_split(reg, dataset.id_test)
             ood_metrics = _evaluate_split(reg, dataset.ood_test)
         except Exception as exc:
-            # 训练已结束但最终表达式无法预测，属于算法无可评估输出，
-            # 不应被调度器视为系统错误而阻断整轮实验。
+            # note note 
+            # note 
             no_valid_output_reason = f"evaluation_failed: {exc!r}"
             raise NoValidOutputError(no_valid_output_reason) from exc
     except TimeoutError as exc:
@@ -1632,8 +1632,8 @@ def run_benchmark_task(
                 ood_metrics=ood_metrics,
             )
             if timeout_type == "budget_exhausted_with_output":
-                # 预算耗尽但已恢复出可评估 best-so-far，应按有效完成处理；
-                # 原始超时原因保留在 raw_timeout_error，避免巡检误判为失败。
+                # note best-so-far note 
+                # note raw_timeout_error note 
                 status = "ok"
                 error = None
         else:

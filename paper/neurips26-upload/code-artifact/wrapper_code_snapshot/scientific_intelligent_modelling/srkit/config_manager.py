@@ -1,15 +1,15 @@
-"""配置管理器，负责加载和访问配置"""
+"""note note"""
 
 import os
 import json
 from pathlib import Path
 
 class ConfigManager:
-    """管理工具箱的配置"""
+    """notetoolboxnote"""
     
     def __init__(self, config_dir=None):
         if config_dir is None:
-            # 如果未指定配置目录，使用包内的config目录
+            # note noteconfignote
             self.config_dir = Path(__file__).parent.parent / "config"
         else:
             self.config_dir = Path(config_dir)
@@ -18,18 +18,18 @@ class ConfigManager:
         self._load_configs()
     
     def _load_configs(self):
-        """加载所有配置文件"""
+        """note"""
         for config_file in self.config_dir.glob("*.json"):
             config_name = config_file.stem
             with open(config_file, 'r') as f:
                 self.configs[config_name] = json.load(f)
     
     def get_config(self, config_name):
-        """获取指定配置"""
+        """note"""
         return self.configs.get(config_name, {})
 
     def get_env_name_by_tool(self, tool_name):
-        """获取工具对应的conda环境名称"""
+        """notecondaenvironment note"""
         toolbox_config = self.get_config("toolbox_config")
         tool_mapping = toolbox_config.get("tool_mapping", {})
         
@@ -38,7 +38,7 @@ class ConfigManager:
         return None
     
     def get_env_config(self, env_name):
-        """获取指定conda环境的配置"""
+        """notecondaenvironment note"""
         envs_config = self.get_config("envs_config")
         env_list = envs_config.get("env_list", {})
         
@@ -46,5 +46,5 @@ class ConfigManager:
             return env_list.get(env_name)
         return None
 
-# 创建全局配置管理器实例
+# note
 config_manager = ConfigManager()

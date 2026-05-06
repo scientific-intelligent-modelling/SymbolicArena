@@ -125,7 +125,7 @@ class OperonRegressor(BaseWrapper):
         unknown = sorted(set(raw_params) - cls._ALLOWED_PARAMS)
         if unknown:
             raise ValueError(
-                "PyOperon 参数不受支持: {}。当前允许的参数有: {}。".format(
+                "PyOperon note: {} current note: {} ".format(
                     ", ".join(unknown),
                     ", ".join(sorted(cls._ALLOWED_PARAMS)),
                 )
@@ -159,7 +159,7 @@ class OperonRegressor(BaseWrapper):
                 try:
                     value = int(float(value))
                 except Exception as err:
-                    raise TypeError(f"max_time 类型转换失败: {err}") from err
+                    raise TypeError(f"max_time note: {err}") from err
                 if value <= 0:
                     params.pop("max_time", None)
                 else:
@@ -192,7 +192,7 @@ class OperonRegressor(BaseWrapper):
             if "variable" not in items:
                 items.append("variable")
             return ",".join(items)
-        raise TypeError("allowed_symbols 需为逗号分隔字符串或 list/tuple/set")
+        raise TypeError("allowed_symbols note list/tuple/set")
 
     @classmethod
     def _resolve_progress_state_path(cls, exp_path, exp_name):
@@ -315,7 +315,7 @@ class OperonRegressor(BaseWrapper):
 
     @staticmethod
     def _fit_pyoperon_model(pyoperon_sklearn, model, X, y):
-        """运行 PyOperon fit，并避免其 pareto 统计阶段因 NaN 候选直接崩溃。"""
+        """note PyOperon fit note pareto note NaN note """
         original_mse = getattr(pyoperon_sklearn, "mean_squared_error", None)
         if original_mse is None:
             model.fit(X, y)
@@ -335,7 +335,7 @@ class OperonRegressor(BaseWrapper):
             model.fit(X, y)
         except ValueError as exc:
             if "Input contains NaN" in str(exc):
-                raise NoValidOutputError("PyOperon 候选预测包含 NaN，未产生可有限评估的候选表达式") from exc
+                raise NoValidOutputError("PyOperon note NaN note") from exc
             raise
         finally:
             pyoperon_sklearn.mean_squared_error = original_mse
@@ -349,7 +349,7 @@ class OperonRegressor(BaseWrapper):
         return pred.size == np.asarray(X).shape[0] and bool(np.all(np.isfinite(pred)))
 
     def _select_finite_model_or_raise(self, model, X):
-        """优先保留可有限评估的 pareto 候选，避免 NaN 候选污染最终结果。"""
+        """note pareto note note NaN note """
         if self._finite_prediction_for_model(model, X):
             return
 
@@ -374,27 +374,27 @@ class OperonRegressor(BaseWrapper):
                 if not self._finite_prediction_for_model(model, X):
                     model.model_ = original_model
 
-        raise NoValidOutputError("PyOperon 未产生可有限评估的候选表达式")
+        raise NoValidOutputError("PyOperon note")
 
     def predict(self, X):
         if self.model is None:
             if hasattr(self, "best_model_str") and getattr(self, "best_model_str"):
                 return self._predict_from_expression(X)
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return self.model.predict(X)
 
     def get_optimal_equation(self):
         if self.model is None:
             if hasattr(self, "best_model_str") and getattr(self, "best_model_str"):
                 return self.best_model_str
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return self.best_model_str if hasattr(self, "best_model_str") else str(self.model)
 
     def get_total_equations(self):
         if self.model is None:
             if hasattr(self, "pareto_models") and self.pareto_models is not None:
                 return self.pareto_models
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return self.pareto_models or [self.best_model_str]
 
     @staticmethod
@@ -431,7 +431,7 @@ class OperonRegressor(BaseWrapper):
     def _predict_from_expression(self, X):
         fn = self._build_predict_fn()
         if fn is None:
-            raise ValueError("无法从模型表达式构建预测函数，当前状态不支持直接预测")
+            raise ValueError("note current noteunsupported note")
         X = np.asarray(X)
         cols = [X[:, i] for i in range(X.shape[1])]
         return np.asarray(fn(*cols))
@@ -473,10 +473,10 @@ if __name__ == "__main__":
     model.fit(X, y)
 
     equation = model.get_optimal_equation()
-    print(f"最优方程: {equation}")
+    print(f"note: {equation}")
 
     total_equations = model.get_total_equations()
-    print(f"所有方程: {total_equations}")
+    print(f"note: {total_equations}")
 
 
 __all__ = ["OperonRegressor"]

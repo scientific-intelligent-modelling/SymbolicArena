@@ -1,16 +1,16 @@
 # algorithms/llmsr_wrapper/wrapper.py
 """
-LLMSR 的 SIM 封装：
+LLMSR note SIM note 
 
-- 使用子仓库中的 `llmsr_regressor.LLMSRRegressor` 作为真正的算法实现；
-- 训练时将内存中的 (X, y) 落盘为 CSV，交给 LLMSRRegressor 运行完整流水线；
-- LLMSRRegressor 自身在 `exp_path/exp_name` 下持久化实验（meta.json、samples/top*.json 等）；
-- 本 wrapper 的序列化只记录「元信息 + 实验目录」，反序列化后通过 `existing_exp_dir`
-  恢复 LLMSRRegressor，并利用其 `predict` 中的持久化逻辑完成预测。
+- note `llmsr_regressor.LLMSRRegressor` note 
+- note (X, y) note CSV note LLMSRRegressor note 
+- LLMSRRegressor note `exp_path/exp_name` note meta.json samples/top*.json note  
+- note wrapper note`note + note` note `existing_exp_dir`
+  note LLMSRRegressor note `predict` note 
 
-注意：
-- 这里不再自己解析 samples 日志、也不覆写 LLM 调用逻辑，统一交给子仓库的实现；
-- 你可以通过参数覆盖 problem_name / exp_path / exp_name / llm_config_path 等。
+note 
+- note samples note note LLM note note 
+- note problem_name / exp_path / exp_name / llm_config_path note 
 """
 
 from __future__ import annotations
@@ -31,22 +31,22 @@ from scientific_intelligent_modelling.benchmarks.normalizers import normalize_ll
 
 
 def _llmsr_root_dir() -> str:
-    """返回子仓库 llmsr 的根目录路径。"""
+    """note llmsr note """
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "llmsr")
 
 
 def _default_llm_config_path() -> str:
     """
-    默认的 llm.config 路径。
+    default note llm.config note 
 
-    默认固定为 benchmark 统一配置路径，保证 llmsr / drsr 共享同一份
-    LLM 采样口径。
+    default note benchmark note note llmsr / drsr note
+    LLM note 
     """
     repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
     return os.path.join(
         repo_root,
         "exp-planning",
-        "02.E1选择验证",
+        "02.e1_selection_validation",
         "llm_configs",
         "benchmark_llm.config",
     )
@@ -68,10 +68,10 @@ def _as_bool(value: Any, default: bool = False) -> bool:
 
 def _import_core_regressor():
     """
-    动态导入子仓库中的 LLMSRRegressor。
+    note LLMSRRegressor 
 
-    之所以不在模块顶层导入，是为了避免在环境未就绪时导入失败，同时兼容
-    子进程中的 import 行为。
+    note noteenvironment note note
+    note import note 
     """
     import sys
 
@@ -84,7 +84,7 @@ def _import_core_regressor():
 
 
 def _is_single_line_formula_function(func_source: Any) -> bool:
-    """接受仅包含字符串说明块和单个 return 的 equation 函数。"""
+    """note return note equation note """
     if not isinstance(func_source, str) or not func_source.strip():
         return False
     try:
@@ -118,7 +118,7 @@ def _is_single_line_formula_function(func_source: Any) -> bool:
 
 
 def _infer_n_features_from_function_signature(func_source: Any) -> int | None:
-    """从 equation 函数签名推断输入特征数。"""
+    """note equation note """
     if not isinstance(func_source, str) or not func_source.strip():
         return None
     try:
@@ -136,28 +136,28 @@ def _infer_n_features_from_function_signature(func_source: Any) -> int | None:
 
 class LLMSRRegressor(BaseWrapper):
     """
-    面向 SIM 的 LLMSR 封装器。
+    note SIM note LLMSR note 
 
-    关键设计：
-    - `fit(X, y)`：将数据写成 CSV，构造子仓库的 LLMSRRegressor 并调用其 `fit()`；
-    - `predict(X)`：基于实验目录（exp_dir）恢复 LLMSRRegressor，并调用其 `predict(X)`；
-    - `serialize()/deserialize()`：只序列化参数和实验目录，真正的模型持久化由
-      LLMSRRegressor 在实验目录下完成。
+    note 
+    - `fit(X, y)` note CSV note LLMSRRegressor note `fit()` 
+    - `predict(X)` note exp_dir note LLMSRRegressor note `predict(X)` 
+    - `serialize()/deserialize()` note note
+      LLMSRRegressor note 
 
-    常用可配置参数（通过 SymbolicRegressor(..., **params) 传入）：
-    - problem_name: 实验/问题名（可选，不传则自动给一个默认名）
-    - background:   背景描述，会进入 prompt
-    - llm_config_path: 自定义 llm.config 路径（默认使用子仓库 llm.config）
-    - exp_path:     实验根目录（默认 ./experiments）
-    - exp_name:     实验子目录名（可选，不传则由子仓库根据时间戳生成）
-    - max_params:   最大参数个数（默认 10）
-    - niterations:  迭代次数（默认 2500）
-    - samples_per_iteration: 每次迭代采样数（默认 4）
-    - seed:         随机种子（可选，为空则不强制）
+    note note SymbolicRegressor(..., **params) note  
+    - problem_name: note/note note note default note 
+    - background:   note note prompt
+    - llm_config_path: note llm.config note default note llm.config 
+    - exp_path:     note default ./experiments 
+    - exp_name:     note note note 
+    - max_params:   note default 10 
+    - niterations:  note default 2500 
+    - samples_per_iteration: note default 4 
+    - seed:         note note note 
     """
 
     def __init__(self, **kwargs: Any):
-        # 保留原始参数，便于反序列化和重复使用
+        # note note
         self.params: Dict[str, Any] = dict(kwargs) if kwargs else {}
         self.params.setdefault("timeout_in_seconds", 3600)
         self.params.setdefault("max_params", 10)
@@ -171,10 +171,10 @@ class LLMSRRegressor(BaseWrapper):
         self.params.setdefault("persist_all_samples", False)
         self.params.setdefault("llm_config_path", _default_llm_config_path())
 
-        # 子仓库的核心回归器实例（惰性创建）
+        # note note 
         self._core: Optional[Any] = None
 
-        # 实验相关元信息
+        # note
         self._exp_dir: Optional[str] = self.params.pop("existing_exp_dir", None) or self.params.pop("exp_dir", None)
         self._problem_name: Optional[str] = self.params.get("problem_name")
         self._n_features: Optional[int] = self.params.pop("n_features", None)
@@ -184,16 +184,16 @@ class LLMSRRegressor(BaseWrapper):
         self._prompt_target_name: Optional[str] = self.params.pop("prompt_target_name", None)
 
     # ------------------------------------------------------------------
-    # 序列化 / 反序列化：只记录元信息与实验目录
+    # note / note note
     # ------------------------------------------------------------------
     def serialize(self) -> str:
         """
-        将当前 wrapper 的最小必要状态序列化为 JSON 字符串。
+        notecurrent wrapper note JSON note 
 
-        这里只记录：
-        - params: 初始化时传入的参数字典
-        - exp_dir: 子仓库 LLMSRRegressor 使用的实验目录
-        - problem_name: 问题名称（便于恢复 core）
+        note 
+        - params: note
+        - exp_dir: note LLMSRRegressor note
+        - problem_name: note note core 
         """
         state = {
             "params": self.params,
@@ -210,11 +210,11 @@ class LLMSRRegressor(BaseWrapper):
     @classmethod
     def deserialize(cls, payload: str) -> "LLMSRRegressor":
         """
-        从 JSON 字符串恢复 wrapper。
+        note JSON note wrapper 
 
-        注意：并不会立刻重新跑实验，只会恢复元信息。
-        真正需要预测时，会基于 exp_dir 创建 core，并利用 existing_exp_dir
-        进入「只预测模式」。
+        note note note 
+        note note exp_dir note core note existing_exp_dir
+        note`note` 
         """
         obj = json.loads(payload)
         inst = cls(**obj.get("params", {}))
@@ -228,14 +228,14 @@ class LLMSRRegressor(BaseWrapper):
         return inst
 
     # ------------------------------------------------------------------
-    # 训练接口
+    # note
     # ------------------------------------------------------------------
     def _resolve_prompt_columns(self, n_features: int) -> tuple[list[str], str]:
-        """解析传给 LLMSR 子仓库的 CSV 列名。
+        """note LLMSR note CSV note 
 
-        `feature_names` / `target_name` 是真实数据契约；这里统一只使用
-        `prompt_feature_names` / `prompt_target_name`，避免 LLMSR 和 DRSR
-        在 prompt 变量命名上走不同隐式路径。
+        `feature_names` / `target_name` note note
+        `prompt_feature_names` / `prompt_target_name` note LLMSR note DRSR
+        note prompt note 
         """
         prompt_feature_names = self._prompt_feature_names
         if not isinstance(prompt_feature_names, list) or len(prompt_feature_names) != n_features:
@@ -246,7 +246,7 @@ class LLMSRRegressor(BaseWrapper):
         return list(prompt_feature_names), prompt_target_name.strip()
 
     def _can_reuse_existing_experiment(self) -> bool:
-        """判断是否可以直接复用已有实验目录而跳过在线训练。"""
+        """note """
         if not self._exp_dir:
             return False
         exp_dir = os.path.abspath(self._exp_dir)
@@ -258,12 +258,12 @@ class LLMSRRegressor(BaseWrapper):
 
     def fit(self, X, y):
         """
-        训练 LLMSR 模型。
+        note LLMSR note 
 
-        步骤：
-        1. 将 (X, y) 写入临时 CSV；
-        2. 构造子仓库 LLMSRRegressor 并调用其 fit()；
-        3. 记录实验目录 exp_dir，后续通过 serialize()/deserialize() 持久化。
+        note 
+        1. note (X, y) note CSV 
+        2. note LLMSRRegressor note fit() 
+        3. note exp_dir note serialize()/deserialize() note 
         """
         self._validate_explicit_dataset_contract(
             X,
@@ -277,22 +277,22 @@ class LLMSRRegressor(BaseWrapper):
         if X_arr.ndim == 1:
             X_arr = X_arr.reshape(-1, 1)
         if X_arr.shape[0] != y_arr.shape[0]:
-            raise ValueError(f"X 与 y 的样本数量不一致: X.shape={X_arr.shape}, y.shape={y_arr.shape}")
+            raise ValueError(f"X note y note: X.shape={X_arr.shape}, y.shape={y_arr.shape}")
 
-        # 若显式传入了 existing_exp_dir，则优先离线复用已有实验目录。
+        # note existing_exp_dir note 
         if self._can_reuse_existing_experiment():
             self._exp_dir = os.path.abspath(self._exp_dir)
             self._n_features = int(X_arr.shape[1])
             self._core = None
             return self
 
-        # 推导 problem_name（允许用户通过参数显式指定）
+        # note problem_name note 
         problem_name = (self._problem_name or "").strip()
         if not problem_name:
             problem_name = "llmsr_problem"
         self._problem_name = problem_name
 
-        # 1) 将数据写入临时 CSV（只在本次训练中使用）
+        # 1) note CSV note 
         tmp_dir = tempfile.mkdtemp(prefix="llmsr_data_")
         try:
             n_features = X_arr.shape[1]
@@ -304,7 +304,7 @@ class LLMSRRegressor(BaseWrapper):
             csv_path = os.path.join(tmp_dir, f"{problem_name}.csv")
             df.to_csv(csv_path, index=False)
 
-            # 2) 构造子仓库 LLMSRRegressor
+            # 2) note LLMSRRegressor
             Core = _import_core_regressor()
 
             llm_config_path = self.params.get("llm_config_path") or _default_llm_config_path()
@@ -318,7 +318,7 @@ class LLMSRRegressor(BaseWrapper):
 
             wandb_cfg = None
             if self.params.get("use_wandb"):
-                # 从上游参数中获取数据集路径与名称（若有）
+                # note note 
                 dataset_path = self.params.get("train_path")
                 dataset_name = self.params.get("dataset_name")
                 prompts_type = self.params.get("prompts_type")
@@ -329,7 +329,7 @@ class LLMSRRegressor(BaseWrapper):
                     "group": self.params.get("wandb_group"),
                     "tags": self.params.get("wandb_tags"),
                 }
-                # 可选：记录当前使用的 prompts 类型/版本，便于在 WandB 中区分不同提示词设置
+                # note notecurrent note prompts note/note note WandB note
                 if prompts_type is not None:
                     wandb_cfg["prompts_type"] = prompts_type
                 if dataset_path is not None:
@@ -353,21 +353,21 @@ class LLMSRRegressor(BaseWrapper):
                 metadata_path=self.params.get("metadata_path"),
                 feature_descriptions=self.params.get("feature_descriptions"),
                 target_description=self.params.get("target_description"),
-                # wrapper 已经显式写好 prompt CSV 列名，不再依赖子仓库二次匿名化。
+                # wrapper note prompt CSV note note 
                 anonymize=False,
                 wandb_config=wandb_cfg,
             )
             core.fit()
 
-            # 记录实验目录，后续序列化时只需要带上这个路径即可
+            # note note
             self._core = core
             self._exp_dir = getattr(core, "exp_dir_", None)
             if not self._exp_dir:
-                # 理论上 core.fit() 会设置 exp_dir_，这里再做一次兜底
+                # note core.fit() note exp_dir_ note
                 self._exp_dir = os.path.join(exp_path, exp_name or problem_name)
 
         finally:
-            # 临时数据只作为 fit 的输入，实验本身由 core 在 exp_path 下持久化
+            # note fit note note core note exp_path note
             import shutil
 
             try:
@@ -378,28 +378,28 @@ class LLMSRRegressor(BaseWrapper):
         return self
 
     # ------------------------------------------------------------------
-    # 预测与方程获取
+    # note
     # ------------------------------------------------------------------
     def _ensure_core(self) -> Any:
         """
-        确保 self._core 可用。
+        note self._core note 
 
-        - 若已在当前进程中训练过，则直接复用；
-        - 若是从序列化状态恢复，则基于 exp_dir 构造一个
-          `existing_exp_dir` 模式的 LLMSRRegressor，仅用于预测和读取结果。
+        - notecurrent note note 
+        - note note exp_dir note
+          `existing_exp_dir` note LLMSRRegressor note 
         """
         if self._core is not None:
             return self._core
 
         if not self._exp_dir:
-            raise RuntimeError("LLMSRRegressor: 缺少实验目录 exp_dir，无法恢复模型状态")
+            raise RuntimeError("LLMSRRegressor: note exp_dir note")
 
         Core = _import_core_regressor()
 
         llm_config_path = self.params.get("llm_config_path") or _default_llm_config_path()
         problem_name = (self._problem_name or self.params.get("problem_name") or "llmsr_problem").strip()
 
-        # 这里 data_csv 对预测模式并不重要，LLMSRRegressor 会从 meta.json 中恢复
+        # note data_csv note LLMSRRegressor note meta.json note
         core = Core(
             problem_name=problem_name,
             data_csv="",
@@ -418,8 +418,8 @@ class LLMSRRegressor(BaseWrapper):
             target_description=self.params.get("target_description"),
             existing_exp_dir=self._exp_dir,
         )
-        # existing_exp_dir 模式下，LLMSRRegressor 会跳过部分元信息恢复判断，
-        # 为保证 predict/方程恢复稳定，这里显式补齐关键元信息。
+        # existing_exp_dir note LLMSRRegressor note 
+        # note predict/note note 
         try:
             if os.path.isfile(os.path.join(self._exp_dir, "meta.json")):
                 with open(os.path.join(self._exp_dir, "meta.json"), "r", encoding="utf-8") as f:
@@ -430,24 +430,24 @@ class LLMSRRegressor(BaseWrapper):
                     core.target_name_ = meta.get("target_name")
         except Exception:
             pass
-        # 避免既有现成实验被当作已拟合模型直接跳过元信息/方程恢复路径
+        # note/note
         core.is_fitted_ = False
         self._core = core
         return core
 
     def predict(self, X):
-        """使用 LLMSR 已搜索到的最佳方程进行预测。"""
+        """note LLMSR note """
         core = self._ensure_core()
         X_arr = np.asarray(X)
         return core.predict(X_arr)
 
-    # ------------------ 方程读取：从 samples/top*.json 中解析 ------------------
+    # ------------------ note note samples/top*.json note ------------------
     def _load_best_sample(self) -> Optional[Dict[str, Any]]:
         """
-        从实验目录的 samples 子目录中读取最优样本（参照子仓库 LLMSRRegressor 的逻辑）。
+        note samples note note LLMSRRegressor note  
 
-        返回:
-            包含 'function'、'params'、'nmse'/'mse' 等字段的字典；若失败则返回 None。
+        note:
+            note 'function' 'params' 'nmse'/'mse' notefieldnote note None 
         """
         if not self._exp_dir:
             return None
@@ -498,7 +498,7 @@ class LLMSRRegressor(BaseWrapper):
 
     def get_optimal_equation(self):
         """
-        返回最优方程的函数字符串（即 top 样本中的 'function' 字段）。
+        note note top note 'function' field  
         """
         best = self._load_best_sample()
         if not best:
@@ -508,7 +508,7 @@ class LLMSRRegressor(BaseWrapper):
 
     def get_total_equations(self, n: Optional[int] = None):
         """
-        返回所有候选 top*.json 中的函数字符串列表（按误差从小到大排序）。
+        note top*.json note noteRanking  
         """
         if not self._exp_dir:
             return []
@@ -542,7 +542,7 @@ class LLMSRRegressor(BaseWrapper):
             d["_sort_key"] = key_val
             items.append(d)
 
-        # 按误差从小到大排序
+        # noteRanking
         items.sort(key=lambda d: d.get("_sort_key", float("inf")))
 
         if n is not None:
@@ -562,10 +562,10 @@ class LLMSRRegressor(BaseWrapper):
     def export_canonical_symbolic_program(self):
         best = self._load_best_sample()
         if not best:
-            raise ValueError("未找到可用的 LLMSR 候选样本")
+            raise ValueError("note LLMSR note")
         func = best.get("function") or ""
         if not _is_single_line_formula_function(func):
-            raise ValueError("LLMSR 当前最优候选不是单行公式函数")
+            raise ValueError("LLMSR current note")
         params = best.get("params")
         if not isinstance(params, list):
             params = None

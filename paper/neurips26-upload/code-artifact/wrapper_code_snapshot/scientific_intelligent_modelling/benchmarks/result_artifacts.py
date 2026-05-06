@@ -1,4 +1,4 @@
-"""结果归档阶段使用的统一符号工件辅助函数。"""
+"""note """
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def _format_error(exc: Exception) -> str:
 
 
 def safe_export_canonical_artifact(regressor: Any) -> tuple[dict[str, Any] | None, str | None]:
-    """从统一回归器安全导出 canonical artifact。"""
+    """note canonical artifact """
     try:
         artifact = regressor.export_canonical_symbolic_program()
         artifact = validate_canonical_symbolic_program(artifact)
@@ -42,13 +42,13 @@ def safe_build_canonical_artifact(
     expected_n_features: int | None = None,
     parameter_values: list[float] | None = None,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    """从已落盘公式文本反向构造 canonical artifact。
+    """note canonical artifact 
 
-    主要用于 timeout 恢复等场景，此时没有可直接调用的 regressor 实例。
+    note timeout note note regressor note 
     """
     text = "" if equation is None else str(equation).strip()
     if not text:
-        return None, "ValueError: 空公式，无法构造 canonical_artifact"
+        return None, "ValueError: empty expression cannot construct canonical_artifact"
 
     tool = str(tool_name).strip().lower()
     try:
@@ -85,7 +85,7 @@ def safe_build_canonical_artifact(
         elif tool in {"imcts", "imcts_wrapper"}:
             artifact = normalize_imcts_artifact(text, expected_n_features=expected_n_features)
         else:
-            raise ValueError(f"暂不支持的工具名: {tool_name!r}")
+            raise ValueError(f"noteunsupported note: {tool_name!r}")
         artifact = validate_canonical_symbolic_program(artifact)
         return artifact, None
     except Exception as exc:

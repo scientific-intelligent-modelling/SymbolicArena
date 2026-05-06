@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""绘制 Core-50 formal 六轴图表。
+"""note Core-50 formal note 
 
-这一版继承 `hexagon_v1_with_artifacts_20260504` 的 clean/noise 统计，
-并用 `symf_formal_metrics_20260504` 替换旧的 SYM-F proxy。
+note `hexagon_v1_with_artifacts_20260504` note clean/noise note 
+note `symf_formal_metrics_20260504` note SYM-F proxy 
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import pandas as pd
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CORE50_ROOT = REPO_ROOT / "exp-planning/04.Core50正式全量评测"
+CORE50_ROOT = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation"
 DEFAULT_V1_DIR = CORE50_ROOT / "analysis/hexagon_v1_with_artifacts_20260504"
 DEFAULT_SYMF_DIR = CORE50_ROOT / "analysis/symf_formal_metrics_20260504"
 DEFAULT_OUTDIR = CORE50_ROOT / "analysis/hexagon_v2_formal_20260505"

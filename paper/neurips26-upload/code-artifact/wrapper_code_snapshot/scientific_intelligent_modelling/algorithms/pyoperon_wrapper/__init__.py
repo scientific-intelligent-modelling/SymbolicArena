@@ -1,4 +1,4 @@
-# 符号回归算法包装器（PyOperon 别名）
+# symbolic regressionnote PyOperon note 
 from .wrapper import OperonRegressor
 
 __all__ = ["OperonRegressor"]

@@ -1,4 +1,4 @@
-"""DRSR 算法封装包入口"""
+"""DRSR note"""
 
 __all__ = [
     "wrapper",

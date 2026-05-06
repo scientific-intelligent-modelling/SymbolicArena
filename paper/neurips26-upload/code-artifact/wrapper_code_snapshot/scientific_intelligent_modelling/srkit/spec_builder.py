@@ -5,7 +5,7 @@ from typing import List, Literal, Optional
 
 
 def sanitize_name(name: str) -> str:
-    """将任意字符串清洗为稳定的 Python 变量名。"""
+    """note Python note """
     s = str(name).strip().lower()
     s = re.sub(r"[^a-z0-9_]", "_", s)
     s = re.sub(r"_+", "_", s).strip("_")
@@ -17,7 +17,7 @@ def sanitize_name(name: str) -> str:
 
 
 def dedup_names(names: List[str]) -> List[str]:
-    """对清洗后的变量名去重，冲突时追加序号。"""
+    """note note """
     seen = {}
     result = []
     for n in names:
@@ -110,18 +110,18 @@ def build_specification(
     target_description: Optional[str] = None,
 ) -> str:
     """
-    统一构建 llmsr/drsr 的 spec 文本。
+    note llmsr/drsr note spec note 
 
-    设计原则：
-    - 文本语义、变量命名、参数槽、线性 seed 对齐；
-    - evaluate() 的底层执行策略允许按算法保留差异。
+    note 
+    - note note note note seed note 
+    - evaluate() note 
     """
     if not features:
-        raise ValueError("features 不能为空")
+        raise ValueError("features cannot be empty")
 
     cleaned_features = dedup_names([sanitize_name(n) for n in features])
-    # 线性 seed 至少需要：常数项 params[0] + 每个特征一个系数。
-    # 如果调用方把 max_params 设得更小，会导致模板里引用了不存在的 params[k]。
+    # note seed note note params[0] + note 
+    # note max_params note note params[k] 
     effective_max_params = max(int(max_params), len(cleaned_features) + 1)
     target_clean = sanitize_name(target)
     background_text = background.strip() if background else ""
@@ -154,7 +154,7 @@ from scipy.optimize import minimize
 # Initialize parameters
 MAX_NPARAMS = {effective_max_params}
 params = [1.0]*MAX_NPARAMS
-# 全局变量用于在沙箱中读取 BFGS 结果参数
+# note BFGS note
 BFGS_PARAMS = None
 
 @evaluate.run
@@ -201,7 +201,7 @@ def evaluate(data: dict) -> float:
         return None
 '''
     else:
-        raise ValueError(f"不支持的 evaluate_style: {evaluate_style}")
+        raise ValueError(f"unsupported note evaluate_style: {evaluate_style}")
 
     equation_block = _build_equation_block(
         feature_sig=feature_sig,

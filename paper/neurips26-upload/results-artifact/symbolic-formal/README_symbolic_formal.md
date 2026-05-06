@@ -8,15 +8,15 @@
 - Prediction parse rate: `0.9947`
 - Exact equivalence rate: `0.1220`
 
-## 评分口径
+## Scoring Protocol
 
-- `equiv_final = cas_equiv or numeric_equiv`。
-- `numeric_equiv` 阈值：`NMSE <= 1e-10` 或 `max_rel <= 1e-08` 或 `max_abs <= 1e-10`。
-- `numeric_equiv_reason` 记录每条数值等价通过或跳过的具体原因，便于审计。
-- 等价公式 `sym_f_formal = 1.0`。
-- 非等价但可解析公式 `sym_f_formal = 0.3 * tree_similarity + 0.2 * ((var_f1 + op_f1) / 2)`。
-- invalid / metric incomplete / unparsable run 记 `0`。
-- `llmsr/drsr` 优先使用 `result.json` 中的 `instantiated_expression`，避免用 `c0/c1` skeleton 做数值等价。
+- `equiv_final = cas_equiv or numeric_equiv` 
+- `numeric_equiv` Threshold `NMSE <= 1e-10` note `max_rel <= 1e-08` note `max_abs <= 1e-10` 
+- `numeric_equiv_reason` records the concrete reason why each numeric-equivalence check passed or was skipped for auditing 
+- Equivalent formulas `sym_f_formal = 1.0` 
+- Non-equivalent but parseable formulas `sym_f_formal = 0.3 * tree_similarity + 0.2 * ((var_f1 + op_f1) / 2)` 
+- invalid / metric-incomplete / unparsable runs are scored as `0` 
+- `llmsr/drsr` prefer `result.json` note `instantiated_expression` avoid using `c0/c1` skeleton for numeric equivalence 
 
 ## Algorithm Summary
 

@@ -1,32 +1,32 @@
 {
   "tool": "pysr",
-  "description": "pysr 工具的 wrapper 参数治理与超参数定义（v0.1）",
+  "description": "pysr note wrapper note v0.1 ",
   "system_params": {
     "problem_name": {
       "type": "string",
       "action": "strip",
-      "description": "实验元参数，不参与算法训练"
+      "description": "experiment meta-parameter not used for algorithm training"
     },
     "seed": {
       "type": "int",
       "action": "map",
       "target": "random_state",
-      "description": "实验元参数；若未显式传入 random_state，则映射到 random_state"
+      "description": "experiment meta-parameter note random_state note random_state"
     },
     "exp_name": {
       "type": "string",
       "action": "strip",
-      "description": "实验元参数，不参与算法训练"
+      "description": "experiment meta-parameter not used for algorithm training"
     },
     "exp_path": {
       "type": "string",
       "action": "strip",
-      "description": "实验元参数，不参与算法训练"
+      "description": "experiment meta-parameter not used for algorithm training"
     },
     "timeout_in_seconds": {
       "type": "int",
       "action": "passthrough",
-      "description": "PySR 原生总时长上限（秒）；到达即停止搜索"
+      "description": "PySR note note  note"
     }
   },
   "allowed_params": {
@@ -88,7 +88,7 @@
       "range": "(0, +inf)",
       "required": false,
       "default": null,
-      "note": "兼容映射为 procs"
+      "note": "note procs"
     },
     "parsimony": {
       "type": "float",
@@ -186,13 +186,13 @@
   },
   "constraints": {
     "resource_alias": {
-      "rule": "若 n_jobs 与 procs 同时出现，优先使用 procs"
+      "rule": "note n_jobs note procs note prefer procs"
     }
   },
   "compatibility": {
     "notes": [
-      "pysr 依赖外部运行时与版本兼容，建议固定在 sim_base 环境并配套版本记录",
-      "wrapper 需要在参数层剥离元参数，并做参数校验与回退"
+      "pysr note note sim_base environment note",
+      "wrapper note note"
     ]
   }
 }

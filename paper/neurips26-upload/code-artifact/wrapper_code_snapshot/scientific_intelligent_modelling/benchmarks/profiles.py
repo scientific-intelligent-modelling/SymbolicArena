@@ -1,7 +1,7 @@
-"""统一 benchmark profile。
+"""note benchmark profile 
 
-这些 profile 尽量忠实保留原始 benchmark 的“原生指标”，
-同时映射到当前仓库可消费的字段命名。
+note profile note benchmark note note  
+notecurrent notefieldnote 
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ BENCHMARK_PROFILES = {
                         "name": "r2_test",
                         "direction": "maximize",
                         "toolkit_field": "r2",
-                        "note": "原论文黑盒回归主准确率指标",
+                        "note": "note",
                     },
                     {
                         "name": "model_size_raw",
@@ -32,13 +32,13 @@ BENCHMARK_PROFILES = {
                         "name": "model_size_simplified",
                         "direction": "minimize",
                         "toolkit_field": "complexity_simplified",
-                        "note": "对表达式做 sympy simplify 后再计数",
+                        "note": "note sympy simplify note",
                     },
                     {
                         "name": "training_time_seconds",
                         "direction": "minimize",
                         "toolkit_field": "train_time_seconds",
-                        "note": "论文结果图包含训练时长",
+                        "note": "note",
                     },
                 ],
             },
@@ -55,7 +55,7 @@ BENCHMARK_PROFILES = {
                         "name": "solution_rate",
                         "direction": "maximize",
                         "toolkit_field": "solution_rate",
-                        "note": "symbolic_solution 的比例统计",
+                        "note": "symbolic_solution note",
                     },
                 ],
             },
@@ -74,20 +74,20 @@ BENCHMARK_PROFILES = {
                         "name": "legacy_accuracy_proxy",
                         "direction": "maximize",
                         "toolkit_field": "legacy_accuracy_proxy",
-                        "note": "用于兼容旧式 error / binary 视角；SRSD 真正强调的是 NED",
+                        "note": "note error / binary note SRSD note NED",
                     },
                     {
                         "name": "solution_rate",
                         "direction": "maximize",
                         "toolkit_field": "solution_rate",
-                        "note": "沿用 SRBench 的 binary symbolic solution",
+                        "note": "note SRBench note binary symbolic solution",
                     },
                     {
                         "name": "normalized_edit_distance",
                         "short_name": "ned",
                         "direction": "minimize",
                         "toolkit_field": "ned",
-                        "note": "对简化后的 equation tree 做 edit distance，并按真值树大小归一化",
+                        "note": "note equation tree note edit distance note",
                     },
                 ],
             },
@@ -107,7 +107,7 @@ BENCHMARK_PROFILES = {
                         "short_name": "sa",
                         "direction": "maximize",
                         "toolkit_field": "symbolic_accuracy",
-                        "note": "论文主表核心指标",
+                        "note": "note",
                     },
                     {
                         "name": "acc_0_1_id",
@@ -131,7 +131,7 @@ BENCHMARK_PROFILES = {
                         "name": "nmse_ood",
                         "direction": "minimize",
                         "toolkit_field": "ood_test.nmse",
-                        "note": "OOD split NMSE; 论文特别强调其重要性",
+                        "note": "OOD split NMSE; note",
                     },
                 ],
             },

@@ -1,6 +1,6 @@
 # Core-50 baseline subset membership
 
-说明：`random-50 avg` 和 `family-stratified random-50 avg` 是 80 次随机抽样的平均，不对应唯一固定 50 数据集名单。
+note `random-50 avg` note `family-stratified random-50 avg` note 80 note note 50 note 
 
 ## Core-50
 01. `Keijzer-11` | `keijzer` | `keijzer` | `sim-datasets-data/keijzer/Keijzer-11`

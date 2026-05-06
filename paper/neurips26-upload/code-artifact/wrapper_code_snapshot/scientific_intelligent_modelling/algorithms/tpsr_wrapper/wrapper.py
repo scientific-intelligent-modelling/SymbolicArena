@@ -23,7 +23,7 @@ class TPSRRegressor(BaseWrapper):
     _PROGRESS_STATE_FILENAME = ".tpsr_current_best.json"
 
     def __init__(self, **kwargs):
-        # 延迟导入，避免环境问题
+        # note noteenvironment note
         self.params = kwargs
         self._contract_n_features = self.params.get("n_features")
         self._contract_feature_names = self.params.get("feature_names")
@@ -39,10 +39,10 @@ class TPSRRegressor(BaseWrapper):
         self._exp_name = self.params.get("exp_name")
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
 
-        # 设置默认参数
+        # note default note
         self.params.setdefault("backbone_model", "e2e")
-        # 与 vendored 官方 TPSR README / run.sh 对齐：
-        # 默认按 bagging 方式做搜索，每个 bag 200 个点，最多 10 个 bag。
+        # note vendored note TPSR README / run.sh note 
+        # default note bagging note note bag 200 note note 10 note bag 
         self.params.setdefault("max_input_points", 200)
         self.params.setdefault("max_number_bags", 10)
         self.params.setdefault("stop_refinement_after", 1)
@@ -62,12 +62,12 @@ class TPSRRegressor(BaseWrapper):
         self.params.setdefault("cpu_interop_threads", 1)
         self.params.setdefault("train_value", False)
         self.params.setdefault("lam", 0.1)
-        # 这是 benchmark 侧额外加的工程保护，不属于官方 README 的参数：
-        # 即便官方搜索阶段按 bag 运行，我们的 wrapper 仍会在 reward/refinement
-        # 内环做额外稳定性保护，避免超大训练集在 CPU 机上被 OOM kill。
+        # note benchmark note note README note 
+        # note bag note note wrapper note reward/refinement
+        # note note CPU note OOM kill 
         self.params.setdefault("reward_sample_limit", 2048)
 
-        # NeSymReS 配置
+        # NeSymReS note
         self.params.setdefault("nesymres_eq_setting_path", os.path.join("nesymres", "jupyter", "100M", "eq_setting.json"))
         self.params.setdefault("nesymres_cfg_path", os.path.join("nesymres", "jupyter", "100M", "config.yaml"))
         self.params.setdefault("nesymres_model_path", None)
@@ -116,7 +116,7 @@ class TPSRRegressor(BaseWrapper):
         if not limit_val or limit_val <= 0 or X_arr.shape[0] <= limit_val:
             return X_arr, y_arr
 
-        # 用等间隔抽样保证可复现，同时避免单纯截前缀导致样本分布偏到训练集头部。
+        # note note 
         indices = np.linspace(0, X_arr.shape[0] - 1, num=limit_val, dtype=int)
         indices = np.unique(indices)
         return X_arr[indices], y_arr[indices]
@@ -127,7 +127,7 @@ class TPSRRegressor(BaseWrapper):
         try:
             setattr(args, name, value)
         except Exception:
-            # 某些参数可能不存在于当前 parser 版本中，略过即可
+            # notecurrent parser note note
             pass
 
     def _resolve_tpsr_path(self, rel_path: str):
@@ -156,7 +156,7 @@ class TPSRRegressor(BaseWrapper):
                 shutil.copyfileobj(response, output)
             return True
         except Exception as e:
-            raise RuntimeError(f"TPSR 预训练权重下载失败: {url}, reason: {e}")
+            raise RuntimeError(f"TPSR note: {url}, reason: {e}")
 
     def _ensure_e2e_model(self):
         requested_path = self._resolve_tpsr_path(self.params.get("symbolicregression_model_path"))
@@ -179,7 +179,7 @@ class TPSRRegressor(BaseWrapper):
         if not os.path.isfile(shared_path):
             if not download_url:
                 raise FileNotFoundError(
-                    "未找到 e2e 预训练权重，且未配置 symbolicregression_model_url"
+                    "note e2e note note symbolicregression_model_url"
                 )
             self._download_if_absent(download_url, shared_path)
         resolved = os.path.abspath(shared_path)
@@ -216,7 +216,7 @@ class TPSRRegressor(BaseWrapper):
             return ""
 
         text = str(expr)
-        # 常见 token 到符号的替换（与 Symbolic SR 的表示统一）
+        # note token note note Symbolic SR note 
         replacements = {
             "add": "+",
             "mul": "*",
@@ -226,7 +226,7 @@ class TPSRRegressor(BaseWrapper):
         }
         for op, op_target in replacements.items():
             text = re.sub(rf"\b{op}\b", op_target, text)
-        # 兼容某些形如 pow2/pow3 写法
+        # note pow2/pow3 note
         text = re.sub(r"\bpow2\b", "**2", text)
         text = re.sub(r"\bpow3\b", "**3", text)
         text = re.sub(r"\bpow4\b", "**4", text)
@@ -276,8 +276,8 @@ class TPSRRegressor(BaseWrapper):
                 matches.add(int(idx_text))
             except Exception:
                 continue
-        # 兼容 one-based 变量表示：若表达式中完全没有 x0/x_0，
-        # 但存在 x1/x_1, x2/x_2 ...，则统一平移为零基索引再做合法性检查。
+        # note one-based note note x0/x_0 
+        # note x1/x_1, x2/x_2 ... note 
         has_zero_based = bool(re.search(r"\bx_?0\b", text))
         if matches and not has_zero_based and min(matches) >= 1:
             matches = {idx - 1 for idx in matches}
@@ -294,11 +294,11 @@ class TPSRRegressor(BaseWrapper):
 
     @classmethod
     def _project_equation_to_feature_budget(cls, equation: str, n_features: Optional[int]) -> str:
-        """将超出当前任务维度的变量投影为 0。
+        """notecurrent note 0 
 
-        TPSR 预训练模型工作在固定的大词表上，候选里可能出现 `x_9` 这类
-        当前任务并不存在的变量。集成层不应把这类 token 直接暴露给 runner；
-        这里按 wrapper 现有预测语义，把越界变量视为缺失特征并投影为 0。
+        TPSR note note `x_9` note
+        current note note token note runner 
+        note wrapper note note 0 
         """
         text = "" if equation is None else str(equation)
         if n_features is None:
@@ -327,11 +327,11 @@ class TPSRRegressor(BaseWrapper):
         return re.sub(r"\bx_(\d+)\b|\bx(\d+)\b", _replace, text)
 
     def _capture_runtime_feature_context(self, X) -> int:
-        """记录当前任务的真实输入维度。
+        """notecurrent note 
 
-        注意：TPSR 的预训练模型与环境词表绑定，不能直接把环境词表从
-        默认 10 维强行缩到当前数据集维度，否则会破坏解码器与词表的一致性。
-        因此这里仅记录真实特征数，后续在集成层过滤越界变量候选。
+        note TPSR noteenvironment note noteenvironment note
+        default 10 notecurrent note noteConsistency 
+        note note 
         """
         n_features = self._resolve_feature_dimension(X)
         self._n_features = n_features
@@ -445,7 +445,7 @@ class TPSRRegressor(BaseWrapper):
         expr_text = self._project_equation_to_feature_budget(expr_text, len(variable_names))
         expr_text = self._normalize_equation(expr_text)
         if not self._equation_within_feature_budget(expr_text, len(variable_names)):
-            print("TPSR 表达式变量索引越界，拒绝构造在线预测函数")
+            print("TPSR note note")
             return None
         try:
             import sympy as sp
@@ -466,7 +466,7 @@ class TPSRRegressor(BaseWrapper):
                     if idx < feature_count:
                         available_args.append(X_arr[:, idx])
                     else:
-                        # 缺失的变量补 0，避免 NeSymReS 方程维度不匹配时直接报错
+                        # note 0 note NeSymReS note
                         available_args.append(np.zeros(X_arr.shape[0], dtype=float))
                 outputs = fn(*available_args)
                 outputs_arr = np.asarray(outputs, dtype=float)
@@ -482,7 +482,7 @@ class TPSRRegressor(BaseWrapper):
             return _predict
 
         except Exception as e:
-            print(f"TPSR 解析表达式失败，无法生成在线预测函数: {str(e)}")
+            print(f"TPSR note note: {str(e)}")
             return None
 
     def _fit_e2e(self, X, y, equation_env, args, samples):
@@ -495,11 +495,11 @@ class TPSRRegressor(BaseWrapper):
         from rl_env import RLEnv
         from default_pi import E2EHeuristic
 
-        # 创建 TPSR 主体模型
+        # note TPSR note
         model = Transformer(params=args, env=equation_env, samples=samples)
         model.to(args.device)
 
-        # 创建 RL 环境
+        # note RL environment
         rl_env = RLEnv(
             params=args,
             samples=samples,
@@ -507,7 +507,7 @@ class TPSRRegressor(BaseWrapper):
             model=model,
         )
 
-        # 创建 TPSR planner
+        # note TPSR planner
         dp = E2EHeuristic(
             equation_env=equation_env,
             rl_env=rl_env,
@@ -523,7 +523,7 @@ class TPSRRegressor(BaseWrapper):
             debug=args.debug,
         )
 
-        # 创建 UCT 代理
+        # note UCT note
         agent = UCT(
             action_space=[],
             gamma=1.0,
@@ -537,7 +537,7 @@ class TPSRRegressor(BaseWrapper):
             ucb_base=args.ucb_base if hasattr(args, "ucb_base") else 4,
         )
 
-        # 运行搜索
+        # note
         done = False
         s = rl_env.state
         checked_candidate_count = 0
@@ -580,8 +580,8 @@ class TPSRRegressor(BaseWrapper):
                         source="e2e_terminal",
                     )
 
-        # `s` 可能只是搜索到当前 horizon 的中间前缀，并不保证是完整程序。
-        # 优先从 default policy 已经生成的完整候选中选最优者；只有在搜索确实完成时，才回退到 `s`。
+        # `s` notecurrent horizon note note 
+        # note default policy note note note `s` 
         candidate_sequences = []
         for seq in getattr(dp, "candidate_programs", []) or []:
             if seq is None:
@@ -591,7 +591,7 @@ class TPSRRegressor(BaseWrapper):
             candidate_sequences.append(s)
 
         if not candidate_sequences:
-            raise RuntimeError("TPSR 搜索阶段未生成任何候选程序")
+            raise RuntimeError("TPSR note")
 
         def _reward_of(seq):
             try:
@@ -603,8 +603,8 @@ class TPSRRegressor(BaseWrapper):
 
         self.all_trees = []
 
-        # TPSR 的核心结果来自搜索得到的完整候选程序，而不是重新跑一遍预训练 E2E 回归器。
-        # 这里优先取 “MCTS + refinement” 的表达式；若 refinement 失败，则退回到 no-ref 结果。
+        # TPSR note note E2E note 
+        # note  MCTS + refinement  note note refinement note note no-ref note 
         try:
             _, refined_expr, refined_trees = refine_for_sample(
                 args,
@@ -642,7 +642,7 @@ class TPSRRegressor(BaseWrapper):
                 if text:
                     candidate_exprs.append(text)
 
-        # 去重并保留顺序
+        # note
         seen = set()
         self.all_trees = []
         for expr in candidate_exprs:
@@ -655,7 +655,7 @@ class TPSRRegressor(BaseWrapper):
                 self.all_trees.append(normalized)
 
         if not self.all_trees:
-            raise RuntimeError("TPSR 未生成任何当前任务维度下合法的候选方程")
+            raise RuntimeError("TPSR notecurrent note")
 
         self.best_tree = self.all_trees[0]
         self.model = model
@@ -677,22 +677,22 @@ class TPSRRegressor(BaseWrapper):
         eq_setting_path = self.params.get("nesymres_eq_setting_path", "")
         cfg_path = self.params.get("nesymres_cfg_path", "")
         if not eq_setting_path:
-            raise FileNotFoundError("NeSymReS 方程配置文件未设置：nesymres_eq_setting_path")
+            raise FileNotFoundError("NeSymReS note nesymres_eq_setting_path")
         if not cfg_path:
-            raise FileNotFoundError("NeSymReS 配置文件未设置：nesymres_cfg_path")
+            raise FileNotFoundError("NeSymReS note nesymres_cfg_path")
 
         eq_setting_path = self._resolve_tpsr_path(eq_setting_path)
         cfg_path = self._resolve_tpsr_path(cfg_path)
 
         if not os.path.isfile(eq_setting_path):
-            raise FileNotFoundError(f"未找到 NeSymReS 方程配置文件: {eq_setting_path}")
+            raise FileNotFoundError(f"note NeSymReS note: {eq_setting_path}")
         if not os.path.isfile(cfg_path):
-            raise FileNotFoundError(f"未找到 NeSymReS 配置文件: {cfg_path}")
+            raise FileNotFoundError(f"note NeSymReS note: {cfg_path}")
 
         model_path = self._resolve_nesymres_weights(cfg)
         if not model_path:
             raise FileNotFoundError(
-                "未找到 NeSymReS 预训练权重。建议设置 nesymres_model_path，或在 `nesymres/weights/` 下放置 ckpt 文件"
+                "note NeSymReS note note nesymres_model_path note `nesymres/weights/` note ckpt note"
             )
 
         return eq_setting_path, cfg_path, model_path
@@ -711,7 +711,7 @@ class TPSRRegressor(BaseWrapper):
 
         cfg_path = self._resolve_tpsr_path(self.params.get("nesymres_cfg_path"))
         if not cfg_path or not os.path.isfile(cfg_path):
-            raise FileNotFoundError(f"NeSymReS 配置文件不存在: {cfg_path}")
+            raise FileNotFoundError(f"NeSymReS note: {cfg_path}")
         cfg = omegaconf.OmegaConf.load(cfg_path)
         eq_setting_path = self._resolve_tpsr_path(self.params.get("nesymres_eq_setting_path"))
         eq_setting_path, _, weight_path = self._resolve_nesymres_resources(cfg)
@@ -854,7 +854,7 @@ class TPSRRegressor(BaseWrapper):
         _, reward_mcts, pred_str = compute_reward_nesymres(model.X, model.y, s, fit_params)
         mcts_expr = pred_str or baseline_expr
         if reward_mcts is None:
-            print("NeSymReS 奖励无法计算，回退到预训练候选表达式")
+            print("NeSymReS note note")
 
         self.best_tree = mcts_expr
         self.all_trees = []
@@ -901,11 +901,11 @@ class TPSRRegressor(BaseWrapper):
 
     def fit(self, X, y):
         """
-        训练 TPSR 模型。
+        note TPSR note 
 
-        参数:
-            X: 特征矩阵，形状 (n_samples, n_features)
-            y: 目标向量，形状 (n_samples,) 或 (n_samples, 1)
+        note:
+            X: note note (n_samples, n_features)
+            y: note note (n_samples,) note (n_samples, 1)
         """
         self._validate_explicit_dataset_contract(
             X,
@@ -922,7 +922,7 @@ class TPSRRegressor(BaseWrapper):
         tpsr_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tpsr")
         inserted_paths = []
 
-        # 导入必要的模块
+        # note
         try:
             for import_path in self._runtime_import_paths():
                 if os.path.isdir(import_path) and import_path not in sys.path:
@@ -939,7 +939,7 @@ class TPSRRegressor(BaseWrapper):
             parser = get_parser()
             args = parser.parse_args([])
 
-            # 注入用户参数（兼容 parser 版本差异）
+            # note note parser note 
             self._set_parser_attr(args, "backbone_model", self.params.get("backbone_model", "e2e"))
             self._set_parser_attr(args, "beam_size", int(self.params.get("beam_size", 10)))
             self._set_parser_attr(args, "beam_type", self.params.get("beam_type", "sampling"))
@@ -994,9 +994,9 @@ class TPSRRegressor(BaseWrapper):
             elif backbone_model == "nesymres":
                 self._fit_nesymres(np.asarray(X), np.asarray(y), args, samples)
             else:
-                raise ValueError(f"不支持的 backbone_model: {backbone_model}")
+                raise ValueError(f"unsupported note backbone_model: {backbone_model}")
 
-            # 统一化所有树列表（若对象为 SymbolicTree，后续再做输出转换）
+            # note note SymbolicTree note 
             self.all_trees = self._normalize_equation_list(self.all_trees)
             if self.best_tree is not None:
                 self.best_tree = self._normalize_equation(self.best_tree)
@@ -1025,30 +1025,30 @@ class TPSRRegressor(BaseWrapper):
                     pass
 
     def predict(self, X):
-        """使用模型进行预测"""
+        """note"""
         if self._predict_fn is not None:
             return self._predict_fn(X)
 
         if hasattr(self.model, "predict"):
             return self.model.predict(X, refinement_type="BFGS")
 
-        raise ValueError("当前后端不支持 predict，需要重新检查 fit 是否已完成并能解析表达式")
+        raise ValueError("current noteunsupported predict note fit note")
 
     def get_optimal_equation(self):
-        """获取模型学习到的最优符号方程"""
+        """note"""
         if self.best_tree is None:
-            raise ValueError("未找到可用方程")
+            raise ValueError("note")
         return self._normalize_equation(self.best_tree)
 
     def get_total_equations(self):
-        """获取模型学习到的所有候选符号方程"""
+        """note"""
         if self.best_tree is None and not self.all_trees:
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return list(self.all_trees or [])
 
     def export_canonical_symbolic_program(self):
         if self.best_tree is None:
-            raise ValueError("未找到可用方程")
+            raise ValueError("note")
         return normalize_tpsr_artifact(
             self.get_optimal_equation(),
             expected_n_features=self._n_features,

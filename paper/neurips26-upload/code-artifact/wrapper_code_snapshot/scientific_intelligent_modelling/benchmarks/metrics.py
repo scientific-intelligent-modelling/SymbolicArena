@@ -1,9 +1,9 @@
-"""统一的 benchmark 指标实现。
+"""note benchmark note 
 
-当前优先覆盖三类 benchmark 的核心指标：
-1. SRBench: R2、模型复杂度、symbolic solution。
-2. SRSD: R2>0.999 风格准确率、solution rate、NED。
-3. LLM-SRBench: NMSE、Acc_tau / Acc0.1、symbolic accuracy（标签聚合）。
+current note benchmark note 
+1. SRBench: R2 note symbolic solution 
+2. SRSD: R2>0.999 note solution rate NED 
+3. LLM-SRBench: NMSE Acc_tau / Acc0.1 symbolic accuracy note  
 """
 
 from __future__ import annotations
@@ -17,12 +17,12 @@ import numpy as np
 
 try:
     import sympy as sp
-except ModuleNotFoundError:  # pragma: no cover - 运行环境可能未安装 sympy
+except ModuleNotFoundError:  # pragma: no cover - the runtime environment may not have sympy installed
     sp = None
 
 
 def safe_float(value: Any) -> float | None:
-    """将结果归一化为普通 float；NaN/Inf 统一返回 None。"""
+    """note float NaN/Inf note None """
     if value is None:
         return None
     try:
@@ -39,9 +39,9 @@ def acc_within_threshold(
     y_pred: np.ndarray,
     threshold: float,
 ) -> float | None:
-    """LLM-SRBench 风格的 Acc_tau。
+    """LLM-SRBench note Acc_tau 
 
-    按绝对误差是否小于阈值计数。
+    noteThresholdnote 
     """
     y_true = np.asarray(y_true, dtype=float).reshape(-1)
     y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
@@ -57,11 +57,11 @@ def llm_srbench_acc_tau(
     *,
     eps: float = 1e-12,
 ) -> float | None:
-    """LLM-SRBench 原生的 Acc_tau。
+    """LLM-SRBench note Acc_tau 
 
-    论文定义采用：
+    note 
         1( max_i |(y_hat_i - y_i) / y_i| <= tau )
-    即对整条测试轨迹给出 0/1 判定，而不是逐点取平均。
+    note 0/1 note note 
     """
     y_true = np.asarray(y_true, dtype=float).reshape(-1)
     y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
@@ -76,11 +76,11 @@ def llm_srbench_nmse(
     y_true: np.ndarray,
     y_pred: np.ndarray,
 ) -> float | None:
-    """LLM-SRBench 原生 NMSE。
+    """LLM-SRBench note NMSE 
 
-    根据论文附录 B.1：
+    note B.1 
         sum_i (y_hat_i - y_i)^2 / sum_i (y_i - y_bar)^2
-    这与当前工具集里常用的 `mse / mean(y^2)` 不是同一口径。
+    notecurrent note `mse / mean(y^2)` note 
     """
     y_true = np.asarray(y_true, dtype=float).reshape(-1)
     y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
@@ -99,7 +99,7 @@ def llm_srbench_numeric_metrics(
     *,
     tau: float = 0.1,
 ) -> dict[str, float | None]:
-    """LLM-SRBench 数值指标组合。"""
+    """LLM-SRBench note """
     return {
         "nmse": llm_srbench_nmse(y_true, y_pred),
         "acc_tau": llm_srbench_acc_tau(y_true, y_pred, tau=tau),
@@ -112,10 +112,10 @@ def regression_metrics(
     *,
     acc_threshold: float | None = None,
 ) -> dict[str, float | None]:
-    """统一回归指标。
+    """note 
 
-    返回当前工具集最常用的一组值，后续 benchmark profile 只需按需取子集：
-    `mse`, `rmse`, `mae`, `r2`, `nmse`, `acc_tau`。
+    notecurrent note note benchmark profile note 
+    `mse`, `rmse`, `mae`, `r2`, `nmse`, `acc_tau` 
     """
     y_true = np.asarray(y_true, dtype=float).reshape(-1)
     y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
@@ -156,14 +156,14 @@ def regression_metrics(
 
 def _sympify_expression(expr: Any) -> sp.Expr:
     if sp is None:
-        raise ModuleNotFoundError("sympy 未安装，无法计算符号类 benchmark 指标")
+        raise ModuleNotFoundError("sympy not installed note benchmark note")
     if isinstance(expr, sp.Expr):
         return expr
     if isinstance(expr, (int, float)):
         return sp.Float(expr)
     if isinstance(expr, str):
         return sp.sympify(expr)
-    raise TypeError(f"不支持的表达式类型: {type(expr)!r}")
+    raise TypeError(f"unsupported note: {type(expr)!r}")
 
 
 def _is_constant_expr(expr: sp.Expr) -> bool:
@@ -174,12 +174,12 @@ def srbench_symbolic_solution(
     predicted_expr: Any,
     true_expr: Any,
 ) -> dict[str, Any]:
-    """SRBench 2021 的 symbolic solution 判定。
+    """SRBench 2021 note symbolic solution note 
 
-    论文定义：
-    - 预测式不能退化成常数；
-    - 满足 `phi* - phi_hat = a` 或 `phi* / phi_hat = b, b != 0`，
-      其中 a / b 为常数。
+    note 
+    - note 
+    - note `phi* - phi_hat = a` note `phi* / phi_hat = b, b != 0` 
+      note a / b note 
     """
     pred = sp.simplify(_sympify_expression(predicted_expr))
     true = sp.simplify(_sympify_expression(true_expr))
@@ -216,7 +216,7 @@ def srbench_symbolic_solution(
 
 
 def _count_complexity(expr: sp.Expr) -> tuple[int, int, int]:
-    """返回 (operators, features, constants)。"""
+    """note (operators, features, constants) """
     if expr.is_Symbol:
         return 0, 1, 0
     if expr.is_Number:
@@ -234,10 +234,10 @@ def _count_complexity(expr: sp.Expr) -> tuple[int, int, int]:
 
 
 def srbench_model_size(expr: Any, *, simplify: bool = False) -> dict[str, Any]:
-    """SRBench 风格复杂度。
+    """SRBench note 
 
-    论文将复杂度定义为：
-    数学运算符 + 特征 + 常数 的总数。
+    note 
+    note + note + note note 
     """
     parsed = _sympify_expression(expr)
     if simplify:
@@ -263,7 +263,7 @@ def _expr_to_tree(expr: sp.Expr) -> _TreeNode:
     if expr.is_Symbol:
         return _TreeNode(f"Symbol:{expr}", ())
     if expr.is_Number:
-        # SRSD 明确指出系数数值本身不应成为重点，统一折叠成常数节点。
+        # SRSD note note 
         return _TreeNode("Const", ())
     return _TreeNode(
         type(expr).__name__,
@@ -307,13 +307,13 @@ def _tree_edit_distance(a: _TreeNode | None, b: _TreeNode | None) -> int:
 
 
 def normalized_tree_edit_distance(predicted_expr: Any, true_expr: Any) -> dict[str, Any]:
-    """SRSD 风格的 normalized edit distance (NED)。
+    """SRSD note normalized edit distance (NED) 
 
-    依据论文的式(3)：
+    note(3) 
         min(1, d(f_pred, f_true) / |f_true|)
-    其中 d 为 Zhang-Shasha tree edit distance，|f_true| 为真值树节点数。
+    note d note Zhang-Shasha tree edit distance |f_true| note 
 
-    这里实现的是同等语义的有序树编辑距离版本，常数节点统一折叠为 `Const`。
+    note note `Const` 
     """
     pred_tree = _expr_to_tree(_sympify_expression(predicted_expr))
     true_tree = _expr_to_tree(_sympify_expression(true_expr))
@@ -328,7 +328,7 @@ def normalized_tree_edit_distance(predicted_expr: Any, true_expr: Any) -> dict[s
 
 
 def aggregate_symbolic_accuracy(labels: Iterable[bool | int | float]) -> float | None:
-    """聚合 LLM-SRBench 风格的 symbolic accuracy。"""
+    """note LLM-SRBench note symbolic accuracy """
     labels = list(labels)
     if not labels:
         return None

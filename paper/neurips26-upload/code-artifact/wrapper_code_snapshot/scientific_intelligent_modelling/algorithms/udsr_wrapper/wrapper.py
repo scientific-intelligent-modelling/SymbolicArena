@@ -1,7 +1,7 @@
 """uDSR trunk wrapper.
 
-当前接入的是 uDSR 的 DSO/GP/LINEAR 主干，不包含论文 full uDSR 的
-AIF 递归化简和 LSPT 预训练 encoder-controller。
+current note uDSR note DSO/GP/LINEAR note note full uDSR note
+AIF note LSPT note encoder-controller 
 """
 
 from __future__ import annotations
@@ -108,7 +108,7 @@ class UDSRRegressor(DSORegressor):
 
     @staticmethod
     def _build_fit_config(base_config: Dict[str, Any], X, y) -> Dict[str, Any]:
-        """写入临时 CSV，同时保留 uDSR 的 GP-meld 开关。"""
+        """note CSV note uDSR note GP-meld note """
         config = deepcopy(base_config)
         experiment = config.setdefault("experiment", {})
         logdir = experiment.get("logdir")

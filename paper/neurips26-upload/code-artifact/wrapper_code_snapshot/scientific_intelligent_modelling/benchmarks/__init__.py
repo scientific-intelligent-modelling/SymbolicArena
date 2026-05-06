@@ -1,4 +1,4 @@
-"""符号回归 benchmark 指标工具集。"""
+"""symbolic regression benchmark note """
 
 from .artifact_schema import (
     CSP_VERSION,
@@ -41,7 +41,7 @@ from .runner import (
 
 try:
     from .judges import LLMSymbolicJudge, llm_srbench_symbolic_accuracy
-except ModuleNotFoundError:  # pragma: no cover - 非 LLM 环境允许跳过 judge 依赖
+except ModuleNotFoundError:  # pragma: no cover - note LLM environment note judge note
     LLMSymbolicJudge = None  # type: ignore
     llm_srbench_symbolic_accuracy = None  # type: ignore
 

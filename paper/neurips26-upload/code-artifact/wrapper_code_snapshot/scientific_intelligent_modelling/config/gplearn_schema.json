@@ -1,32 +1,32 @@
 {
   "tool": "gplearn",
-  "description": "gplearn 工具的 wrapper 参数治理与闭环行为定义（v0.1）",
+  "description": "gplearn note wrapper note v0.1 ",
   "system_params": {
     "problem_name": {
       "type": "string",
       "action": "strip",
-      "description": "实验元参数，不参与算法训练"
+      "description": "experiment meta-parameter not used for algorithm training"
     },
     "seed": {
       "type": "int",
       "action": "map",
       "target": "random_state",
-      "description": "实验元参数；若未显式设置 random_state，则映射为 random_state"
+      "description": "experiment meta-parameter note random_state note random_state"
     },
     "exp_name": {
       "type": "string",
       "action": "strip",
-      "description": "实验元参数，不参与算法训练"
+      "description": "experiment meta-parameter not used for algorithm training"
     },
     "exp_path": {
       "type": "string",
       "action": "strip",
-      "description": "实验元参数，不参与算法训练"
+      "description": "experiment meta-parameter not used for algorithm training"
     },
     "timeout_in_seconds": {
       "type": "int",
       "action": "strip",
-      "description": "统一运行时元参数；由外层子进程执行器负责总时长控制，不直接透传给 gplearn"
+      "description": "note note note gplearn"
     }
   },
   "allowed_params": {
@@ -93,13 +93,13 @@
     "function_set": {
       "type": "list|tuple|string",
       "required": false,
-      "default": "gplearn 默认函数集"
+      "default": "gplearn default note"
     },
     "const_range": {
       "type": "tuple|list|string",
       "required": false,
       "default": null,
-      "description": "长度为2的数值序列(low, high)"
+      "description": "note2note(low, high)"
     },
     "init_depth": {
       "type": "int|tuple",
@@ -160,13 +160,13 @@
         "p_point_mutation",
         "p_point_replace"
       ],
-      "rule": "每个参数都必须在 [0,1]，且非零参数之和不大于1.0"
+      "rule": "note [0,1] note1.0"
     }
   },
   "compatibility": {
     "notes": [
-      "兼容 sklearn>=1.7.0 与 gplearn 0.4.3 的 _validate_data 缺失问题：wrapper 已内置动态补丁",
-      "过滤并剥离 exp_path/exp_name/problem_name/seed 元参数，不直接透传给 gplearn SymbolicRegressor"
+      "note sklearn>=1.7.0 note gplearn 0.4.3 note _validate_data note wrapper note",
+      "note exp_path/exp_name/problem_name/seed note note gplearn SymbolicRegressor"
     ]
   }
 }

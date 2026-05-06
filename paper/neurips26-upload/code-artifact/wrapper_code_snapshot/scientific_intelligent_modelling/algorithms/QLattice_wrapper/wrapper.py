@@ -1,9 +1,9 @@
-"""QLattice 回归器包装器（原生实现）
+"""QLattice note note 
 
-说明：
-- 适配 srkit/subprocess_runner 的统一调用：fit/predict/get_optimal_equation/get_total_equations
-- 训练期依赖在线 feyn.QLattice()（社区版）
-- 序列化采用稳健 JSON：保存最优表达式与候选方程字符串，反序列化后可离线预测
+note 
+- note srkit/subprocess_runner note fit/predict/get_optimal_equation/get_total_equations
+- note feyn.QLattice() note 
+- note JSON note note
 """
 
 from __future__ import annotations
@@ -21,13 +21,13 @@ from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
 
 
 class QLatticeRegressor(BaseWrapper):
-    """QLattice 的回归器封装（回归任务）。
+    """QLattice note note  
 
-    参数（常用）：
-    - n_epochs: int = 100，自动搜索轮数
-    - kind: str = 'regression'，任务类型
-    - signif: int = 4，表达式输出的有效数字（用于 sympify 展示）
-    - 其他 QLattice.auto_run 支持的参数可透传
+    note note  
+    - n_epochs: int = 100 note
+    - kind: str = 'regression' note
+    - signif: int = 4 note note sympify note 
+    - note QLattice.auto_run note
     """
     _PROGRESS_STATE_FILENAME = ".qlattice_current_best.json"
 
@@ -45,17 +45,17 @@ class QLatticeRegressor(BaseWrapper):
         self._exp_path = self.params.get("exp_path")
         self._exp_name = self.params.get("exp_name")
 
-        # QLattice 相关缓存
+        # QLattice note
         self._ql = None
         self._models = []
         self._best_model = None
 
-        # 表达式/预测相关缓存
-        self._expr_str: Optional[str] = None  # 最优表达式字符串
+        # note/note
+        self._expr_str: Optional[str] = None  # note
         self._input_vars: List[str] = []
         self._output_name: str = 'y'
         self._lambdified = None
-        # 候选方程字符串列表（便于序列化后仍可获取多个解）
+        # note note 
         self._equations: List[str] = []
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
 
@@ -156,9 +156,9 @@ class QLatticeRegressor(BaseWrapper):
         except Exception:
             pass
 
-    # ---------------- 公共接口 ----------------
+    # ---------------- note ----------------
     def fit(self, X, y):
-        """训练 QLattice 模型并缓存最优与候选表达式。"""
+        """note QLattice note """
         import feyn
         self._validate_explicit_dataset_contract(
             X,
@@ -173,24 +173,24 @@ class QLatticeRegressor(BaseWrapper):
         if X.ndim == 1:
             X = X.reshape(-1, 1)
 
-        # 构造 DataFrame
+        # note DataFrame
         n_features = X.shape[1]
         self._input_vars = [f"x{i}" for i in range(n_features)]
         self._output_name = self.params.get('output_name', self._contract_target_name or 'y')
         df = pd.DataFrame(X, columns=self._input_vars)
         df[self._output_name] = y
 
-        # 连接 QLattice（社区版需要联网）
+        # note QLattice note 
         self._ql = feyn.QLattice()
 
-        # 组装 auto_run 参数
+        # note auto_run note
         auto_args = {
             'data': df,
             'output_name': self._output_name,
             'kind': self.params.get('kind', 'regression'),
             'n_epochs': int(self.params.get('n_epochs', 100)),
         }
-        # 尽量覆盖 QLattice.auto_run 的可选参数（按需透传）
+        # note QLattice.auto_run note note 
         for k in [
             'stypes', 'threads', 'max_complexity', 'query_string',
             'loss_function', 'criterion', 'sample_weights',
@@ -201,7 +201,7 @@ class QLatticeRegressor(BaseWrapper):
 
         total_epochs = int(auto_args.get('n_epochs', 100))
         if total_epochs < 1:
-            raise ValueError('n_epochs 必须 >= 1')
+            raise ValueError('n_epochs note >= 1')
         signif = int(self.params.get('signif', 4))
         criterion_name = self._criterion_name()
 
@@ -216,8 +216,8 @@ class QLatticeRegressor(BaseWrapper):
                 else:
                     epoch_args.pop('starting_models', None)
                 epoch_models = list(self._ql.auto_run(**epoch_args))
-                # feyn 在单 epoch 增量调用时，部分数据集可能偶发返回空列表；
-                # 这不等价于整个搜索失败，继续给后续 epoch 机会即可。
+                # feyn note epoch note note 
+                # note note epoch note 
                 if not epoch_models:
                     continue
                 models = epoch_models
@@ -229,17 +229,17 @@ class QLatticeRegressor(BaseWrapper):
                     criterion_name=criterion_name,
                 )
             if not models:
-                raise NoValidOutputError('QLattice.auto_run 未返回任何模型。')
+                raise NoValidOutputError('QLattice.auto_run note ')
         else:
             models = list(self._ql.auto_run(**auto_args))
             if not models:
-                raise NoValidOutputError('QLattice.auto_run 未返回任何模型。')
+                raise NoValidOutputError('QLattice.auto_run note ')
 
         self._models = models
         self._best_model = self._select_best_model(models, criterion_name)
         self.model = True
 
-        # 提取最优与候选表达式
+        # note
         self._expr_str = self._model_equation(self._best_model, signif)
 
         equations: List[str] = []
@@ -249,22 +249,22 @@ class QLatticeRegressor(BaseWrapper):
                 equations.append(eq)
         self._equations = equations
 
-        # 构建 lambdify 预测器（便于序列化回放）
+        # note lambdify note note 
         self._build_lambdify()
         return self
 
     def predict(self, X):
-        """使用模型进行预测。"""
+        """note """
         if self.model is None:
-            raise ValueError('模型尚未训练，请先调用 fit 方法。')
+            raise ValueError('note note fit note ')
 
         X = np.asarray(X)
         if X.ndim == 1:
             X = X.reshape(-1, 1)
         if X.shape[1] != len(self._input_vars):
-            raise ValueError(f'特征维度不匹配：期望 {len(self._input_vars)} 列，实际 {X.shape[1]} 列。')
+            raise ValueError(f'note note {len(self._input_vars)} note note {X.shape[1]} note ')
 
-        # 优先使用原生 feyn 模型（更稳健），其次使用 lambdify
+        # prefernote feyn note note  note lambdify
         if self._best_model is not None:
             import pandas as pd
             df = pd.DataFrame(X, columns=self._input_vars)
@@ -275,27 +275,27 @@ class QLatticeRegressor(BaseWrapper):
             y_pred = self._lambdified(*cols)
             return np.asarray(y_pred)
 
-        raise RuntimeError('未找到可用的预测器（表达式或 QLattice 模型）。')
+        raise RuntimeError('note note QLattice note  ')
 
     def get_optimal_equation(self):
         if self.model is None:
-            raise ValueError('模型尚未训练，请先调用 fit 方法。')
+            raise ValueError('note note fit note ')
         if self._expr_str:
             return self._expr_str
         try:
             signif = int(self.params.get('signif', 4))
             return str(self._best_model.sympify(signif=signif))
         except Exception:
-            return '未找到可用的方程'
+            return 'note'
 
     def get_total_equations(self, n: int | None = None):
-        """返回候选模型的表达式列表（字符串）。
+        """note note  
 
-        参数:
-            n: 返回的方程数量上限；若为 None 或无效，则返回全部。
+        note:
+            n: note note None note note 
         """
         if self.model is None:
-            raise ValueError('模型尚未训练，请先调用 fit 方法。')
+            raise ValueError('note note fit note ')
         results: List[str] = []
         signif = int(self.params.get('signif', 4))
         if self._models:
@@ -314,13 +314,13 @@ class QLatticeRegressor(BaseWrapper):
 
     def export_canonical_symbolic_program(self):
         if self.model is None:
-            raise ValueError('模型尚未训练，请先调用 fit 方法。')
+            raise ValueError('note note fit note ')
         return normalize_qlattice_artifact(
             self.get_optimal_equation(),
             expected_n_features=len(self._input_vars or []),
         )
 
-    # ---------------- 序列化/反序列化 ----------------
+    # ---------------- note/note ----------------
     def serialize(self):
         state = {
             'params': self.params,
@@ -343,7 +343,7 @@ class QLatticeRegressor(BaseWrapper):
         inst._build_lambdify()
         return inst
 
-    # ---------------- 内部工具 ----------------
+    # ---------------- note ----------------
     def _build_lambdify(self):
         if not self._expr_str or not self._input_vars:
             self._lambdified = None

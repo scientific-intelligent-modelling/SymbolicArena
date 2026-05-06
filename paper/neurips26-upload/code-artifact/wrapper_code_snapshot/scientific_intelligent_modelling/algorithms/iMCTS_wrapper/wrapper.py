@@ -1,17 +1,17 @@
 """
-iMCTS 包装器
+iMCTS note
 
-将外部仓库 MCTS-4-SR 集成到本框架，提供统一的 BaseWrapper 接口：
-- fit(X, y): 训练并发现最佳表达式
-- predict(X): 使用找到的向量表达式进行预测
-- get_optimal_equation(): 返回最优的简化表达式（字符串）
-- get_total_equations(): 返回候选表达式列表（此处仅返回最优表达式）
+note MCTS-4-SR note note BaseWrapper note 
+- fit(X, y): note
+- predict(X): note
+- get_optimal_equation(): note note 
+- get_total_equations(): note note 
 
-实现要点：
-- iMCTS.Regrssor 期望输入形状为 (n_features, n_samples)，本框架使用 (n_samples, n_features)，需转置
-- Regressor.fit() 返回 (simplified_expr, vec_expr, eval_count, path)
-- 预测通过 eval('lambda x: {vec_expr}') 并在 numpy 上下文下调用 f(x)
-- 为了在子进程序列化/反序列化后仍可预测，本包装器不依赖底层类状态进行预测，而是持久化 vec_expr 并在需要时重建可调用函数
+note 
+- iMCTS.Regrssor note (n_features, n_samples) note (n_samples, n_features) note
+- Regressor.fit() note (simplified_expr, vec_expr, eval_count, path)
+- note eval('lambda x: {vec_expr}') note numpy note f(x)
+- note/note note note vec_expr note
 """
 
 import os
@@ -27,8 +27,8 @@ from scientific_intelligent_modelling.benchmarks.normalizers import normalize_im
 
 
 def _default_eval_context(user_ctx: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """构建用于 eval 的安全上下文（仅暴露必要数学函数）。
-    iMCTS 默认上下文参考其 regressor 实现：sin/cos/exp/log/tanh 等。
+    """note eval note note  
+    iMCTS default note regressor note sin/cos/exp/log/tanh note 
     """
     ctx = {
         'np': np,
@@ -44,11 +44,11 @@ def _default_eval_context(user_ctx: Optional[Dict[str, Any]] = None) -> Dict[str
 
 
 class iMCTSRegressor(BaseWrapper):
-    """iMCTS 的统一包装器。"""
+    """iMCTS note """
     _PROGRESS_STATE_FILENAME = ".imcts_current_best.json"
 
     def __init__(self, **kwargs):
-        # 存储用户传入参数，部分会透传给 iMCTS.Regressor
+        # note note iMCTS.Regressor
         self.params: Dict[str, Any] = dict(kwargs) if kwargs else {}
         self.params.setdefault("ops", ["+", "-", "*", "/", "sin", "cos", "exp", "log", "R"])
         self.params.setdefault("max_depth", 6)
@@ -69,17 +69,17 @@ class iMCTSRegressor(BaseWrapper):
         self._contract_feature_names = self.params.pop("feature_names", None)
         self._contract_target_name = self.params.pop("target_name", None)
 
-        # 训练所得的表达式
+        # note
         self._best_expr_simplified: Optional[str] = None
         self._best_expr_vector: Optional[str] = None
         self._eval_count: Optional[int] = None
         self._best_path: Optional[int] = None
         self._n_features: Optional[int] = None
 
-        # 预测时的上下文（可由用户覆盖）
+        # note note 
         self._eval_context: Dict[str, Any] = _default_eval_context(self.params.get('context'))
 
-        # 运行时（fit 阶段）引用的底层回归器（仅在同一进程内可用）
+        # note fit note note note 
         self._runtime_regressor = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
 
@@ -113,7 +113,7 @@ class iMCTSRegressor(BaseWrapper):
         except Exception:
             pass
 
-    # ============ 标准 API ============
+    # ============ note API ============
     def fit(self, X, y):
         self._validate_explicit_dataset_contract(
             X,
@@ -125,23 +125,23 @@ class iMCTSRegressor(BaseWrapper):
         X = np.asarray(X)
         y = np.asarray(y).reshape(-1)
         if X.ndim != 2:
-            raise ValueError("iMCTS 训练需要二维输入数组 (n_samples, n_features)")
+            raise ValueError("iMCTS note (n_samples, n_features)")
         self._n_features = int(X.shape[1])
 
-        # 导入第三方代码：将子仓库加入 sys.path
+        # note note sys.path
         base_dir = os.path.dirname(os.path.abspath(__file__))
         lib_dir = os.path.join(base_dir, 'MCTS-4-SR')
         if lib_dir not in sys.path:
             sys.path.insert(0, lib_dir)
 
-        # 延迟导入 iMCTS
+        # note iMCTS
         from iMCTS.regressor import Regressor as _MCTSRegressor
 
-        # iMCTS 期望输入形状为 (n_features, n_samples)
+        # iMCTS note (n_features, n_samples)
         x_train = X.T
         y_train = y
 
-        # 过滤仅 iMCTS 支持的关键字参数
+        # note iMCTS note
         allowed_keys = {
             'ops', 'arity_dict', 'context', 'max_depth', 'K', 'c', 'gamma',
             'gp_rate', 'mutation_rate', 'exploration_rate', 'max_single_arity_ops',
@@ -150,7 +150,7 @@ class iMCTSRegressor(BaseWrapper):
         }
         mcts_kwargs = {k: v for k, v in self.params.items() if k in allowed_keys}
 
-        # 实例化并训练
+        # note
         reg = _MCTSRegressor(
             x_train=x_train,
             y_train=y_train,
@@ -160,14 +160,14 @@ class iMCTSRegressor(BaseWrapper):
         self._runtime_regressor = reg
         simplified_expr, vec_expr, eval_count, path = reg.fit(seed=self.params.get('seed'))
 
-        # 缓存结果
+        # note
         self._best_expr_simplified = simplified_expr
         self._best_expr_vector = vec_expr
         self._eval_count = int(eval_count) if eval_count is not None else None
         if path is not None and not isinstance(path, (list, tuple)):
             self._best_path = int(path)
         else:
-            # iMCTS 运行时返回 path 可能为路径列表，保留原始结构用于调试
+            # iMCTS note path note note
             self._best_path = path
 
         self._write_progress_state(
@@ -180,35 +180,35 @@ class iMCTSRegressor(BaseWrapper):
 
     def predict(self, X):
         if not isinstance(self._best_expr_vector, str) or not self._best_expr_vector:
-            raise ValueError("模型尚未训练或未找到可用的表达式")
+            raise ValueError("note")
         X = np.asarray(X)
         if X.ndim != 2:
-            raise ValueError("iMCTS 预测需要二维输入数组 (n_samples, n_features)")
+            raise ValueError("iMCTS note (n_samples, n_features)")
 
-        # iMCTS 预测期望 (n_features, n_samples)
+        # iMCTS note (n_features, n_samples)
         XT = X.T
 
-        # 若同进程存在底层回归器，直接复用其 predict（包含更多上下文）
+        # note note predict note 
         if self._runtime_regressor is not None:
             return self._runtime_regressor.predict(XT, self._best_expr_vector)
 
-        # 否则根据持久化的表达式与上下文重建可调用函数
+        # note
         try:
             func = eval(f'lambda x: {self._best_expr_vector}', self._eval_context)
             y_pred = func(XT)
             return np.asarray(y_pred)
         except Exception as e:
-            raise RuntimeError(f"iMCTS 预测失败: {e}")
+            raise RuntimeError(f"iMCTS note: {e}")
 
     def get_optimal_equation(self):
-        # 返回简化后的标量表达式（便于阅读/记录）
+        # note note/note 
         return self._best_expr_simplified or ""
 
     def get_total_equations(self):
-        # 当前仅返回一个最优表达式
+        # current note
         return [self._best_expr_simplified] if self._best_expr_simplified else []
 
-    # ============ 序列化 / 反序列化 ============
+    # ============ note / note ============
     def serialize(self):
         state = {
             'params': self.params,
@@ -217,7 +217,7 @@ class iMCTSRegressor(BaseWrapper):
             'eval_count': self._eval_count,
             'best_path': self._best_path,
             'n_features': self._n_features,
-            # 仅持久化上下文的键名，值用默认可重建（避免不可序列化对象）
+            # note note default note note 
             'context_keys': list((self.params.get('context') or {}).keys())
         }
         return json.dumps(state, ensure_ascii=False)
@@ -231,14 +231,14 @@ class iMCTSRegressor(BaseWrapper):
         inst._eval_count = obj.get('eval_count')
         inst._best_path = obj.get('best_path')
         inst._n_features = obj.get('n_features')
-        # 运行时回归器不可恢复；预测走表达式+上下文路径
+        # note note+note
         inst._runtime_regressor = None
         return inst
 
     def export_canonical_symbolic_program(self):
         equation = self.get_optimal_equation()
         if not equation:
-            raise ValueError("iMCTS 当前没有可导出的最优方程")
+            raise ValueError("iMCTS current note")
         return normalize_imcts_artifact(
             equation,
             expected_n_features=self._n_features,
@@ -247,7 +247,7 @@ class iMCTSRegressor(BaseWrapper):
     def __str__(self) -> str:
         lines: List[str] = ["iMCTSRegressor(tool='iMCTS')"]
         if self._best_expr_simplified:
-            lines.append(f"最佳表达式: {self._best_expr_simplified}")
+            lines.append(f"note: {self._best_expr_simplified}")
         if self._eval_count is not None:
-            lines.append(f"评估表达式数: {self._eval_count}")
+            lines.append(f"note: {self._eval_count}")
         return "\n".join(lines)

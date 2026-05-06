@@ -56,7 +56,7 @@ class DSORegressor(BaseWrapper):
     _TRAINING_KEYS = {"batch_size", "n_samples", "epsilon", "n_cores_batch"}
 
     def __init__(self, **kwargs):
-        # 延迟导入，避免环境问题
+        # note noteenvironment note
         raw_kwargs = dict(kwargs or {})
         self._exp_path = raw_kwargs.get("exp_path")
         self._exp_name = raw_kwargs.get("exp_name")
@@ -127,8 +127,8 @@ class DSORegressor(BaseWrapper):
         if exp_name and "exp_name" not in experiment:
             experiment["exp_name"] = str(exp_name)
         if exp_path and experiment.get("logdir") is None:
-            # DSO 内部会再用 exp_name 组装 save_path，logdir 这里只传实验根目录，
-            # 避免最终路径变成 exp_path/exp_name/exp_name 的双层结构。
+            # DSO note exp_name note save_path logdir note 
+            # note exp_path/exp_name/exp_name note 
             experiment["logdir"] = os.path.abspath(str(exp_path))
 
         config = dict(params)
@@ -147,23 +147,23 @@ class DSORegressor(BaseWrapper):
             target_name=self._contract_target_name,
             context="DSORegressor.fit",
         )
-        # 优先使用子仓库源码，避免环境可复现性差异导致的 editable 安装问题
+        # prefernote noteenvironment note editable note
         repo_root = os.path.dirname(os.path.abspath(__file__))
         local_dso_path = os.path.join(repo_root, "dso", "dso")
         if os.path.isdir(local_dso_path) and local_dso_path not in sys.path:
             sys.path.insert(0, local_dso_path)
 
-        # 仅在需要时导入
+        # note
         from dso import DeepSymbolicOptimizer
         import warnings
-        # 过滤掉特定的FutureWarning
+        # noteFutureWarning
         warnings.filterwarnings("ignore", category=FutureWarning, 
                                 message="`BaseEstimator._validate_data` is deprecated")
         
         if not hasattr(__import__("dso"), "DeepSymbolicOptimizer"):
-            raise ImportError("当前 dso 包未提供 DeepSymbolicOptimizer，请检查 dso 源码或安装版本。")
+            raise ImportError("current dso note DeepSymbolicOptimizer note dso note ")
 
-        # 创建并训练模型
+        # note
         self.model = DeepSymbolicOptimizer(self.params)
         fit_config = self._build_fit_config(self.model.config, X, y)
         self.model.set_config(fit_config)
@@ -286,7 +286,7 @@ class DSORegressor(BaseWrapper):
 
         self._dso_expression = str(self.model.program_.sympy_expr)
         self._dso_equation = str(self.model.program_.pretty())
-        # 仅在运行时可进行反序列化后的预测，不在主进程训练过程里触发额外解析成本
+        # note note
         self._build_predict_fn_from_equation(self._dso_expression)
 
     def _build_predict_fn_from_equation(self, equation: str):
@@ -351,11 +351,11 @@ class DSORegressor(BaseWrapper):
             return np.full(x_arr.shape[0], float(self._dso_pred_constant), dtype=float)
 
         if self._dso_pred_fn is None:
-            raise RuntimeError("DSO 反序列化模型不包含可执行方程，无法继续执行 predict")
+            raise RuntimeError("DSO note note predict")
 
         n_features = x_arr.shape[1] if x_arr.ndim > 1 else 0
         if n_features < self._dso_var_count:
-            raise ValueError("DSO 反序列化状态下的输入特征维度不足")
+            raise ValueError("DSO note")
 
         args = [x_arr[:, idx] for idx in self._dso_input_indices]
         y = self._dso_pred_fn(*args)
@@ -365,38 +365,38 @@ class DSORegressor(BaseWrapper):
         if self.model is None:
             if self._dso_pred_fn is not None or self._dso_pred_constant is not None:
                 return self._predict_with_cached_fn(X)
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         if hasattr(self.model, "predict"):
             return self.model.predict(X)
         if hasattr(self.model, "program_"):
             return self.model.program_.execute(np.asarray(X))
-        raise ValueError("DSO 模型状态不完整，无法执行 predict")
+        raise ValueError("DSO note note predict")
     
     def get_optimal_equation(self):
-        """返回模型拟合的数学方程"""
+        """note"""
         if self.model is None:
             if self._dso_equation is not None:
                 return self._dso_equation
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         
-        # 返回模型的字符串表示，这就是拟合的方程
+        # note note
         return str(self.model.program_.pretty())
 
     def get_total_equations(self):
         """
-            获取模型学习到的所有符号方程
+            note
         """
         if self.model is None:
             if self._dso_equation is not None:
                 return [self._dso_equation]
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         
-        # 返回模型的字符串表示，这就是拟合的方程
+        # note note
         return [str(self.model.program_.pretty())]
 
     def __getstate__(self) -> Dict[str, Any]:
         state = self.__dict__.copy()
-        # 规避 RLock/进程上下文等不可 pickle 对象，保留方程文本供反序列化恢复预测
+        # note RLock/note pickle note note
         if state.get("model") is not None:
             self._cache_post_fit_state()
         state["model"] = None
@@ -429,7 +429,7 @@ class DSORegressor(BaseWrapper):
             except Exception:
                 raw_equation = None
         if raw_equation is None:
-            raise ValueError("DSO 当前没有可导出的标准表达式")
+            raise ValueError("DSO current note")
         expected_n_features = self._dso_n_features
         if expected_n_features is None and self._dso_var_count:
             expected_n_features = int(self._dso_var_count)

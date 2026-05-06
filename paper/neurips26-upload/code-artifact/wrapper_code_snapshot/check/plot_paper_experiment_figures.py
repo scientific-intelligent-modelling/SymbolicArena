@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""补齐论文实验叙事图表。
+"""note 
 
-输出目录：
-`exp-planning/04.Core50正式全量评测/analysis/paper_figures_20260505`
+note 
+`exp-planning/04.core50_formal_full_evaluation/analysis/paper_figures_20260505`
 
-该脚本把现有 01/02/03/04/05 阶段资产串起来，生成论文 Q&A 实验叙事需要的
-pipeline、数据池覆盖、双探针、Probe-4、Core-50 代表性、leaderboard、
-symbolic / noise / stability / ablation 等图表。
+note 01/02/03/04/05 note note Q&A note
+pipeline note note Probe-4 Core-50 note leaderboard 
+symbolic / noise / stability / ablation note 
 """
 
 from __future__ import annotations
@@ -30,28 +30,28 @@ import pandas as pd
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-OUTDIR = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/paper_figures_20260505"
+OUTDIR = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/analysis/paper_figures_20260505"
 
-RUNNABLE_664 = REPO_ROOT / "exp-planning/01.双探针实验/datasets_runnable.csv"
+RUNNABLE_664 = REPO_ROOT / "exp-planning/01.dual_probe_experiment/datasets_runnable.csv"
 DUAL_PROBE = REPO_ROOT / "experiment-results/benchmark_formal200_20260417/one_seed_probe_dataset_compare.csv"
 STAGE1_CANDIDATE = REPO_ROOT / "experiment-results/benchmark_selection_dossier_20260422/tables/stage1_candidate200_flat.csv"
-E1_12 = REPO_ROOT / "exp-planning/02.E1选择验证/e1_final_results_current_20260429/digest/e1_12_dataset_algorithm_nmse_table.csv"
-PROBE4_ALG = REPO_ROOT / "exp-planning/02.E1选择验证/e1_final_results_current_20260429/digest/probe4_selection_nmse_only/probe4_algorithm_scores_nmse_only.csv"
-PROBE4_COMBO = REPO_ROOT / "exp-planning/02.E1选择验证/e1_final_results_current_20260429/digest/probe4_selection_nmse_only/probe4_combo_scores_nmse_only.csv"
-PROBE4_PAIR = REPO_ROOT / "exp-planning/02.E1选择验证/e1_final_results_current_20260429/digest/probe4_selection_nmse_only/probe4_pairwise_complementarity_nmse_only.csv"
-PROBE4_DATASET = REPO_ROOT / "exp-planning/03.四探针全量664三种子验证/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_level.csv"
-PROBE4_DATASET_ALG = REPO_ROOT / "exp-planning/03.四探针全量664三种子验证/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_algorithm.csv"
-PROBE4_RUN = REPO_ROOT / "exp-planning/03.四探针全量664三种子验证/generated/postprocess_final_20260501-105508/probe4_postprocess_run_level.csv"
-CORE50 = REPO_ROOT / "exp-planning/04.Core50正式全量评测/core50_datasets.csv"
-HEXAGON_V2 = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/hexagon_v2_formal_20260505"
+E1_12 = REPO_ROOT / "exp-planning/02.e1_selection_validation/e1_final_results_current_20260429/digest/e1_12_dataset_algorithm_nmse_table.csv"
+PROBE4_ALG = REPO_ROOT / "exp-planning/02.e1_selection_validation/e1_final_results_current_20260429/digest/probe4_selection_nmse_only/probe4_algorithm_scores_nmse_only.csv"
+PROBE4_COMBO = REPO_ROOT / "exp-planning/02.e1_selection_validation/e1_final_results_current_20260429/digest/probe4_selection_nmse_only/probe4_combo_scores_nmse_only.csv"
+PROBE4_PAIR = REPO_ROOT / "exp-planning/02.e1_selection_validation/e1_final_results_current_20260429/digest/probe4_selection_nmse_only/probe4_pairwise_complementarity_nmse_only.csv"
+PROBE4_DATASET = REPO_ROOT / "exp-planning/03.probe4_full664_3seed_validation/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_level.csv"
+PROBE4_DATASET_ALG = REPO_ROOT / "exp-planning/03.probe4_full664_3seed_validation/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_algorithm.csv"
+PROBE4_RUN = REPO_ROOT / "exp-planning/03.probe4_full664_3seed_validation/generated/postprocess_final_20260501-105508/probe4_postprocess_run_level.csv"
+CORE50 = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/core50_datasets.csv"
+HEXAGON_V2 = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/analysis/hexagon_v2_formal_20260505"
 HEXAGON_SCORES = HEXAGON_V2 / "hexagon_scores_formal.csv"
 HEXAGON_SCORES_CI = HEXAGON_V2 / "hexagon_scores_formal_with_ci.csv"
 HEXAGON_COMPONENTS = HEXAGON_V2 / "dataset_axis_components_formal.csv"
-SYMF_RUN = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/symf_formal_metrics_20260504/symbolic_metrics_formal.csv"
-CLEAN_RUNS = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/hexagon_v1_with_artifacts_20260504/clean_final_runs_updated.csv"
-NOISE_RUNS = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/hexagon_v1_with_artifacts_20260504/noise_final_runs.csv"
-NOISE_COMPLETION = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/hexagon_v1_with_artifacts_20260504/noise_completion_summary.csv"
-ROBUSTNESS = REPO_ROOT / "exp-planning/04.Core50正式全量评测/analysis/hexagon_v1_with_artifacts_20260504/robustness_components.csv"
+SYMF_RUN = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/analysis/symf_formal_metrics_20260504/symbolic_metrics_formal.csv"
+CLEAN_RUNS = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/analysis/hexagon_v1_with_artifacts_20260504/clean_final_runs_updated.csv"
+NOISE_RUNS = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/analysis/hexagon_v1_with_artifacts_20260504/noise_final_runs.csv"
+NOISE_COMPLETION = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/analysis/hexagon_v1_with_artifacts_20260504/noise_completion_summary.csv"
+ROBUSTNESS = REPO_ROOT / "exp-planning/04.core50_formal_full_evaluation/analysis/hexagon_v1_with_artifacts_20260504/robustness_components.csv"
 
 PROBE4_SELECTED = ["dso", "pyoperon", "imcts", "udsr"]
 AXES = ["ID_Q", "OOD_G", "SYM_F", "EFF", "ROB", "STAB"]
@@ -289,7 +289,7 @@ def subset_metrics(dataset_level: pd.DataFrame, dataset_alg: pd.DataFrame, subse
 
 
 def core_ids_from_manifest(dataset_level: pd.DataFrame, core50: pd.DataFrame) -> set[str]:
-    """精确使用冻结 manifest 中的 dataset_dir，避免跨来源同名任务误匹配。"""
+    """note manifest note dataset_dir note """
     if "dataset_dir" in core50 and "dataset_rel" in dataset_level:
         core_dirs = set(core50["dataset_dir"].astype(str))
         core_ids = set(dataset_level[dataset_level["dataset_rel"].astype(str).isin(core_dirs)]["dataset_id"])
@@ -481,8 +481,8 @@ def plot_reservoir_composition(dataset_level: pd.DataFrame, record: list[FigureR
         for idx, value in enumerate(values):
             ax.text(idx, value + ymax * 0.025, f"{int(value)}", ha="center", va="bottom", fontsize=8.0, fontweight="medium", color="#222222")
 
-    # 正文里这张图会被压到单页文本宽度。保持 1x4 结构，并压缩高度，
-    # 避免在论文中占用过多纵向空间。
+    # note note 1x4 note note 
+    # note 
     fig, axes = plt.subplots(1, 4, figsize=(12.4, 3.25))
     family = dataset_level["family"].value_counts()
     family_labels = ["firstprinciples" if str(x) == "srbench2025/firstprinciples" else x for x in family.index]
@@ -944,9 +944,9 @@ def plot_tradeoffs_and_symbolic(record: list[FigureRecord]) -> None:
 
 def snapshot_rows(max_files: int = 120000) -> pd.DataFrame:
     roots = [
-        REPO_ROOT / "exp-planning/05.Core50噪声鲁棒性评测/results/remote_artifacts_clean_modelsplit_slim_20260504-224415",
-        REPO_ROOT / "exp-planning/05.Core50噪声鲁棒性评测/results/remote_artifacts_noise_cpu_20260504-184611",
-        REPO_ROOT / "exp-planning/05.Core50噪声鲁棒性评测/results/remote_artifacts_noise_gpu_20260504-184619",
+        REPO_ROOT / "exp-planning/05.core50_noise_robustness/results/remote_artifacts_clean_modelsplit_slim_20260504-224415",
+        REPO_ROOT / "exp-planning/05.core50_noise_robustness/results/remote_artifacts_noise_cpu_20260504-184611",
+        REPO_ROOT / "exp-planning/05.core50_noise_robustness/results/remote_artifacts_noise_gpu_20260504-184619",
     ]
     wanted_minutes = {1, 2, 3, 5, 10, 20, 30, 45, 60}
     rows: list[dict[str, Any]] = []

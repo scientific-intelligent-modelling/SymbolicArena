@@ -1,4 +1,4 @@
-"""gplearn wrapper（带参数白名单与参数规范化）。"""
+"""gplearn wrapper note  """
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from scientific_intelligent_modelling.benchmarks.normalizers import normalize_gp
 
 
 class GPLearnRegressor(BaseWrapper):
-    """gplearn SymbolicRegressor 的参数化适配层。"""
+    """gplearn SymbolicRegressor note """
     _PROGRESS_STATE_FILENAME = ".gplearn_current_best.json"
     _DEFAULT_PARAMS = {
         "population_size": 1000,
@@ -53,7 +53,7 @@ class GPLearnRegressor(BaseWrapper):
     }
 
     _ALLOWED_PARAMS = {
-        # 主搜索参数
+        # note
         "population_size": (int, lambda v: int(v), lambda v: v > 0, "population_size > 0"),
         "generations": (int, lambda v: int(v), lambda v: v > 0, "generations > 0"),
         "tournament_size": (int, lambda v: int(v), lambda v: v > 1, "tournament_size > 1"),
@@ -65,18 +65,18 @@ class GPLearnRegressor(BaseWrapper):
         "p_point_mutation": (numbers.Real, float, lambda v: 0 <= v <= 1, "p_point_mutation in [0,1]"),
         "p_point_replace": (numbers.Real, float, lambda v: 0 <= v <= 1, "p_point_replace in [0,1]"),
 
-        # 结构与表达式空间参数
-        "const_range": (object, None, None, "2元数值序列/可解析字符串"),
-        "function_set": (object, None, None, "逗号分隔字符串或 list/tuple"),
-        "init_depth": (object, None, None, "int 或 2 元组"),
+        # note
+        "const_range": (object, None, None, "2note/note"),
+        "function_set": (object, None, None, "note list/tuple"),
+        "init_depth": (object, None, None, "int note 2 note"),
         "init_method": (str, str, lambda v: v in {"half and half", "grow", "full"}, "init_method in {'half and half','grow','full'}"),
-        "metric": (str, str, None, "字符串指标名"),
+        "metric": (str, str, None, "note"),
         "max_samples": (numbers.Real, float, lambda v: v > 0, "max_samples > 0"),
-        "random_state": (int, int, None, "整数种子"),
+        "random_state": (int, int, None, "note"),
         "n_jobs": (int, int, lambda v: v > 0, "n_jobs > 0"),
         "verbose": (int, int, lambda v: v >= 0, "verbose >= 0"),
-        "low_memory": (bool, bool, None, "布尔"),
-        "warm_start": (bool, bool, None, "布尔"),
+        "low_memory": (bool, bool, None, "note"),
+        "warm_start": (bool, bool, None, "note"),
     }
 
     _PROBABILITY_PARAMS = (
@@ -94,7 +94,7 @@ class GPLearnRegressor(BaseWrapper):
         self._contract_n_features = kwargs.get("n_features")
         self._contract_feature_names = kwargs.get("feature_names")
         self._contract_target_name = kwargs.get("target_name")
-        # 延迟导入，避免环境问题
+        # note noteenvironment note
         self.params = self._validate_and_normalize_params(kwargs)
         self.model = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
@@ -116,20 +116,20 @@ class GPLearnRegressor(BaseWrapper):
         if unknown:
             allowed = ", ".join(sorted(cls._ALLOWED_PARAMS))
             raise ValueError(
-                f"gplearn 参数不受支持: {', '.join(unknown)}。"
-                f"当前允许的参数有: {allowed}。"
+                f"gplearn note: {', '.join(unknown)} "
+                f"current note: {allowed} "
             )
 
         for key, value in raw_params.items():
             type_hint, caster, validator, hint = cls._ALLOWED_PARAMS[key]
             if value is None:
                 if key in ("function_set",):
-                    # gplearn 的默认 function_set 可用，允许 None
+                    # gplearn note default function_set note note None
                     params[key] = None
                     continue
                 if key in ("init_depth",):
                     continue
-                raise ValueError(f"{key} 不允许为 None；建议移除此字段或提供有效值")
+                raise ValueError(f"{key} note None notefieldnote")
 
             if key == "function_set":
                 params[key] = cls._normalize_function_set(value)
@@ -149,22 +149,22 @@ class GPLearnRegressor(BaseWrapper):
 
             if type_hint is numbers.Real:
                 if not isinstance(value, numbers.Real):
-                    raise TypeError(f"{key} 类型应为数值类型；你传的是: {type(value).__name__}")
+                    raise TypeError(f"{key} note note: {type(value).__name__}")
             elif type_hint is not object and not isinstance(value, type_hint):
-                # bool is bool subclass of int，故提前处理
+                # bool is bool subclass of int note
                 if type_hint is int and isinstance(value, bool):
                     pass
                 else:
-                    raise TypeError(f"{key} 类型应为 {type_hint.__name__}；你传的是: {type(value).__name__}")
+                    raise TypeError(f"{key} note {type_hint.__name__} note: {type(value).__name__}")
 
             if caster is not None:
                 try:
                     value = caster(value)
                 except Exception as err:
-                    raise TypeError(f"{key} 类型转换失败: {err}") from err
+                    raise TypeError(f"{key} note: {err}") from err
 
             if validator is not None and not validator(value):
-                raise ValueError(f"{key} 校验失败：期望 {hint}；当前值: {value}")
+                raise ValueError(f"{key} note note {hint} current note: {value}")
 
             params[key] = value
 
@@ -179,7 +179,7 @@ class GPLearnRegressor(BaseWrapper):
         try:
             from sklearn.utils.validation import check_X_y, check_array
         except Exception as e:
-            warnings.warn(f"无法引入 sklearn 兼容校验函数: {e}")
+            warnings.warn(f"note sklearn note: {e}")
             return
 
         def _build_validation_kwargs(base_kwargs):
@@ -219,55 +219,55 @@ class GPLearnRegressor(BaseWrapper):
 
     @staticmethod
     def _normalize_function_set(value: Any) -> Tuple[str, ...] | None:
-        """将 function_set 标准化为 tuple 字符串序列。"""
+        """note function_set note tuple note """
         if value is None:
             return None
 
         if isinstance(value, str):
             text = value.strip()
             if not text:
-                raise ValueError("function_set 不能为空")
-            # 支持 ["add", "sub", ...] 以及 add,sub,mul
+                raise ValueError("function_set cannot be empty")
+            # note ["add", "sub", ...] note add,sub,mul
             if text.startswith("[") or text.startswith("("):
                 parsed = ast.literal_eval(text)
                 if not isinstance(parsed, (list, tuple)):
-                    raise TypeError("function_set 字符串解析后需为列表/元组")
+                    raise TypeError("function_set note/note")
                 funcs = parsed
             else:
                 funcs = [token.strip() for token in text.split(",") if token.strip()]
             return tuple(str(x) for x in funcs)
 
         if not isinstance(value, (list, tuple, set)):
-            raise TypeError("function_set 需为 list/tuple/set 或逗号分隔字符串")
+            raise TypeError("function_set note list/tuple/set note")
         if not value:
-            raise ValueError("function_set 不能为空")
+            raise ValueError("function_set cannot be empty")
         return tuple(str(x) for x in value)
 
     @staticmethod
     def _normalize_init_depth(value: Any) -> Tuple[int, int]:
         if isinstance(value, int):
             if value < 1:
-                raise ValueError("init_depth 必须 >= 1")
+                raise ValueError("init_depth note >= 1")
             return (value, value)
         if isinstance(value, (list, tuple)):
             if len(value) != 2:
-                raise ValueError("init_depth 需为单个 int 或长度为 2 的序列")
+                raise ValueError("init_depth note int note 2 note")
             low, high = int(value[0]), int(value[1])
             if low < 1 or high < low:
-                raise ValueError("init_depth 需满足 1 <= low <= high")
+                raise ValueError("init_depth note 1 <= low <= high")
             return (low, high)
         if isinstance(value, str):
             value = value.strip()
             if not value:
-                raise ValueError("init_depth 字符串不能为空")
+                raise ValueError("init_depth notecannot be empty")
             if "," not in value:
                 ivalue = int(value)
                 return (ivalue, ivalue)
             low, high = (int(item.strip()) for item in value.split(",", 1))
             if low < 1 or high < low:
-                raise ValueError("init_depth 需满足 1 <= low <= high")
+                raise ValueError("init_depth note 1 <= low <= high")
             return (low, high)
-        raise TypeError("init_depth 需为 int 或 2 元组/列表")
+        raise TypeError("init_depth note int note 2 note/note")
 
     @staticmethod
     def _normalize_const_range(value: Any) -> Tuple[float, float]:
@@ -276,12 +276,12 @@ class GPLearnRegressor(BaseWrapper):
         elif isinstance(value, (list, tuple)):
             parsed = value
         else:
-            raise TypeError("const_range 需为 2 元组/列表（或其字符串形式）")
+            raise TypeError("const_range note 2 note/note note ")
         if len(parsed) != 2:
-            raise ValueError("const_range 需为 2 元素序列 (low, high)")
+            raise ValueError("const_range note 2 note (low, high)")
         low, high = float(parsed[0]), float(parsed[1])
         if low >= high:
-            raise ValueError("const_range 需满足 low < high")
+            raise ValueError("const_range note low < high")
         return (low, high)
 
     @classmethod
@@ -292,9 +292,9 @@ class GPLearnRegressor(BaseWrapper):
             if value is None:
                 continue
             if not isinstance(value, numbers.Real):
-                raise TypeError(f"{name} 应为 0~1 的数值")
+                raise TypeError(f"{name} note 0~1 note")
             if value < 0 or value > 1:
-                raise ValueError(f"{name} 应在 [0,1]，当前值 {value}")
+                raise ValueError(f"{name} note [0,1] current note {value}")
             if value > 0:
                 given.append(float(value))
 
@@ -302,7 +302,7 @@ class GPLearnRegressor(BaseWrapper):
             prob_sum = sum(given)
             if prob_sum > 1.0 + 1e-12:
                 raise ValueError(
-                    "p_* 参数的和不能超过 1.0，当前配置为: "
+                    "p_* note 1.0 current note: "
                     f"{prob_sum:.6f}"
                 )
 
@@ -343,7 +343,7 @@ class GPLearnRegressor(BaseWrapper):
             target_name=self._contract_target_name,
             context="GPLearnRegressor.fit",
         )
-        # 仅在需要时导入
+        # note
         from gplearn.genetic import SymbolicRegressor as GPLearnSR
         import warnings
 
@@ -376,26 +376,26 @@ class GPLearnRegressor(BaseWrapper):
 
     def predict(self, X):
         if self.model is None:
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return self.model.predict(X)
 
     def get_optimal_equation(self):
-        """返回模型拟合的数学方程"""
+        """note"""
         if self.model is None:
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return str(self.model)
 
     def get_total_equations(self):
         """
-            获取模型学习到的所有符号方程
+            note
         """
         if self.model is None:
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return [str(self.model)]
 
     def export_canonical_symbolic_program(self):
         if self.model is None:
-            raise ValueError("模型尚未训练，请先调用fit方法")
+            raise ValueError("note notefitnote")
         return normalize_gplearn_artifact(
             self.get_optimal_equation(),
             expected_n_features=getattr(self.model, "n_features_in_", None),

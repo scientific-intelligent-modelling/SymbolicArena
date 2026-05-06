@@ -1,6 +1,6 @@
-# Core50 12算法排序（OOD log10 NMSE）
+# Core50 12noteRanking OOD log10 NMSE 
 
-口径：每个 dataset×algorithm 先取 5 seed 的 OOD log10 NMSE 中位数；缺失/NaN/Inf 按 12 惩罚；再对 50 个数据集取平均。数值越低越好。
+note note dataset×algorithm note 5 seed note OOD log10 NMSE note note/NaN/Inf note 12 note note 50 note note 
 
 | rank | algorithm | OOD mean | OOD median | ID mean | valid mean | train mean | metric complete | wins | median sec |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
