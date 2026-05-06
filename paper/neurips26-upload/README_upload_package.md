@@ -27,6 +27,14 @@ This directory collects the files prepared for the NeurIPS 2026 Evaluations & Da
     `SymbolicArena_NeurIPS26_ED_code_snapshot_minimal.zip`.
   - The full repository contains large vendored algorithm assets and should not be blindly uploaded as a supplementary zip.
 
+- Full experiment artifact:
+  - Use an anonymous external artifact URL for the large raw experiment outputs.
+  - Local staging instructions and build outputs are under:
+    `external-artifact-hosting/`.
+  - Upload the generated `dist/SymbolicArena_NeurIPS26_ED_external_full_artifact.tar.zst`,
+    `dist/EXTERNAL_ARTIFACT_FILE_MANIFEST.txt.zst`, and `dist/SHA256SUMS.txt`
+    to the external host, not to OpenReview.
+
 ## Contents
 
 - `paper-pdf/`
@@ -43,6 +51,10 @@ This directory collects the files prepared for the NeurIPS 2026 Evaluations & Da
 
 - `openreview-form/`
   - Text snippets to paste into OpenReview fields.
+
+- `external-artifact-hosting/`
+  - Instructions, source manifest, anonymization/build script, and local external-hosting staging metadata.
+  - Its generated `dist/` and `staging/` directories are intentionally git-ignored.
 
 - `FILE_MANIFEST.txt`
   - File list for this upload package.
