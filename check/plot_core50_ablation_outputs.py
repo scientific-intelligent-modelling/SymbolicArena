@@ -293,7 +293,7 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
         "metadata-diverse-50": (8, -10, "left", "top"),
         "response-kmedoids-50": (8, 8, "left", "bottom"),
         "top-info-50": (-8, -10, "right", "top"),
-        "difficulty-balanced-50": (8, 8, "left", "bottom"),
+        "difficulty-balanced-50": (-8, 2, "right", "center"),
     }
     for ok, marker, label in [(True, "*", "feasible"), (False, "o", "violates hard constraints")]:
         sub = plot_df[feasible == ok]
@@ -312,7 +312,7 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
             key = str(row["subset"])
             dx, dy, ha, va = label_offsets.get(key, (5, 4, "left", "bottom"))
             ax.annotate(
-                _display_name(key),
+                "Difficulty-\nbalanced" if key == "difficulty-balanced-50" else _display_name(key),
                 (row["mean_info"], row["aggregate_error"]),
                 xytext=(dx, dy),
                 textcoords="offset points",
@@ -356,18 +356,30 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     bottom = np.zeros(len(subset_order))
     family_bar_width = 0.52
     family_colors = plt.cm.tab20(np.linspace(0, 1, len(family_order)))
+    family_handles: dict[str, Any] = {}
     for color, family in zip(family_colors, family_order):
         vals = []
         for subset in subset_order:
             match = family_dist[(family_dist["subset"] == subset) & (family_dist["family"] == family)]
             vals.append(float(match["count"].iloc[0]) if not match.empty else 0.0)
-        ax.bar(x_family, vals, width=family_bar_width, bottom=bottom, label=family, color=color, linewidth=0)
+        bars = ax.bar(x_family, vals, width=family_bar_width, bottom=bottom, label=family, color=color, linewidth=0)
+        family_handles[family] = bars[0]
         bottom += np.asarray(vals)
     ax.set_ylabel("Datasets")
     ax.set_xticks(x_family, family_labels, rotation=34, ha="right", fontsize=TICK_LABEL_FONTSIZE)
     _bold_core_ticklabels(ax.get_xticklabels())
     ax.margins(x=0.04)
-    ax.legend(frameon=False, fontsize=6.3, ncol=2, loc="upper left", bbox_to_anchor=(1.02, 1.0))
+    # The legend is ordered to match the visual top-to-bottom stack order.
+    legend_order = list(reversed(family_order))
+    ax.legend(
+        [family_handles[family] for family in legend_order],
+        legend_order,
+        frameon=False,
+        fontsize=6.3,
+        ncol=1,
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+    )
     _style_axis(ax)
 
     fig.tight_layout(pad=1.0, w_pad=1.6, h_pad=1.5)
