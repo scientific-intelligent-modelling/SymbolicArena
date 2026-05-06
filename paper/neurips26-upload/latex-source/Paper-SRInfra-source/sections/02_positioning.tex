@@ -1,0 +1,10 @@
+\section{Positioning}
+
+\paragraph{SR benchmarks.}
+SRBench, SRSD, and LLM-SRBench provide the closest benchmark context for this work \citep{lacava2021contemporary,matsubara2024rethinking,shojaee2025llmsrbench}. They establish large task pools, formula-backed scientific-discovery settings, and LLM-oriented equation-discovery tests. \arena{} uses these resources as sources and reference points, but addresses a different question: how to turn a heterogeneous reservoir into a compact benchmark and dynamic leaderboard whose construction, failures, and scores remain auditable as new algorithms are added.
+
+\paragraph{Modern SR algorithms.}
+Current SR methods span evolutionary search, RL and neural-guided program generation, tree search, transformers, and LLM-assisted systems \citep{cranmer2023pysr,petersen2021dsr,landajuela2022unified,shojaee2023tpsr,shojaee2025llmsr}. These paradigms differ in their search spaces, priors, constant fitting, output validity, and sensitivity to prompt or pretrained-model distributions. \arena{} is therefore not designed around one solver family; its execution layer standardizes these methods into one result schema while preserving algorithm-specific failure semantics.
+
+\paragraph{Benchmark distillation and dynamic evaluation.}
+Efficient evaluation work such as tinyBenchmarks and SubLIME shows that smaller subsets can preserve conclusions from larger benchmark suites when subset selection is explicitly validated \citep{polo2024tinybenchmarks,saranathan2025sublime}. Dynamic evaluation systems such as Dynabench, Dynaboard, and DataPerf emphasize benchmark maintenance and score comparability over time \citep{kiela2021dynabench,ma2021dynaboard,mazumder2023dataperf}. \arena{} adapts these ideas to formula-backed SR by combining probe-based task distillation, expression-level traces, and fixed absolute scores. A fuller related-work discussion is provided in \cref{app:related-work}.

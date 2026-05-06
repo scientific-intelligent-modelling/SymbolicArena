@@ -1,0 +1,38 @@
+\section{Artifact, Documentation, and Reproducibility}
+
+The \arena{} artifact is organized as an anonymized evaluation package rather than only a paper supplement. It includes the standardized dataset lists, algorithm execution assets, result schemas, postprocessing scripts, and reproducibility documentation needed to audit the benchmark construction and leaderboard.
+
+\paragraph{Released components.}
+The submission package contains the following components:
+\begin{verbatim}
+1. Core-50 dataset manifest and dataset files
+2. GT-Reservoir-664 metadata
+3. Candidate-200 metadata
+4. Probe-2 and Probe-4 run summaries
+5. Core-50 12-algorithm clean final results
+6. Remote-collected minute-level snapshot archive
+7. Expression canonicalization and replay utilities
+8. Six-axis metric computation scripts
+9. Reproduction scripts for Core-50 and leaderboard runs
+10. Croissant metadata, dataset card, benchmark card, and license table
+\end{verbatim}
+
+The final-result summaries are kept in the main artifact tree. The 180,000 minute-level snapshots are released as a separate compressed trace archive because expanding every progress file substantially increases artifact size.
+
+\paragraph{Result schemas.}
+Each run-level artifact records the dataset identifier, algorithm, seed, status, failure reason, wall-clock time, final expression, expression complexity, and train/validation/ID/OOD metrics. Timeout with recovered output is distinguished from timeout without output, so budget exhaustion is not automatically treated as algorithm failure.
+
+\paragraph{Reproduction commands.}
+The benchmark is reproducible at three levels: dataset validation, single-run replay, and full-batch scheduling. The minimal reproduction path is:
+\begin{verbatim}
+python scripts/validate_datasets.py --manifest metadata/core50.csv
+python scripts/run_one.py --algorithm pysr --dataset <dataset> --seed 0
+python scripts/reproduce_leaderboard.py --manifest metadata/core50.csv
+\end{verbatim}
+The full cluster schedule used for the reported runs is included separately because the 12-algorithm leaderboard requires heterogeneous CPU and LLM-backed environments. Additional implementation and data-cleaning details are summarized in \cref{app:infra-cleaning}.
+
+\paragraph{Metadata, licenses, and anonymity.}
+We provide machine-readable Croissant metadata for the \core{} benchmark and reservoir manifests. For each source benchmark and algorithm wrapper, the artifact records the original source URL, license, and redistribution status. For double-blind review, the released archive removes author-identifying paths and repository names while preserving stable dataset and run identifiers.
+
+\paragraph{Current limitations of the artifact.}
+The clean \core{} final results, minute-level trace archive, Probe4-Full postprocessing, and formal symbolic-fidelity artifacts are present in the release package. The ROBU noisy-training track remains an extension: if the paper reports a completed six-axis leaderboard, the shared noisy-training protocol must be regenerated and released with the same result schema.

@@ -1,0 +1,172 @@
+{
+  "tool": "gplearn",
+  "description": "gplearn 工具的 wrapper 参数治理与闭环行为定义（v0.1）",
+  "system_params": {
+    "problem_name": {
+      "type": "string",
+      "action": "strip",
+      "description": "实验元参数，不参与算法训练"
+    },
+    "seed": {
+      "type": "int",
+      "action": "map",
+      "target": "random_state",
+      "description": "实验元参数；若未显式设置 random_state，则映射为 random_state"
+    },
+    "exp_name": {
+      "type": "string",
+      "action": "strip",
+      "description": "实验元参数，不参与算法训练"
+    },
+    "exp_path": {
+      "type": "string",
+      "action": "strip",
+      "description": "实验元参数，不参与算法训练"
+    },
+    "timeout_in_seconds": {
+      "type": "int",
+      "action": "strip",
+      "description": "统一运行时元参数；由外层子进程执行器负责总时长控制，不直接透传给 gplearn"
+    }
+  },
+  "allowed_params": {
+    "population_size": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "generations": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "tournament_size": {
+      "type": "int",
+      "range": "(1, +inf)",
+      "required": false,
+      "default": null
+    },
+    "stopping_criteria": {
+      "type": "float",
+      "range": "[0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "parsimony_coefficient": {
+      "type": "float",
+      "range": "[0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "p_crossover": {
+      "type": "float",
+      "range": "[0, 1]",
+      "required": false,
+      "default": null
+    },
+    "p_subtree_mutation": {
+      "type": "float",
+      "range": "[0, 1]",
+      "required": false,
+      "default": null
+    },
+    "p_hoist_mutation": {
+      "type": "float",
+      "range": "[0, 1]",
+      "required": false,
+      "default": null
+    },
+    "p_point_mutation": {
+      "type": "float",
+      "range": "[0, 1]",
+      "required": false,
+      "default": null
+    },
+    "p_point_replace": {
+      "type": "float",
+      "range": "[0, 1]",
+      "required": false,
+      "default": null
+    },
+    "function_set": {
+      "type": "list|tuple|string",
+      "required": false,
+      "default": "gplearn 默认函数集"
+    },
+    "const_range": {
+      "type": "tuple|list|string",
+      "required": false,
+      "default": null,
+      "description": "长度为2的数值序列(low, high)"
+    },
+    "init_depth": {
+      "type": "int|tuple",
+      "required": false,
+      "default": null
+    },
+    "init_method": {
+      "type": "enum",
+      "candidates": ["half and half", "grow", "full"],
+      "required": false,
+      "default": null
+    },
+    "metric": {
+      "type": "str",
+      "required": false,
+      "default": null
+    },
+    "max_samples": {
+      "type": "float",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "random_state": {
+      "type": "int",
+      "required": false,
+      "default": null
+    },
+    "n_jobs": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": 1
+    },
+    "verbose": {
+      "type": "int",
+      "range": "[0, +inf)",
+      "required": false,
+      "default": 0
+    },
+    "low_memory": {
+      "type": "bool",
+      "required": false,
+      "default": false
+    },
+    "warm_start": {
+      "type": "bool",
+      "required": false,
+      "default": false
+    }
+  },
+  "constraints": {
+    "mutation_probability_sum": {
+      "params": [
+        "p_crossover",
+        "p_subtree_mutation",
+        "p_hoist_mutation",
+        "p_point_mutation",
+        "p_point_replace"
+      ],
+      "rule": "每个参数都必须在 [0,1]，且非零参数之和不大于1.0"
+    }
+  },
+  "compatibility": {
+    "notes": [
+      "兼容 sklearn>=1.7.0 与 gplearn 0.4.3 的 _validate_data 缺失问题：wrapper 已内置动态补丁",
+      "过滤并剥离 exp_path/exp_name/problem_name/seed 元参数，不直接透传给 gplearn SymbolicRegressor"
+    ]
+  }
+}

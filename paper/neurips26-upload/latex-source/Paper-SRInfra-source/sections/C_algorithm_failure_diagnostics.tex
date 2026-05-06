@@ -1,0 +1,113 @@
+\section{Diagnostic Profiles of Evaluated Algorithms}
+\label{app:algorithm-diagnostics}
+
+A single leaderboard rank does not explain why a symbolic-regression method fails. \arena{} records output validity, metric completeness, numerical quality, OOD behavior, symbolic-fidelity artifacts, complexity, seed-level behavior, and minute-level search traces. This makes it possible to diagnose failures at a finer granularity than a single OOD-NMSE column. The goal of this appendix is not to declare an algorithm universally good or bad, but to summarize which failure modes are exposed by \core{} under the \arena{} protocol.
+
+\paragraph{Failure taxonomy.}
+We use seven diagnostic categories. \emph{Numerical underfitting} denotes failure to obtain good ID or validation fit. \emph{OOD degradation} denotes a large drop from ID quality to OOD quality, suggesting shortcut expressions or poor extrapolation. \emph{Symbolic mismatch} denotes low expression-level agreement with the ground-truth formula even when numerical error is low. \emph{Inefficient search} denotes strong final performance but slow time-to-threshold or low anytime AUC. \emph{Premature stagnation} denotes early plateauing of best-so-far quality. \emph{Seed instability} denotes large seed-to-seed variance in numerical score, structure, or success rate. \emph{Invalid or incomplete output} denotes missing, unparsable, timed-out, or metric-incomplete artifacts.
+
+These categories are not mutually exclusive. For example, a method may be numerically strong but symbolically mismatched, or produce valid expressions but fail complete ID/OOD metric evaluation. \Cref{fig:hexagon-heatmap,fig:appendix-hexagon-small-multiples,fig:appendix-axis-correlation,fig:appendix-robustness-extension} provide the corresponding multi-axis and robustness diagnostics. The cards below use the clean \core{} leaderboard statistics reported in the main text: each algorithm has 250 runs, and lower penalized OOD log NMSE is better.
+
+\begin{center}
+\small
+\textbf{Table D.1:} Algorithm-level diagnostic summary from the clean \core{} leaderboard.
+
+\vspace{0.4em}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llrrrp{0.30\linewidth}}
+\toprule
+\textbf{Algorithm} & \textbf{Paradigm} & \textbf{Valid} & \textbf{Metric} & \textbf{OOD log} & \textbf{Primary diagnostic questions} \\
+ & & \textbf{rate} & \textbf{complete} & \textbf{NMSE} & \\
+\midrule
+uDSR & neural-guided SR & 1.000 & 1.000 & $-5.646$ & Symbolic equivalence and seed-level structural consistency despite strong numerical quality \\
+iMCTS & tree search / MCTS & 1.000 & 0.968 & $-3.960$ & Metric-completion gaps, time-to-threshold behavior, and symbolic mismatch \\
+PySR & evolutionary GP & 1.000 & 0.960 & $-3.055$ & OOD shortcuts, expression complexity, and low-NMSE non-equivalence \\
+DSO & RL / policy search & 1.000 & 0.972 & $-2.458$ & Reward-driven exploration limits, operator recovery, and seed variance \\
+DRSR & LLM/hybrid SR & 1.000 & 1.000 & $-2.087$ & OOD degradation, refinement quality, and generated-structure mismatch \\
+LLM-SR & LLM-assisted SR & 1.000 & 0.992 & $-1.420$ & Context sensitivity, prior mismatch, and post-generation fitting limits \\
+gplearn & classical GP & 1.000 & 1.000 & $-1.207$ & Under-exploration, bloat, and OOD degradation \\
+QLattice & graph/evolutionary SR & 0.980 & 0.972 & $-0.780$ & Distinguishing output-health failures from algorithmic OOD failures \\
+TPSR & transformer/planning SR & 1.000 & 0.996 & $0.896$ & Pretraining-distribution mismatch and weak OOD transfer \\
+PyOperon & evolutionary GP & 0.984 & 0.840 & $1.079$ & Metric incompleteness, invalid-prone tasks, and weak penalized OOD quality \\
+E2ESR & end-to-end neural SR & 1.000 & 0.800 & $2.891$ & Metric-completion failures and unreliable competitive evaluation \\
+RAG-SR & retrieval/LLM-assisted SR & 1.000 & 0.964 & $3.788$ & Retrieval mismatch, generated-expression quality, and OOD degradation \\
+\bottomrule
+\end{tabular}}
+\end{center}
+
+\paragraph{How the diagnostic evidence is computed.}
+Table D.2 converts the final-result archive into interpretable failure indicators. \emph{Wins} counts the number of datasets on which an algorithm has the best five-seed median OOD log NMSE among the 12 methods. \emph{Good OOD} counts datasets with five-seed median OOD log NMSE below $-2$; \emph{bad OOD} counts datasets above $2$; and \emph{gap$>2$} counts datasets whose median OOD log NMSE exceeds median ID log NMSE by more than two log units. \emph{Miss} is the number of run-level artifacts, out of 250, for which the final result is not metric-complete. Exact-equivalence rates come from the formal symbolic-fidelity pass, which combines CAS simplification, independent numeric-equivalence probes, tree similarity, variable F1, and operator F1. These indicators intentionally mix output health, numerical behavior, symbolic recovery, and anytime efficiency, because no single column explains failures.
+
+\begin{center}
+\small
+\textbf{Table D.2:} Evidence used for algorithm-level failure diagnosis. Counts are over 50 datasets unless otherwise stated.
+
+\vspace{0.4em}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrrrp{0.31\linewidth}}
+\toprule
+\textbf{Algorithm} & \textbf{Wins} & \textbf{Good} & \textbf{Bad} & \textbf{Gap} & \textbf{Miss} & \textbf{Exact} & \textbf{EFF} & \textbf{Diagnostic evidence} \\
+ & & \textbf{OOD} & \textbf{OOD} & \textbf{$>2$} & \textbf{/250} & \textbf{equiv.} & & \\
+\midrule
+uDSR & 11 & 33 & 1 & 13 & 0 & 24.0\% & 41.0 & Strong numerical recovery, but OOD gaps and modest equivalence rate require symbolic checks \\
+iMCTS & 13 & 27 & 11 & 8 & 8 & 30.8\% & 46.8 & Strong OOD and efficiency profile, plus a long-tail of difficult OOD cases \\
+PySR & 7 & 29 & 11 & 8 & 10 & 34.0\% & 17.8 & Highest formal \symf{} but slow anytime behavior and long-tail metric failures \\
+DSO & 7 & 13 & 1 & 6 & 7 & 18.0\% & 24.2 & Healthy RL baseline with symbolic shortcut cases despite good numerical fit \\
+DRSR & 9 & 20 & 4 & 11 & 0 & 12.0\% & 13.2 & Complete artifacts; failures concentrate in refinement, OOD gaps, and low symbolic recovery \\
+LLM-SR & 0 & 15 & 5 & 14 & 4 & 12.8\% & 12.5 & Evaluable outputs but no dataset wins, low efficiency, and context-sensitive OOD gaps \\
+gplearn & 0 & 9 & 0 & 5 & 0 & 8.0\% & 9.0 & Stable classical GP baseline; failures are search expressivity and symbolic mismatch \\
+QLattice & 0 & 12 & 4 & 16 & 7 & 4.8\% & 26.1 & Fast but gap-prone; output health and OOD retention must be separated \\
+TPSR & 1 & 4 & 8 & 7 & 1 & 0.4\% & 11.5 & Valid outputs but weak symbolic recovery and pretraining-distribution transfer \\
+PyOperon & 1 & 6 & 10 & 11 & 40 & 0.0\% & 19.7 & Severe metric-completeness issue and no formal equivalence under this protocol \\
+E2ESR & 1 & 10 & 18 & 9 & 50 & 0.0\% & 14.5 & Valid artifacts often fail complete evaluation; poor OOD and zero exact recovery \\
+RAG-SR & 0 & 1 & 27 & 9 & 9 & 1.6\% & 3.2 & Mostly numerical underfitting rather than missing-output failure; weakest efficiency \\
+\bottomrule
+\end{tabular}}
+\end{center}
+
+\paragraph{Representative symbolic shortcut.}
+The symbolic-fidelity pass exposes low-error but non-equivalent expressions. We report \texttt{Nguyen-9} because it is a repeated low-NMSE non-equivalence pattern found by the audit, not a hand-selected single failure. The ground-truth expression is $\sin(x_0)+\sin(x_1^2)$, while several low-NMSE predictions simplify to $\sin(x_0)+\sin(x_0^2)$. This shortcut appears in five DSO seeds, two gplearn seeds, and one PySR seed. Its ID and OOD NMSE are near machine precision, but the formal \symf{} score is only $0.424$. This case illustrates why \arena{} does not treat numerical fit alone as symbolic recovery.
+
+\subsection{Per-Algorithm Diagnostic Cards}
+
+\paragraph{uDSR.}
+uDSR is the strongest numerical method under the penalized OOD leaderboard: it wins 11 datasets, has no metric-incomplete runs, and reaches good OOD quality on 33 of 50 datasets. Its diagnostic weakness is not artifact health, but symbolic and extrapolation fidelity. Its exact-equivalence rate is 24.0\%, below PySR and iMCTS, and 13 datasets have an OOD-ID gap above two log units. \arena{} therefore treats uDSR as a strong numerical baseline whose outputs still require \symf{} and seed-level structural checks.
+
+\paragraph{iMCTS.}
+iMCTS has the strongest clean-track OOD/efficiency profile and wins the largest number of datasets (13 of 50). It has the best \oodg{} and EFF values among the evaluated methods, which indicates that tree-search behavior is both accurate and comparatively efficient under the one-hour protocol. The failure pattern is long-tailed: although 27 datasets have good OOD quality, 11 have bad OOD quality, and 8 of 250 runs are not metric-complete. The diagnostic question is therefore not whether iMCTS is competitive, but why its search occasionally produces difficult-to-evaluate or OOD-fragile expressions.
+
+\paragraph{PySR.}
+PySR is the strongest symbolic-fidelity method in the formal pass, with the highest \symf{} and exact-equivalence rate (34.0\%). It also has good OOD quality on 29 datasets. Its main diagnostic weaknesses are cost and tail behavior: EFF is only 17.8, 10 runs are not metric-complete, and 11 datasets have bad OOD quality despite strong aggregate performance. PySR therefore looks like a high-quality final evaluator but not always an efficient anytime baseline.
+
+\paragraph{DSO.}
+DSO is a healthy RL/policy-search baseline: it wins 7 datasets and has only 7 metric-incomplete runs. Its failures are more symbolic than infrastructural. The low-NMSE non-equivalence audit finds five DSO seeds on \texttt{Nguyen-9} with near-perfect numerical error but a wrong variable structure. This is consistent with reward-driven exploration: a policy can discover a numerically excellent shortcut without recovering the intended formula.
+
+\paragraph{DRSR.}
+DRSR has complete artifact health and wins 9 datasets, so its mid-tier leaderboard position should not be explained away as missing outputs. Instead, the failure modes are refinement quality, OOD degradation, and symbolic mismatch. It has 20 good-OOD datasets, but 11 datasets have an OOD-ID gap above two log units, and exact equivalence is only 12.0\%. This suggests that generated structures are often executable but not consistently ground-truth equivalent.
+
+\paragraph{LLM-SR.}
+LLM-SR produces evaluable outputs but does not win any dataset under the five-seed median OOD criterion. It has 15 good-OOD datasets, but 14 datasets have OOD-ID gaps above two log units and its EFF score is low (12.5). This pattern suggests that the method can generate plausible formulas, but the formal \core{} protocol still exposes context sensitivity, OOD degradation, and post-generation fitting limits. The result should be interpreted under the recorded prompt/context contract, rather than as a context-free statement about all LLM-assisted SR.
+
+\paragraph{gplearn.}
+gplearn is a stable classical GP baseline: all 250 runs are valid and metric-complete, and none of the datasets have bad OOD medians above 2. Its weakness is not reliability but competitiveness. It wins no dataset, reaches good OOD quality on only 9 datasets, and exact equivalence is 8.0\%. The \texttt{Nguyen-9} shortcut also appears in two gplearn seeds. Thus gplearn is useful as a clean classical baseline, but its failures are dominated by under-exploration and symbolic mismatch.
+
+\paragraph{QLattice.}
+QLattice is fast, with median runtime far below the one-hour methods, but its diagnostic profile is gap-prone. It has 5 no-valid-output runs, 7 metric-incomplete runs, and no dataset wins. It still reaches good OOD quality on 12 datasets, but 16 datasets have OOD-ID gaps above two log units. This means its failures should not be reduced to output-health problems: even when expressions are valid, OOD retention and symbolic recovery remain limiting factors.
+
+\paragraph{TPSR.}
+TPSR has almost complete metric health, but weak \idq{}, \oodg{}, and symbolic recovery. It wins one dataset, reaches good OOD quality on only 4 datasets, and exact equivalence is 0.4\%. Since only one run is metric-incomplete, the primary diagnosis is not wrapper failure. The more plausible failure mode is proposal-distribution mismatch: the pretrained or learned symbolic prior does not transfer cleanly to many \core{} tasks under the fixed one-hour adaptation budget.
+
+\paragraph{PyOperon.}
+PyOperon shows the clearest output-health warning among the evolutionary methods. It has 4 no-valid-output runs and 40 metric-incomplete runs, and formal exact equivalence is 0.0\%. At the same time, it still wins one dataset and reaches good OOD quality on 6 datasets, so it is not simply unusable. The diagnosis is that PyOperon is a useful stress-test probe for invalid-prone and difficult tasks, but its leaderboard score must retain explicit metric-completeness penalties.
+
+\paragraph{E2ESR.}
+E2ESR illustrates the distinction between valid artifacts and complete evaluation. All 250 runs produce valid artifacts, but 50 are not metric-complete. It reaches good OOD quality on 10 datasets and wins one dataset, but 18 datasets have bad OOD medians and exact equivalence is 0.0\%. The failure mode is therefore not absence of output; it is that the produced output often fails to yield robust, competitive ID/OOD and symbolic evaluation under the shared evaluator.
+
+\paragraph{RAG-SR.}
+RAG-SR ranks last under the penalized OOD leaderboard and wins no dataset. It has 8 timed-out runs and 9 metric-incomplete runs, but its dominant failure is numerical quality rather than missing output: 42 datasets have OOD medians above 0 and 27 are above 2. Its clean-track \idq{}, \oodg{}, EFF, and STAB are all weak relative to the 12-method panel. Under the current wrapper and context protocol, the retrieved or generated structures do not reliably match the \core{} equations.
+
+\subsection{Cross-Algorithm Patterns}
+
+The diagnostic cards show that SR algorithms fail in qualitatively different ways. uDSR, iMCTS, and PySR are strong numerically, but still require symbolic-equivalence and long-tail OOD checks. DSO, DRSR, and LLM-SR often produce executable formulas, yet reveal different mixtures of shortcutting, refinement limits, and OOD degradation. gplearn is reliable but rarely wins. QLattice is fast but gap-prone. TPSR, E2ESR, PyOperon, and RAG-SR expose different forms of distribution mismatch, metric incompleteness, or numerical underfitting. These distinctions justify \arena{}'s multi-axis design: a single OOD-NMSE ranking cannot capture the diagnostic structure of modern SR systems.
+
+The current appendix intentionally reports algorithm-level patterns rather than per-dataset blame. The released trace archive supports a stricter follow-up table with representative cases of OOD shortcutting, low-NMSE non-equivalence, seed instability, timeout/no-valid-output, and complexity growth. Such case tables should be generated mechanically from the released \texttt{result.json} and minute-level progress artifacts to avoid cherry-picking.

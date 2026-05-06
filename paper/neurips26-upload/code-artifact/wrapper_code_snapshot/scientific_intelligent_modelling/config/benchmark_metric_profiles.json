@@ -1,0 +1,112 @@
+{
+  "srbench": {
+    "paper": "La Cava et al., 2021",
+    "url": "https://cavalab.org/assets/papers/La%20Cava%20et%20al.%20-%202021%20-%20Contemporary%20Symbolic%20Regression%20Methods%20and%20their.pdf",
+    "task_groups": {
+      "black_box_regression": {
+        "selection_protocol": "5-fold CV for tuning; 75/25 train/test; 10 repeated trials",
+        "metrics": [
+          {
+            "name": "r2_test",
+            "direction": "maximize",
+            "toolkit_field": "r2"
+          },
+          {
+            "name": "model_size_raw",
+            "direction": "minimize",
+            "toolkit_field": "complexity_raw"
+          },
+          {
+            "name": "model_size_simplified",
+            "direction": "minimize",
+            "toolkit_field": "complexity_simplified"
+          },
+          {
+            "name": "training_time_seconds",
+            "direction": "minimize",
+            "toolkit_field": "train_time_seconds"
+          }
+        ]
+      },
+      "ground_truth_regression": {
+        "selection_protocol": "multiple noise levels; 10 repeated trials",
+        "metrics": [
+          {
+            "name": "symbolic_solution",
+            "direction": "maximize",
+            "toolkit_field": "symbolic_solution"
+          },
+          {
+            "name": "solution_rate",
+            "direction": "maximize",
+            "toolkit_field": "solution_rate"
+          }
+        ]
+      }
+    }
+  },
+  "srsd": {
+    "paper": "Matsubara et al., 2024",
+    "url": "https://openreview.net/pdf?id=qrUdrXsiXX",
+    "task_groups": {
+      "scientific_discovery": {
+        "selection_protocol": "use validation geometric / relative error to choose best model, then compute symbolic metrics",
+        "metrics": [
+          {
+            "name": "legacy_accuracy_proxy",
+            "direction": "maximize",
+            "toolkit_field": "legacy_accuracy_proxy"
+          },
+          {
+            "name": "solution_rate",
+            "direction": "maximize",
+            "toolkit_field": "solution_rate"
+          },
+          {
+            "name": "normalized_edit_distance",
+            "short_name": "ned",
+            "direction": "minimize",
+            "toolkit_field": "ned"
+          }
+        ]
+      }
+    }
+  },
+  "llm_srbench": {
+    "paper": "Shojaee et al., 2025",
+    "url": "https://proceedings.mlr.press/v267/shojaee25a.html",
+    "task_groups": {
+      "scientific_equation_discovery": {
+        "selection_protocol": "report symbolic correctness together with ID/OOD numerical generalization",
+        "metrics": [
+          {
+            "name": "symbolic_accuracy",
+            "short_name": "sa",
+            "direction": "maximize",
+            "toolkit_field": "symbolic_accuracy"
+          },
+          {
+            "name": "acc_0_1_id",
+            "direction": "maximize",
+            "toolkit_field": "id_test.acc_0_1"
+          },
+          {
+            "name": "acc_0_1_ood",
+            "direction": "maximize",
+            "toolkit_field": "ood_test.acc_0_1"
+          },
+          {
+            "name": "nmse_id",
+            "direction": "minimize",
+            "toolkit_field": "id_test.nmse"
+          },
+          {
+            "name": "nmse_ood",
+            "direction": "minimize",
+            "toolkit_field": "ood_test.nmse"
+          }
+        ]
+      }
+    }
+  }
+}

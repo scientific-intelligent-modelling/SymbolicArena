@@ -1,0 +1,125 @@
+\documentclass{article}
+
+% NeurIPS 2026 submission style.
+% This paper targets the Evaluations & Datasets track.  For camera-ready,
+% switch to \usepackage[eandd, final]{neurips_2026}.
+\usepackage[eandd]{neurips_2026}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[hypertexnames=false]{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{cleveref}
+
+\title{SymbolicArena: A Unified Infrastructure for Benchmark Distillation and Dynamic Evaluation in Symbolic Regression}
+
+\author{%
+  Anonymous Authors \\
+  Anonymous Institution \\
+  \texttt{anonymous@anonymous.org}
+}
+
+\newcommand{\arena}{\textbf{SymbolicArena}}
+\newcommand{\core}{Core-50}
+\newcommand{\reservoir}{GT-Reservoir-664}
+\newcommand{\candidate}{Candidate-200}
+\newcommand{\probe}{Probe-4}
+\newcommand{\idq}{\textsc{ID-Q}}
+\newcommand{\oodg}{\textsc{OOD-G}}
+\newcommand{\symf}{\textsc{SYM-F}}
+\newcommand{\eff}{\textsc{EFF}}
+\newcommand{\rob}{\textsc{ROBU}}
+\newcommand{\stab}{\textsc{STAB}}
+
+\begin{document}
+
+\maketitle
+
+\input{sections/00_abstract}
+\input{sections/01_introduction}
+% \input{sections/02_positioning}
+\input{sections/03_overview}
+\input{sections/04_reservoir_standardization}
+\input{sections/05_core50_distillation}
+\input{sections/06_dynamic_leaderboard}
+\input{sections/07_hexagonal_protocol}
+\input{sections/08_experiments}
+\input{sections/09_artifact_reproducibility}
+\input{sections/10_limitations}
+\input{sections/11_conclusion}
+
+% Acknowledgments are hidden in anonymized submission mode by the NeurIPS style.
+% \begin{ack}
+% Acknowledgments and funding disclosures go here for the final version.
+% \end{ack}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\newpage
+\appendix
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{A.\arabic{figure}}
+\renewcommand{\theHfigure}{appendix.\arabic{figure}}
+\input{sections/02_related_work}
+
+\clearpage
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{B.\arabic{figure}}
+\renewcommand{\theHfigure}{appendixB.\arabic{figure}}
+\input{sections/B_core50_selection_details}
+
+\clearpage
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{C.\arabic{figure}}
+\renewcommand{\theHfigure}{appendixC.\arabic{figure}}
+\input{sections/A_infrastructure_data_cleaning}
+
+\clearpage
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{D.\arabic{figure}}
+\renewcommand{\theHfigure}{appendixC1.\arabic{figure}}
+\input{sections/appreservoir.tex}
+
+\clearpage
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{D.\arabic{figure}}
+\renewcommand{\theHfigure}{appendixD.\arabic{figure}}
+\input{sections/B_additional_empirical_figures}
+
+\clearpage
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{E.\arabic{figure}}
+\renewcommand{\theHfigure}{appendixE.\arabic{figure}}
+\input{sections/C_algorithm_failure_diagnostics}
+
+\clearpage
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{F.\arabic{figure}}
+\renewcommand{\theHfigure}{appendixF.\arabic{figure}}
+\input{sections/D_evaluated_baselines}
+
+\clearpage
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{G.\arabic{figure}}
+\renewcommand{\theHfigure}{appendixG.\arabic{figure}}
+\input{sections/E_leaderboard_configuration_manifest}
+
+\clearpage
+\input{checklist.tex}
+
+\end{document}

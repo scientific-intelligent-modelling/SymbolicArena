@@ -1,0 +1,96 @@
+{
+  "tool": "gplearn",
+  "description": "gplearn 超参数搜索空间（适配 wrapper 的参数白名单）",
+  "search_space": {
+    "population_size": {
+      "type": "int",
+      "distribution": "log_uniform",
+      "min": 100,
+      "max": 3000
+    },
+    "generations": {
+      "type": "int",
+      "distribution": "int",
+      "min": 20,
+      "max": 250
+    },
+    "tournament_size": {
+      "type": "int",
+      "distribution": "int",
+      "min": 5,
+      "max": 50
+    },
+    "parsimony_coefficient": {
+      "type": "float",
+      "distribution": "log_uniform",
+      "min": 1e-9,
+      "max": 1e-1
+    },
+    "p_crossover": {
+      "type": "float",
+      "distribution": "uniform",
+      "min": 0.4,
+      "max": 0.95
+    },
+    "p_subtree_mutation": {
+      "type": "float",
+      "distribution": "uniform",
+      "min": 0.0,
+      "max": 0.4
+    },
+    "p_hoist_mutation": {
+      "type": "float",
+      "distribution": "uniform",
+      "min": 0.0,
+      "max": 0.3
+    },
+    "p_point_mutation": {
+      "type": "float",
+      "distribution": "uniform",
+      "min": 0.0,
+      "max": 0.4
+    },
+    "p_point_replace": {
+      "type": "float",
+      "distribution": "uniform",
+      "min": 0.0,
+      "max": 0.3
+    },
+    "function_set": {
+      "type": "categorical",
+      "candidates": [
+        ["add", "sub", "mul", "div"],
+        ["add", "sub", "mul", "div", "sin", "cos", "exp", "log"],
+        ["add", "sub", "mul", "div", "sqrt", "inv", "pow"]
+      ]
+    },
+    "const_range": {
+      "type": "tuple_float",
+      "constraints": [0.01, 100]
+    },
+    "init_depth": {
+      "type": "tuple_int",
+      "min": [1, 2],
+      "max": [3, 6]
+    },
+    "init_method": {
+      "type": "categorical",
+      "candidates": ["half and half", "grow", "full"]
+    },
+    "max_samples": {
+      "type": "float",
+      "distribution": "uniform",
+      "min": 0.2,
+      "max": 1.0
+    },
+    "n_jobs": {
+      "type": "int",
+      "distribution": "int",
+      "min": 1,
+      "max": 8
+    }
+  },
+  "constraints": [
+    "p_* parameters must be in [0,1], and sum(p_crossover + p_subtree_mutation + p_hoist_mutation + p_point_mutation + p_point_replace) <= 1.0"
+  ]
+}

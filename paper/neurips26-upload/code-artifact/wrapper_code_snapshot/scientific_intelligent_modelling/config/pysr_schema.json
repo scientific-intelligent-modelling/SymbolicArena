@@ -1,0 +1,198 @@
+{
+  "tool": "pysr",
+  "description": "pysr 工具的 wrapper 参数治理与超参数定义（v0.1）",
+  "system_params": {
+    "problem_name": {
+      "type": "string",
+      "action": "strip",
+      "description": "实验元参数，不参与算法训练"
+    },
+    "seed": {
+      "type": "int",
+      "action": "map",
+      "target": "random_state",
+      "description": "实验元参数；若未显式传入 random_state，则映射到 random_state"
+    },
+    "exp_name": {
+      "type": "string",
+      "action": "strip",
+      "description": "实验元参数，不参与算法训练"
+    },
+    "exp_path": {
+      "type": "string",
+      "action": "strip",
+      "description": "实验元参数，不参与算法训练"
+    },
+    "timeout_in_seconds": {
+      "type": "int",
+      "action": "passthrough",
+      "description": "PySR 原生总时长上限（秒）；到达即停止搜索"
+    }
+  },
+  "allowed_params": {
+    "niterations": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "max_evals": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "early_stop_condition": {
+      "type": "float|string",
+      "required": false,
+      "default": null
+    },
+    "population_size": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "populations": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "ncycles_per_iteration": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "maxsize": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "maxdepth": {
+      "type": "int",
+      "range": "[1, +inf)",
+      "required": false,
+      "default": null
+    },
+    "procs": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "n_jobs": {
+      "type": "int",
+      "range": "(0, +inf)",
+      "required": false,
+      "default": null,
+      "note": "兼容映射为 procs"
+    },
+    "parsimony": {
+      "type": "float",
+      "range": "[0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "constraints": {
+      "type": "dict",
+      "required": false,
+      "default": null
+    },
+    "nested_constraints": {
+      "type": "dict",
+      "required": false,
+      "default": null
+    },
+    "complexity_of_operators": {
+      "type": "dict",
+      "required": false,
+      "default": null
+    },
+    "complexity_of_constants": {
+      "type": "int|float",
+      "required": false,
+      "default": null
+    },
+    "complexity_of_variables": {
+      "type": "int|float|list",
+      "required": false,
+      "default": null
+    },
+    "binary_operators": {
+      "type": "string|list|tuple",
+      "required": false,
+      "default": null
+    },
+    "unary_operators": {
+      "type": "string|list|tuple",
+      "required": false,
+      "default": null
+    },
+    "elementwise_loss": {
+      "type": "string",
+      "required": false,
+      "default": null
+    },
+    "model_selection": {
+      "type": "string",
+      "required": false,
+      "default": null
+    },
+    "loss_function": {
+      "type": "string",
+      "required": false,
+      "default": null
+    },
+    "warm_start": {
+      "type": "bool",
+      "required": false,
+      "default": false
+    },
+    "progress": {
+      "type": "bool",
+      "required": false,
+      "default": true
+    },
+    "verbosity": {
+      "type": "int",
+      "range": "[0, +inf)",
+      "required": false,
+      "default": null
+    },
+    "random_state": {
+      "type": "int",
+      "required": false,
+      "default": null
+    },
+    "precision": {
+      "type": "int",
+      "required": false,
+      "default": null
+    },
+    "deterministic": {
+      "type": "bool",
+      "required": false,
+      "default": false
+    },
+    "parallelism": {
+      "type": "string",
+      "required": false,
+      "default": null,
+      "enum": ["serial", "multithreading", "multiprocessing"]
+    }
+  },
+  "constraints": {
+    "resource_alias": {
+      "rule": "若 n_jobs 与 procs 同时出现，优先使用 procs"
+    }
+  },
+  "compatibility": {
+    "notes": [
+      "pysr 依赖外部运行时与版本兼容，建议固定在 sim_base 环境并配套版本记录",
+      "wrapper 需要在参数层剥离元参数，并做参数校验与回退"
+    ]
+  }
+}
