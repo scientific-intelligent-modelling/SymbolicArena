@@ -281,7 +281,6 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     ax.barh(labels, plot_df["aggregate_error"], color=colors, edgecolor="#333333", linewidth=0.5)
     ax.invert_yaxis()
     ax.set_xlabel("Aggregate score MAE to full reservoir (lower is better)")
-    ax.set_title("Fidelity error")
     ax.grid(axis="x", alpha=0.25)
     _style_axis(ax)
 
@@ -323,7 +322,6 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
             )
     ax.set_xlabel("Mean information")
     ax.set_ylabel("Aggregate score MAE")
-    ax.set_title("Information vs. fidelity")
     ax.set_xlim(0.06, 0.73)
     ax.set_ylim(0.05, 2.38)
     ax.grid(alpha=0.25)
@@ -338,7 +336,6 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
     ax.set_xticks(x, labels, rotation=24, ha="right")
     _bold_core_ticklabels(ax.get_xticklabels())
     ax.set_ylabel("Selection score")
-    ax.set_title("Hard-constraint gate")
     ax.grid(axis="y", alpha=0.25)
     ax.legend(frameon=False, fontsize=LEGEND_FONTSIZE)
     _style_axis(ax)
@@ -367,7 +364,6 @@ def _plot_ablation(metrics: pd.DataFrame, family_dist: pd.DataFrame) -> list[str
         ax.bar(x_family, vals, width=family_bar_width, bottom=bottom, label=family, color=color, linewidth=0)
         bottom += np.asarray(vals)
     ax.set_ylabel("Datasets")
-    ax.set_title("Family concentration")
     ax.set_xticks(x_family, family_labels, rotation=34, ha="right", fontsize=TICK_LABEL_FONTSIZE)
     _bold_core_ticklabels(ax.get_xticklabels())
     ax.margins(x=0.04)
@@ -397,7 +393,7 @@ def _latex_table(metrics: pd.DataFrame | None = None) -> str:
         "\\begin{table}[t]",
         "\\centering",
         "\\small",
-        "\\caption{Core-50 ablation against deterministic and random 50-task selectors. Higher is better for objective score, coverage, mean information, and mean stability; lower is better for aggregate-score MAE.}",
+        "\\caption{\\textbf{Core-50 ablation against deterministic and random 50-task selectors.} Higher is better for objective score, coverage, mean information, and mean stability; lower is better for aggregate-score MAE.}",
         "\\label{tab:core50-ablation-summary}",
         "\\resizebox{\\linewidth}{!}{%",
         "\\begin{tabular}{lrrrrr}",

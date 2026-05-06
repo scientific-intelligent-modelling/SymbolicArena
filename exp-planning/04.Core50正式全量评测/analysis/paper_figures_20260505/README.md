@@ -1,6 +1,6 @@
 # Paper Experiment Figures 20260505
 
-- Created at: `2026-05-05T16:02:18`
+- Created at: `2026-05-07T00:26:14`
 - This directory supplements the Core-50 formal hexagon figures with distillation-validity and reviewer-facing experiment figures.
 - Figures marked `generated_proxy` are valid for exploratory analysis but should be described with their exact data scope in the paper.
 
@@ -38,4 +38,4 @@
 | Figure 28 | score drift comparison                | generated       | figure28_score_drift_comparison.png;figure28_score_drift_comparison.pdf                                                                                                             |                                                                                                                                                                   |
 | Figure 29 | axis correlation matrix               | generated       | figure29_axis_correlation_matrix.png;figure29_axis_correlation_matrix.pdf                                                                                                           |                                                                                                                                                                   |
 | Figure 30 | bootstrap confidence interval         | generated       | figure30_bootstrap_ci.png;figure30_bootstrap_ci.pdf                                                                                                                                 |                                                                                                                                                                   |
-| Figure 31 | ablation summary                      | generated       | figure31_ablation_summary.png;figure31_ablation_summary.pdf                                                                                                                         | Uses currently available subset baselines; full objective ablation can replace this later.                                                                        |
+| Figure 31 | ablation summary                      | generated       | figure31_ablation_summary.png;figure31_ablation_summary.pdf                                                                                                                         | Infeasible baselines receive zero feasible score after hard-constraint gating.                                                                                    |

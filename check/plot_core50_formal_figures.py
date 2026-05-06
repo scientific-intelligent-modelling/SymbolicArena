@@ -227,8 +227,6 @@ def heatmap(data: pd.DataFrame, out: Path, title: str | None = None, cmap: str =
     for spine in ax.spines.values():
         spine.set_color("#333333")
         spine.set_linewidth(0.9)
-    if title:
-        ax.set_title(title, fontsize=16, pad=12)
     cbar = fig.colorbar(im, ax=ax, label="Score", fraction=0.032, pad=0.035)
     cbar.ax.tick_params(labelsize=12)
     cbar.set_label("Score", fontsize=13)
@@ -264,7 +262,6 @@ def plot_bar(scores: pd.DataFrame, metric: str, out: Path, title: str, xlabel: s
     bars = ax.barh(df["algorithm"], df[metric], color=PALETTE[: len(df)])
     ax.set_xlim(0, max(100, float(df[metric].max()) * 1.08))
     ax.set_xlabel(xlabel)
-    ax.set_title(title)
     ax.grid(axis="x", alpha=0.55)
     for bar, value in zip(bars, df[metric], strict=False):
         ax.text(float(value) + 0.8, bar.get_y() + bar.get_height() / 2, f"{value:.1f}", va="center", fontsize=8)
@@ -277,13 +274,11 @@ def plot_axis_small_multiples(scores: pd.DataFrame, out: Path) -> None:
     for ax, axis in zip(axes.ravel(), AXES, strict=False):
         df = scores.set_index("algorithm").loc[order].reset_index()
         ax.barh(df["algorithm"], df[axis], color="#2a9d8f")
-        ax.set_title(DISPLAY[axis])
         ax.set_xlim(0, 100)
         ax.grid(axis="x", alpha=0.5)
         ax.invert_yaxis()
         if axis not in {"ID_Q", "EFF"}:
             ax.tick_params(labelleft=False)
-    fig.suptitle("Core-50 Axis Scores by Algorithm", fontsize=14, fontweight="bold")
     save_figure(fig, out)
 
 
@@ -303,7 +298,6 @@ def plot_radar(scores: pd.DataFrame, out: Path, top_k: int = 4) -> None:
     ax.set_xticks(angles[:-1], labels)
     ax.set_ylim(0, 100)
     ax.set_yticks([20, 40, 60, 80, 100])
-    ax.set_title(f"Core-50 Radar Top-{top_k} by Formal HexaScore", pad=24)
     ax.legend(loc="upper right", bbox_to_anchor=(1.28, 1.08), frameon=False)
     save_figure(fig, out)
 
@@ -317,7 +311,6 @@ def plot_scatter(scores: pd.DataFrame, x: str, y: str, out: Path, title: str) ->
     ax.set_ylabel(DISPLAY.get(y, y))
     ax.set_xlim(0, max(100, float(scores[x].max()) * 1.08))
     ax.set_ylim(0, max(100, float(scores[y].max()) * 1.08))
-    ax.set_title(title)
     ax.grid(alpha=0.45)
     save_figure(fig, out)
 
@@ -333,7 +326,6 @@ def plot_proxy_vs_formal(scores: pd.DataFrame, out: Path) -> None:
     ax.set_ylim(0, lim)
     ax.set_xlabel("SYM-F proxy")
     ax.set_ylabel("SYM-F formal")
-    ax.set_title("SYM-F proxy vs formal judge")
     ax.grid(alpha=0.45)
     save_figure(fig, out)
 
@@ -349,7 +341,6 @@ def plot_equiv_rates(symf_alg: pd.DataFrame, out: Path) -> None:
     ax.set_xticks(x, df["algorithm"], rotation=35, ha="right")
     ax.set_ylim(0, max(50, 100 * float(df[["exact_equiv_rate", "cas_equiv_rate", "numeric_equiv_rate"]].max().max()) * 1.15))
     ax.set_ylabel("Rate (%)")
-    ax.set_title("Formal Equivalence Rates")
     ax.grid(axis="y", alpha=0.45)
     ax.legend(frameon=False, ncol=3)
     save_figure(fig, out)
@@ -374,7 +365,6 @@ def plot_noise_line(robustness: pd.DataFrame, out: Path) -> None:
         )
     ax.set_xlabel("Noise sigma")
     ax.set_ylabel("ROB component")
-    ax.set_title("Noise Robustness by Sigma")
     ax.set_xticks([0.01, 0.05, 0.10], ["1%", "5%", "10%"])
     ax.set_ylim(0, 100)
     ax.grid(alpha=0.45)
@@ -391,7 +381,7 @@ def plot_noise_heatmaps(robustness: pd.DataFrame, noise_completion: pd.DataFrame
     qmat = agg.pivot(index="algorithm", columns="noise_sigma", values="q_noise").fillna(0)
     qmat = qmat.loc[qmat.mean(axis=1).sort_values(ascending=False).index]
     qmat.columns = [f"{int(c * 100)}%" for c in qmat.columns]
-    heatmap(qmat, outdir / "fig_noise_quality_by_sigma_heatmap.png", "Noisy-train / clean-test Quality by Sigma")
+    heatmap(qmat, outdir / "fig_noise_quality_by_sigma_heatmap.png", None)
 
     comp = noise_completion.copy()
     comp["valid_rate_pct"] = 100 * comp["valid_rate"].fillna(0)
@@ -414,7 +404,6 @@ def plot_valid_parse_rates(scores: pd.DataFrame, out: Path) -> None:
     ax.set_xticks(x, data.index, rotation=35, ha="right")
     ax.set_ylim(0, 105)
     ax.set_ylabel("Rate (%)")
-    ax.set_title("Validity and Parse Rates")
     ax.grid(axis="y", alpha=0.45)
     ax.legend(frameon=False, ncol=3)
     save_figure(fig, out)

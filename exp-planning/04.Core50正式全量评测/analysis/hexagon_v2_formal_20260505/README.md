@@ -1,6 +1,6 @@
 # Core-50 hexagon v2 formal figures
 
-- Created at: `2026-05-05T00:41:47`
+- Created at: `2026-05-07T00:24:52`
 - `SYM-F` uses formal judge: CAS equivalence, independent probe numeric equivalence, variable/operator F1, and fast tree similarity.
 - `ID-Q`, `OOD-G`, `EFF`, `ROB`, `STAB` inherit the v1 clean/noise artifacts.
 - `EFF` and `STAB` are still proxy axes until full clean minute-level AUC and formal seed-level structural consistency are wired.
