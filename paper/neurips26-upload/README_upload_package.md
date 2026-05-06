@@ -4,6 +4,12 @@ This directory collects the files prepared for the NeurIPS 2026 Evaluations & Da
 
 ## What to upload directly
 
+The final destination-organized files are under:
+
+```text
+upload-ready/
+```
+
 - `paper-pdf/SymbolicArena_NeurIPS26_ED_main.pdf`
   - Main paper PDF.
   - Built from `paper/Paper-SRInfra/main.tex`.
@@ -13,6 +19,10 @@ This directory collects the files prepared for the NeurIPS 2026 Evaluations & Da
   - Minimal LaTeX source bundle for archival or camera-ready transfer.
   - Includes `main.tex`, `main.bbl`, `references.bib`, `neurips_2026.sty`, `checklist.tex`, `sections/`, `tables/`, and paper figures.
   - Excludes git metadata, build cache, Chinese draft, and unused trash figures.
+
+- `upload-ready/openreview-direct/SymbolicArena_NeurIPS26_ED_supplementary_material.zip`
+  - Single OpenReview supplementary zip below the 100MB limit.
+  - Contains slim result tables, dataset metadata, manifests, and checksums.
 
 ## What needs URL-based submission
 
@@ -55,6 +65,9 @@ This directory collects the files prepared for the NeurIPS 2026 Evaluations & Da
 - `external-artifact-hosting/`
   - Instructions, source manifest, anonymization/build script, and local external-hosting staging metadata.
   - Its generated `dist/` and `staging/` directories are intentionally git-ignored.
+
+- `upload-ready/`
+  - Destination-organized upload map for OpenReview direct upload, anonymous Dataset URL, anonymous Code URL, and anonymous external artifact URL.
 
 - `FILE_MANIFEST.txt`
   - File list for this upload package.
