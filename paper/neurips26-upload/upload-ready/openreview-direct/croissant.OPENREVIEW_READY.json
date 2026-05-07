@@ -1,0 +1,141 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/"
+  },
+  "@type": "sc:Dataset",
+  "name": "SymbolicArena Core-50 and GT-Reservoir-664",
+  "description": "A symbolic-regression evaluation benchmark built from a standardized ground-truth reservoir, a frozen Core-50 subset, algorithm hyperparameter manifests, and evaluation result summaries.",
+  "url": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "citation": "Anonymous authors. SymbolicArena: A Unified Platform for Dynamic and Multi-Dimensional Evaluation of Symbolic Regression. NeurIPS 2026 Evaluations and Datasets Track submission.",
+  "keywords": [
+    "symbolic regression",
+    "benchmark",
+    "evaluation",
+    "datasets",
+    "formula discovery"
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "full_standardized_dataset_payload",
+      "name": "SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst",
+      "contentUrl": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+      "encodingFormat": "application/zstd",
+      "description": "Compressed archive containing the full standardized SymbolicArena dataset payload: 793 dataset directories and standardized CSV splits, metadata.yaml files, and formula.py files. The archive expands to dataset-url-full-standardized/."
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "full_standardized_dataset_payload_checksum",
+      "name": "SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst.sha256",
+      "contentUrl": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+      "encodingFormat": "text/plain",
+      "description": "SHA256 checksum for the compressed full standardized dataset payload."
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "full_dataset_directory_manifest",
+      "name": "metadata/full_dataset_directory_manifest.csv",
+      "contentUrl": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+      "encodingFormat": "text/csv",
+      "description": "One row per standardized dataset directory included in the full dataset payload."
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "full_dataset_file_manifest",
+      "name": "metadata/full_dataset_file_manifest.csv",
+      "contentUrl": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+      "encodingFormat": "text/csv",
+      "description": "One row per copied dataset file, including hosted path, file size, and SHA256 checksum."
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "core50_ground_truth_manifest",
+      "name": "metadata/core50_ground_truth_manifest.csv",
+      "contentUrl": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+      "encodingFormat": "text/csv",
+      "description": "Frozen Core-50 task manifest with dataset identity, source family, subgroup, target variable, feature names, and ground-truth expression."
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "core50_algorithm_hyperparameters",
+      "name": "metadata/core50_algorithm_hyperparameters_full.json",
+      "contentUrl": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+      "encodingFormat": "application/json",
+      "description": "Machine-readable hyperparameter manifest for the 12 evaluated symbolic-regression algorithms."
+    },
+    {
+      "@type": "cr:FileSet",
+      "@id": "standardized_task_splits",
+      "name": "data/",
+      "containedIn": "https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978",
+      "encodingFormat": "text/csv",
+      "description": "Standardized train, validation, ID test, and OOD test splits for benchmark tasks, stored under data/ in the compressed payload."
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "core50_tasks",
+      "name": "Core-50 task records",
+      "description": "One record per frozen Core-50 benchmark task.",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "name": "dataset_id",
+          "dataType": "sc:Text",
+          "description": "Stable dataset identifier."
+        },
+        {
+          "@type": "cr:Field",
+          "name": "family",
+          "dataType": "sc:Text",
+          "description": "Source benchmark family."
+        },
+        {
+          "@type": "cr:Field",
+          "name": "subgroup",
+          "dataType": "sc:Text",
+          "description": "Source subgroup or task class."
+        },
+        {
+          "@type": "cr:Field",
+          "name": "target",
+          "dataType": "sc:Text",
+          "description": "Target variable name."
+        },
+        {
+          "@type": "cr:Field",
+          "name": "features",
+          "dataType": "sc:Text",
+          "description": "Ordered feature names used by the benchmark runner."
+        },
+        {
+          "@type": "cr:Field",
+          "name": "ground_truth_expression",
+          "dataType": "sc:Text",
+          "description": "Ground-truth symbolic expression for formula replay and symbolic-fidelity evaluation."
+        }
+      ],
+      "source": {
+        "fileObject": {
+          "@id": "core50_ground_truth_manifest"
+        }
+      }
+    }
+  ],
+  "rai:dataCollection": "The benchmark is assembled from public symbolic-regression formula sources and generated deterministic splits. See the paper sections on reservoir standardization and infrastructure/data cleaning.",
+  "rai:dataPreprocessing": "Each task is normalized into train, validation, ID-test, and OOD-test splits with metadata, formula identity, target name, feature names, and source-family tags.",
+  "rai:useCases": "Intended for evaluating symbolic-regression algorithms under a fixed Core-50 benchmark protocol, auditing OOD generalization, symbolic fidelity, efficiency, robustness, and stability.",
+  "rai:limitations": "The benchmark is designed for symbolic-regression evaluation and should not be interpreted as a universal measure of all scientific discovery systems. The Core-50 subset is a compact evaluation subset distilled from a larger reservoir.",
+  "rai:personalSensitiveInformation": "No human-subject or personally identifiable information is included in the benchmark tasks.",
+  "rai:maintenancePlan": "During review, the anonymized OSF dataset page will remain accessible. After acceptance, the authors plan to replace anonymous review links with a public archival release, retain checksums for released files, and document any future benchmark updates through versioned manifests.",
+  "codeRepository": "https://anonymous.4open.science/r/SymbolicArenaCode-A3C0/",
+  "isBasedOn": [
+    "https://osf.io/qvs5g/overview?view_only=496e544380f04bf5a97fb4ab9ea2b95f"
+  ]
+}

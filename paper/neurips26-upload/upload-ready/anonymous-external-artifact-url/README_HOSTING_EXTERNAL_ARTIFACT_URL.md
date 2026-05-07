@@ -22,6 +22,7 @@ UPLOAD_CHECKLIST.md
 EXTERNAL_ARTIFACT_BUILD_SUMMARY.md
 EXTERNAL_ARTIFACT_SOURCE_MANIFEST.csv
 external_artifact_croissant.TEMPLATE.json
+external_artifact_croissant.READY.json
 ```
 
 ## Recommended Hosts

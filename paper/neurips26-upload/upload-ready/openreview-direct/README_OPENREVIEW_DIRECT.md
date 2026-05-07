@@ -11,16 +11,14 @@ SymbolicArena_NeurIPS26_ED_main.pdf
 ## Croissant File
 
 ```text
-croissant.OPENREVIEW_NEEDS_URL.json
+croissant.OPENREVIEW_READY.json
 ```
 
-Before upload:
+The ready file already contains the anonymous Dataset URL, license URL, anonymized citation, code URL, and maintenance plan.
 
-- Replace `TODO_REPLACE_WITH_ANONYMOUS_DATASET_URL`.
-- Replace `TODO_REPLACE_WITH_LICENSE_URL`.
-- Replace `TODO_REPLACE_WITH_ANONYMIZED_CITATION_OR_PAPER_REFERENCE`.
-- Replace `TODO_REPLACE_WITH_MAINTENANCE_PLAN_AND_PUBLIC_RELEASE_POLICY`.
-- Run a Croissant validator.
+Before upload, run a Croissant validator if possible.
+
+Do not upload any older placeholder Croissant template.
 
 ## Supplementary Material
 

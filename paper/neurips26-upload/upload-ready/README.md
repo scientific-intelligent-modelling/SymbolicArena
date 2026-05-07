@@ -48,6 +48,12 @@ upload-ready/anonymous-dataset-url/
 
 After hosting, fill the OpenReview `Dataset URL` field with that anonymous URL and update the Croissant file.
 
+Current anonymous Dataset URL:
+
+```text
+https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978
+```
+
 ## 3. Code URL
 
 Use files under:
@@ -57,6 +63,12 @@ upload-ready/anonymous-code-url/
 ```
 
 This is a minimal anonymized code snapshot. For the final Code URL, prefer an anonymous Git repository containing the runnable benchmark infrastructure, installation instructions, smoke tests, and reproduction commands. This snapshot can be used as the initial seed or as a small fallback artifact.
+
+Current anonymous Code URL:
+
+```text
+https://anonymous.4open.science/r/SymbolicArenaCode-A3C0/
+```
 
 ## 4. External Full Artifact URL
 
@@ -84,6 +96,12 @@ external_artifact_croissant.TEMPLATE.json
 ```
 
 Do not upload the uncompressed `staging/` directory.
+
+Current anonymous external raw-results URL:
+
+```text
+https://osf.io/qvs5g/overview?view_only=496e544380f04bf5a97fb4ab9ea2b95f
+```
 
 ## Remaining Manual Steps
 

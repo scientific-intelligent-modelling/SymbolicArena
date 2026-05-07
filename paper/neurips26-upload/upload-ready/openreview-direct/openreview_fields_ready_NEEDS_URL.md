@@ -1,4 +1,4 @@
-# OpenReview Fields
+# OpenReview Fields Ready To Paste
 
 ## Title
 
@@ -41,7 +41,7 @@ This submission includes a dataset: yes
 ## Dataset URL
 
 ```text
-TODO_REPLACE_WITH_ANONYMOUS_DATASET_URL
+https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978
 ```
 
 Use the anonymous URL where `SymbolicArena_NeurIPS26_ED_full_dataset_payload.tar.zst` is hosted.
@@ -57,7 +57,7 @@ The compressed full dataset payload is approximately 1.1GB, which is below the 4
 ## Code URL
 
 ```text
-TODO_REPLACE_WITH_ANONYMOUS_CODE_URL
+https://anonymous.4open.science/r/SymbolicArenaCode-A3C0/
 ```
 
 Use the anonymous repository created from `upload-ready/anonymous-code-url/` or the cleaned full runnable repository.
@@ -74,6 +74,14 @@ Not applicable. This submission provides an anonymized Code URL for the benchmar
 
 ```text
 SymbolicArena_NeurIPS26_ED_supplementary_material.zip
+```
+
+## External Raw Results URL
+
+This URL is not the main Dataset URL. Use it in the paper artifact statement, supplementary README, or Dataset Large URL only if the form requires an extra link:
+
+```text
+https://osf.io/qvs5g/overview?view_only=496e544380f04bf5a97fb4ab9ea2b95f
 ```
 
 ## License

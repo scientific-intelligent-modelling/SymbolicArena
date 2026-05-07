@@ -18,7 +18,7 @@ If the dataset or benchmark cannot be anonymized, select single-blind in the Ope
 
 ## Dataset URL
 
-TODO_REPLACE_WITH_ANONYMOUS_DATASET_URL
+https://osf.io/5hdqa/overview?view_only=2a5790c6516f4c8f88fd74474c1d3978
 
 Recommended options:
 
@@ -30,7 +30,7 @@ Recommended options:
 
 ## Code URL
 
-TODO_REPLACE_WITH_ANONYMOUS_CODE_URL
+https://anonymous.4open.science/r/SymbolicArenaCode-A3C0/
 
 Recommended:
 
@@ -40,7 +40,7 @@ Recommended:
 
 ## Dataset license
 
-TODO_REPLACE_WITH_LICENSE
+CC BY 4.0
 
 Use a clear SPDX-compatible license URL when possible.
 
@@ -50,12 +50,12 @@ This submission introduces SymbolicArena, a symbolic-regression evaluation and b
 
 ## Data access statement
 
-TODO_REPLACE_AFTER_HOSTING
-
-The benchmark data are accessible to reviewers at the dataset URL above. The hosted artifact includes Core-50 task manifests, standardized train/validation/ID/OOD splits, formula metadata, source-family metadata, and documentation of intended use and limitations.
+The benchmark data are accessible to reviewers at the Dataset URL above. The hosted artifact includes the full standardized dataset payload, Core-50 task manifests, standardized train/validation/ID/OOD splits, formula metadata, source-family metadata, checksums, and documentation of intended use and limitations.
 
 ## Code access statement
 
-TODO_REPLACE_AFTER_HOSTING
+The code artifact is accessible to reviewers at the Code URL above. It includes the benchmark runner, wrapper contracts for the evaluated algorithms, result schema, postprocessing scripts, and smoke-test instructions.
 
-The code artifact includes the benchmark runner, wrapper contracts for the evaluated algorithms, result schema, postprocessing scripts, and smoke-test instructions.
+## External raw results URL
+
+https://osf.io/qvs5g/overview?view_only=496e544380f04bf5a97fb4ab9ea2b95f
