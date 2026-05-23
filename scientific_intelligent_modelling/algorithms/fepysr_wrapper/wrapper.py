@@ -1,0 +1,311 @@
+import json
+from copy import deepcopy
+from typing import Any
+
+import numpy as np
+
+from ..base_wrapper import BaseWrapper
+from scientific_intelligent_modelling.benchmarks.normalizers import normalize_external_infix_artifact
+
+
+class FePySRRegressor(BaseWrapper):
+    """FePySR 两阶段符号回归适配层。
+
+    FePySR 本体采用 PyTorch 特征抽取 + PySR 搜索。这里仅做工程集成：
+    - 吸收 runner 元参数，避免透传到底层库；
+    - 将常用 PySR/FePySR 参数映射成 hydra overrides；
+    - 保持与工具集统一 fit/predict/equation/artifact 接口一致。
+    """
+
+    _DEFAULT_PARAMS = {
+        "num_workers": 4,
+        "num_experiments": 8,
+        "fmn_epochs": 30,
+        "fmn_batch_size": 64,
+        "fmn_lr": 0.1,
+        "fea_num": 10,
+        "pysr_num": 6,
+        "niterations": 40,
+        "population_size": 40,
+        "populations": 4,
+        "ncycles_per_iteration": 100,
+        "maxsize": 20,
+        "maxdepth": 8,
+        "timeout_in_seconds": 600,
+        "binary_operators": ["+", "-", "*", "/"],
+        "unary_operators": ["sin", "cos", "exp", "log"],
+    }
+    _META_PARAMS = {
+        "exp_name",
+        "exp_path",
+        "problem_name",
+        "seed",
+        "n_features",
+        "feature_names",
+        "target_name",
+        "task_label",
+        "task_global_index",
+        "expected_dataset_rel",
+        "expected_dataset_dir",
+        "progress_snapshot_interval_seconds",
+        "timeout_guard_seconds",
+    }
+    _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
+        "overrides",
+        "custom_pysr_model",
+        "device",
+        "fmn_only",
+    }
+
+    def __init__(self, **kwargs):
+        raw_kwargs = dict(kwargs)
+        self._contract_n_features = raw_kwargs.get("n_features")
+        self._contract_feature_names = raw_kwargs.get("feature_names")
+        self._contract_target_name = raw_kwargs.get("target_name")
+        self.params = self._validate_and_normalize_params(raw_kwargs)
+        self.model = None
+        self._equations: list[str] = []
+        self._best_equation: str | None = None
+        self._callable = None
+
+    @classmethod
+    def _validate_and_normalize_params(cls, raw_params: dict[str, Any]) -> dict[str, Any]:
+        raw_params = dict(raw_params)
+        seed = raw_params.get("seed")
+        for key in cls._META_PARAMS:
+            raw_params.pop(key, None)
+        raw_params.pop("seed", None)
+
+        for key, value in cls._DEFAULT_PARAMS.items():
+            raw_params.setdefault(key, deepcopy(value))
+        if seed is not None:
+            raw_params.setdefault("random_state", int(seed))
+
+        # random_state 只用于转成 PySR seed override，不直接暴露给 FePySR 构造器。
+        allowed = set(cls._ALLOWED_PARAMS) | {"random_state"}
+        unknown = sorted(set(raw_params) - allowed)
+        if unknown:
+            raise ValueError(
+                "FePySR 参数不受支持: {}。当前允许的参数有: {}。".format(
+                    ", ".join(unknown),
+                    ", ".join(sorted(allowed)),
+                )
+            )
+
+        for key in (
+            "num_workers",
+            "num_experiments",
+            "fmn_epochs",
+            "fmn_batch_size",
+            "fea_num",
+            "pysr_num",
+            "niterations",
+            "population_size",
+            "populations",
+            "ncycles_per_iteration",
+            "maxsize",
+            "maxdepth",
+            "timeout_in_seconds",
+        ):
+            if key in raw_params and raw_params[key] is not None:
+                raw_params[key] = int(raw_params[key])
+        if raw_params.get("population_size", 0) < 16:
+            raise ValueError("FePySR 的 population_size 需要至少为 16，以满足 PySR tournament_selection_n 约束")
+        if "fmn_lr" in raw_params and raw_params["fmn_lr"] is not None:
+            raw_params["fmn_lr"] = float(raw_params["fmn_lr"])
+        if "fmn_only" in raw_params:
+            raw_params["fmn_only"] = bool(raw_params["fmn_only"])
+        return raw_params
+
+    @staticmethod
+    def _format_override_value(value: Any) -> str:
+        if isinstance(value, str):
+            return value
+        return repr(value)
+
+    @classmethod
+    def _build_overrides(cls, params: dict[str, Any]) -> list[str]:
+        overrides = list(params.get("overrides") or [])
+        mapping = {
+            "num_workers": "Parallel.num_workers",
+            "num_experiments": "Parallel.num_experiments",
+            "fmn_epochs": "FMN.num_epochs",
+            "fmn_batch_size": "FMN.batch_size",
+            "fmn_lr": "FMN.lr",
+            "fea_num": "data_symbol.fea_num",
+            "pysr_num": "data_symbol.pysr_num",
+            "niterations": "pysr_params.niterations",
+            "population_size": "pysr_params.population_size",
+            "populations": "pysr_params.populations",
+            "ncycles_per_iteration": "pysr_params.ncycles_per_iteration",
+            "maxsize": "pysr_params.maxsize",
+            "maxdepth": "pysr_params.maxdepth",
+            "timeout_in_seconds": "pysr_params.timeout_in_seconds",
+            "binary_operators": "pysr_params.binary_operators",
+            "unary_operators": "pysr_params.unary_operators",
+            "device": "FMN.device",
+            "fmn_only": "FMN.FMN_only",
+        }
+        for key, path in mapping.items():
+            if key in params and params[key] is not None:
+                overrides.append(f"{path}={cls._format_override_value(params[key])}")
+        return overrides
+
+    def fit(self, X, y):
+        self._validate_explicit_dataset_contract(
+            X,
+            n_features=self._contract_n_features,
+            feature_names=self._contract_feature_names,
+            target_name=self._contract_target_name,
+            context="FePySRRegressor.fit",
+        )
+        try:
+            import pysr  # noqa: F401
+            import torch
+            from fepysr import FePySR
+        except Exception as err:  # pragma: no cover - exercised in integration env
+            raise ImportError(
+                "FePySRRegressor 需要安装 fepysr、torch、hydra-core、pysr；"
+                "请先创建/激活 sim_fepysr 环境。"
+            ) from err
+
+        X_arr = np.asarray(X, dtype=float)
+        y_arr = np.asarray(y, dtype=float).reshape(-1, 1)
+        X_tensor = torch.as_tensor(X_arr, dtype=torch.float64)
+        y_tensor = torch.as_tensor(y_arr, dtype=torch.float64)
+        self.model = FePySR(
+            overrides=self._build_overrides(self.params),
+            custom_pysr_model=self.params.get("custom_pysr_model"),
+        )
+        self.model.fit(X_tensor, y_tensor)
+        eq = str(getattr(self.model, "best_equation_", "") or "")
+        self._best_equation = eq or None
+        if self._best_equation:
+            self._callable = self._build_callable(self._best_equation)
+        self._equations = [eq] if eq else []
+        return self
+
+    @staticmethod
+    def _build_callable(expr: str):
+        import sympy as sp
+
+        text = expr.replace("^", "**")
+        text = text.replace("torch.", "").replace("np.", "").replace("numpy.", "")
+        text = text.replace("abs(", "Abs(")
+        text = __import__("re").sub(r"\bX(\d+)\b", lambda m: f"x{m.group(1)}", text)
+        symbols = [sp.Symbol(f"x{i}") for i in range(64)]
+        locals_map = {f"x{i}": symbols[i] for i in range(64)}
+        locals_map.update(
+            {
+                "sin": sp.sin,
+                "cos": sp.cos,
+                "exp": sp.exp,
+                "log": sp.log,
+                "sqrt": sp.sqrt,
+                "Abs": sp.Abs,
+            }
+        )
+        parsed = sp.sympify(text, locals=locals_map)
+        used = sorted(
+            [sym for sym in parsed.free_symbols if str(sym).startswith("x")],
+            key=lambda sym: int(str(sym)[1:]) if str(sym)[1:].isdigit() else 10**9,
+        )
+        if not used:
+            const_value = float(parsed)
+            return lambda X: np.full((np.asarray(X).shape[0],), const_value, dtype=float)
+
+        fn = sp.lambdify(used, parsed, modules="numpy")
+
+        def _predict(X):
+            X_arr = np.asarray(X, dtype=float)
+            if X_arr.ndim == 1:
+                X_arr = X_arr.reshape(-1, 1)
+            args = [X_arr[:, int(str(sym)[1:])] for sym in used]
+            return np.asarray(fn(*args), dtype=float).reshape(-1)
+
+        return _predict
+
+    def serialize(self):
+        if not isinstance(self._best_equation, str) or not self._best_equation.strip():
+            raise ValueError("FePySR 未产生可序列化方程")
+        params = {k: v for k, v in self.params.items() if k != "custom_pysr_model"}
+        return json.dumps(
+            {
+                "mode": "fepysr_expression",
+                "params": params,
+                "contract": {
+                    "n_features": self._contract_n_features,
+                    "feature_names": self._contract_feature_names,
+                    "target_name": self._contract_target_name,
+                },
+                "best_equation": self._best_equation,
+                "equations": self._equations,
+            },
+            ensure_ascii=False,
+        )
+
+    @classmethod
+    def deserialize(cls, payload):
+        try:
+            obj = json.loads(payload)
+        except Exception:
+            return BaseWrapper.deserialize(payload)
+        if not isinstance(obj, dict) or obj.get("mode") != "fepysr_expression":
+            return BaseWrapper.deserialize(payload)
+        contract = dict(obj.get("contract") or {})
+        inst = cls(
+            n_features=contract.get("n_features"),
+            feature_names=contract.get("feature_names"),
+            target_name=contract.get("target_name"),
+            **dict(obj.get("params") or {}),
+        )
+        inst._best_equation = obj.get("best_equation")
+        inst._equations = list(obj.get("equations") or ([inst._best_equation] if inst._best_equation else []))
+        if inst._best_equation:
+            inst._callable = inst._build_callable(inst._best_equation)
+        return inst
+
+    def predict(self, X):
+        if self.model is None and self._callable is None:
+            raise ValueError("模型尚未训练，请先调用fit方法")
+        if self.model is None:
+            return self._callable(X)
+        pred = self.model.predict(np.asarray(X, dtype=float))
+        try:
+            pred = pred.detach().cpu().numpy()
+        except Exception:
+            pred = np.asarray(pred)
+        return np.asarray(pred, dtype=float).reshape(-1)
+
+    def get_optimal_equation(self):
+        eq = self._best_equation
+        if eq is None and self.model is not None:
+            eq = getattr(self.model, "best_equation_", None)
+        if not isinstance(eq, str) or not eq.strip():
+            raise ValueError("FePySR 未产生可用最优方程")
+        return eq
+
+    def get_total_equations(self):
+        if self.model is None and not self._equations:
+            raise ValueError("模型尚未训练，请先调用fit方法")
+        equations = list(self._equations)
+        solved = getattr(self.model, "solved_pysr_model", None)
+        if solved is not None and hasattr(solved, "equations_"):
+            try:
+                table = solved.equations_
+                if hasattr(table, "columns"):
+                    for col in ("sympy_format", "equation", "expr", "expression"):
+                        if col in table.columns:
+                            equations.extend(str(item) for item in table[col].dropna().tolist())
+                            break
+            except Exception:
+                pass
+        return [eq for idx, eq in enumerate(equations) if eq and eq not in equations[:idx]]
+
+    def export_canonical_symbolic_program(self):
+        return normalize_external_infix_artifact(
+            self.get_optimal_equation(),
+            tool_name="fepysr",
+            expected_n_features=self._contract_n_features,
+            shift_one_based=False,
+        )

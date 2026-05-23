@@ -27,6 +27,75 @@
       "pip_packages": [],
       "comments": "这是工具箱的基环境，里面不装任何的依赖包"
     },
+    "sim_fepysr": {
+      "python_version": "3.10",
+      "conda_packages": [
+        "pip"
+      ],
+      "channels": [
+        "conda-forge"
+      ],
+      "pip_packages": [
+        "numpy",
+        "pandas",
+        "sympy",
+        "scikit-learn",
+        "pysr",
+        "hydra-core",
+        "omegaconf"
+      ],
+      "post_install_commands": [
+        "pip install -e .",
+        "pip install --timeout 120 --retries 5 torch --index-url https://download.pytorch.org/whl/cpu",
+        "python -c \"from pathlib import Path; import subprocess; p=Path('/tmp/sim_fepysr_src'); subprocess.check_call(['git','clone','--depth','1','https://github.com/laixn/FePySR.git',str(p)]) if not (p/'fepysr').is_dir() else None\"",
+        "pip install -e /tmp/sim_fepysr_src"
+      ],
+      "comments": "FePySR 环境：神经特征抽取 + PySR 后端；CPU torch，PySR/Julia 缓存按 pysr 规则预热"
+    },
+    "sim_jaxsr": {
+      "python_version": "3.10",
+      "conda_packages": [
+        "pip"
+      ],
+      "channels": [
+        "conda-forge"
+      ],
+      "pip_packages": [
+        "numpy",
+        "pandas",
+        "scipy",
+        "sympy",
+        "jax",
+        "jaxlib"
+      ],
+      "post_install_commands": [
+        "pip install -e .",
+        "pip install --no-deps jaxsr"
+      ],
+      "comments": "JAXSR 环境：CPU JAX sparse/basis-library symbolic regression"
+    },
+    "sim_symbolfit": {
+      "python_version": "3.10",
+      "conda_packages": [
+        "pip"
+      ],
+      "channels": [
+        "conda-forge"
+      ],
+      "pip_packages": [
+        "numpy",
+        "pandas",
+        "scipy",
+        "sympy",
+        "pysr",
+        "lmfit",
+        "symbolfit==0.2.5"
+      ],
+      "post_install_commands": [
+        "pip install -e ."
+      ],
+      "comments": "SymbolFit 环境：PySR 公式搜索 + LMFIT 参数重优化和不确定性估计"
+    },
     "sim_e2esr": {
       "python_version": "3.7",
       "conda_packages": [

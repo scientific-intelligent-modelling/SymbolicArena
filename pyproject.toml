@@ -24,9 +24,10 @@ dependencies = ["numpy>=1.18.0", "networkx>=2.5", "pyyaml>=5.1"]
 
 
 [tool.setuptools]
-packages = ["scientific_intelligent_modelling"]
-package-dir = { scientific_intelligent_modelling = "scientific_intelligent_modelling" }
 include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["scientific_intelligent_modelling*"]
 
 [project.scripts]
 sim-cli = "scientific_intelligent_modelling.cli:main"

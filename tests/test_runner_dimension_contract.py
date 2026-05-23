@@ -4,10 +4,13 @@ import numpy as np
 
 from scientific_intelligent_modelling.algorithms.drsr_wrapper.wrapper import DRSRRegressor
 from scientific_intelligent_modelling.algorithms.dso_wrapper.wrapper import DSORegressor
+from scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper import FePySRRegressor
 from scientific_intelligent_modelling.algorithms.gplearn_wrapper.wrapper import GPLearnRegressor
+from scientific_intelligent_modelling.algorithms.jaxsr_wrapper.wrapper import JAXSRRegressor
 from scientific_intelligent_modelling.algorithms.llmsr_wrapper.wrapper import LLMSRRegressor
 from scientific_intelligent_modelling.algorithms.pyoperon_wrapper.wrapper import OperonRegressor
 from scientific_intelligent_modelling.algorithms.pysr_wrapper.wrapper import PySRRegressor
+from scientific_intelligent_modelling.algorithms.symbolfit_wrapper.wrapper import SymbolFitRegressor
 
 
 class RunnerDimensionContractTest(unittest.TestCase):
@@ -40,6 +43,21 @@ class RunnerDimensionContractTest(unittest.TestCase):
         self.assertNotIn("n_features", dso.params)
         self.assertNotIn("feature_names", dso.params)
         self.assertNotIn("target_name", dso.params)
+
+        fepysr = FePySRRegressor(**shared)
+        self.assertNotIn("n_features", fepysr.params)
+        self.assertNotIn("feature_names", fepysr.params)
+        self.assertNotIn("target_name", fepysr.params)
+
+        jaxsr = JAXSRRegressor(**shared)
+        self.assertNotIn("n_features", jaxsr.params)
+        self.assertNotIn("feature_names", jaxsr.params)
+        self.assertNotIn("target_name", jaxsr.params)
+
+        symbolfit = SymbolFitRegressor(**shared)
+        self.assertNotIn("n_features", symbolfit.params)
+        self.assertNotIn("feature_names", symbolfit.params)
+        self.assertNotIn("target_name", symbolfit.params)
 
     def test_llm_wrappers_capture_runner_dataset_contract_meta(self):
         shared = {

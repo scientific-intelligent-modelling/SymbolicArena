@@ -446,11 +446,22 @@ class SymbolicRegressor:
             except Exception:
                 pass
             # 避免 julia/pythoncall 在受限环境尝试在只读 conda 环境中创建目录
-            env.setdefault(
-                "PYTHON_JULIAPKG_PROJECT",
-                str(Path(tempfile.gettempdir()) / f"pyjuliapkg_{self.env_name}")
-            )
+            pyjuliapkg_project = Path(tempfile.gettempdir()) / f"pyjuliapkg_{self.env_name}"
+            if self.env_name in {"sim_fepysr", "sim_symbolfit"}:
+                pyjuliapkg_project = Path.home() / "pyjuliapkg_symbolfit"
+            env.setdefault("PYTHON_JULIAPKG_PROJECT", str(pyjuliapkg_project))
+            if "PYTHON_JULIAPKG_EXE" not in env and "PYTHON_JULIACALL_BINDIR" not in env:
+                julia_candidates = [
+                    Path(env["PYTHON_JULIAPKG_PROJECT"]) / "pyjuliapkg" / "install" / "bin" / "julia",
+                    Path.home() / "pyjuliapkg_pysr" / "pyjuliapkg" / "install" / "bin" / "julia",
+                ]
+                for julia_candidate in julia_candidates:
+                    if julia_candidate.exists():
+                        env["PYTHON_JULIAPKG_EXE"] = str(julia_candidate)
+                        env["PYTHON_JULIACALL_BINDIR"] = str(julia_candidate.parent)
+                        break
             # 如果工具不依赖 julia，此注入不会产生副作用
+            env.setdefault("PYTHON_JULIACALL_HANDLE_SIGNALS", "yes")
             env.setdefault('PYTHONUNBUFFERED', '1')
             timeout_seconds = self._resolve_subprocess_timeout_seconds(command)
             proc = subprocess.Popen(

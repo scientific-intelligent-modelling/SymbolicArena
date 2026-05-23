@@ -267,6 +267,45 @@ def normalize_pysr_artifact(raw_equation: str, *, expected_n_features: int | Non
     return validate_canonical_symbolic_program(artifact)
 
 
+def normalize_external_infix_artifact(
+    raw_equation: str,
+    *,
+    tool_name: str,
+    expected_n_features: int | None = None,
+    shift_one_based: bool = True,
+) -> dict[str, Any]:
+    """归一化外部 Python 风格中缀表达式。
+
+    新接入的轻量 wrapper 通常只暴露一个字符串表达式。这里统一处理
+    `X0`/`x_0`/`x[0]` 等变量写法，输出 benchmark runner 可消费的
+    CanonicalSymbolicProgram。
+    """
+    raw_text = str(raw_equation)
+    expr = re.sub(r"\bX(\d+)\b", lambda m: f"x{m.group(1)}", raw_text)
+    expr = expr.replace("^", "**")
+    normalized_expression, parsed = _normalize_common_expression(
+        expr,
+        shift_one_based=shift_one_based,
+    )
+    variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []
+    artifact = build_canonical_symbolic_program(
+        tool_name=tool_name,
+        raw_equation=raw_equation,
+        expected_n_features=expected_n_features,
+        python_function_source=_build_function_source(normalized_expression, variables),
+        return_expression_source=normalized_expression,
+        normalized_expression=normalized_expression,
+        variables=variables,
+        operator_set=_collect_operator_set(parsed),
+        ast_node_count=_count_sympy_nodes(parsed),
+        tree_depth=_sympy_tree_depth(parsed),
+        normalization_mode=f"{tool_name}_external_infix",
+    )
+    artifact["sympy_parse_ok"] = parsed is not None
+    artifact["sympy_expression"] = normalized_expression if parsed is not None else None
+    return validate_canonical_symbolic_program(artifact)
+
+
 def normalize_qlattice_artifact(raw_equation: str, *, expected_n_features: int | None = None) -> dict[str, Any]:
     normalized_expression, parsed = _normalize_common_expression(raw_equation)
     variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []

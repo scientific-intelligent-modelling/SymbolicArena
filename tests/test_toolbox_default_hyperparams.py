@@ -26,6 +26,42 @@ def test_pysr_defaults_are_aligned():
     assert reg.params["procs"] == 1
 
 
+def test_fepysr_defaults_are_aligned():
+    from scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper import FePySRRegressor
+
+    reg = FePySRRegressor()
+    assert reg.params["num_workers"] == 4
+    assert reg.params["num_experiments"] == 8
+    assert reg.params["fmn_epochs"] == 30
+    assert reg.params["niterations"] == 40
+    assert reg.params["maxsize"] == 20
+    assert reg.params["binary_operators"] == ["+", "-", "*", "/"]
+
+
+def test_jaxsr_defaults_are_aligned():
+    from scientific_intelligent_modelling.algorithms.jaxsr_wrapper.wrapper import JAXSRRegressor
+
+    reg = JAXSRRegressor()
+    assert reg.params["max_terms"] == 5
+    assert reg.params["strategy"] == "greedy_forward"
+    assert reg.params["information_criterion"] == "bic"
+    assert reg.params["max_polynomial_degree"] == 3
+    assert reg.params["include_interactions"] is True
+    assert reg.params["include_transcendental"] is False
+
+
+def test_symbolfit_defaults_are_aligned():
+    from scientific_intelligent_modelling.algorithms.symbolfit_wrapper.wrapper import SymbolFitRegressor
+
+    reg = SymbolFitRegressor()
+    assert reg.params["niterations"] == 40
+    assert reg.params["maxsize"] == 25
+    assert reg.params["max_complexity"] == 25
+    assert reg.params["fit_y_unc"] is False
+    assert reg.params["procs"] == 1
+    assert reg.params["parallelism"] == "serial"
+
+
 def test_pyoperon_defaults_are_aligned():
     from scientific_intelligent_modelling.algorithms.pyoperon_wrapper.wrapper import OperonRegressor
 
