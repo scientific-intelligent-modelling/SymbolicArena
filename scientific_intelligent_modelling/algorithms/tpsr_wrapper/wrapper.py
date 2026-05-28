@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import os
 import pickle
+import random
 import re
 import tempfile
 import sys
@@ -38,6 +39,8 @@ class TPSRRegressor(BaseWrapper):
         self._exp_path = self.params.get("exp_path")
         self._exp_name = self.params.get("exp_name")
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+        self._timeout_in_seconds = self._as_positive_float(self.params.get("timeout_in_seconds"))
+        self._timeout_guard_seconds = self._as_positive_float(self.params.get("timeout_guard_seconds")) or 5.0
 
         # 设置默认参数
         self.params.setdefault("backbone_model", "e2e")
@@ -85,6 +88,70 @@ class TPSRRegressor(BaseWrapper):
             exp_name.strip(),
             cls._PROGRESS_STATE_FILENAME,
         )
+
+    @staticmethod
+    def _as_positive_float(value):
+        try:
+            value = float(value)
+        except Exception:
+            return None
+        return value if value > 0 else None
+
+    def _time_budget_exhausted(self, started_at):
+        if self._timeout_in_seconds is None:
+            return False
+        return (time.time() - started_at) >= max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds)
+
+    def _set_search_round_seed(self, args, round_index):
+        try:
+            base_seed = int(getattr(args, "seed", self.params.get("seed", 23)))
+        except Exception:
+            base_seed = 23
+        seed = (base_seed + int(round_index)) % (2**32 - 1)
+        random.seed(seed)
+        np.random.seed(seed)
+        try:
+            torch.manual_seed(seed)
+        except Exception:
+            pass
+
+    def _score_current_tree(self, X, y):
+        if self._predict_fn is None:
+            return None
+        try:
+            pred = np.asarray(self._predict_fn(X), dtype=float).reshape(-1)
+            target = np.asarray(y, dtype=float).reshape(-1)
+        except Exception:
+            return None
+        if pred.shape[0] != target.shape[0]:
+            return None
+        mask = np.isfinite(pred) & np.isfinite(target)
+        if not np.any(mask):
+            return None
+        try:
+            return -float(np.mean((pred[mask] - target[mask]) ** 2))
+        except Exception:
+            return None
+
+    def _snapshot_e2e_state(self):
+        return {
+            "model": self.model,
+            "best_tree": self.best_tree,
+            "all_trees": list(self.all_trees or []),
+            "predict_fn": self._predict_fn,
+            "backend_params": dict(self._backend_params or {}),
+            "predict_variable_names": list(self._predict_variable_names or []),
+            "n_features": self._n_features,
+        }
+
+    def _restore_e2e_state(self, state):
+        self.model = state["model"]
+        self.best_tree = state["best_tree"]
+        self.all_trees = state["all_trees"]
+        self._predict_fn = state["predict_fn"]
+        self._backend_params = state["backend_params"]
+        self._predict_variable_names = state["predict_variable_names"]
+        self._n_features = state["n_features"]
 
     @staticmethod
     def _shared_symbolic_model_path():
@@ -499,54 +566,72 @@ class TPSRRegressor(BaseWrapper):
         model = Transformer(params=args, env=equation_env, samples=samples)
         model.to(args.device)
 
-        # 创建 RL 环境
-        rl_env = RLEnv(
-            params=args,
-            samples=samples,
-            equation_env=equation_env,
-            model=model,
-        )
+        def _new_search_components(round_index):
+            self._set_search_round_seed(args, round_index)
+            rl_env = RLEnv(
+                params=args,
+                samples=samples,
+                equation_env=equation_env,
+                model=model,
+            )
+            dp = E2EHeuristic(
+                equation_env=equation_env,
+                rl_env=rl_env,
+                model=model,
+                k=args.width,
+                num_beams=args.num_beams,
+                horizon=args.horizon,
+                device=args.device,
+                use_seq_cache=not args.no_seq_cache,
+                use_prefix_cache=not args.no_prefix_cache,
+                length_penalty=args.beam_length_penalty if hasattr(args, "beam_length_penalty") else 1.0,
+                train_value_mode=args.train_value if hasattr(args, "train_value") else False,
+                debug=args.debug,
+            )
+            agent = UCT(
+                action_space=[],
+                gamma=1.0,
+                ucb_constant=args.ucb_constant if hasattr(args, "ucb_constant") else 1.0,
+                horizon=args.horizon,
+                rollouts=args.rollout,
+                dp=dp,
+                width=args.width,
+                reuse_tree=True,
+                alg=args.uct_alg if hasattr(args, "uct_alg") else "uct",
+                ucb_base=args.ucb_base if hasattr(args, "ucb_base") else 4,
+            )
+            return rl_env, dp, agent
 
-        # 创建 TPSR planner
-        dp = E2EHeuristic(
-            equation_env=equation_env,
-            rl_env=rl_env,
-            model=model,
-            k=args.width,
-            num_beams=args.num_beams,
-            horizon=args.horizon,
-            device=args.device,
-            use_seq_cache=not args.no_seq_cache,
-            use_prefix_cache=not args.no_prefix_cache,
-            length_penalty=args.beam_length_penalty if hasattr(args, "beam_length_penalty") else 1.0,
-            train_value_mode=args.train_value if hasattr(args, "train_value") else False,
-            debug=args.debug,
-        )
-
-        # 创建 UCT 代理
-        agent = UCT(
-            action_space=[],
-            gamma=1.0,
-            ucb_constant=args.ucb_constant if hasattr(args, "ucb_constant") else 1.0,
-            horizon=args.horizon,
-            rollouts=args.rollout,
-            dp=dp,
-            width=args.width,
-            reuse_tree=True,
-            alg=args.uct_alg if hasattr(args, "uct_alg") else "uct",
-            ucb_base=args.ucb_base if hasattr(args, "ucb_base") else 4,
-        )
+        search_round = 0
+        rl_env, dp, agent = _new_search_components(search_round)
 
         # 运行搜索
         done = False
         s = rl_env.state
         checked_candidate_count = 0
         best_progress_reward = float("-inf")
-        for _ in range(args.horizon):
-            if done or len(s) >= args.horizon:
+        best_search_sequence = None
+        candidate_sequences = []
+        started_at = time.time()
+        max_steps = None if self._timeout_in_seconds is not None else int(args.horizon)
+        steps_taken = 0
+        while max_steps is None or steps_taken < max_steps:
+            if self._time_budget_exhausted(started_at):
                 break
+            if done or len(s) >= args.horizon:
+                if self._timeout_in_seconds is None:
+                    break
+                candidate_sequences.extend(seq for seq in getattr(dp, "candidate_programs", []) or [] if seq is not None)
+                if done and s is not None:
+                    candidate_sequences.append(s)
+                search_round += 1
+                rl_env, dp, agent = _new_search_components(search_round)
+                s = rl_env.state
+                checked_candidate_count = 0
+                done = False
             act = agent.act(rl_env, done)
             s, _, done, _ = rl_env.step(act)
+            steps_taken += 1
             update_root(agent, act, s)
             dp.update_cache(s)
 
@@ -557,6 +642,7 @@ class TPSRRegressor(BaseWrapper):
                 best_reward=best_progress_reward,
             )
             if best_seq is not None:
+                best_search_sequence = best_seq
                 progress_expr = self._sequence_to_e2e_expression(args, model, equation_env, best_seq, samples)
                 self._emit_progress_equation(
                     equation=progress_expr,
@@ -572,6 +658,7 @@ class TPSRRegressor(BaseWrapper):
                     terminal_reward = None
                 if terminal_reward is not None and terminal_reward > best_progress_reward:
                     best_progress_reward = terminal_reward
+                    best_search_sequence = s
                     progress_expr = self._sequence_to_e2e_expression(args, model, equation_env, s, samples)
                     self._emit_progress_equation(
                         equation=progress_expr,
@@ -582,7 +669,6 @@ class TPSRRegressor(BaseWrapper):
 
         # `s` 可能只是搜索到当前 horizon 的中间前缀，并不保证是完整程序。
         # 优先从 default policy 已经生成的完整候选中选最优者；只有在搜索确实完成时，才回退到 `s`。
-        candidate_sequences = []
         for seq in getattr(dp, "candidate_programs", []) or []:
             if seq is None:
                 continue
@@ -599,7 +685,7 @@ class TPSRRegressor(BaseWrapper):
             except Exception:
                 return float("-inf")
 
-        best_sequence = max(candidate_sequences, key=_reward_of)
+        best_sequence = best_search_sequence if best_search_sequence is not None else max(candidate_sequences, key=_reward_of)
 
         self.all_trees = []
 
@@ -990,7 +1076,31 @@ class TPSRRegressor(BaseWrapper):
 
             backbone_model = self.params.get("backbone_model", "e2e").lower()
             if backbone_model == "e2e":
-                self._fit_e2e(X, y, equation_env, args, samples)
+                started_at = time.time()
+                base_seed = int(self.params.get("seed", 23))
+                chunk_index = 0
+                natural_completions = 0
+                best_state = None
+                best_score = None
+                while True:
+                    if self._timeout_in_seconds is not None and self._time_budget_exhausted(started_at):
+                        break
+                    self._set_parser_attr(args, "seed", base_seed + chunk_index)
+                    self._fit_e2e(X, y, equation_env, args, samples)
+                    score = self._score_current_tree(X, y)
+                    if best_state is None or (score is not None and (best_score is None or score > best_score)):
+                        best_state = self._snapshot_e2e_state()
+                        best_score = score
+                    natural_completions += 1
+                    chunk_index += 1
+                    if self._timeout_in_seconds is None:
+                        break
+                if best_state is None:
+                    raise RuntimeError("TPSR 未产生可用表达式")
+                self._restore_e2e_state(best_state)
+                self._backend_params["budget_chunks_run"] = chunk_index
+                self._backend_params["natural_completions"] = natural_completions
+                self._backend_params["budget_loop_exhausted"] = self._time_budget_exhausted(started_at)
             elif backbone_model == "nesymres":
                 self._fit_nesymres(np.asarray(X), np.asarray(y), args, samples)
             else:

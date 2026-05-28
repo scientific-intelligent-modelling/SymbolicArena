@@ -38,6 +38,8 @@ class QLatticeRegressor(BaseWrapper):
         self.params.setdefault("criterion", "bic")
         self.params.setdefault("signif", 4)
         self.params.setdefault("threads", 4)
+        self._timeout_in_seconds = self._as_positive_float(self.params.pop("timeout_in_seconds", None))
+        self._timeout_guard_seconds = self._as_positive_float(self.params.pop("timeout_guard_seconds", None)) or 5.0
         self._contract_n_features = self.params.pop("n_features", None)
         self._contract_feature_names = self.params.pop("feature_names", None)
         self._contract_target_name = self.params.pop("target_name", None)
@@ -58,6 +60,14 @@ class QLatticeRegressor(BaseWrapper):
         # 候选方程字符串列表（便于序列化后仍可获取多个解）
         self._equations: List[str] = []
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+
+    @staticmethod
+    def _as_positive_float(value) -> Optional[float]:
+        try:
+            value = float(value)
+        except Exception:
+            return None
+        return value if value > 0 else None
 
     @classmethod
     def _resolve_progress_state_path(cls, exp_path, exp_name) -> Optional[str]:
@@ -210,7 +220,12 @@ class QLatticeRegressor(BaseWrapper):
             models = []
             epoch_args = dict(auto_args)
             epoch_args['n_epochs'] = 1
+            started_at = time.time()
             for epoch in range(1, total_epochs + 1):
+                if self._timeout_in_seconds is not None:
+                    elapsed = time.time() - started_at
+                    if elapsed >= max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds):
+                        break
                 if running_models:
                     epoch_args['starting_models'] = running_models
                 else:

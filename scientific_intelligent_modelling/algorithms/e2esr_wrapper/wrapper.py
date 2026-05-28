@@ -6,6 +6,7 @@ import sys
 import requests
 import sympy as sp
 import torch
+import time
 
 from ..base_wrapper import BaseWrapper 
 from scientific_intelligent_modelling.benchmarks.normalizers import normalize_e2esr_artifact
@@ -77,6 +78,8 @@ class E2ESRRegressor(BaseWrapper):
         self._contract_n_features = self.params.pop("n_features", None)
         self._contract_feature_names = self.params.pop("feature_names", None)
         self._contract_target_name = self.params.pop("target_name", None)
+        self._timeout_in_seconds = self._as_positive_float(self.params.get("timeout_in_seconds"))
+        self._timeout_guard_seconds = self._as_positive_float(self.params.get("timeout_guard_seconds")) or 5.0
         self.model = None
         self.regressor = None
         self.best_tree = None
@@ -99,6 +102,14 @@ class E2ESRRegressor(BaseWrapper):
         
         # 立即加载模型
         self._load_model()
+
+    @staticmethod
+    def _as_positive_float(value):
+        try:
+            value = float(value)
+        except Exception:
+            return None
+        return value if value > 0 else None
     
     def _load_model(self):
         """加载预训练模型，如果本地不存在则从URL下载"""
@@ -165,6 +176,24 @@ class E2ESRRegressor(BaseWrapper):
         except Exception:
             # PyTorch 可能在并行运行时初始化后禁止再次设置 interop 线程。
             pass
+
+    def _time_budget_exhausted(self, started_at):
+        if self._timeout_in_seconds is None:
+            return False
+        return (time.time() - started_at) >= max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds)
+
+    @staticmethod
+    def _tree_score(tree_info):
+        if not isinstance(tree_info, dict):
+            return None
+        for key in ("r2", "score"):
+            value = tree_info.get(key)
+            if isinstance(value, (int, float, np.floating)) and np.isfinite(value):
+                return float(value)
+        loss = tree_info.get("_mse")
+        if isinstance(loss, (int, float, np.floating)) and np.isfinite(loss):
+            return -float(loss)
+        return None
     
     def fit(self, X, y):
         """
@@ -193,6 +222,8 @@ class E2ESRRegressor(BaseWrapper):
                 "stop_refinement_after",
                 "n_trees_to_refine",
                 "rescale",
+                "timeout_in_seconds",
+                "timeout_guard_seconds",
             }
             regressor_kwargs = {
                 k: v
@@ -205,17 +236,59 @@ class E2ESRRegressor(BaseWrapper):
                 # 剔除 SymbolicRegressor 注入的元参数，避免 __init__ 透传失败
                 pass
             
-            self.regressor = SymbolicTransformerRegressor(
-                model=self.model,
-                progress_state_path=self._progress_state_path,
-                **regressor_kwargs
-            )
-            
-            # 训练回归器
-            self.regressor.fit(X, y)
-            
-            # 获取并保存最佳树
-            self.best_tree = self.regressor.retrieve_tree(with_infos=True)
+            started_at = time.time()
+            base_seed = self.params.get("seed")
+            best_regressor = None
+            best_tree = None
+            best_score = None
+            chunk_index = 0
+            natural_completions = 0
+
+            while True:
+                if self._timeout_in_seconds is not None and self._time_budget_exhausted(started_at):
+                    break
+                try:
+                    seed = int(base_seed) + chunk_index if base_seed is not None else None
+                except Exception:
+                    seed = base_seed
+                if seed is not None:
+                    try:
+                        np.random.seed(int(seed))
+                        torch.manual_seed(int(seed))
+                    except Exception:
+                        pass
+
+                regressor = SymbolicTransformerRegressor(
+                    model=self.model,
+                    progress_state_path=self._progress_state_path,
+                    **regressor_kwargs
+                )
+                regressor._external_start_fit = started_at
+
+                # 训练回归器。若底层自然完成但预算未耗尽，外层会立刻启动下一轮。
+                regressor.fit(X, y)
+                tree = regressor.retrieve_tree(with_infos=True)
+                score = self._tree_score(tree)
+                if best_tree is None or (score is not None and (best_score is None or score > best_score)):
+                    best_regressor = regressor
+                    best_tree = tree
+                    best_score = score
+                natural_completions += 1
+                chunk_index += 1
+                if self._timeout_in_seconds is None:
+                    break
+
+            if best_regressor is None or best_tree is None:
+                raise RuntimeError("E2ESR 未产生可用表达式")
+
+            self.regressor = best_regressor
+            self.best_tree = best_tree
+            self._budget_chunks_run = chunk_index
+            self._natural_completions = natural_completions
+            self._budget_loop_exhausted = self._time_budget_exhausted(started_at)
+            for cache_name in ("_cached_optimal_equation", "_cached_total_equations"):
+                if hasattr(self, cache_name):
+                    delattr(self, cache_name)
             
             return self
             

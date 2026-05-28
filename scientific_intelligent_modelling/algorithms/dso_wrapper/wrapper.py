@@ -63,6 +63,8 @@ class DSORegressor(BaseWrapper):
         self._contract_n_features = raw_kwargs.get("n_features")
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
+        self._timeout_in_seconds = self._as_positive_float(raw_kwargs.get("timeout_in_seconds"))
+        self._timeout_guard_seconds = self._as_positive_float(raw_kwargs.get("timeout_guard_seconds")) or 5.0
         self.params = self._build_config(raw_kwargs)
         self.model = None
         self._dso_equation = None
@@ -73,6 +75,14 @@ class DSORegressor(BaseWrapper):
         self._dso_input_indices = []
         self._dso_n_features = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+
+    @staticmethod
+    def _as_positive_float(value):
+        try:
+            value = float(value)
+        except Exception:
+            return None
+        return value if value > 0 else None
 
     @classmethod
     def _build_config(cls, raw_kwargs):
@@ -138,6 +148,29 @@ class DSORegressor(BaseWrapper):
         config["policy_optimizer"] = policy_optimizer
         config["prior"] = prior
         return config
+
+    @staticmethod
+    def _program_reward(program):
+        reward = getattr(program, "r", None)
+        try:
+            return float(reward)
+        except Exception:
+            return None
+
+    def _best_program_from_model(self):
+        if self.model is None:
+            return None
+        trainer = getattr(self.model, "trainer", None)
+        program = getattr(trainer, "p_r_best", None) if trainer is not None else None
+        if program is not None:
+            return program
+        return getattr(self.model, "program_", None)
+
+    def _time_budget_exhausted(self, started_at):
+        if self._timeout_in_seconds is None:
+            return False
+        elapsed = time.time() - started_at
+        return elapsed >= max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds)
     
     def fit(self, X, y):
         self._validate_explicit_dataset_contract(
@@ -163,26 +196,78 @@ class DSORegressor(BaseWrapper):
         if not hasattr(__import__("dso"), "DeepSymbolicOptimizer"):
             raise ImportError("当前 dso 包未提供 DeepSymbolicOptimizer，请检查 dso 源码或安装版本。")
 
+        def _new_model(chunk_index=0):
+            params = deepcopy(self.params)
+            if self._timeout_in_seconds is not None:
+                training = dict(params.get("training") or {})
+                training["early_stopping"] = False
+                params["training"] = training
+                experiment = dict(params.get("experiment") or {})
+                seed = experiment.get("seed")
+                if seed is not None:
+                    try:
+                        experiment["seed"] = int(seed) + int(chunk_index)
+                    except Exception:
+                        pass
+                params["experiment"] = experiment
+            model = DeepSymbolicOptimizer(params)
+            fit_config = self._build_fit_config(model.config, X, y)
+            if self._timeout_in_seconds is not None:
+                fit_config.setdefault("training", {})
+                fit_config["training"]["early_stopping"] = False
+            model.set_config(fit_config)
+            return model
+
         # 创建并训练模型
-        self.model = DeepSymbolicOptimizer(self.params)
-        fit_config = self._build_fit_config(self.model.config, X, y)
-        self.model.set_config(fit_config)
+        self.model = _new_model(0)
         train_result = None
+        best_program = None
+        best_reward = None
         if self._progress_state_path:
+            started_at = time.time()
+            chunk_index = 0
+            natural_completions = 0
             while True:
+                if self._time_budget_exhausted(started_at):
+                    break
                 step_result = self.model.train_one_step()
                 self._update_progress_state_from_model()
+                program = self._best_program_from_model()
+                reward = self._program_reward(program)
+                if program is not None and (best_program is None or (reward is not None and (best_reward is None or reward > best_reward))):
+                    best_program = program
+                    best_reward = reward
                 if step_result is not None:
-                    train_result = step_result
-                    break
+                    program = step_result.get("program") if isinstance(step_result, dict) else None
+                    reward = self._program_reward(program)
+                    if program is not None and (best_program is None or (reward is not None and (best_reward is None or reward > best_reward))):
+                        best_program = program
+                        best_reward = reward
+                    if self._timeout_in_seconds is None:
+                        train_result = step_result
+                        break
+                    natural_completions += 1
+                    chunk_index += 1
+                    self.model = _new_model(chunk_index)
+                    continue
                 trainer = getattr(self.model, "trainer", None)
                 if trainer is not None and getattr(trainer, "done", False):
-                    break
+                    if self._timeout_in_seconds is None:
+                        break
+                    natural_completions += 1
+                    chunk_index += 1
+                    self.model = _new_model(chunk_index)
+            self._budget_chunks_run = chunk_index + 1
+            self._natural_completions = natural_completions
+            self._budget_loop_exhausted = self._time_budget_exhausted(started_at)
         else:
             train_result = self.model.train()
 
         if train_result is None and getattr(self.model, "trainer", None) is not None:
             train_result = self.model.finish()
+        if best_program is not None:
+            train_result = dict(train_result or {})
+            train_result["program"] = best_program
         self.model.program_ = train_result["program"]
         x_arr = np.asarray(X)
         self._dso_n_features = int(x_arr.shape[1]) if x_arr.ndim == 2 else 1

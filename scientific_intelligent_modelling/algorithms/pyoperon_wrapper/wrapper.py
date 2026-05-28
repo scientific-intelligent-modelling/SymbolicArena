@@ -30,7 +30,21 @@ class OperonRegressor(BaseWrapper):
         "max_evaluations": 500000,
         "n_threads": 4,
     }
-    _META_PARAMS = {"exp_name", "exp_path", "problem_name", "seed", "n_features", "feature_names", "target_name"}
+    _META_PARAMS = {
+        "exp_name",
+        "exp_path",
+        "problem_name",
+        "seed",
+        "n_features",
+        "feature_names",
+        "target_name",
+        "timeout_guard_seconds",
+        "progress_snapshot_interval_seconds",
+        "task_label",
+        "task_global_index",
+        "expected_dataset_rel",
+        "expected_dataset_dir",
+    }
     _PROGRESS_STATE_FILENAME = ".pyoperon_current_best.json"
     _ALLOWED_PARAMS = {
         "allowed_symbols",
@@ -114,8 +128,10 @@ class OperonRegressor(BaseWrapper):
         }
 
         for old, new in alias_map.items():
-            if old in raw_params and new not in raw_params:
-                raw_params[new] = raw_params.pop(old)
+            if old in raw_params:
+                alias_value = raw_params.pop(old)
+                if new not in raw_params:
+                    raw_params[new] = alias_value
 
         raw_params.pop("seed", None)
 
@@ -132,6 +148,9 @@ class OperonRegressor(BaseWrapper):
             )
 
         params.update(raw_params)
+
+        if "max_time" in params and "generations" not in params:
+            params["generations"] = 1000000
 
         if "n_threads" in params:
             try:

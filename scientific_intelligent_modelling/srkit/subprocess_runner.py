@@ -280,8 +280,11 @@ def handle_fit(regressor_class, command):
     # 提取数据和参数
     data = command['data']
     params = dict(command.get('params', {}) or {})
-    # 统一的运行时元参数，不直接透传给算法 wrapper。
-    params.pop('timeout_in_seconds', None)
+    # timeout 同时是子进程外层保护，也是部分 wrapper 内部预算循环的控制信号。
+    # 不能在这里丢弃，否则算法会自然完成后提前返回，外层只能看到 completed。
+    command_timeout = command.get("timeout_in_seconds")
+    if params.get("timeout_in_seconds") is None and command_timeout is not None:
+        params["timeout_in_seconds"] = command_timeout
     
     # 转换为numpy数组
     X = np.array(data['X'])

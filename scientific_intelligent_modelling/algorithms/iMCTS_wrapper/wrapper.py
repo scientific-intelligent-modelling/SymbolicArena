@@ -63,6 +63,8 @@ class iMCTSRegressor(BaseWrapper):
         self.params.setdefault("max_expressions", 2000000)
         self.params.setdefault("verbose", False)
         self.params.setdefault("optimization_method", "LN_NELDERMEAD")
+        self._timeout_in_seconds = self._as_positive_float(self.params.pop("timeout_in_seconds", None))
+        self._timeout_guard_seconds = self._as_positive_float(self.params.pop("timeout_guard_seconds", None)) or 5.0
         self._exp_path = self.params.get('exp_path')
         self._exp_name = self.params.get('exp_name')
         self._contract_n_features = self.params.pop("n_features", None)
@@ -82,6 +84,14 @@ class iMCTSRegressor(BaseWrapper):
         # 运行时（fit 阶段）引用的底层回归器（仅在同一进程内可用）
         self._runtime_regressor = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+
+    @staticmethod
+    def _as_positive_float(value) -> Optional[float]:
+        try:
+            value = float(value)
+        except Exception:
+            return None
+        return value if value > 0 else None
 
     @classmethod
     def _resolve_progress_state_path(cls, exp_path: Optional[str], exp_name: Optional[str]) -> Optional[str]:
@@ -146,19 +156,59 @@ class iMCTSRegressor(BaseWrapper):
             'ops', 'arity_dict', 'context', 'max_depth', 'K', 'c', 'gamma',
             'gp_rate', 'mutation_rate', 'exploration_rate', 'max_single_arity_ops',
             'max_constants', 'max_expressions', 'verbose', 'reward_func',
-            'optimization_method'
+            'optimization_method', 'time_limit', 'disable_success_early_stop'
         }
         mcts_kwargs = {k: v for k, v in self.params.items() if k in allowed_keys}
 
-        # 实例化并训练
-        reg = _MCTSRegressor(
-            x_train=x_train,
-            y_train=y_train,
-            progress_callback=self._write_progress_state if self._progress_state_path else None,
-            **mcts_kwargs,
+        started_at = time.time()
+        base_seed = self.params.get('seed')
+        max_chunks = int(self.params.get("budget_chunks", 1) or 1)
+        if self._timeout_in_seconds is not None and "budget_chunks" not in self.params:
+            max_chunks = 1000000
+        if self._timeout_in_seconds is not None:
+            mcts_kwargs["disable_success_early_stop"] = True
+
+        best_tuple = None
+        best_score = None
+        last_reg = None
+        natural_completions = 0
+        for chunk_index in range(max(1, max_chunks)):
+            if self._timeout_in_seconds is not None:
+                elapsed = time.time() - started_at
+                remaining_budget = max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds - elapsed)
+                if remaining_budget <= 0.0:
+                    break
+                mcts_kwargs["time_limit"] = remaining_budget
+            reg = _MCTSRegressor(
+                x_train=x_train,
+                y_train=y_train,
+                progress_callback=self._write_progress_state if self._progress_state_path else None,
+                **mcts_kwargs,
+            )
+            last_reg = reg
+            try:
+                seed = int(base_seed) + chunk_index if base_seed is not None else None
+            except Exception:
+                seed = base_seed
+            simplified_expr, vec_expr, eval_count, path = reg.fit(seed=seed)
+            score = self._score_vector_expression(reg, vec_expr, x_train, y_train)
+            if best_tuple is None or (score is not None and (best_score is None or score < best_score)):
+                best_tuple = (simplified_expr, vec_expr, eval_count, path, reg)
+                best_score = score
+            natural_completions += 1
+            if self._timeout_in_seconds is None:
+                break
+
+        if best_tuple is None:
+            raise ValueError("iMCTS 未产生可用表达式")
+        simplified_expr, vec_expr, eval_count, path, best_reg = best_tuple
+        self._runtime_regressor = best_reg or last_reg
+        self._budget_chunks_run = natural_completions
+        self._natural_completions = natural_completions
+        self._budget_loop_exhausted = (
+            self._timeout_in_seconds is not None
+            and (time.time() - started_at) >= max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds)
         )
-        self._runtime_regressor = reg
-        simplified_expr, vec_expr, eval_count, path = reg.fit(seed=self.params.get('seed'))
 
         # 缓存结果
         self._best_expr_simplified = simplified_expr
@@ -199,6 +249,29 @@ class iMCTSRegressor(BaseWrapper):
             return np.asarray(y_pred)
         except Exception as e:
             raise RuntimeError(f"iMCTS 预测失败: {e}")
+
+    @staticmethod
+    def _score_vector_expression(reg, vec_expr, x_train, y_train) -> Optional[float]:
+        if not isinstance(vec_expr, str) or not vec_expr.strip():
+            return None
+        try:
+            y_pred = reg.predict(x_train, vec_expr)
+        except Exception:
+            return None
+        try:
+            pred = np.asarray(y_pred, dtype=float).reshape(-1)
+            target = np.asarray(y_train, dtype=float).reshape(-1)
+        except Exception:
+            return None
+        if pred.shape[0] != target.shape[0]:
+            return None
+        mask = np.isfinite(pred) & np.isfinite(target)
+        if not np.any(mask):
+            return None
+        try:
+            return float(np.mean((pred[mask] - target[mask]) ** 2))
+        except Exception:
+            return None
 
     def get_optimal_equation(self):
         # 返回简化后的标量表达式（便于阅读/记录）
