@@ -3,6 +3,8 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -20,6 +22,43 @@ def _write_manifest(batch_dir: Path, dataset_ids: tuple[str, ...]) -> None:
             f"alg__seed520__{dataset_id},alg,{dataset_id},/data/{dataset_id},520,3600,60"
         )
     (manifest_dir / "tasks.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+
+def _write_success_result(batch_dir: Path, dataset_id: str) -> None:
+    task_dir = batch_dir / "runs" / "alg" / "seed520" / dataset_id
+    task_dir.mkdir(parents=True, exist_ok=True)
+    (task_dir / "result.json").write_text(
+        json.dumps(
+            {
+                "status": "ok",
+                "runtime_seconds": 3501.0,
+                "valid": {"nmse": 0.1},
+                "id_test": {"nmse": 0.1},
+                "ood_test": {"nmse": 0.1},
+                "canonical_artifact": {"expression": "x0"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    progress_dir = task_dir / "progress"
+    progress_dir.mkdir()
+    (progress_dir / "minute_0001.json").write_text("{}", encoding="utf-8")
+    (progress_dir / "minute_0055.json").write_text("{}", encoding="utf-8")
+
+
+def _run_audit_cli(batch_dir: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            "benchmark-control/compliance/launchers/audit_batch.py",
+            "--batch-dir",
+            str(batch_dir),
+            *extra_args,
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
 
 
 def test_heartbeat_marks_codex_needed_when_failures_exist(tmp_path: Path) -> None:
@@ -133,3 +172,50 @@ def test_rerun_queue_allows_header_only_failure_cases(tmp_path: Path) -> None:
     with output.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert rows == []
+
+
+def test_audit_cli_writes_heartbeat_and_rerun_queue_for_failed_batch(tmp_path: Path) -> None:
+    batch_dir = tmp_path / "batch"
+    _write_manifest(batch_dir, ("d1",))
+
+    completed = _run_audit_cli(
+        batch_dir,
+        "--write-heartbeat",
+        "--write-rerun",
+        "--round-id",
+        "1",
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    heartbeat_path = batch_dir / "heartbeat.json"
+    rerun_path = batch_dir / "repair" / "round_001" / "rerun_tasks.csv"
+    assert heartbeat_path.exists()
+    assert rerun_path.exists()
+    heartbeat_payload = json.loads(heartbeat_path.read_text(encoding="utf-8"))
+    assert heartbeat_payload["phase"] == "repair"
+    with rerun_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["task_id"] for row in rows] == ["alg__seed520__d1"]
+
+
+def test_audit_cli_skips_rerun_queue_when_batch_is_clean(tmp_path: Path) -> None:
+    batch_dir = tmp_path / "batch"
+    _write_manifest(batch_dir, ("d1",))
+    _write_success_result(batch_dir, "d1")
+
+    completed = _run_audit_cli(
+        batch_dir,
+        "--write-heartbeat",
+        "--write-rerun",
+        "--round-id",
+        "2",
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    heartbeat_path = batch_dir / "heartbeat.json"
+    rerun_path = batch_dir / "repair" / "round_002" / "rerun_tasks.csv"
+    assert heartbeat_path.exists()
+    assert not rerun_path.exists()
+    heartbeat_payload = json.loads(heartbeat_path.read_text(encoding="utf-8"))
+    assert heartbeat_payload["phase"] == "done"
+    assert heartbeat_payload["failed"] == 0

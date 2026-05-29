@@ -10,6 +10,8 @@ LIB = ROOT / "benchmark-control" / "compliance" / "lib"
 sys.path.insert(0, str(LIB))
 
 from audit import audit_batch
+from heartbeat import write_heartbeat
+from rerun import write_rerun_queue
 
 
 def _resolve_repo_path(value: str) -> Path:
@@ -22,8 +24,20 @@ def _resolve_repo_path(value: str) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch-dir", required=True)
+    parser.add_argument("--write-heartbeat", action="store_true")
+    parser.add_argument("--write-rerun", action="store_true")
+    parser.add_argument("--round-id", type=int, default=1)
     args = parser.parse_args()
-    print(audit_batch(batch_dir=_resolve_repo_path(args.batch_dir)))
+    batch_dir = _resolve_repo_path(args.batch_dir)
+    summary = audit_batch(batch_dir=batch_dir)
+    if args.write_heartbeat:
+        write_heartbeat(
+            batch_dir=batch_dir,
+            phase="repair" if summary["failed"] > 0 else "done",
+        )
+    if args.write_rerun and summary["failed"] > 0:
+        write_rerun_queue(batch_dir=batch_dir, round_id=args.round_id)
+    print(summary)
     return 0
 
 
