@@ -83,6 +83,9 @@ ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
 
 python benchmark-control/compliance/launchers/write_stage1_queue_commands.py \
   --batch-dir benchmark-runs/compliance/latest
+
+python benchmark-control/compliance/launchers/check_stage1_readiness.py \
+  --batch-dir benchmark-runs/compliance/latest
 ```
 
 审计批次：

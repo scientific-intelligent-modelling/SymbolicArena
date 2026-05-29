@@ -43,6 +43,9 @@ ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
 
 python benchmark-control/compliance/launchers/write_stage1_queue_commands.py \
   --batch-dir benchmark-runs/compliance/latest
+
+python benchmark-control/compliance/launchers/check_stage1_readiness.py \
+  --batch-dir benchmark-runs/compliance/latest
 ```
 
 该命令只生成 `deploy/01_preflight_from_iaaccn22.sh`、`deploy/02_smoke_dispatch_from_iaaccn22.sh` 和 `deploy/03_full_dispatch_from_iaaccn22.sh`，不会连接远端，也不会启动实验。
