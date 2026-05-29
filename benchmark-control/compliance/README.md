@@ -45,9 +45,25 @@ ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
 审计当前批次并写入心跳与重跑队列：
 
 ```bash
+BATCH_ID="$(basename "$(readlink -f benchmark-runs/compliance/latest)")"
+
+python benchmark-control/compliance/launchers/collect_remote_batch.py \
+  --batch-dir benchmark-runs/compliance/latest \
+  --batch-id "${BATCH_ID}" \
+  --hosts iaaccn22 iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29 \
+  --controller-host iaaccn22 \
+  --use-internal-ips
+
 python benchmark-control/compliance/launchers/harvest_batch.py \
   --batch-dir benchmark-runs/compliance/latest \
-  --experiment-root "experiments/${BATCH_ID}"
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn22 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn23 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn24 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn25 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn26 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn27 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn28 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn29
 
 python benchmark-control/compliance/launchers/audit_batch.py \
   --batch-dir benchmark-runs/compliance/latest \
@@ -56,4 +72,4 @@ python benchmark-control/compliance/launchers/audit_batch.py \
   --round-id 1
 ```
 
-`harvest_batch.py` 只把调度器写在 `experiments/` 下的 `result.json` 和 `progress/` 映射到当前批次的 `runs/` 审计布局，不会启动远端任务。上面的 prepare 和 audit 命令也只会生成或更新 manifest、audit、heartbeat、rerun 等控制文件，不会触发任何远端 dispatch。
+`collect_remote_batch.py` 只用过滤 `rsync` 拉取 `result.json`、`progress/`、launcher 状态等审计所需轻量产物；`harvest_batch.py` 只把收集到的调度结果映射到当前批次的 `runs/` 审计布局。上面的 prepare、collect、harvest 和 audit 命令不会启动远端实验，也不会触发远端 dispatch。

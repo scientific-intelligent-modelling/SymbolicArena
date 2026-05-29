@@ -42,9 +42,10 @@ benchmark-runs/compliance/latest
 5. 如果需要修复代码，先根据日志和审计证据定位根因。
 6. 修改代码后运行针对性验证并提交 commit。
 7. 同步代码到 `iaaccn22~29`。
-8. 将远端 `experiments/<batch_id>/` 产物 harvest 到 `benchmark-runs/compliance/latest/runs/`。
-9. 只重跑失败项，不重跑已合规任务。
-10. 更新 `repair/repair_log.md` 和轻量摘要。
+8. 用过滤 `rsync` 收集远端 `experiments/<batch_id>/` 审计所需轻量产物。
+9. 将收集到的产物 harvest 到 `benchmark-runs/compliance/latest/runs/`。
+10. 只重跑失败项，不重跑已合规任务。
+11. 更新 `repair/repair_log.md` 和轻量摘要。
 
 ## 禁止事项
 
@@ -84,9 +85,25 @@ ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
 审计批次：
 
 ```bash
+BATCH_ID="$(basename "$(readlink -f benchmark-runs/compliance/latest)")"
+
+python benchmark-control/compliance/launchers/collect_remote_batch.py \
+  --batch-dir benchmark-runs/compliance/latest \
+  --batch-id "${BATCH_ID}" \
+  --hosts iaaccn22 iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29 \
+  --controller-host iaaccn22 \
+  --use-internal-ips
+
 python benchmark-control/compliance/launchers/harvest_batch.py \
   --batch-dir benchmark-runs/compliance/latest \
-  --experiment-root "experiments/${BATCH_ID}"
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn22 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn23 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn24 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn25 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn26 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn27 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn28 \
+  --experiment-root benchmark-runs/compliance/latest/remote-experiments/iaaccn29
 
 python benchmark-control/compliance/launchers/audit_batch.py \
   --batch-dir benchmark-runs/compliance/latest \
