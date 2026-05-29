@@ -18,7 +18,12 @@ def _valid_report(hosts: list[str]) -> dict[str, object]:
                 "ok": True,
                 "files": {
                     "scheduler": {"matches_expected": True},
+                    "launcher": {"matches_expected": True},
+                    "runner": {"matches_expected": True},
+                    "toolbox_config": {"matches_expected": True},
                     "source_csv": {"matches_expected": True},
+                    "gplearn_wrapper": {"matches_expected": True},
+                    "gplearn_params": {"matches_expected": True},
                 },
                 "dataset_sync": {"all_match": True},
                 "params": {"gplearn": {"exists": True, "json_ok": True}},
@@ -65,6 +70,26 @@ def test_preflight_gate_reports_mismatch_missing_host_and_failed_env(tmp_path: P
     assert "missing host in preflight report: iaaccn23" in summary["issues"]
     assert "iaaccn22 file scheduler mismatch" in summary["issues"]
     assert "iaaccn22 env sim_base import failed" in summary["issues"]
+
+
+def test_preflight_gate_requires_tool_wrapper_and_param_file_hashes(tmp_path: Path) -> None:
+    gate = load_for_test("preflight_gate")
+    report = _valid_report(["iaaccn22"])
+    host = report["hosts"][0]
+    del host["files"]["gplearn_wrapper"]
+    del host["files"]["gplearn_params"]
+    report_path = tmp_path / "preflight.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    summary = gate.check_preflight_report(
+        report_path=report_path,
+        expected_hosts=["iaaccn22"],
+        batch_dir=tmp_path / "batch",
+    )
+
+    assert summary["ready_for_smoke"] is False
+    assert "iaaccn22 file gplearn_wrapper missing" in summary["issues"]
+    assert "iaaccn22 file gplearn_params missing" in summary["issues"]
 
 
 def test_preflight_gate_launcher_exits_nonzero_when_not_ready(tmp_path: Path, monkeypatch) -> None:

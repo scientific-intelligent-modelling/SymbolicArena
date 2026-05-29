@@ -64,16 +64,29 @@ def _check_host(
     if item.get("ok") is False:
         issues.append(f"{host} preflight transport failed: {item.get('stage') or item.get('error') or 'unknown'}")
         return
-    _check_files(host, item.get("files"), issues)
+    _check_files(host, item.get("files"), requested_tools, issues)
     _check_dataset_sync(host, item.get("dataset_sync"), issues)
     _check_params(host, item.get("params"), requested_tools, issues)
     _check_envs(host, item.get("envs"), requested_envs, issues)
 
 
-def _check_files(host: str, files: object, issues: list[str]) -> None:
+def _check_files(host: str, files: object, requested_tools: list[str], issues: list[str]) -> None:
     if not isinstance(files, dict):
         issues.append(f"{host} files report missing")
         return
+    required_labels = [
+        "scheduler",
+        "launcher",
+        "runner",
+        "toolbox_config",
+        "source_csv",
+    ]
+    for tool in requested_tools:
+        required_labels.append(f"{tool}_wrapper")
+        required_labels.append(f"{tool}_params")
+    for label in required_labels:
+        if label not in files:
+            issues.append(f"{host} file {label} missing")
     for label, payload in files.items():
         if not isinstance(payload, dict):
             issues.append(f"{host} file {label} report invalid")
