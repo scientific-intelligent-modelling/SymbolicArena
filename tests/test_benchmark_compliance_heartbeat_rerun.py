@@ -24,6 +24,19 @@ def _write_manifest(batch_dir: Path, dataset_ids: tuple[str, ...]) -> None:
     (manifest_dir / "tasks.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
 
 
+def _write_task_audit(batch_dir: Path, dataset_ids: tuple[str, ...]) -> None:
+    audit_dir = batch_dir / "audit"
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    rows = [
+        "task_id,algorithm,dataset_id,seed,status,runtime_seconds,has_result,has_progress,metrics_valid,artifact_valid,failure_class,reason"
+    ]
+    for dataset_id in dataset_ids:
+        rows.append(
+            f"alg__seed520__{dataset_id},alg,{dataset_id},520,ok,3501.000,true,true,true,true,,"
+        )
+    (audit_dir / "task_audit.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+
 def _write_success_result(batch_dir: Path, dataset_id: str) -> None:
     task_dir = batch_dir / "runs" / "alg" / "seed520" / dataset_id
     task_dir.mkdir(parents=True, exist_ok=True)
@@ -101,6 +114,7 @@ def test_heartbeat_treats_header_only_failures_as_clean_audit(tmp_path: Path) ->
     _write_manifest(batch_dir, ("d1", "d2", "d3"))
     audit_dir = batch_dir / "audit"
     audit_dir.mkdir(parents=True)
+    _write_task_audit(batch_dir, ("d1", "d2", "d3"))
     (audit_dir / "failure_cases.csv").write_text(
         "task_id,algorithm,dataset_id,seed,status,runtime_seconds,has_result,has_progress,metrics_valid,artifact_valid,failure_class,reason\n",
         encoding="utf-8",
@@ -113,6 +127,29 @@ def test_heartbeat_treats_header_only_failures_as_clean_audit(tmp_path: Path) ->
     assert payload["failed"] == 0
     assert payload["needs_codex"] is False
     assert payload["codex_reason"] == ""
+    assert payload["latest_audit"] == "audit/failure_cases.csv"
+
+
+def test_heartbeat_marks_header_only_failures_without_task_audit_as_needing_codex(
+    tmp_path: Path,
+) -> None:
+    heartbeat = load_for_test("heartbeat")
+    batch_dir = tmp_path / "batch"
+    _write_manifest(batch_dir, ("d1", "d2"))
+    audit_dir = batch_dir / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "failure_cases.csv").write_text(
+        "task_id,algorithm,dataset_id,seed,status,runtime_seconds,has_result,has_progress,metrics_valid,artifact_valid,failure_class,reason\n",
+        encoding="utf-8",
+    )
+
+    payload = heartbeat.write_heartbeat(batch_dir=batch_dir, phase="repair")
+
+    assert payload["total_tasks"] == 2
+    assert payload["finished"] == 0
+    assert payload["failed"] == 0
+    assert payload["needs_codex"] is True
+    assert payload["codex_reason"] == "audit/task_audit.csv missing or incomplete"
     assert payload["latest_audit"] == "audit/failure_cases.csv"
 
 

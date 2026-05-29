@@ -115,6 +115,20 @@ def test_audit_classifies_progress_metric_and_artifact_failures(tmp_path: Path) 
             "compliant": "false",
         }
     ]
+    with (batch_dir / "audit" / "metric_failure_cases.csv").open(
+        newline="",
+        encoding="utf-8",
+    ) as handle:
+        metric_rows = list(csv.DictReader(handle))
+    assert [row["dataset_id"] for row in metric_rows] == ["d2"]
+    assert [row["failure_class"] for row in metric_rows] == ["metric_invalid"]
+    with (batch_dir / "audit" / "missing_artifact_cases.csv").open(
+        newline="",
+        encoding="utf-8",
+    ) as handle:
+        artifact_rows = list(csv.DictReader(handle))
+    assert [row["dataset_id"] for row in artifact_rows] == ["d3"]
+    assert [row["failure_class"] for row in artifact_rows] == ["artifact_invalid"]
 
 
 def test_audit_treats_missing_or_null_nmse_as_metric_invalid(tmp_path: Path) -> None:

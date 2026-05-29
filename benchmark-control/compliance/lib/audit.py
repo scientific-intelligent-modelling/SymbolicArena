@@ -40,6 +40,16 @@ def audit_batch(*, batch_dir: Path) -> dict[str, int]:
         TASK_AUDIT_FIELDS,
         [row for row in failures if row["failure_class"] == "early_stop"],
     )
+    _write_csv(
+        audit_dir / "missing_artifact_cases.csv",
+        TASK_AUDIT_FIELDS,
+        [row for row in failures if row["failure_class"] == "artifact_invalid"],
+    )
+    _write_csv(
+        audit_dir / "metric_failure_cases.csv",
+        TASK_AUDIT_FIELDS,
+        [row for row in failures if row["failure_class"] == "metric_invalid"],
+    )
     _write_summary(audit_dir / "budget_compliance_summary.csv", rows)
     return {
         "total_tasks": len(rows),

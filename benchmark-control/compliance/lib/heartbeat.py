@@ -19,12 +19,20 @@ def write_heartbeat(
         raise ValueError(f"invalid heartbeat phase: {phase}")
 
     failures_path = batch_dir / "audit" / "failure_cases.csv"
+    task_audit_path = batch_dir / "audit" / "task_audit.csv"
     failures = _read_csv(failures_path)
     task_rows = _read_csv(batch_dir / "manifest" / "tasks.csv")
+    task_audit_rows = _read_csv(task_audit_path)
     audit_exists = failures_path.exists()
     total_tasks = len(task_rows)
-    finished = _finished_count(total_tasks=total_tasks, failed=len(failures), audit_exists=audit_exists)
-    needs_codex = (not audit_exists) or bool(failures)
+    audit_complete = _audit_complete(total_tasks=total_tasks, audit_rows=len(task_audit_rows))
+    finished = _finished_count(
+        total_tasks=total_tasks,
+        failed=len(failures),
+        audit_exists=audit_exists,
+        audit_complete=audit_complete,
+    )
+    needs_codex = (not audit_exists) or (not audit_complete) or bool(failures)
     payload = {
         "batch_id": batch_dir.name,
         "phase": phase,
@@ -36,7 +44,11 @@ def write_heartbeat(
         "failed": len(failures),
         "stale": 0,
         "needs_codex": needs_codex,
-        "codex_reason": _codex_reason(failures=failures, audit_exists=audit_exists),
+        "codex_reason": _codex_reason(
+            failures=failures,
+            audit_exists=audit_exists,
+            audit_complete=audit_complete,
+        ),
         "latest_audit": "audit/failure_cases.csv" if audit_exists else "",
         "latest_rerun_queue": latest_rerun_queue,
     }
@@ -55,17 +67,25 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def _finished_count(*, total_tasks: int, failed: int, audit_exists: bool) -> int:
-    if not audit_exists:
+def _audit_complete(*, total_tasks: int, audit_rows: int) -> bool:
+    if total_tasks <= 0:
+        return False
+    return audit_rows == total_tasks
+
+
+def _finished_count(*, total_tasks: int, failed: int, audit_exists: bool, audit_complete: bool) -> int:
+    if not audit_exists or not audit_complete:
         return 0
     if total_tasks <= 0:
         return 0
     return max(0, total_tasks - failed)
 
 
-def _codex_reason(*, failures: list[dict[str, str]], audit_exists: bool) -> str:
+def _codex_reason(*, failures: list[dict[str, str]], audit_exists: bool, audit_complete: bool) -> str:
     if not audit_exists:
         return "audit/failure_cases.csv missing"
+    if not audit_complete:
+        return "audit/task_audit.csv missing or incomplete"
     if not failures:
         return ""
 
