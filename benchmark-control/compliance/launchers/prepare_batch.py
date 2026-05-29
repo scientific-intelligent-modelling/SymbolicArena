@@ -17,6 +17,13 @@ def _git_revision() -> str:
     return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
 
 
+def _resolve_repo_path(value: str) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    return ROOT / path
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--toolbox-config", default="scientific_intelligent_modelling/config/toolbox_config.json")
@@ -24,9 +31,9 @@ def main() -> int:
     parser.add_argument("--batch-dir", required=True)
     args = parser.parse_args()
     summary = generate_manifest(
-        toolbox_config_path=Path(args.toolbox_config),
-        ssr50_root=Path(args.ssr50_root),
-        batch_dir=Path(args.batch_dir),
+        toolbox_config_path=_resolve_repo_path(args.toolbox_config),
+        ssr50_root=_resolve_repo_path(args.ssr50_root),
+        batch_dir=_resolve_repo_path(args.batch_dir),
         git_revision=_git_revision(),
     )
     print(summary)

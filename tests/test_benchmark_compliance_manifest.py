@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import csv
+import importlib.util
 import json
 from pathlib import Path
+import sys
 
 
 def _write_dataset(root: Path, name: str) -> None:
@@ -54,3 +56,63 @@ def test_manifest_generation_writes_750_stage1_tasks(tmp_path: Path) -> None:
     assert rows[0]["timeout_in_seconds"] == "3600"
     assert rows[0]["progress_snapshot_interval_seconds"] == "60"
     assert "__seed520__" in rows[0]["task_id"]
+
+
+def test_manifest_generation_preserves_relative_dataset_paths(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from benchmark_control_compliance_manifest_import import load_for_test
+
+    module = load_for_test("manifest")
+    ssr50_root = tmp_path / "ssr50"
+    for idx in range(50):
+        _write_dataset(ssr50_root, f"dataset_{idx:04d}")
+    config_path = tmp_path / "toolbox_config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "tool_mapping": {
+                    f"alg{idx:02d}": {"env": f"env{idx:02d}", "regressor": f"Reg{idx:02d}"}
+                    for idx in range(15)
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    batch_dir = tmp_path / "benchmark-runs" / "compliance" / "batch"
+
+    module.generate_manifest(
+        toolbox_config_path=config_path,
+        ssr50_root=Path("ssr50"),
+        batch_dir=batch_dir,
+        git_revision="abc123",
+    )
+
+    tasks_path = batch_dir / "manifest" / "tasks.csv"
+    with tasks_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["dataset_dir"] == "ssr50/dataset_0000"
+
+
+def test_load_for_test_restores_sys_path() -> None:
+    from benchmark_control_compliance_manifest_import import load_for_test
+
+    before = list(sys.path)
+    load_for_test("models")
+    assert sys.path == before
+
+
+def test_prepare_batch_resolves_repo_relative_paths_from_any_cwd(tmp_path: Path, monkeypatch) -> None:
+    launcher_path = Path(__file__).resolve().parents[1] / "benchmark-control" / "compliance" / "launchers" / "prepare_batch.py"
+    spec = importlib.util.spec_from_file_location("benchmark_compliance_prepare_batch", launcher_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {launcher_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    monkeypatch.chdir(tmp_path)
+    resolved = module._resolve_repo_path("scientific_intelligent_modelling/config/toolbox_config.json")
+
+    assert resolved == launcher_path.parents[3] / "scientific_intelligent_modelling" / "config" / "toolbox_config.json"

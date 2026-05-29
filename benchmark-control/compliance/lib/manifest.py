@@ -35,7 +35,7 @@ def _read_datasets(ssr50_root: Path) -> list[dict[str, str]]:
             datasets.append(
                 {
                     "dataset_id": dataset_dir.name,
-                    "dataset_dir": str(dataset_dir.resolve()),
+                    "dataset_dir": str(dataset_dir),
                 }
             )
     if len(datasets) != 50:
@@ -115,7 +115,7 @@ def generate_manifest(
 
 def _to_csv(fieldnames: list[str], rows: list[dict[str, Any]]) -> str:
     buffer = StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=fieldnames)
+    writer = csv.DictWriter(buffer, fieldnames=fieldnames, lineterminator="\n")
     writer.writeheader()
     writer.writerows(rows)
     return buffer.getvalue()
