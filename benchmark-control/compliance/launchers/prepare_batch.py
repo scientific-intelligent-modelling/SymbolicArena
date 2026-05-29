@@ -14,7 +14,7 @@ from manifest import generate_manifest
 
 
 def _git_revision() -> str:
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
 
 
 def _resolve_repo_path(value: str) -> Path:
@@ -35,6 +35,7 @@ def main() -> int:
         ssr50_root=_resolve_repo_path(args.ssr50_root),
         batch_dir=_resolve_repo_path(args.batch_dir),
         git_revision=_git_revision(),
+        dataset_dir_base=ROOT,
     )
     print(summary)
     return 0

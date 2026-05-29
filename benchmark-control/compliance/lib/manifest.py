@@ -43,12 +43,19 @@ def _read_datasets(ssr50_root: Path) -> list[dict[str, str]]:
     return datasets
 
 
+def _dataset_output_path(dataset_dir: str, dataset_dir_base: Path | None) -> str:
+    if dataset_dir_base is None:
+        return dataset_dir
+    return str(Path(dataset_dir).relative_to(dataset_dir_base))
+
+
 def generate_manifest(
     *,
     toolbox_config_path: Path,
     ssr50_root: Path,
     batch_dir: Path,
     git_revision: str,
+    dataset_dir_base: Path | None = None,
 ) -> dict[str, int]:
     algorithms = _read_tool_mapping(toolbox_config_path)
     if len(algorithms) != 15:
@@ -56,13 +63,20 @@ def generate_manifest(
     datasets = _read_datasets(ssr50_root)
     manifest_dir = batch_dir / "manifest"
     manifest_dir.mkdir(parents=True, exist_ok=True)
+    dataset_rows = [
+        {
+            "dataset_id": dataset["dataset_id"],
+            "dataset_dir": _dataset_output_path(dataset["dataset_dir"], dataset_dir_base),
+        }
+        for dataset in datasets
+    ]
 
     (manifest_dir / "algorithms.json").write_text(
         json.dumps(algorithms, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     (manifest_dir / "datasets.csv").write_text(
-        _to_csv(["dataset_id", "dataset_dir"], datasets),
+        _to_csv(["dataset_id", "dataset_dir"], dataset_rows),
         encoding="utf-8",
     )
     budget = {
@@ -85,7 +99,7 @@ def generate_manifest(
                     "task_id": f"{algorithm}__seed{STAGE1_SEED}__{dataset_id}",
                     "algorithm": algorithm,
                     "dataset_id": dataset_id,
-                    "dataset_dir": dataset["dataset_dir"],
+                    "dataset_dir": _dataset_output_path(dataset["dataset_dir"], dataset_dir_base),
                     "seed": STAGE1_SEED,
                     "timeout_in_seconds": STAGE1_TIMEOUT_SECONDS,
                     "progress_snapshot_interval_seconds": STAGE1_PROGRESS_INTERVAL_SECONDS,

@@ -116,3 +116,80 @@ def test_prepare_batch_resolves_repo_relative_paths_from_any_cwd(tmp_path: Path,
     resolved = module._resolve_repo_path("scientific_intelligent_modelling/config/toolbox_config.json")
 
     assert resolved == launcher_path.parents[3] / "scientific_intelligent_modelling" / "config" / "toolbox_config.json"
+
+
+def test_prepare_batch_git_revision_runs_from_repo_root(monkeypatch) -> None:
+    launcher_path = Path(__file__).resolve().parents[1] / "benchmark-control" / "compliance" / "launchers" / "prepare_batch.py"
+    spec = importlib.util.spec_from_file_location("benchmark_compliance_prepare_batch_git", launcher_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {launcher_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    captured: dict[str, object] = {}
+
+    def _fake_check_output(cmd: list[str], *, text: bool, cwd: Path | None = None) -> str:
+        captured["cmd"] = cmd
+        captured["text"] = text
+        captured["cwd"] = cwd
+        return "deadbeef\n"
+
+    monkeypatch.setattr(module.subprocess, "check_output", _fake_check_output)
+
+    revision = module._git_revision()
+
+    assert revision == "deadbeef"
+    assert captured["cmd"] == ["git", "rev-parse", "HEAD"]
+    assert captured["text"] is True
+    assert captured["cwd"] == module.ROOT
+
+
+def test_prepare_batch_main_writes_repo_relative_dataset_paths(tmp_path: Path, monkeypatch) -> None:
+    launcher_path = Path(__file__).resolve().parents[1] / "benchmark-control" / "compliance" / "launchers" / "prepare_batch.py"
+    spec = importlib.util.spec_from_file_location("benchmark_compliance_prepare_batch_main", launcher_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {launcher_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    fake_root = tmp_path / "repo"
+    toolbox_dir = fake_root / "scientific_intelligent_modelling" / "config"
+    toolbox_dir.mkdir(parents=True)
+    (toolbox_dir / "toolbox_config.json").write_text(
+        json.dumps(
+            {
+                "tool_mapping": {
+                    f"alg{idx:02d}": {"env": f"env{idx:02d}", "regressor": f"Reg{idx:02d}"}
+                    for idx in range(15)
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    ssr50_root = fake_root / "sim-datasets-data" / "ssr50"
+    for idx in range(50):
+        _write_dataset(ssr50_root, f"dataset_{idx:04d}")
+    batch_dir = fake_root / "benchmark-runs" / "compliance" / "batch"
+    outside_cwd = tmp_path / "outside"
+    outside_cwd.mkdir()
+
+    monkeypatch.setattr(module, "ROOT", fake_root)
+    monkeypatch.setattr(module, "_git_revision", lambda: "abc123")
+    monkeypatch.chdir(outside_cwd)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "prepare_batch.py",
+            "--batch-dir",
+            "benchmark-runs/compliance/batch",
+        ],
+    )
+
+    assert module.main() == 0
+
+    tasks_path = batch_dir / "manifest" / "tasks.csv"
+    with tasks_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert not Path(rows[0]["dataset_dir"]).is_absolute()
+    assert rows[0]["dataset_dir"].startswith("sim-datasets-data/ssr50/")
