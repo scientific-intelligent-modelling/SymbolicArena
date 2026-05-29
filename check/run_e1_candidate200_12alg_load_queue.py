@@ -1828,7 +1828,7 @@ def _local_candidate_data_fingerprints(rows: list[dict[str, str]]) -> list[dict[
 def _run_preflight(args: argparse.Namespace) -> dict[str, Any]:
     script = _write_preflight_script()
     remote_script = Path("/tmp/e1_candidate200_12alg_preflight.py")
-    rows = _read_rows(SOURCE_CSV)
+    rows = _read_rows(args.source_csv_path, expected_rows=args.expected_rows_value)
     local_files = _preflight_local_files()
     request = {
         "tools": args.tools,

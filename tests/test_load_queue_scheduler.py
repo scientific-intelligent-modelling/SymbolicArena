@@ -1,4 +1,6 @@
 from pathlib import Path
+import json
+import subprocess
 from types import SimpleNamespace
 
 import pytest
@@ -102,6 +104,51 @@ def test_build_tasks_stable_half_uses_llm_bucket_params(tmp_path):
         "drsr_turbo",
     }
     assert all(task.params_name == "gplearn" and task.llm_model_bucket is None for task in tasks if task.tool == "gplearn")
+
+
+def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
+    source_csv = tmp_path / "smoke.csv"
+    source_csv.write_text(
+        "global_index,dataset_id,dataset_name,dataset_dir,dataset_rel\n"
+        f"1,d1,d1,{tmp_path / 'd1'},{tmp_path / 'd1'}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(scheduler, "SOURCE_CSV", tmp_path / "missing_candidate200.csv")
+    monkeypatch.setattr(scheduler, "_write_preflight_script", lambda: tmp_path / "remote_preflight.py")
+    monkeypatch.setattr(scheduler, "_preflight_local_files", lambda: {})
+    monkeypatch.setattr(scheduler, "_local_git_head", lambda: "head")
+    monkeypatch.setattr(scheduler, "_local_file_hashes", lambda: {})
+    monkeypatch.setattr(
+        scheduler,
+        "_scp",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, "", ""),
+    )
+    monkeypatch.setattr(
+        scheduler,
+        "_ssh",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            json.dumps({"host": "iaaccn22", "ok": True}),
+            "",
+        ),
+    )
+
+    args = SimpleNamespace(
+        source_csv_path=source_csv,
+        expected_rows_value=1,
+        queue_root_path=tmp_path / "queue",
+        preflight_report=tmp_path / "preflight.json",
+        tools=["gplearn"],
+        hosts=["iaaccn22"],
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        preflight_host_timeout=5,
+    )
+
+    summary = scheduler._run_preflight(args)
+
+    assert summary["hosts"] == [{"host": "iaaccn22", "ok": True}]
 
 
 def test_build_tasks_stable_half_requires_variant_params(tmp_path):
