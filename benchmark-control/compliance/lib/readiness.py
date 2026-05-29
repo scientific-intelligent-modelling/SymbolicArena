@@ -7,6 +7,7 @@ from typing import Any
 
 
 REQUIRED_DEPLOY_SCRIPTS = [
+    "00_sync_code_and_batch_to_iaaccn22.sh",
     "01_preflight_from_iaaccn22.sh",
     "02_smoke_dispatch_from_iaaccn22.sh",
     "03_full_dispatch_from_iaaccn22.sh",
@@ -102,5 +103,8 @@ def _check_deploy_scripts(batch_dir: Path, issues: list[str]) -> None:
             issues.append(f"deploy/{script} missing")
             continue
         content = path.read_text(encoding="utf-8")
-        if "run_e1_candidate200_12alg_load_queue.py" not in content:
+        if script.startswith("00_sync"):
+            if "rsync -aR" not in content:
+                issues.append(f"deploy/{script} does not call rsync")
+        elif "run_e1_candidate200_12alg_load_queue.py" not in content:
             issues.append(f"deploy/{script} does not call load queue scheduler")

@@ -69,16 +69,20 @@ def _write_ready_batch(batch_dir: Path) -> None:
         ],
     )
     for script in (
+        "00_sync_code_and_batch_to_iaaccn22.sh",
         "01_preflight_from_iaaccn22.sh",
         "02_smoke_dispatch_from_iaaccn22.sh",
         "03_full_dispatch_from_iaaccn22.sh",
     ):
         path = batch_dir / "deploy" / script
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            "#!/usr/bin/env bash\nset -euo pipefail\npython check/run_e1_candidate200_12alg_load_queue.py\n",
-            encoding="utf-8",
-        )
+        if script.startswith("00_sync"):
+            path.write_text("#!/usr/bin/env bash\nrsync -aR source dest\n", encoding="utf-8")
+        else:
+            path.write_text(
+                "#!/usr/bin/env bash\nset -euo pipefail\npython check/run_e1_candidate200_12alg_load_queue.py\n",
+                encoding="utf-8",
+            )
 
 
 def test_readiness_passes_for_complete_stage1_batch(tmp_path: Path) -> None:
