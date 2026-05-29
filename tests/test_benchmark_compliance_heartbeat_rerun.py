@@ -9,6 +9,19 @@ import pytest
 from benchmark_control_compliance_manifest_import import load_for_test
 
 
+def _write_manifest(batch_dir: Path, dataset_ids: tuple[str, ...]) -> None:
+    manifest_dir = batch_dir / "manifest"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    rows = [
+        "task_id,algorithm,dataset_id,dataset_dir,seed,timeout_in_seconds,progress_snapshot_interval_seconds"
+    ]
+    for dataset_id in dataset_ids:
+        rows.append(
+            f"alg__seed520__{dataset_id},alg,{dataset_id},/data/{dataset_id},520,3600,60"
+        )
+    (manifest_dir / "tasks.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+
 def test_heartbeat_marks_codex_needed_when_failures_exist(tmp_path: Path) -> None:
     heartbeat = load_for_test("heartbeat")
     batch_dir = tmp_path / "batch"
@@ -26,6 +39,42 @@ def test_heartbeat_marks_codex_needed_when_failures_exist(tmp_path: Path) -> Non
     assert payload["failed"] == 1
     saved = json.loads((batch_dir / "heartbeat.json").read_text(encoding="utf-8"))
     assert saved["phase"] == "repair"
+
+
+def test_heartbeat_marks_missing_audit_as_needing_codex(tmp_path: Path) -> None:
+    heartbeat = load_for_test("heartbeat")
+    batch_dir = tmp_path / "batch"
+    _write_manifest(batch_dir, ("d1", "d2"))
+
+    payload = heartbeat.write_heartbeat(batch_dir=batch_dir, phase="repair")
+
+    assert payload["total_tasks"] == 2
+    assert payload["finished"] == 0
+    assert payload["failed"] == 0
+    assert payload["needs_codex"] is True
+    assert payload["codex_reason"] == "audit/failure_cases.csv missing"
+    assert payload["latest_audit"] == ""
+
+
+def test_heartbeat_treats_header_only_failures_as_clean_audit(tmp_path: Path) -> None:
+    heartbeat = load_for_test("heartbeat")
+    batch_dir = tmp_path / "batch"
+    _write_manifest(batch_dir, ("d1", "d2", "d3"))
+    audit_dir = batch_dir / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "failure_cases.csv").write_text(
+        "task_id,algorithm,dataset_id,seed,status,runtime_seconds,has_result,has_progress,metrics_valid,artifact_valid,failure_class,reason\n",
+        encoding="utf-8",
+    )
+
+    payload = heartbeat.write_heartbeat(batch_dir=batch_dir, phase="done")
+
+    assert payload["total_tasks"] == 3
+    assert payload["finished"] == 3
+    assert payload["failed"] == 0
+    assert payload["needs_codex"] is False
+    assert payload["codex_reason"] == ""
+    assert payload["latest_audit"] == "audit/failure_cases.csv"
 
 
 def test_heartbeat_rejects_invalid_phase(tmp_path: Path) -> None:
@@ -60,3 +109,27 @@ def test_rerun_queue_contains_only_failed_tasks(tmp_path: Path) -> None:
             "failure_class": "early_stop",
         }
     ]
+
+
+def test_rerun_queue_raises_when_failure_cases_missing(tmp_path: Path) -> None:
+    rerun = load_for_test("rerun")
+
+    with pytest.raises(FileNotFoundError, match="audit/failure_cases.csv"):
+        rerun.write_rerun_queue(batch_dir=tmp_path / "batch", round_id=1)
+
+
+def test_rerun_queue_allows_header_only_failure_cases(tmp_path: Path) -> None:
+    rerun = load_for_test("rerun")
+    batch_dir = tmp_path / "batch"
+    audit_dir = batch_dir / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "failure_cases.csv").write_text(
+        "task_id,algorithm,dataset_id,seed,status,runtime_seconds,has_result,has_progress,metrics_valid,artifact_valid,failure_class,reason\n",
+        encoding="utf-8",
+    )
+
+    output = rerun.write_rerun_queue(batch_dir=batch_dir, round_id=1)
+
+    with output.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows == []

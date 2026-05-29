@@ -9,6 +9,8 @@ RERUN_FIELDS = ["task_id", "algorithm", "dataset_id", "seed", "failure_class"]
 
 def write_rerun_queue(*, batch_dir: Path, round_id: int) -> Path:
     failures_path = batch_dir / "audit" / "failure_cases.csv"
+    if not failures_path.exists():
+        raise FileNotFoundError(f"{failures_path.relative_to(batch_dir)} missing")
     repair_dir = batch_dir / "repair" / f"round_{round_id:03d}"
     repair_dir.mkdir(parents=True, exist_ok=True)
     output = repair_dir / "rerun_tasks.csv"
@@ -26,7 +28,5 @@ def write_rerun_queue(*, batch_dir: Path, round_id: int) -> Path:
 
 
 def _read_failures(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
-        return []
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
