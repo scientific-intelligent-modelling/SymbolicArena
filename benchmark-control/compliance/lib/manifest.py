@@ -29,15 +29,19 @@ def _read_tool_mapping(path: Path) -> dict[str, dict[str, str]]:
 
 def _read_datasets(ssr50_root: Path) -> list[dict[str, str]]:
     datasets: list[dict[str, str]] = []
-    for dataset_dir in sorted(path for path in ssr50_root.iterdir() if path.is_dir()):
-        metadata = dataset_dir / "metadata.yaml"
-        if metadata.exists():
-            datasets.append(
-                {
-                    "dataset_id": dataset_dir.name,
-                    "dataset_dir": str(dataset_dir),
-                }
-            )
+    seen_ids: set[str] = set()
+    for metadata in sorted(ssr50_root.rglob("metadata.yaml")):
+        dataset_dir = metadata.parent
+        dataset_id = dataset_dir.name
+        if dataset_id in seen_ids:
+            raise ValueError(f"duplicate SSR50 dataset_id {dataset_id!r} under {ssr50_root}")
+        seen_ids.add(dataset_id)
+        datasets.append(
+            {
+                "dataset_id": dataset_id,
+                "dataset_dir": str(dataset_dir),
+            }
+        )
     if len(datasets) != 50:
         raise ValueError(f"expected 50 SSR50 datasets, found {len(datasets)} under {ssr50_root}")
     return datasets
