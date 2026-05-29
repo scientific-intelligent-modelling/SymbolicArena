@@ -80,6 +80,9 @@ python benchmark-control/compliance/launchers/prepare_batch.py \
   --ssr50-root sim-datasets-data/ssr50 \
   --batch-dir "benchmark-runs/compliance/${BATCH_ID}"
 ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
+
+python benchmark-control/compliance/launchers/write_stage1_queue_commands.py \
+  --batch-dir benchmark-runs/compliance/latest
 ```
 
 审计批次：

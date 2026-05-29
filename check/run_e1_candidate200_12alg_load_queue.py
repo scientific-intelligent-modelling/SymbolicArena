@@ -1487,8 +1487,8 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
         time.sleep(args.poll_seconds)
 
 
-def _write_preflight_script() -> Path:
-    path = QUEUE_ROOT / "preflight" / "remote_preflight.py"
+def _write_preflight_script(queue_root: Path | None = None) -> Path:
+    path = (queue_root or QUEUE_ROOT) / "preflight" / "remote_preflight.py"
     content = r'''#!/usr/bin/env python3
 from __future__ import annotations
 
@@ -1826,7 +1826,7 @@ def _local_candidate_data_fingerprints(rows: list[dict[str, str]]) -> list[dict[
 
 
 def _run_preflight(args: argparse.Namespace) -> dict[str, Any]:
-    script = _write_preflight_script()
+    script = _write_preflight_script(args.queue_root_path)
     remote_script = Path("/tmp/e1_candidate200_12alg_preflight.py")
     rows = _read_rows(args.source_csv_path, expected_rows=args.expected_rows_value)
     local_files = _preflight_local_files()
@@ -1845,7 +1845,7 @@ def _run_preflight(args: argparse.Namespace) -> dict[str, Any]:
             host_reports.append({"host": host, "ok": False, "stage": "scp_preflight_script", "error": copy.stderr or copy.stdout})
             continue
         payload = {**request, "host": host}
-        local_request = QUEUE_ROOT / "preflight" / f"request_{host}_{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
+        local_request = args.queue_root_path / "preflight" / f"request_{host}_{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
         local_request.parent.mkdir(parents=True, exist_ok=True)
         local_request.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         remote_request = Path(f"/tmp/e1_candidate200_12alg_preflight_request_{host}.json")

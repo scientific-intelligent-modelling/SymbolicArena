@@ -40,7 +40,12 @@ python benchmark-control/compliance/launchers/prepare_batch.py \
   --ssr50-root sim-datasets-data/ssr50 \
   --batch-dir "benchmark-runs/compliance/${BATCH_ID}"
 ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
+
+python benchmark-control/compliance/launchers/write_stage1_queue_commands.py \
+  --batch-dir benchmark-runs/compliance/latest
 ```
+
+该命令只生成 `deploy/01_preflight_from_iaaccn22.sh`、`deploy/02_smoke_dispatch_from_iaaccn22.sh` 和 `deploy/03_full_dispatch_from_iaaccn22.sh`，不会连接远端，也不会启动实验。
 
 审计当前批次并写入心跳与重跑队列：
 

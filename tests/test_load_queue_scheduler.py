@@ -114,15 +114,16 @@ def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setattr(scheduler, "SOURCE_CSV", tmp_path / "missing_candidate200.csv")
-    monkeypatch.setattr(scheduler, "_write_preflight_script", lambda: tmp_path / "remote_preflight.py")
     monkeypatch.setattr(scheduler, "_preflight_local_files", lambda: {})
     monkeypatch.setattr(scheduler, "_local_git_head", lambda: "head")
     monkeypatch.setattr(scheduler, "_local_file_hashes", lambda: {})
-    monkeypatch.setattr(
-        scheduler,
-        "_scp",
-        lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, "", ""),
-    )
+    scp_sources = []
+
+    def _fake_scp(local_path, *args, **kwargs):
+        scp_sources.append(Path(local_path))
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(scheduler, "_scp", _fake_scp)
     monkeypatch.setattr(
         scheduler,
         "_ssh",
@@ -149,6 +150,8 @@ def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
     summary = scheduler._run_preflight(args)
 
     assert summary["hosts"] == [{"host": "iaaccn22", "ok": True}]
+    assert scp_sources[0].parent == args.queue_root_path / "preflight"
+    assert scp_sources[1].parent == args.queue_root_path / "preflight"
 
 
 def test_build_tasks_stable_half_requires_variant_params(tmp_path):
