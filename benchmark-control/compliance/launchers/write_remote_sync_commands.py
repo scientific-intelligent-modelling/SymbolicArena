@@ -48,7 +48,7 @@ SYNC_ITEMS=(
 )
 
 echo "[sync] local -> {HUB}"
-rsync -aR --delete-after "${{SYNC_ITEMS[@]}}" {HUB}:{REMOTE_ROOT}/
+rsync -aR "${{SYNC_ITEMS[@]}}" {HUB}:{REMOTE_ROOT}/
 ssh -o BatchMode=yes -o ConnectTimeout=10 {HUB} \\
   "cd {REMOTE_ROOT} && ln -sfn \\"$BATCH_ID\\" benchmark-runs/compliance/latest"
 
@@ -62,7 +62,7 @@ SYNC_ITEMS=(
 )
 for target in {' '.join(INTERNAL_TARGETS)}; do
   echo "[sync] iaaccn22 -> $target"
-  rsync -aR --delete-after "${{SYNC_ITEMS[@]}}" "$target":{REMOTE_ROOT}/
+  rsync -aR "${{SYNC_ITEMS[@]}}" "$target":{REMOTE_ROOT}/
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \\
     "cd {REMOTE_ROOT} && ln -sfn \\"$BATCH_ID\\" benchmark-runs/compliance/latest"
 done
