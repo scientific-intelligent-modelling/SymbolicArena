@@ -92,6 +92,7 @@ python benchmark-control/compliance/launchers/check_stage1_readiness.py \
 ```
 
 `deploy/01_preflight_from_iaaccn22.sh` 会在预检完成后调用 `check_preflight_report.py`；只有全部 host 的代码、参数、数据和环境检查通过，才允许进入 smoke。
+`deploy/02_smoke_dispatch_from_iaaccn22.sh` 会在 30 个 smoke 任务结束后收集 `${BATCH_ID}_smoke` 产物，harvest 到 `benchmark-runs/compliance/latest/smoke/`，再用 `check_audit_success.py --expected-total-tasks 30` 阻断不合格 smoke。
 
 审计批次：
 

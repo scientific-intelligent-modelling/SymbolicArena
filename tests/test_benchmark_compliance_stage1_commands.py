@@ -43,6 +43,10 @@ def test_write_stage1_queue_commands_generates_preflight_smoke_and_full(tmp_path
     assert "check_preflight_report.py" in preflight
     assert "--batch-name \"${BATCH_ID}_smoke\"" in smoke
     assert "--expected-rows 2" in smoke
+    assert "prepare_smoke_batch.py" in smoke
+    assert "--batch-id \"${BATCH_ID}_smoke\"" in smoke
+    assert "check_audit_success.py" in smoke
+    assert "--expected-total-tasks 30" in smoke
     assert "--batch-name \"${BATCH_ID}\"" in full
     assert "--expected-rows 50" in full
     assert "--source-csv benchmark-runs/compliance/latest/queues/ssr50_source.csv" in full

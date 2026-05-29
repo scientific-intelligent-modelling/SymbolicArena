@@ -7,6 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 TOOLS = "qlattice drsr dso e2esr fepysr gplearn imcts jaxsr llmsr pyoperon pysr ragsr symbolfit tpsr udsr"
 HOSTS = "iaaccn22 iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29"
+HARVEST_ROOTS = " \\\n+  ".join(
+    f"--experiment-root benchmark-runs/compliance/latest/smoke/remote-experiments/{host}"
+    for host in HOSTS.split()
+)
 
 
 def write_stage1_queue_commands(*, batch_dir: Path) -> list[Path]:
@@ -93,6 +97,30 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --host-session-count-prefix compliance_smoke_ \\
   --poll-seconds 60 \\
   2>&1 | tee benchmark-runs/compliance/latest/deploy/smoke_dispatch_from_iaaccn22.log
+
+python benchmark-control/compliance/launchers/prepare_smoke_batch.py \\
+  --batch-dir benchmark-runs/compliance/latest
+
+python benchmark-control/compliance/launchers/collect_remote_batch.py \\
+  --batch-dir benchmark-runs/compliance/latest/smoke \\
+  --batch-id "${{BATCH_ID}}_smoke" \\
+  --hosts {HOSTS} \\
+  --controller-host iaaccn22 \\
+  --use-internal-ips
+
+python benchmark-control/compliance/launchers/harvest_batch.py \\
+  --batch-dir benchmark-runs/compliance/latest/smoke \\
+  {HARVEST_ROOTS}
+
+python benchmark-control/compliance/launchers/audit_batch.py \\
+  --batch-dir benchmark-runs/compliance/latest/smoke \\
+  --write-heartbeat \\
+  --write-rerun \\
+  --round-id 1
+
+python benchmark-control/compliance/launchers/check_audit_success.py \\
+  --batch-dir benchmark-runs/compliance/latest/smoke \\
+  --expected-total-tasks 30
 """
     )
 
