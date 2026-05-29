@@ -85,9 +85,44 @@ python benchmark-control/compliance/launchers/check_preflight_report.py \\
     )
 
 
+def _preflight_gate_check() -> str:
+    return """
+python - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("benchmark-runs/compliance/latest/preflight/preflight_gate_summary.json")
+if not path.exists():
+    raise SystemExit(f"preflight gate summary missing: {path}; run deploy/01_preflight_from_iaaccn22.sh first")
+payload = json.loads(path.read_text(encoding="utf-8"))
+if payload.get("ready_for_smoke") is not True:
+    raise SystemExit(f"preflight gate not ready_for_smoke: {payload.get('issues')}")
+print(f"preflight gate passed: {path}")
+PY
+"""
+
+
+def _smoke_gate_check() -> str:
+    return """
+python - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("benchmark-runs/compliance/latest/smoke/audit/audit_gate_summary.json")
+if not path.exists():
+    raise SystemExit(f"smoke audit gate summary missing: {path}; run deploy/02_smoke_dispatch_from_iaaccn22.sh first")
+payload = json.loads(path.read_text(encoding="utf-8"))
+if payload.get("audit_passed") is not True:
+    raise SystemExit(f"smoke audit gate failed: {payload.get('issues')}")
+print(f"smoke audit gate passed: {path}")
+PY
+"""
+
+
 def _smoke_dispatch_script() -> str:
     return (
         _common_header()
+        + _preflight_gate_check()
         + f"""
 python check/run_e1_candidate200_12alg_load_queue.py \\
   --batch-name "${{BATCH_ID}}_smoke" \\
@@ -135,6 +170,7 @@ python benchmark-control/compliance/launchers/check_audit_success.py \\
 def _full_dispatch_script() -> str:
     return (
         _common_header()
+        + _smoke_gate_check()
         + f"""
 python check/run_e1_candidate200_12alg_load_queue.py \\
   --batch-name "${{BATCH_ID}}" \\

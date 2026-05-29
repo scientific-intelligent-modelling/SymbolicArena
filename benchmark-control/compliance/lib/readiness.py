@@ -118,8 +118,8 @@ def _check_deploy_scripts(batch_dir: Path, issues: list[str]) -> None:
         content = path.read_text(encoding="utf-8")
         if script.startswith("00_sync"):
             _check_sync_script_contract(script, content, issues)
-        elif "run_e1_candidate200_12alg_load_queue.py" not in content:
-            issues.append(f"deploy/{script} does not call load queue scheduler")
+        else:
+            _check_stage_script_contract(script, content, issues)
 
 
 def _check_sync_script_contract(script: str, content: str, issues: list[str]) -> None:
@@ -135,3 +135,18 @@ def _check_sync_script_contract(script: str, content: str, issues: list[str]) ->
     for item in REQUIRED_RSYNC_FILTERS:
         if item not in content:
             issues.append(f"deploy/{script} missing rsync filter {item}")
+
+
+def _check_stage_script_contract(script: str, content: str, issues: list[str]) -> None:
+    if "run_e1_candidate200_12alg_load_queue.py" not in content:
+        issues.append(f"deploy/{script} does not call load queue scheduler")
+    if script.startswith("01_preflight") and "check_preflight_report.py" not in content:
+        issues.append(f"deploy/{script} does not call preflight gate")
+    if script.startswith("02_smoke") and (
+        "preflight_gate_summary.json" not in content or "ready_for_smoke" not in content
+    ):
+        issues.append(f"deploy/{script} missing preflight gate check")
+    if script.startswith("03_full") and (
+        "smoke/audit/audit_gate_summary.json" not in content or "audit_passed" not in content
+    ):
+        issues.append(f"deploy/{script} missing smoke audit gate check")

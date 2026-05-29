@@ -90,9 +90,34 @@ def _write_ready_batch(batch_dir: Path) -> None:
                 'rsync -aR "${RSYNC_FILTERS[@]}" "${SYNC_ITEMS[@]}" dest\n',
                 encoding="utf-8",
             )
+        elif script.startswith("01_preflight"):
+            path.write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                "python check/run_e1_candidate200_12alg_load_queue.py\n"
+                "python benchmark-control/compliance/launchers/check_preflight_report.py\n",
+                encoding="utf-8",
+            )
+        elif script.startswith("02_smoke"):
+            path.write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                "python - <<'PY'\n"
+                "path = 'benchmark-runs/compliance/latest/preflight/preflight_gate_summary.json'\n"
+                "ready_for_smoke = True\n"
+                "PY\n"
+                "python check/run_e1_candidate200_12alg_load_queue.py\n",
+                encoding="utf-8",
+            )
         else:
             path.write_text(
-                "#!/usr/bin/env bash\nset -euo pipefail\npython check/run_e1_candidate200_12alg_load_queue.py\n",
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                "python - <<'PY'\n"
+                "path = 'benchmark-runs/compliance/latest/smoke/audit/audit_gate_summary.json'\n"
+                "audit_passed = True\n"
+                "PY\n"
+                "python check/run_e1_candidate200_12alg_load_queue.py\n",
                 encoding="utf-8",
             )
 
@@ -142,6 +167,23 @@ def test_readiness_reports_incomplete_sync_script_contract(tmp_path: Path) -> No
     assert "deploy/00_sync_code_and_batch_to_iaaccn22.sh missing sync item scientific_intelligent_modelling/" in summary["issues"]
     assert "deploy/00_sync_code_and_batch_to_iaaccn22.sh missing rsync filter --exclude=.git/" in summary["issues"]
     assert "deploy/00_sync_code_and_batch_to_iaaccn22.sh does not use RSYNC_FILTERS array" in summary["issues"]
+
+
+def test_readiness_reports_missing_stage_gate_contracts(tmp_path: Path) -> None:
+    readiness = load_for_test("readiness")
+    batch_dir = tmp_path / "batch"
+    _write_ready_batch(batch_dir)
+    for script in ("02_smoke_dispatch_from_iaaccn22.sh", "03_full_dispatch_from_iaaccn22.sh"):
+        (batch_dir / "deploy" / script).write_text(
+            "#!/usr/bin/env bash\npython check/run_e1_candidate200_12alg_load_queue.py\n",
+            encoding="utf-8",
+        )
+
+    summary = readiness.check_readiness(batch_dir=batch_dir)
+
+    assert summary["ready"] is False
+    assert "deploy/02_smoke_dispatch_from_iaaccn22.sh missing preflight gate check" in summary["issues"]
+    assert "deploy/03_full_dispatch_from_iaaccn22.sh missing smoke audit gate check" in summary["issues"]
 
 
 def test_readiness_launcher_resolves_repo_relative_paths(tmp_path: Path, monkeypatch) -> None:
