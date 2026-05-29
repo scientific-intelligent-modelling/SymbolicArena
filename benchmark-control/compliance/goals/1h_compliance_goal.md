@@ -91,6 +91,8 @@ python benchmark-control/compliance/launchers/check_stage1_readiness.py \
   --batch-dir benchmark-runs/compliance/latest
 ```
 
+`deploy/01_preflight_from_iaaccn22.sh` 会在预检完成后调用 `check_preflight_report.py`；只有全部 host 的代码、参数、数据和环境检查通过，才允许进入 smoke。
+
 审计批次：
 
 ```bash

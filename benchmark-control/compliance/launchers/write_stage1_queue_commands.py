@@ -65,6 +65,11 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --preflight-host-timeout 240 \\
   --preflight-report benchmark-runs/compliance/latest/deploy/preflight_15alg_smoke_from_iaaccn22.json \\
   2>&1 | tee benchmark-runs/compliance/latest/deploy/preflight_15alg_smoke_from_iaaccn22.log
+
+python benchmark-control/compliance/launchers/check_preflight_report.py \\
+  --batch-dir benchmark-runs/compliance/latest \\
+  --report benchmark-runs/compliance/latest/deploy/preflight_15alg_smoke_from_iaaccn22.json \\
+  --expected-hosts {HOSTS}
 """
     )
 

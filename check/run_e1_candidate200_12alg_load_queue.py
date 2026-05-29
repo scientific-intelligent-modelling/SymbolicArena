@@ -1492,7 +1492,6 @@ def _write_preflight_script(queue_root: Path | None = None) -> Path:
     content = r'''#!/usr/bin/env python3
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 import shlex
@@ -1504,7 +1503,6 @@ from pathlib import Path
 
 REMOTE_ROOT = Path("/home/zhangziwen/workplace/scientific-intelligent-modelling")
 REMOTE_DATA_ROOT = Path("/home/zhangziwen/sim-datasets-data")
-SOURCE_CSV = REMOTE_ROOT / "exp-planning/02.E1选择验证/generated/candidate200_unified.csv"
 PARAMS_ROOT = REMOTE_ROOT / "exp-planning/02.E1选择验证/generated/params"
 
 ENV_IMPORTS = {
@@ -1548,32 +1546,6 @@ def sha256(path: Path) -> str | None:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
-
-
-def load_candidate_rows() -> tuple[list[dict], dict]:
-    if not SOURCE_CSV.exists():
-        return [], {"exists": False, "path": str(SOURCE_CSV)}
-    with SOURCE_CSV.open("r", encoding="utf-8", newline="") as f:
-        rows = list(csv.DictReader(f))
-    missing = []
-    for row in rows:
-        dataset_dir = Path(row.get("dataset_dir") or "")
-        if not dataset_dir.is_absolute():
-            if dataset_dir.parts and dataset_dir.parts[0] == "sim-datasets-data":
-                dataset_dir = REMOTE_DATA_ROOT.joinpath(*dataset_dir.parts[1:])
-            else:
-                dataset_dir = REMOTE_DATA_ROOT / dataset_dir
-        required = ["metadata.yaml", "train.csv", "valid.csv", "id_test.csv", "ood_test.csv"]
-        absent = [name for name in required if not (dataset_dir / name).exists()]
-        if absent:
-            missing.append({"dataset": row.get("dataset_name"), "dataset_dir": str(dataset_dir), "missing": absent})
-    return rows, {
-        "exists": True,
-        "path": str(SOURCE_CSV),
-        "row_count": len(rows),
-        "dataset_missing_count": len(missing),
-        "dataset_missing_examples": missing[:10],
-    }
 
 
 def remote_dataset_dir(dataset_rel: str) -> Path:
@@ -1706,7 +1678,6 @@ def main() -> None:
     local_hashes = payload.get("local_hashes", {})
     expected_dataset_fingerprints = payload.get("dataset_fingerprints", [])
 
-    rows, dataset_report = load_candidate_rows()
     git_head = run(f"git -C {REMOTE_ROOT} rev-parse HEAD", timeout=20)
     git_status = run(f"git -C {REMOTE_ROOT} status --short", timeout=30)
     remote_head = git_head["stdout"].strip().splitlines()[-1] if git_head["returncode"] == 0 and git_head["stdout"].strip() else None
@@ -1732,7 +1703,6 @@ def main() -> None:
             "status_short_preview": git_status["stdout"].splitlines()[:20],
         },
         "files": files,
-        "candidate200": dataset_report,
         "dataset_sync": check_dataset_sync(expected_dataset_fingerprints),
         "params": check_params(tools),
         "envs": check_envs(envs),
@@ -1755,9 +1725,9 @@ def _local_git_head() -> str | None:
     return result.stdout.strip()
 
 
-def _local_file_hashes() -> dict[str, str | None]:
+def _local_file_hashes(local_files: dict[str, str]) -> dict[str, str | None]:
     out: dict[str, str | None] = {}
-    for label, rel in _preflight_local_files().items():
+    for label, rel in local_files.items():
         path = REPO_ROOT / rel
         if not path.exists():
             out[label] = None
@@ -1766,14 +1736,19 @@ def _local_file_hashes() -> dict[str, str | None]:
     return out
 
 
-def _preflight_local_files() -> dict[str, str]:
+def _preflight_local_files(source_csv_path: Path | None = None) -> dict[str, str]:
     rels = {
         "scheduler": "check/run_e1_candidate200_12alg_load_queue.py",
         "launcher": "check/launch_e1_benchmark.py",
         "runner": "scientific_intelligent_modelling/benchmarks/runner.py",
         "toolbox_config": "scientific_intelligent_modelling/config/toolbox_config.json",
-        "candidate200": "exp-planning/02.E1选择验证/generated/candidate200_unified.csv",
     }
+    if source_csv_path is not None:
+        try:
+            absolute_source = source_csv_path if source_csv_path.is_absolute() else REPO_ROOT / source_csv_path
+            rels["source_csv"] = absolute_source.relative_to(REPO_ROOT).as_posix()
+        except ValueError:
+            pass
     for tool in sorted(TOOL_CONFIG):
         rels[f"{tool}_params"] = f"exp-planning/02.E1选择验证/generated/params/{TOOL_CONFIG[tool]['params']}.json"
     return rels
@@ -1829,12 +1804,12 @@ def _run_preflight(args: argparse.Namespace) -> dict[str, Any]:
     script = _write_preflight_script(args.queue_root_path)
     remote_script = Path("/tmp/e1_candidate200_12alg_preflight.py")
     rows = _read_rows(args.source_csv_path, expected_rows=args.expected_rows_value)
-    local_files = _preflight_local_files()
+    local_files = _preflight_local_files(args.source_csv_path)
     request = {
         "tools": args.tools,
         "envs": _selected_envs(args.tools),
         "local_head": _local_git_head(),
-        "local_hashes": _local_file_hashes(),
+        "local_hashes": _local_file_hashes(local_files),
         "local_files": local_files,
         "dataset_fingerprints": _local_candidate_data_fingerprints(rows),
     }

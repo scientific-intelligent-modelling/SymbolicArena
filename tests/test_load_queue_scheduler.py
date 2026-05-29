@@ -39,12 +39,22 @@ def test_preflight_script_import_checks_include_new_algorithm_envs(tmp_path, mon
     script = scheduler._write_preflight_script()
     content = script.read_text(encoding="utf-8")
 
+    assert "candidate200_unified.csv" not in content
     assert '"sim_fepysr"' in content
     assert "scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper" in content
     assert '"sim_jaxsr"' in content
     assert "scientific_intelligent_modelling.algorithms.jaxsr_wrapper.wrapper" in content
     assert '"sim_symbolfit"' in content
     assert "scientific_intelligent_modelling.algorithms.symbolfit_wrapper.wrapper" in content
+
+
+def test_preflight_local_files_use_requested_source_csv(tmp_path):
+    source_csv = scheduler.REPO_ROOT / "benchmark-runs" / "compliance" / "latest" / "queues" / "smoke_2datasets_source.csv"
+
+    local_files = scheduler._preflight_local_files(source_csv)
+
+    assert local_files["source_csv"] == "benchmark-runs/compliance/latest/queues/smoke_2datasets_source.csv"
+    assert "candidate200" not in local_files
 
 
 def _write_params(root: Path, *names: str) -> None:
@@ -114,9 +124,9 @@ def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setattr(scheduler, "SOURCE_CSV", tmp_path / "missing_candidate200.csv")
-    monkeypatch.setattr(scheduler, "_preflight_local_files", lambda: {})
+    monkeypatch.setattr(scheduler, "_preflight_local_files", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(scheduler, "_local_git_head", lambda: "head")
-    monkeypatch.setattr(scheduler, "_local_file_hashes", lambda: {})
+    monkeypatch.setattr(scheduler, "_local_file_hashes", lambda *_args, **_kwargs: {})
     scp_sources = []
 
     def _fake_scp(local_path, *args, **kwargs):

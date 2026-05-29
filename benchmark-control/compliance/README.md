@@ -52,6 +52,7 @@ python benchmark-control/compliance/launchers/check_stage1_readiness.py \
 ```
 
 这些命令只生成 `deploy/00_sync_code_and_batch_to_iaaccn22.sh`、`deploy/01_preflight_from_iaaccn22.sh`、`deploy/02_smoke_dispatch_from_iaaccn22.sh` 和 `deploy/03_full_dispatch_from_iaaccn22.sh`，不会连接远端，也不会启动实验。
+`deploy/01_preflight_from_iaaccn22.sh` 会在预检完成后调用 `check_preflight_report.py`；只有全部 host 的代码、参数、数据和环境检查通过，才允许进入 smoke。
 
 审计当前批次并写入心跳与重跑队列：
 

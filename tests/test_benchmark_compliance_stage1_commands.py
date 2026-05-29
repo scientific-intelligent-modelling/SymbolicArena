@@ -40,6 +40,7 @@ def test_write_stage1_queue_commands_generates_preflight_smoke_and_full(tmp_path
     full = paths[2].read_text(encoding="utf-8")
     assert "--preflight-only" in preflight
     assert "--source-csv benchmark-runs/compliance/latest/queues/smoke_2datasets_source.csv" in preflight
+    assert "check_preflight_report.py" in preflight
     assert "--batch-name \"${BATCH_ID}_smoke\"" in smoke
     assert "--expected-rows 2" in smoke
     assert "--batch-name \"${BATCH_ID}\"" in full
