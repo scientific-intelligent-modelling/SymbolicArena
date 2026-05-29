@@ -9,7 +9,12 @@ from typing import Any
 from models import HEARTBEAT_PHASES
 
 
-def write_heartbeat(*, batch_dir: Path, phase: str) -> dict[str, Any]:
+def write_heartbeat(
+    *,
+    batch_dir: Path,
+    phase: str,
+    latest_rerun_queue: str = "",
+) -> dict[str, Any]:
     if phase not in HEARTBEAT_PHASES:
         raise ValueError(f"invalid heartbeat phase: {phase}")
 
@@ -33,7 +38,7 @@ def write_heartbeat(*, batch_dir: Path, phase: str) -> dict[str, Any]:
         "needs_codex": needs_codex,
         "codex_reason": _codex_reason(failures=failures, audit_exists=audit_exists),
         "latest_audit": "audit/failure_cases.csv" if audit_exists else "",
-        "latest_rerun_queue": "",
+        "latest_rerun_queue": latest_rerun_queue,
     }
     batch_dir.mkdir(parents=True, exist_ok=True)
     (batch_dir / "heartbeat.json").write_text(

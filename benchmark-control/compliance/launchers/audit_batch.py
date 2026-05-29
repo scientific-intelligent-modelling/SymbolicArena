@@ -30,13 +30,16 @@ def main() -> int:
     args = parser.parse_args()
     batch_dir = _resolve_repo_path(args.batch_dir)
     summary = audit_batch(batch_dir=batch_dir)
+    latest_rerun_queue = ""
+    if args.write_rerun and summary["failed"] > 0:
+        rerun_path = write_rerun_queue(batch_dir=batch_dir, round_id=args.round_id)
+        latest_rerun_queue = rerun_path.relative_to(batch_dir).as_posix()
     if args.write_heartbeat:
         write_heartbeat(
             batch_dir=batch_dir,
             phase="repair" if summary["failed"] > 0 else "done",
+            latest_rerun_queue=latest_rerun_queue,
         )
-    if args.write_rerun and summary["failed"] > 0:
-        write_rerun_queue(batch_dir=batch_dir, round_id=args.round_id)
     print(summary)
     return 0
 

@@ -193,6 +193,7 @@ def test_audit_cli_writes_heartbeat_and_rerun_queue_for_failed_batch(tmp_path: P
     assert rerun_path.exists()
     heartbeat_payload = json.loads(heartbeat_path.read_text(encoding="utf-8"))
     assert heartbeat_payload["phase"] == "repair"
+    assert heartbeat_payload["latest_rerun_queue"] == "repair/round_001/rerun_tasks.csv"
     with rerun_path.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert [row["task_id"] for row in rows] == ["alg__seed520__d1"]
