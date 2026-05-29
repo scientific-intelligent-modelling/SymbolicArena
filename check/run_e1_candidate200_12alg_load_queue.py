@@ -59,10 +59,13 @@ TOOL_CONFIG: dict[str, dict[str, Any]] = {
     "dso": {"tool_arg": "dso", "params": "dso", "env": "sim_dso", "workers": 1, "task_size": 1},
     "tpsr": {"tool_arg": "tpsr", "params": "tpsr", "env": "sim_tpsr", "workers": 1, "task_size": 1},
     "e2esr": {"tool_arg": "e2esr", "params": "e2esr", "env": "sim_e2esr", "workers": 1, "task_size": 1},
+    "fepysr": {"tool_arg": "fepysr", "params": "fepysr", "env": "sim_fepysr", "workers": 1, "task_size": 1},
+    "jaxsr": {"tool_arg": "jaxsr", "params": "jaxsr", "env": "sim_jaxsr", "workers": 1, "task_size": 1},
     "qlattice": {"tool_arg": "QLattice", "params": "qlattice", "env": "sim_qLattice", "workers": 1, "task_size": 1},
     "imcts": {"tool_arg": "iMCTS", "params": "imcts", "env": "sim_iMCTS", "workers": 1, "task_size": 1},
     "udsr": {"tool_arg": "udsr", "params": "udsr", "env": "sim_dso", "workers": 1, "task_size": 1},
     "ragsr": {"tool_arg": "ragsr", "params": "ragsr", "env": "sim_ragsr", "workers": 1, "task_size": 1},
+    "symbolfit": {"tool_arg": "symbolfit", "params": "symbolfit", "env": "sim_symbolfit", "workers": 1, "task_size": 1},
 }
 
 DEFAULT_TOOLS = tuple(TOOL_CONFIG)

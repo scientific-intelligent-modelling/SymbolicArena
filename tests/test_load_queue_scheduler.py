@@ -6,6 +6,31 @@ import pytest
 from check import run_e1_candidate200_12alg_load_queue as scheduler
 
 
+def test_tool_config_supports_current_15_toolbox_algorithms():
+    expected_tools = {
+        "qlattice",
+        "drsr",
+        "dso",
+        "e2esr",
+        "fepysr",
+        "gplearn",
+        "imcts",
+        "jaxsr",
+        "llmsr",
+        "pyoperon",
+        "pysr",
+        "ragsr",
+        "symbolfit",
+        "tpsr",
+        "udsr",
+    }
+
+    assert set(scheduler.TOOL_CONFIG) == expected_tools
+    assert scheduler.TOOL_CONFIG["fepysr"]["tool_arg"] == "fepysr"
+    assert scheduler.TOOL_CONFIG["jaxsr"]["env"] == "sim_jaxsr"
+    assert scheduler.TOOL_CONFIG["symbolfit"]["params"] == "symbolfit"
+
+
 def _write_params(root: Path, *names: str) -> None:
     root.mkdir(parents=True, exist_ok=True)
     for name in names:
@@ -19,6 +44,7 @@ def _scheduler_args(**overrides):
         "prioritize_llm": True,
         "default_max_running_per_tool": 0,
         "llm_model_bucket_limits_parsed": {"base": 1, "turbo": 1},
+        "seed_dispatch_mode": "mixed",
     }
     base.update(overrides)
     return SimpleNamespace(**base)
