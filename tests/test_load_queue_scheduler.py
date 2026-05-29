@@ -29,6 +29,20 @@ def test_tool_config_supports_current_15_toolbox_algorithms():
     assert scheduler.TOOL_CONFIG["fepysr"]["tool_arg"] == "fepysr"
     assert scheduler.TOOL_CONFIG["jaxsr"]["env"] == "sim_jaxsr"
     assert scheduler.TOOL_CONFIG["symbolfit"]["params"] == "symbolfit"
+    
+
+def test_preflight_script_import_checks_include_new_algorithm_envs(tmp_path, monkeypatch):
+    monkeypatch.setattr(scheduler, "QUEUE_ROOT", tmp_path / "queue")
+
+    script = scheduler._write_preflight_script()
+    content = script.read_text(encoding="utf-8")
+
+    assert '"sim_fepysr"' in content
+    assert "scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper" in content
+    assert '"sim_jaxsr"' in content
+    assert "scientific_intelligent_modelling.algorithms.jaxsr_wrapper.wrapper" in content
+    assert '"sim_symbolfit"' in content
+    assert "scientific_intelligent_modelling.algorithms.symbolfit_wrapper.wrapper" in content
 
 
 def _write_params(root: Path, *names: str) -> None:

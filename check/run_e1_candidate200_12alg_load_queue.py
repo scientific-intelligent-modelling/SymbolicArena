@@ -1523,9 +1523,12 @@ ENV_IMPORTS = {
     ],
     "sim_tpsr": ["scientific_intelligent_modelling.algorithms.tpsr_wrapper.wrapper"],
     "sim_e2esr": ["scientific_intelligent_modelling.algorithms.e2esr_wrapper.wrapper"],
+    "sim_fepysr": ["scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper"],
+    "sim_jaxsr": ["scientific_intelligent_modelling.algorithms.jaxsr_wrapper.wrapper"],
     "sim_qLattice": ["scientific_intelligent_modelling.algorithms.QLattice_wrapper.wrapper"],
     "sim_iMCTS": ["scientific_intelligent_modelling.algorithms.iMCTS_wrapper.wrapper"],
     "sim_ragsr": ["scientific_intelligent_modelling.algorithms.ragsr_wrapper.wrapper"],
+    "sim_symbolfit": ["scientific_intelligent_modelling.algorithms.symbolfit_wrapper.wrapper"],
 }
 
 
