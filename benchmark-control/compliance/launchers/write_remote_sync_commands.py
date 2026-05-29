@@ -22,6 +22,11 @@ SYNC_PATHS = [
     "benchmark-control/compliance/",
     "exp-planning/02.E1选择验证/generated/params/",
 ]
+RSYNC_FILTERS = [
+    "--exclude=__pycache__/",
+    "--exclude=*.pyc",
+    "--exclude=*.pyo",
+]
 
 
 def write_remote_sync_commands(*, batch_dir: Path) -> Path:
@@ -37,18 +42,23 @@ def _script_content(*, batch_dir: Path) -> str:
     batch_id = batch_dir.resolve().name
     batch_rel = _repo_relative(batch_dir)
     sync_items_array = "\n".join(f'  "{item}"' for item in [*SYNC_PATHS, f"{batch_rel}/"])
+    rsync_filters_array = "\n".join(f'  "{item}"' for item in RSYNC_FILTERS)
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 BATCH_ID="{batch_id}"
 
+RSYNC_FILTERS=(
+{rsync_filters_array}
+)
+
 SYNC_ITEMS=(
 {sync_items_array}
 )
 
 echo "[sync] local -> {HUB}"
-rsync -aR "${{SYNC_ITEMS[@]}}" {HUB}:{REMOTE_ROOT}/
+rsync -aR "${{RSYNC_FILTERS[@]}}" "${{SYNC_ITEMS[@]}}" {HUB}:{REMOTE_ROOT}/
 ssh -o BatchMode=yes -o ConnectTimeout=10 {HUB} \\
   "cd {REMOTE_ROOT} && ln -sfn \\"$BATCH_ID\\" benchmark-runs/compliance/latest"
 
@@ -57,12 +67,15 @@ ssh -o BatchMode=yes -o ConnectTimeout=10 {HUB} 'bash -s' <<'REMOTE_SYNC'
 set -euo pipefail
 cd {REMOTE_ROOT}
 BATCH_ID="{batch_id}"
+RSYNC_FILTERS=(
+{rsync_filters_array}
+)
 SYNC_ITEMS=(
 {sync_items_array}
 )
 for target in {' '.join(INTERNAL_TARGETS)}; do
   echo "[sync] iaaccn22 -> $target"
-  rsync -aR "${{SYNC_ITEMS[@]}}" "$target":{REMOTE_ROOT}/
+  rsync -aR "${{RSYNC_FILTERS[@]}}" "${{SYNC_ITEMS[@]}}" "$target":{REMOTE_ROOT}/
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \\
     "cd {REMOTE_ROOT} && ln -sfn \\"$BATCH_ID\\" benchmark-runs/compliance/latest"
 done

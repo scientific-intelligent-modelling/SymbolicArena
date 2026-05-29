@@ -31,6 +31,10 @@ def test_write_remote_sync_commands_generates_reviewable_sync_script(tmp_path: P
     assert path.name == "00_sync_code_and_batch_to_iaaccn22.sh"
     content = path.read_text(encoding="utf-8")
     assert "rsync -aR" in content
+    assert "--exclude=__pycache__/" in content
+    assert "--exclude=*.pyc" in content
+    assert "--exclude=*.pyo" in content
+    assert 'rsync -aR "${RSYNC_FILTERS[@]}" "${SYNC_ITEMS[@]}"' in content
     assert "--delete-after" not in content
     assert "iaaccn22:/home/zhangziwen/workplace/scientific-intelligent-modelling/" in content
     assert "10.10.100.23" in content
