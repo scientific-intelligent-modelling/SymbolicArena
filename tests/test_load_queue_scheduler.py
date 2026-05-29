@@ -57,6 +57,32 @@ def test_preflight_local_files_use_requested_source_csv(tmp_path):
     assert "candidate200" not in local_files
 
 
+def test_preflight_local_files_include_all_algorithm_wrappers(tmp_path):
+    source_csv = scheduler.REPO_ROOT / "benchmark-runs" / "compliance" / "latest" / "queues" / "smoke_2datasets_source.csv"
+
+    local_files = scheduler._preflight_local_files(source_csv)
+
+    expected_wrapper_paths = {
+        "qlattice_wrapper": "scientific_intelligent_modelling/algorithms/QLattice_wrapper/wrapper.py",
+        "drsr_wrapper": "scientific_intelligent_modelling/algorithms/drsr_wrapper/wrapper.py",
+        "dso_wrapper": "scientific_intelligent_modelling/algorithms/dso_wrapper/wrapper.py",
+        "e2esr_wrapper": "scientific_intelligent_modelling/algorithms/e2esr_wrapper/wrapper.py",
+        "fepysr_wrapper": "scientific_intelligent_modelling/algorithms/fepysr_wrapper/wrapper.py",
+        "gplearn_wrapper": "scientific_intelligent_modelling/algorithms/gplearn_wrapper/wrapper.py",
+        "imcts_wrapper": "scientific_intelligent_modelling/algorithms/iMCTS_wrapper/wrapper.py",
+        "jaxsr_wrapper": "scientific_intelligent_modelling/algorithms/jaxsr_wrapper/wrapper.py",
+        "llmsr_wrapper": "scientific_intelligent_modelling/algorithms/llmsr_wrapper/wrapper.py",
+        "pyoperon_wrapper": "scientific_intelligent_modelling/algorithms/pyoperon_wrapper/wrapper.py",
+        "pysr_wrapper": "scientific_intelligent_modelling/algorithms/pysr_wrapper/wrapper.py",
+        "ragsr_wrapper": "scientific_intelligent_modelling/algorithms/ragsr_wrapper/wrapper.py",
+        "symbolfit_wrapper": "scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py",
+        "tpsr_wrapper": "scientific_intelligent_modelling/algorithms/tpsr_wrapper/wrapper.py",
+        "udsr_wrapper": "scientific_intelligent_modelling/algorithms/udsr_wrapper/wrapper.py",
+    }
+    for label, rel_path in expected_wrapper_paths.items():
+        assert local_files[label] == rel_path
+
+
 def _write_params(root: Path, *names: str) -> None:
     root.mkdir(parents=True, exist_ok=True)
     for name in names:

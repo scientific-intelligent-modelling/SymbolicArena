@@ -69,6 +69,23 @@ TOOL_CONFIG: dict[str, dict[str, Any]] = {
 }
 
 DEFAULT_TOOLS = tuple(TOOL_CONFIG)
+WRAPPER_PATHS = {
+    "gplearn": "scientific_intelligent_modelling/algorithms/gplearn_wrapper/wrapper.py",
+    "llmsr": "scientific_intelligent_modelling/algorithms/llmsr_wrapper/wrapper.py",
+    "pyoperon": "scientific_intelligent_modelling/algorithms/pyoperon_wrapper/wrapper.py",
+    "drsr": "scientific_intelligent_modelling/algorithms/drsr_wrapper/wrapper.py",
+    "pysr": "scientific_intelligent_modelling/algorithms/pysr_wrapper/wrapper.py",
+    "dso": "scientific_intelligent_modelling/algorithms/dso_wrapper/wrapper.py",
+    "tpsr": "scientific_intelligent_modelling/algorithms/tpsr_wrapper/wrapper.py",
+    "e2esr": "scientific_intelligent_modelling/algorithms/e2esr_wrapper/wrapper.py",
+    "fepysr": "scientific_intelligent_modelling/algorithms/fepysr_wrapper/wrapper.py",
+    "jaxsr": "scientific_intelligent_modelling/algorithms/jaxsr_wrapper/wrapper.py",
+    "qlattice": "scientific_intelligent_modelling/algorithms/QLattice_wrapper/wrapper.py",
+    "imcts": "scientific_intelligent_modelling/algorithms/iMCTS_wrapper/wrapper.py",
+    "udsr": "scientific_intelligent_modelling/algorithms/udsr_wrapper/wrapper.py",
+    "ragsr": "scientific_intelligent_modelling/algorithms/ragsr_wrapper/wrapper.py",
+    "symbolfit": "scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py",
+}
 
 
 @dataclass(frozen=True)
@@ -1749,6 +1766,8 @@ def _preflight_local_files(source_csv_path: Path | None = None) -> dict[str, str
             rels["source_csv"] = absolute_source.relative_to(REPO_ROOT).as_posix()
         except ValueError:
             pass
+    for tool, wrapper_path in sorted(WRAPPER_PATHS.items()):
+        rels[f"{tool}_wrapper"] = wrapper_path
     for tool in sorted(TOOL_CONFIG):
         rels[f"{tool}_params"] = f"exp-planning/02.E1选择验证/generated/params/{TOOL_CONFIG[tool]['params']}.json"
     return rels
