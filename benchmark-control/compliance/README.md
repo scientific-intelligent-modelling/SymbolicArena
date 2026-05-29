@@ -45,6 +45,10 @@ ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
 审计当前批次并写入心跳与重跑队列：
 
 ```bash
+python benchmark-control/compliance/launchers/harvest_batch.py \
+  --batch-dir benchmark-runs/compliance/latest \
+  --experiment-root "experiments/${BATCH_ID}"
+
 python benchmark-control/compliance/launchers/audit_batch.py \
   --batch-dir benchmark-runs/compliance/latest \
   --write-heartbeat \
@@ -52,4 +56,4 @@ python benchmark-control/compliance/launchers/audit_batch.py \
   --round-id 1
 ```
 
-这些命令只会生成或更新 manifest、audit、heartbeat、rerun 等控制文件，不会启动远端全量实验，也不会触发任何远端 dispatch。
+`harvest_batch.py` 只把调度器写在 `experiments/` 下的 `result.json` 和 `progress/` 映射到当前批次的 `runs/` 审计布局，不会启动远端任务。上面的 prepare 和 audit 命令也只会生成或更新 manifest、audit、heartbeat、rerun 等控制文件，不会触发任何远端 dispatch。
