@@ -63,3 +63,31 @@ audit/failure_cases.csv 为空
 budget_compliance_summary.csv 显示 15 个算法全部合规
 heartbeat.json 中 needs_codex=false
 ```
+
+## 标准命令
+
+以下命令默认在仓库根目录执行。`benchmark-runs/` 是 Git ignore 的运行产物目录；这里的 prepare 和 audit 都只操作本地控制面文件，不会启动远端全量实验。
+
+准备批次：
+
+```bash
+BATCH_ID="compliance_15alg_ssr50_seed520_1h_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "benchmark-runs/compliance/${BATCH_ID}"
+python benchmark-control/compliance/launchers/prepare_batch.py \
+  --toolbox-config scientific_intelligent_modelling/config/toolbox_config.json \
+  --ssr50-root sim-datasets-data/ssr50 \
+  --batch-dir "benchmark-runs/compliance/${BATCH_ID}"
+ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
+```
+
+审计批次：
+
+```bash
+python benchmark-control/compliance/launchers/audit_batch.py \
+  --batch-dir benchmark-runs/compliance/latest \
+  --write-heartbeat \
+  --write-rerun \
+  --round-id 1
+```
+
+远端 dispatch 只能在 smoke 验证通过且获得明确确认后执行；上面的命令不会启动任何远端实验。

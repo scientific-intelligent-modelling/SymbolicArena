@@ -25,3 +25,31 @@ benchmark-runs/
 ```
 
 阶段一只验证预算合规和落盘合规。通过后再扩展到 `3 seeds × 24h × noise`。
+
+## 本地准备命令
+
+以下命令默认在仓库根目录执行。`prepare_batch.py` 和 `audit_batch.py` 都支持传入 repo-relative 路径；真实批次产物写入 `benchmark-runs/`，该目录已被 Git 忽略，不会纳入提交。
+
+准备一个新的阶段一批次：
+
+```bash
+BATCH_ID="compliance_15alg_ssr50_seed520_1h_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "benchmark-runs/compliance/${BATCH_ID}"
+python benchmark-control/compliance/launchers/prepare_batch.py \
+  --toolbox-config scientific_intelligent_modelling/config/toolbox_config.json \
+  --ssr50-root sim-datasets-data/ssr50 \
+  --batch-dir "benchmark-runs/compliance/${BATCH_ID}"
+ln -sfn "${BATCH_ID}" benchmark-runs/compliance/latest
+```
+
+审计当前批次并写入心跳与重跑队列：
+
+```bash
+python benchmark-control/compliance/launchers/audit_batch.py \
+  --batch-dir benchmark-runs/compliance/latest \
+  --write-heartbeat \
+  --write-rerun \
+  --round-id 1
+```
+
+这些命令只会生成或更新 manifest、audit、heartbeat、rerun 等控制文件，不会启动远端全量实验，也不会触发任何远端 dispatch。
