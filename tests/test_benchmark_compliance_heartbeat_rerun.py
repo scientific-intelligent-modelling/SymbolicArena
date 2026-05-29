@@ -108,6 +108,20 @@ def test_heartbeat_marks_missing_audit_as_needing_codex(tmp_path: Path) -> None:
     assert payload["latest_audit"] == ""
 
 
+def test_heartbeat_resolves_latest_symlink_to_real_batch_id(tmp_path: Path) -> None:
+    heartbeat = load_for_test("heartbeat")
+    batch_dir = tmp_path / "compliance_15alg_ssr50_seed520_1h_20260529-235959"
+    latest = tmp_path / "latest"
+    _write_manifest(batch_dir, ("d1",))
+    latest.symlink_to(batch_dir, target_is_directory=True)
+
+    payload = heartbeat.write_heartbeat(batch_dir=latest, phase="preparing")
+
+    assert payload["batch_id"] == batch_dir.name
+    saved = json.loads((batch_dir / "heartbeat.json").read_text(encoding="utf-8"))
+    assert saved["batch_id"] == batch_dir.name
+
+
 def test_heartbeat_treats_header_only_failures_as_clean_audit(tmp_path: Path) -> None:
     heartbeat = load_for_test("heartbeat")
     batch_dir = tmp_path / "batch"

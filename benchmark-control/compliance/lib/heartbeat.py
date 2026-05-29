@@ -34,7 +34,7 @@ def write_heartbeat(
     )
     needs_codex = (not audit_exists) or (not audit_complete) or bool(failures)
     payload = {
-        "batch_id": batch_dir.name,
+        "batch_id": batch_dir.resolve().name,
         "phase": phase,
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "total_tasks": total_tasks,
