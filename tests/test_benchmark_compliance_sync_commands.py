@@ -44,8 +44,22 @@ def test_write_remote_sync_commands_generates_reviewable_sync_script(tmp_path: P
     assert 'ln -sfn \\"$BATCH_ID\\" benchmark-runs/compliance/latest' in content
     assert "check/run_e1_candidate200_12alg_load_queue.py" in content
     assert "benchmark-control/compliance/" in content
+    assert "scientific_intelligent_modelling/" in content
     assert "tmux new-session" not in content
     assert "run_e1_candidate200_12alg_load_queue.py \\" not in content
+
+
+def test_write_remote_sync_commands_excludes_python_and_git_metadata(tmp_path: Path) -> None:
+    launcher = _load_launcher()
+    batch_dir = tmp_path / "benchmark-runs" / "compliance" / "batch"
+    batch_dir.mkdir(parents=True)
+
+    path = launcher.write_remote_sync_commands(batch_dir=batch_dir)
+
+    content = path.read_text(encoding="utf-8")
+    assert "--exclude=.git/" in content
+    assert "--exclude=__pycache__/" in content
+    assert "--exclude=*.pyc" in content
 
 
 def test_write_remote_sync_commands_continues_after_single_internal_sync_failure(tmp_path: Path) -> None:

@@ -19,10 +19,12 @@ INTERNAL_TARGETS = [
 SYNC_PATHS = [
     "check/run_e1_candidate200_12alg_load_queue.py",
     "check/launch_e1_benchmark.py",
+    "scientific_intelligent_modelling/",
     "benchmark-control/compliance/",
     "exp-planning/02.E1选择验证/generated/params/",
 ]
 RSYNC_FILTERS = [
+    "--exclude=.git/",
     "--exclude=__pycache__/",
     "--exclude=*.pyc",
     "--exclude=*.pyo",
