@@ -48,6 +48,23 @@ def test_write_remote_sync_commands_generates_reviewable_sync_script(tmp_path: P
     assert "run_e1_candidate200_12alg_load_queue.py \\" not in content
 
 
+def test_write_remote_sync_commands_continues_after_single_internal_sync_failure(tmp_path: Path) -> None:
+    launcher = _load_launcher()
+    batch_dir = tmp_path / "benchmark-runs" / "compliance" / "batch"
+    batch_dir.mkdir(parents=True)
+
+    path = launcher.write_remote_sync_commands(batch_dir=batch_dir)
+
+    content = path.read_text(encoding="utf-8")
+    assert "failures=0" in content
+    assert "SYNC_FAIL $target" in content
+    assert "LINK_FAIL $target" in content
+    assert "failures=$((failures + 1))" in content
+    assert "continue" in content
+    assert 'if [[ "$failures" -gt 0 ]]; then' in content
+    assert "exit 1" in content
+
+
 def test_remote_sync_commands_launcher_resolves_repo_relative_paths(tmp_path: Path, monkeypatch) -> None:
     launcher = _load_launcher()
     fake_root = tmp_path / "repo"

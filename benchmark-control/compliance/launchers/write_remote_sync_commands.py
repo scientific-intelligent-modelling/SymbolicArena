@@ -73,12 +73,25 @@ RSYNC_FILTERS=(
 SYNC_ITEMS=(
 {sync_items_array}
 )
+failures=0
 for target in {' '.join(INTERNAL_TARGETS)}; do
   echo "[sync] iaaccn22 -> $target"
-  rsync -aR "${{RSYNC_FILTERS[@]}}" "${{SYNC_ITEMS[@]}}" "$target":{REMOTE_ROOT}/
-  ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \\
-    "cd {REMOTE_ROOT} && ln -sfn \\"$BATCH_ID\\" benchmark-runs/compliance/latest"
+  if ! rsync -aR "${{RSYNC_FILTERS[@]}}" "${{SYNC_ITEMS[@]}}" "$target":{REMOTE_ROOT}/; then
+    echo "SYNC_FAIL $target"
+    failures=$((failures + 1))
+    continue
+  fi
+  if ! ssh -o BatchMode=yes -o ConnectTimeout=10 "$target" \\
+    "cd {REMOTE_ROOT} && ln -sfn \\"$BATCH_ID\\" benchmark-runs/compliance/latest"; then
+    echo "LINK_FAIL $target"
+    failures=$((failures + 1))
+    continue
+  fi
 done
+if [[ "$failures" -gt 0 ]]; then
+  echo "[sync] $failures internal target(s) failed"
+  exit 1
+fi
 REMOTE_SYNC
 
 echo "[sync] done"
