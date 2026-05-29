@@ -12,6 +12,19 @@ REQUIRED_DEPLOY_SCRIPTS = [
     "02_smoke_dispatch_from_iaaccn22.sh",
     "03_full_dispatch_from_iaaccn22.sh",
 ]
+REQUIRED_SYNC_ITEMS = [
+    "check/run_e1_candidate200_12alg_load_queue.py",
+    "check/launch_e1_benchmark.py",
+    "scientific_intelligent_modelling/",
+    "benchmark-control/compliance/",
+    "exp-planning/02.E1选择验证/generated/params/",
+]
+REQUIRED_RSYNC_FILTERS = [
+    "--exclude=.git/",
+    "--exclude=__pycache__/",
+    "--exclude=*.pyc",
+    "--exclude=*.pyo",
+]
 
 
 def check_readiness(*, batch_dir: Path) -> dict[str, Any]:
@@ -104,7 +117,21 @@ def _check_deploy_scripts(batch_dir: Path, issues: list[str]) -> None:
             continue
         content = path.read_text(encoding="utf-8")
         if script.startswith("00_sync"):
-            if "rsync -aR" not in content:
-                issues.append(f"deploy/{script} does not call rsync")
+            _check_sync_script_contract(script, content, issues)
         elif "run_e1_candidate200_12alg_load_queue.py" not in content:
             issues.append(f"deploy/{script} does not call load queue scheduler")
+
+
+def _check_sync_script_contract(script: str, content: str, issues: list[str]) -> None:
+    if "rsync -aR" not in content:
+        issues.append(f"deploy/{script} does not call rsync")
+    if '"${RSYNC_FILTERS[@]}"' not in content:
+        issues.append(f"deploy/{script} does not use RSYNC_FILTERS array")
+    if '"${SYNC_ITEMS[@]}"' not in content:
+        issues.append(f"deploy/{script} does not use SYNC_ITEMS array")
+    for item in REQUIRED_SYNC_ITEMS:
+        if item not in content:
+            issues.append(f"deploy/{script} missing sync item {item}")
+    for item in REQUIRED_RSYNC_FILTERS:
+        if item not in content:
+            issues.append(f"deploy/{script} missing rsync filter {item}")

@@ -77,7 +77,19 @@ def _write_ready_batch(batch_dir: Path) -> None:
         path = batch_dir / "deploy" / script
         path.parent.mkdir(parents=True, exist_ok=True)
         if script.startswith("00_sync"):
-            path.write_text("#!/usr/bin/env bash\nrsync -aR source dest\n", encoding="utf-8")
+            path.write_text(
+                "#!/usr/bin/env bash\n"
+                "RSYNC_FILTERS=(\"--exclude=.git/\" \"--exclude=__pycache__/\" \"--exclude=*.pyc\" \"--exclude=*.pyo\")\n"
+                "SYNC_ITEMS=(\n"
+                "  \"check/run_e1_candidate200_12alg_load_queue.py\"\n"
+                "  \"check/launch_e1_benchmark.py\"\n"
+                "  \"scientific_intelligent_modelling/\"\n"
+                "  \"benchmark-control/compliance/\"\n"
+                "  \"exp-planning/02.E1选择验证/generated/params/\"\n"
+                ")\n"
+                'rsync -aR "${RSYNC_FILTERS[@]}" "${SYNC_ITEMS[@]}" dest\n',
+                encoding="utf-8",
+            )
         else:
             path.write_text(
                 "#!/usr/bin/env bash\nset -euo pipefail\npython check/run_e1_candidate200_12alg_load_queue.py\n",
@@ -113,6 +125,23 @@ def test_readiness_reports_missing_full_queue_and_scripts(tmp_path: Path) -> Non
     assert summary["ready"] is False
     assert "queues/ssr50_source.csv missing" in summary["issues"]
     assert "deploy/02_smoke_dispatch_from_iaaccn22.sh missing" in summary["issues"]
+
+
+def test_readiness_reports_incomplete_sync_script_contract(tmp_path: Path) -> None:
+    readiness = load_for_test("readiness")
+    batch_dir = tmp_path / "batch"
+    _write_ready_batch(batch_dir)
+    (batch_dir / "deploy" / "00_sync_code_and_batch_to_iaaccn22.sh").write_text(
+        "#!/usr/bin/env bash\nrsync -aR check/run_e1_candidate200_12alg_load_queue.py dest\n",
+        encoding="utf-8",
+    )
+
+    summary = readiness.check_readiness(batch_dir=batch_dir)
+
+    assert summary["ready"] is False
+    assert "deploy/00_sync_code_and_batch_to_iaaccn22.sh missing sync item scientific_intelligent_modelling/" in summary["issues"]
+    assert "deploy/00_sync_code_and_batch_to_iaaccn22.sh missing rsync filter --exclude=.git/" in summary["issues"]
+    assert "deploy/00_sync_code_and_batch_to_iaaccn22.sh does not use RSYNC_FILTERS array" in summary["issues"]
 
 
 def test_readiness_launcher_resolves_repo_relative_paths(tmp_path: Path, monkeypatch) -> None:
