@@ -198,14 +198,12 @@ def _runtime_seconds(result: dict[str, Any]) -> float:
 def _metrics_valid(result: dict[str, Any]) -> bool:
     for split in ("valid", "id_test", "ood_test"):
         metrics = result.get(split)
-        if not isinstance(metrics, dict) or not metrics:
+        if not isinstance(metrics, dict):
             return False
-        numeric_values = [
-            float(value)
-            for value in metrics.values()
-            if isinstance(value, (int, float)) and not isinstance(value, bool)
-        ]
-        if not numeric_values or not all(math.isfinite(value) for value in numeric_values):
+        nmse = metrics.get("nmse")
+        if not isinstance(nmse, (int, float)) or isinstance(nmse, bool):
+            return False
+        if not math.isfinite(float(nmse)):
             return False
     return True
 

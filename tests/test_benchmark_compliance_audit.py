@@ -117,6 +117,58 @@ def test_audit_classifies_progress_metric_and_artifact_failures(tmp_path: Path) 
     ]
 
 
+def test_audit_treats_missing_or_null_nmse_as_metric_invalid(tmp_path: Path) -> None:
+    module = load_for_test("audit")
+    batch_dir = tmp_path / "batch"
+    _write_tasks(batch_dir, ("d1", "d2"))
+
+    task_dir_1 = batch_dir / "runs" / "alg" / "seed520" / "d1"
+    task_dir_1.mkdir(parents=True)
+    (task_dir_1 / "result.json").write_text(
+        json.dumps(
+            {
+                "status": "ok",
+                "runtime_seconds": 3501.0,
+                "valid": {"rmse": 0.0, "nmse": None},
+                "id_test": {"rmse": 0.0, "nmse": 0.1},
+                "ood_test": {"rmse": 0.0, "nmse": 0.1},
+                "canonical_artifact": {"expression": "x0"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    progress_dir_1 = task_dir_1 / "progress"
+    progress_dir_1.mkdir()
+    (progress_dir_1 / "minute_0001.json").write_text("{}", encoding="utf-8")
+    (progress_dir_1 / "minute_0055.json").write_text("{}", encoding="utf-8")
+
+    task_dir_2 = batch_dir / "runs" / "alg" / "seed520" / "d2"
+    task_dir_2.mkdir(parents=True)
+    (task_dir_2 / "result.json").write_text(
+        json.dumps(
+            {
+                "status": "ok",
+                "runtime_seconds": 3501.0,
+                "valid": {"rmse": 0.0, "nmse": 0.1},
+                "id_test": {"rmse": 0.0},
+                "ood_test": {"rmse": 0.0, "nmse": 0.1},
+                "canonical_artifact": {"expression": "x0"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    progress_dir_2 = task_dir_2 / "progress"
+    progress_dir_2.mkdir()
+    (progress_dir_2 / "minute_0001.json").write_text("{}", encoding="utf-8")
+    (progress_dir_2 / "minute_0055.json").write_text("{}", encoding="utf-8")
+
+    module.audit_batch(batch_dir=batch_dir)
+
+    with (batch_dir / "audit" / "task_audit.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["failure_class"] for row in rows] == ["metric_invalid", "metric_invalid"]
+
+
 def test_audit_launcher_runs_and_schema_matches_failure_classes(tmp_path: Path, monkeypatch) -> None:
     launcher_path = (
         Path(__file__).resolve().parents[1]
