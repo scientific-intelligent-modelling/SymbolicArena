@@ -50,6 +50,12 @@ def test_write_stage1_queue_commands_generates_preflight_smoke_and_full(tmp_path
     assert "--batch-name \"${BATCH_ID}\"" in full
     assert "--expected-rows 50" in full
     assert "--source-csv benchmark-runs/compliance/latest/queues/ssr50_source.csv" in full
+    assert "--batch-id \"${BATCH_ID}\"" in full
+    assert "collect_remote_batch.py" in full
+    assert "harvest_batch.py" in full
+    assert "audit_batch.py" in full
+    assert "check_audit_success.py" in full
+    assert "--expected-total-tasks 750" in full
     assert "SIM_QUEUE_CONTROLLER_IS_LOCAL=1" in preflight
 
 

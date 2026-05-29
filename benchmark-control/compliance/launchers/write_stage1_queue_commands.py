@@ -7,10 +7,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 TOOLS = "qlattice drsr dso e2esr fepysr gplearn imcts jaxsr llmsr pyoperon pysr ragsr symbolfit tpsr udsr"
 HOSTS = "iaaccn22 iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29"
-HARVEST_ROOTS = " \\\n+  ".join(
-    f"--experiment-root benchmark-runs/compliance/latest/smoke/remote-experiments/{host}"
-    for host in HOSTS.split()
-)
+
+
+def _harvest_roots(base: str) -> str:
+    return " \\\n  ".join(
+        f"--experiment-root {base}/{host}"
+        for host in HOSTS.split()
+    )
+
+
+SMOKE_HARVEST_ROOTS = _harvest_roots("benchmark-runs/compliance/latest/smoke/remote-experiments")
+FULL_HARVEST_ROOTS = _harvest_roots("benchmark-runs/compliance/latest/remote-experiments")
 
 
 def write_stage1_queue_commands(*, batch_dir: Path) -> list[Path]:
@@ -110,7 +117,7 @@ python benchmark-control/compliance/launchers/collect_remote_batch.py \\
 
 python benchmark-control/compliance/launchers/harvest_batch.py \\
   --batch-dir benchmark-runs/compliance/latest/smoke \\
-  {HARVEST_ROOTS}
+  {SMOKE_HARVEST_ROOTS}
 
 python benchmark-control/compliance/launchers/audit_batch.py \\
   --batch-dir benchmark-runs/compliance/latest/smoke \\
@@ -144,6 +151,27 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --host-session-count-prefix compliance_1h_ \\
   --poll-seconds 60 \\
   2>&1 | tee benchmark-runs/compliance/latest/deploy/full_dispatch_from_iaaccn22.log
+
+python benchmark-control/compliance/launchers/collect_remote_batch.py \\
+  --batch-dir benchmark-runs/compliance/latest \\
+  --batch-id "${{BATCH_ID}}" \\
+  --hosts {HOSTS} \\
+  --controller-host iaaccn22 \\
+  --use-internal-ips
+
+python benchmark-control/compliance/launchers/harvest_batch.py \\
+  --batch-dir benchmark-runs/compliance/latest \\
+  {FULL_HARVEST_ROOTS}
+
+python benchmark-control/compliance/launchers/audit_batch.py \\
+  --batch-dir benchmark-runs/compliance/latest \\
+  --write-heartbeat \\
+  --write-rerun \\
+  --round-id 1
+
+python benchmark-control/compliance/launchers/check_audit_success.py \\
+  --batch-dir benchmark-runs/compliance/latest \\
+  --expected-total-tasks 750
 """
     )
 
