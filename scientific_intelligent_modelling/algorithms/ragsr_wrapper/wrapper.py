@@ -140,7 +140,7 @@ class RAGSRRegressor(BaseWrapper):
         if self._timeout_in_seconds is not None and self.params.get("time_limit") is None:
             # 给 EvolutionaryForest 一个软超时，让它有机会在外层硬杀前正常返回。
             self.params["time_limit"] = max(1.0, self._timeout_in_seconds - 5.0)
-        if self._timeout_in_seconds is not None and "n_gen" not in raw_kwargs:
+        if self._timeout_in_seconds is not None:
             self.params["n_gen"] = max(int(self.params.get("n_gen") or 1), 100000)
         self.model = None
         self._equation = None

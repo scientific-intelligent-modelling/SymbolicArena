@@ -52,6 +52,12 @@ class RAGSRWrapperTest(unittest.TestCase):
         self.assertNotIn("feature_names", reg.params)
         self.assertNotIn("target_name", reg.params)
 
+    def test_timeout_budget_clamps_explicit_small_generation_budget(self):
+        reg = RAGSRRegressor(timeout_in_seconds=3600, n_gen=100)
+
+        self.assertEqual(reg.params["n_gen"], 100000)
+        self.assertEqual(reg.params["time_limit"], 3595.0)
+
     def test_fit_predict_and_export_with_fake_backend(self):
         fake_package = types.ModuleType("evolutionary_forest")
         fake_forest = types.ModuleType("evolutionary_forest.forest")
