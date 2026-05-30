@@ -190,6 +190,23 @@ def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
     assert scp_sources[1].parent == args.queue_root_path / "preflight"
 
 
+def test_preflight_dataset_resolution_prefers_home_data_root_for_sim_datasets(tmp_path, monkeypatch):
+    repo_root = tmp_path / "repo"
+    home_root = tmp_path / "home"
+    repo_dataset = repo_root / "sim-datasets-data" / "ssr50" / "datasets" / "demo"
+    home_dataset = home_root / "sim-datasets-data" / "ssr50" / "datasets" / "demo"
+    repo_dataset.mkdir(parents=True)
+    home_dataset.mkdir(parents=True)
+    monkeypatch.setattr(scheduler, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(Path, "home", lambda: home_root)
+
+    resolved = scheduler._resolve_local_dataset_dir(
+        {"dataset_rel": "sim-datasets-data/ssr50/datasets/demo"}
+    )
+
+    assert resolved == home_dataset
+
+
 def test_build_tasks_stable_half_requires_variant_params(tmp_path):
     params_root = tmp_path / "params"
     _write_params(params_root, "llmsr_base")

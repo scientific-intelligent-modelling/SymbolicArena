@@ -1784,14 +1784,18 @@ def _sha256_file(path: Path) -> str:
 def _resolve_local_dataset_dir(row: dict[str, str]) -> Path:
     dataset_rel = row.get("dataset_rel") or row.get("dataset_dir") or ""
     path = Path(dataset_rel)
+    home_data_root = Path.home() / "sim-datasets-data"
     if path.is_absolute():
         try:
             rel = path.relative_to("/home/zhangziwen/sim-datasets-data")
-            return REPO_ROOT / "sim-datasets-data" / rel
+            candidates = [home_data_root / rel, REPO_ROOT / "sim-datasets-data" / rel, path]
+            return next((candidate for candidate in candidates if candidate.exists()), candidates[0])
         except ValueError:
             return path
     if path.parts and path.parts[0] == "sim-datasets-data":
-        return REPO_ROOT / path
+        rel = Path(*path.parts[1:])
+        candidates = [home_data_root / rel, REPO_ROOT / path]
+        return next((candidate for candidate in candidates if candidate.exists()), candidates[0])
     return REPO_ROOT / "sim-datasets-data" / path
 
 
