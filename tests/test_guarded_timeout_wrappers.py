@@ -59,6 +59,7 @@ def test_fepysr_repeats_successful_fit_until_timeout_budget(monkeypatch) -> None
     reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
 
     assert len(fit_calls) >= 2
+    assert all(not any("pysr_params.random_state" in item for item in call) for call in fit_calls)
     assert reg.get_optimal_equation() == "X0"
 
 

@@ -172,7 +172,6 @@ class FePySRRegressor(BaseWrapper):
             "maxsize": "pysr_params.maxsize",
             "maxdepth": "pysr_params.maxdepth",
             "timeout_in_seconds": "pysr_params.timeout_in_seconds",
-            "random_state": "pysr_params.random_state",
             "binary_operators": "pysr_params.binary_operators",
             "unary_operators": "pysr_params.unary_operators",
             "device": "FMN.device",
