@@ -135,6 +135,7 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --seeds 520 \\
   --controller-host iaaccn22 \\
   --use-internal-ips \\
+  --skip-support-sync \\
   --session-prefix compliance_smoke_ \\
   --host-session-count-prefix compliance_smoke_ \\
   --poll-seconds 60 \\
@@ -183,6 +184,7 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --seeds 520 \\
   --controller-host iaaccn22 \\
   --use-internal-ips \\
+  --skip-support-sync \\
   --session-prefix compliance_1h_ \\
   --host-session-count-prefix compliance_1h_ \\
   --poll-seconds 60 \\
