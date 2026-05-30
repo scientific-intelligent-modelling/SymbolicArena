@@ -9,6 +9,7 @@ from .normalizers import (
     normalize_dso_artifact,
     normalize_drsr_artifact,
     normalize_e2esr_artifact,
+    normalize_external_infix_artifact,
     normalize_gplearn_artifact,
     normalize_imcts_artifact,
     normalize_llmsr_artifact,
@@ -84,6 +85,13 @@ def safe_build_canonical_artifact(
             artifact = normalize_qlattice_artifact(text, expected_n_features=expected_n_features)
         elif tool in {"imcts", "imcts_wrapper"}:
             artifact = normalize_imcts_artifact(text, expected_n_features=expected_n_features)
+        elif tool in {"jaxsr", "jaxsr_wrapper"}:
+            artifact = normalize_external_infix_artifact(
+                text,
+                tool_name="jaxsr",
+                expected_n_features=expected_n_features,
+                shift_one_based=False,
+            )
         else:
             raise ValueError(f"暂不支持的工具名: {tool_name!r}")
         artifact = validate_canonical_symbolic_program(artifact)

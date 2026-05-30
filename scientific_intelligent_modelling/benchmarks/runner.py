@@ -41,6 +41,7 @@ _SNAPSHOT_CAPABLE_TOOLS = {
     "gplearn",
     "e2esr",
     "iMCTS",
+    "jaxsr",
     "tpsr",
     "QLattice",
     "ragsr",
@@ -967,6 +968,17 @@ def _extract_qlattice_periodic_candidate(experiment_dir: str | Path) -> dict[str
     return item
 
 
+def _extract_jaxsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
+    path = Path(experiment_dir) / ".jaxsr_current_best.json"
+    item = _read_json_file(path)
+    if not item:
+        return None
+    equation = item.get("equation")
+    if not isinstance(equation, str) or not equation.strip():
+        return None
+    return item
+
+
 def _extract_ragsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
     path = Path(experiment_dir) / ".ragsr_current_best.json"
     item = _read_json_file(path)
@@ -1002,6 +1014,8 @@ def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> d
         return _extract_tpsr_periodic_candidate(experiment_dir)
     if tool == "qlattice":
         return _extract_qlattice_periodic_candidate(experiment_dir)
+    if tool == "jaxsr":
+        return _extract_jaxsr_periodic_candidate(experiment_dir)
     if tool == "ragsr":
         return _extract_ragsr_periodic_candidate(experiment_dir)
     return None

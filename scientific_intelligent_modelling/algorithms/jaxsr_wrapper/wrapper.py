@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 from copy import deepcopy
 from typing import Any
 
@@ -13,6 +15,7 @@ from scientific_intelligent_modelling.benchmarks.normalizers import normalize_ex
 class JAXSRRegressor(BaseWrapper):
     """JAXSR sparse basis-library 符号回归适配层。"""
 
+    _PROGRESS_STATE_FILENAME = ".jaxsr_current_best.json"
     _DEFAULT_PARAMS = {
         "max_terms": 5,
         "strategy": "greedy_forward",
@@ -55,8 +58,34 @@ class JAXSRRegressor(BaseWrapper):
         self._contract_n_features = raw_kwargs.get("n_features")
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
+        self._timeout_in_seconds = self._as_positive_float(raw_kwargs.get("timeout_in_seconds"))
+        self._timeout_guard_seconds = self._as_positive_float(raw_kwargs.get("timeout_guard_seconds")) or 5.0
+        self._progress_state_path = self._resolve_progress_state_path(
+            raw_kwargs.get("exp_path"),
+            raw_kwargs.get("exp_name"),
+        )
         self.params = self._validate_and_normalize_params(raw_kwargs)
         self.model = None
+
+    @staticmethod
+    def _as_positive_float(value) -> float | None:
+        try:
+            value = float(value)
+        except Exception:
+            return None
+        return value if value > 0 else None
+
+    @classmethod
+    def _resolve_progress_state_path(cls, exp_path, exp_name) -> str | None:
+        if not isinstance(exp_path, str) or not exp_path.strip():
+            return None
+        if not isinstance(exp_name, str) or not exp_name.strip():
+            return None
+        return os.path.join(
+            os.path.abspath(exp_path.strip()),
+            exp_name.strip(),
+            cls._PROGRESS_STATE_FILENAME,
+        )
 
     @classmethod
     def _validate_and_normalize_params(cls, raw_params: dict[str, Any]) -> dict[str, Any]:
@@ -125,6 +154,70 @@ class JAXSRRegressor(BaseWrapper):
             library = library.add_ratios()
         return library
 
+    def _iteration_random_state(self, iteration: int) -> int | None:
+        base = self.params.get("random_state")
+        if base is None and self._timeout_in_seconds is None:
+            return None
+        base_value = 0 if base is None else int(base)
+        return base_value + int(iteration)
+
+    def _build_model(self, SymbolicRegressor, library, iteration: int):
+        return SymbolicRegressor(
+            basis_library=library,
+            max_terms=self.params["max_terms"],
+            strategy=self.params["strategy"],
+            information_criterion=self.params["information_criterion"],
+            cv_folds=self.params["cv_folds"],
+            regularization=self.params["regularization"],
+            random_state=self._iteration_random_state(iteration),
+        )
+
+    @staticmethod
+    def _model_equation(model) -> str:
+        if hasattr(model, "to_sympy"):
+            return str(model.to_sympy())
+        return str(model.expression_)
+
+    @staticmethod
+    def _estimate_complexity(equation: str) -> int | None:
+        try:
+            import sympy as sp
+
+            expr = sp.sympify(equation)
+            return int(sum(1 for _ in sp.preorder_traversal(expr)))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _training_mse(model, X_arr: np.ndarray, y_arr: np.ndarray) -> float:
+        try:
+            pred = np.asarray(model.predict(X_arr), dtype=float).reshape(-1)
+            if pred.shape != y_arr.shape or not np.all(np.isfinite(pred)):
+                return float("inf")
+            return float(np.mean((pred - y_arr) ** 2))
+        except Exception:
+            return float("inf")
+
+    def _write_progress_state(self, model, *, iteration: int, loss: float) -> None:
+        if not self._progress_state_path or model is None:
+            return
+        equation = self._model_equation(model)
+        if not isinstance(equation, str) or not equation.strip():
+            return
+        payload = {
+            "equation": equation,
+            "loss": loss,
+            "complexity": self._estimate_complexity(equation),
+            "iteration": int(iteration),
+            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            os.makedirs(os.path.dirname(self._progress_state_path), exist_ok=True)
+            with open(self._progress_state_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
     def fit(self, X, y):
         self._validate_explicit_dataset_contract(
             X,
@@ -145,16 +238,25 @@ class JAXSRRegressor(BaseWrapper):
         if X_arr.ndim == 1:
             X_arr = X_arr.reshape(-1, 1)
         library = self._build_basis_library(int(X_arr.shape[1]))
-        self.model = SymbolicRegressor(
-            basis_library=library,
-            max_terms=self.params["max_terms"],
-            strategy=self.params["strategy"],
-            information_criterion=self.params["information_criterion"],
-            cv_folds=self.params["cv_folds"],
-            regularization=self.params["regularization"],
-            random_state=self.params.get("random_state"),
-        )
-        self.model.fit(X_arr, y_arr)
+        started_at = time.time()
+        best_model = None
+        best_loss = float("inf")
+        iteration = 0
+        while True:
+            model = self._build_model(SymbolicRegressor, library, iteration)
+            model.fit(X_arr, y_arr)
+            loss = self._training_mse(model, X_arr, y_arr)
+            if best_model is None or loss < best_loss:
+                best_model = model
+                best_loss = loss
+                self._write_progress_state(best_model, iteration=iteration + 1, loss=best_loss)
+            iteration += 1
+            if self._timeout_in_seconds is None:
+                break
+            elapsed = time.time() - started_at
+            if elapsed >= max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds):
+                break
+        self.model = best_model
         return self
 
     def predict(self, X):
