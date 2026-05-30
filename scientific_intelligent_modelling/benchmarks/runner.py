@@ -1304,6 +1304,39 @@ def _periodic_snapshot_loop(
         )
 
 
+def _write_final_progress_payload_if_requested(
+    *,
+    result: dict[str, Any],
+    progress_snapshot_interval_seconds: int | None,
+    output_dir: Path,
+    experiment_dir: str | Path | None,
+) -> None:
+    if not progress_snapshot_interval_seconds:
+        return
+    if str(result.get("status") or "").strip().lower() != "ok":
+        return
+    equation = result.get("equation")
+    if not isinstance(equation, str) or not equation.strip():
+        return
+    if not isinstance(result.get("canonical_artifact"), dict):
+        return
+
+    payload = dict(result)
+    payload["record_type"] = "final_best"
+    payload["checkpoint_index"] = "final"
+    try:
+        elapsed_seconds = float(result.get("seconds") or 0.0)
+    except Exception:
+        elapsed_seconds = 0.0
+    payload["elapsed_seconds"] = round(elapsed_seconds, 3)
+    payload["elapsed_minutes"] = max(0, int(round(elapsed_seconds / 60.0)))
+    _write_progress_payload(
+        payload,
+        primary_dir=output_dir / _PROGRESS_DIRNAME,
+        experiment_dir=experiment_dir,
+    )
+
+
 def _build_srsd_distractor_summary(
     feature_names: list[str],
     feature_descriptions: list[str | None],
@@ -1700,6 +1733,13 @@ def run_benchmark_task(
         result["termination_reason"] = "no_valid_output"
     else:
         result["termination_reason"] = "completed" if status == "ok" else status
+
+    _write_final_progress_payload_if_requested(
+        result=result,
+        progress_snapshot_interval_seconds=progress_snapshot_interval_seconds,
+        output_dir=output_dir,
+        experiment_dir=experiment_dir,
+    )
 
     result_path = output_dir / "result.json"
     write_result_payload(result, primary_path=result_path, experiment_dir=experiment_dir)

@@ -66,6 +66,7 @@ class SymbolFitRegressor(BaseWrapper):
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
         self.params = self._validate_and_normalize_params(raw_kwargs)
+        self._apply_internal_timeout_guard(raw_kwargs)
         self.model = None
         self._best_candidate = None
         self._best_equation = None
@@ -101,6 +102,31 @@ class SymbolFitRegressor(BaseWrapper):
         if raw_params.get("y_uncertainty") is not None:
             raw_params["y_uncertainty"] = float(raw_params["y_uncertainty"])
         return raw_params
+
+    @staticmethod
+    def _positive_int(value: Any) -> int | None:
+        try:
+            parsed = int(value)
+        except Exception:
+            return None
+        return parsed if parsed > 0 else None
+
+    @classmethod
+    def _resolve_timeout_guard(cls, timeout_seconds: int, raw_guard: Any) -> int:
+        explicit_guard = cls._positive_int(raw_guard)
+        if explicit_guard is not None:
+            return explicit_guard
+        return min(300, max(1, int(timeout_seconds * 0.1)))
+
+    def _apply_internal_timeout_guard(self, raw_kwargs: dict[str, Any]) -> None:
+        timeout_seconds = self._positive_int(raw_kwargs.get("timeout_in_seconds"))
+        if timeout_seconds is None:
+            return
+        guard_seconds = self._resolve_timeout_guard(
+            timeout_seconds,
+            raw_kwargs.get("timeout_guard_seconds"),
+        )
+        self.params["timeout_in_seconds"] = max(1, timeout_seconds - guard_seconds)
 
     def _build_pysr_config(self):
         if self.params.get("pysr_config") is not None:

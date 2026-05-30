@@ -4,9 +4,11 @@ import time
 import unittest
 from pathlib import Path
 
+import numpy as np
 import sympy as sp
 
 from scientific_intelligent_modelling.benchmarks import runner
+from scientific_intelligent_modelling.benchmarks.normalizers import normalize_external_infix_artifact
 
 
 def _write_dataset(dataset_dir: Path):
@@ -589,6 +591,65 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                 self.assertEqual(path.name, "minute_0010.json")
                 self.assertIn("progress", str(path))
                 self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["checkpoint_index"], 2)
+
+    def test_run_benchmark_task_writes_final_progress_for_non_snapshot_tool(self):
+        class FakeSymbolicRegressor:
+            def __init__(self, tool_name, problem_name=None, seed=1314, **params):
+                del problem_name, seed
+                self.tool_name = tool_name
+                self.params = params
+                self.experiment_dir = str(Path(params["exp_path"]) / params["exp_name"])
+                Path(self.experiment_dir).mkdir(parents=True, exist_ok=True)
+
+            def fit(self, X, y):
+                self.X = X
+                self.y = y
+                return self
+
+            def predict(self, X):
+                arr = np.asarray(X, dtype=float)
+                return 1.0 + 2.0 * arr[:, 0] + 3.0 * arr[:, 1]
+
+            def get_optimal_equation(self):
+                return "1 + 2*x0 + 3*x1"
+
+            def get_total_equations(self):
+                return [self.get_optimal_equation()]
+
+            def export_canonical_symbolic_program(self):
+                return normalize_external_infix_artifact(
+                    self.get_optimal_equation(),
+                    tool_name=self.tool_name,
+                    expected_n_features=2,
+                    shift_one_based=False,
+                )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            output_root = root / "out"
+            _write_dataset(dataset_dir)
+
+            old_symbolic_regressor = runner.SymbolicRegressor
+            try:
+                runner.SymbolicRegressor = FakeSymbolicRegressor
+                result_path = runner.run_benchmark_task(
+                    tool_name="symbolfit",
+                    dataset_dir=dataset_dir,
+                    output_root=output_root,
+                    seed=520,
+                    params_override={"progress_snapshot_interval_seconds": 60},
+                )
+            finally:
+                runner.SymbolicRegressor = old_symbolic_regressor
+
+            progress_files = sorted(result_path.parent.glob("progress/minute_*.json"))
+            self.assertEqual(len(progress_files), 1)
+            payload = json.loads(progress_files[0].read_text(encoding="utf-8"))
+            self.assertEqual(payload["record_type"], "final_best")
+            self.assertEqual(payload["tool"], "symbolfit")
+            self.assertEqual(payload["status"], "ok")
+            self.assertAlmostEqual(payload["valid"]["rmse"], 0.0, places=10)
 
 
 if __name__ == "__main__":
