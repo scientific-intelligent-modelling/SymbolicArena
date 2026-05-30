@@ -1,4 +1,5 @@
 import json
+import time
 from copy import deepcopy
 from typing import Any
 
@@ -49,7 +50,9 @@ class FePySRRegressor(BaseWrapper):
         "expected_dataset_dir",
         "progress_snapshot_interval_seconds",
         "timeout_guard_seconds",
+        "fill_timeout_budget",
     }
+    _MIN_BUDGET_REFIT_SECONDS = 5
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
         "overrides",
         "custom_pysr_model",
@@ -62,6 +65,8 @@ class FePySRRegressor(BaseWrapper):
         self._contract_n_features = raw_kwargs.get("n_features")
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
+        self._explicit_timeout_seconds = self._positive_int(raw_kwargs.get("timeout_in_seconds"))
+        self._fill_timeout_budget = bool(raw_kwargs.get("fill_timeout_budget", True))
         self.params = self._validate_and_normalize_params(raw_kwargs)
         self._apply_internal_timeout_guard(raw_kwargs)
         self.model = None
@@ -167,6 +172,7 @@ class FePySRRegressor(BaseWrapper):
             "maxsize": "pysr_params.maxsize",
             "maxdepth": "pysr_params.maxdepth",
             "timeout_in_seconds": "pysr_params.timeout_in_seconds",
+            "random_state": "pysr_params.random_state",
             "binary_operators": "pysr_params.binary_operators",
             "unary_operators": "pysr_params.unary_operators",
             "device": "FMN.device",
@@ -176,6 +182,31 @@ class FePySRRegressor(BaseWrapper):
             if key in params and params[key] is not None:
                 overrides.append(f"{path}={cls._format_override_value(params[key])}")
         return overrides
+
+    def _budget_deadline(self) -> float | None:
+        if not self._fill_timeout_budget or self._explicit_timeout_seconds is None:
+            return None
+        budget_seconds = self._positive_int(self.params.get("timeout_in_seconds"))
+        if budget_seconds is None:
+            return None
+        return time.monotonic() + budget_seconds
+
+    @classmethod
+    def _remaining_budget_seconds(cls, deadline: float | None) -> int | None:
+        if deadline is None:
+            return None
+        return max(0, int(deadline - time.monotonic()))
+
+    @staticmethod
+    def _equation_score(expr: str, X_arr: np.ndarray, y_arr: np.ndarray) -> float:
+        try:
+            pred = FePySRRegressor._build_callable(expr)(X_arr)
+            target = y_arr.reshape(-1)
+            if pred.shape[0] != target.shape[0] or not np.all(np.isfinite(pred)):
+                return float("inf")
+            return float(np.mean((pred - target) ** 2))
+        except Exception:
+            return float("inf")
 
     def fit(self, X, y):
         self._validate_explicit_dataset_contract(
@@ -199,16 +230,44 @@ class FePySRRegressor(BaseWrapper):
         y_arr = np.asarray(y, dtype=float).reshape(-1, 1)
         X_tensor = torch.as_tensor(X_arr, dtype=torch.float64)
         y_tensor = torch.as_tensor(y_arr, dtype=torch.float64)
-        self.model = FePySR(
-            overrides=self._build_overrides(self.params),
-            custom_pysr_model=self.params.get("custom_pysr_model"),
-        )
-        self.model.fit(X_tensor, y_tensor)
-        eq = str(getattr(self.model, "best_equation_", "") or "")
-        self._best_equation = eq or None
+        deadline = self._budget_deadline()
+        best_model = None
+        best_equation = None
+        best_score = float("inf")
+        equations: list[str] = []
+        attempt = 0
+        while True:
+            remaining = self._remaining_budget_seconds(deadline)
+            if attempt > 0 and remaining is not None and remaining < self._MIN_BUDGET_REFIT_SECONDS:
+                break
+            attempt += 1
+            iteration_params = dict(self.params)
+            if remaining is not None:
+                iteration_params["timeout_in_seconds"] = max(1, remaining)
+            if iteration_params.get("random_state") is not None:
+                iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
+            model = FePySR(
+                overrides=self._build_overrides(iteration_params),
+                custom_pysr_model=iteration_params.get("custom_pysr_model"),
+            )
+            model.fit(X_tensor, y_tensor)
+            eq = str(getattr(model, "best_equation_", "") or "")
+            if eq:
+                equations.append(eq)
+                score = self._equation_score(eq, X_arr, y_arr)
+                if best_equation is None or score < best_score:
+                    best_model = model
+                    best_equation = eq
+                    best_score = score
+            elif best_model is None:
+                best_model = model
+            if deadline is None or time.monotonic() >= deadline:
+                break
+        self.model = best_model
+        self._best_equation = best_equation
         if self._best_equation:
             self._callable = self._build_callable(self._best_equation)
-        self._equations = [eq] if eq else []
+        self._equations = [eq for idx, eq in enumerate(equations) if eq and eq not in equations[:idx]]
         return self
 
     @staticmethod

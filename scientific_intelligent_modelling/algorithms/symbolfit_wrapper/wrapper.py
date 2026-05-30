@@ -4,6 +4,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from copy import deepcopy
 from typing import Any
 
@@ -51,7 +52,9 @@ class SymbolFitRegressor(BaseWrapper):
         "expected_dataset_dir",
         "progress_snapshot_interval_seconds",
         "timeout_guard_seconds",
+        "fill_timeout_budget",
     }
+    _MIN_BUDGET_REFIT_SECONDS = 5
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
         "random_state",
         "pysr_config",
@@ -65,6 +68,8 @@ class SymbolFitRegressor(BaseWrapper):
         self._contract_n_features = raw_kwargs.get("n_features")
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
+        self._explicit_timeout_seconds = self._positive_int(raw_kwargs.get("timeout_in_seconds"))
+        self._fill_timeout_budget = bool(raw_kwargs.get("fill_timeout_budget", True))
         self.params = self._validate_and_normalize_params(raw_kwargs)
         self._apply_internal_timeout_guard(raw_kwargs)
         self.model = None
@@ -128,26 +133,41 @@ class SymbolFitRegressor(BaseWrapper):
         )
         self.params["timeout_in_seconds"] = max(1, timeout_seconds - guard_seconds)
 
-    def _build_pysr_config(self):
-        if self.params.get("pysr_config") is not None:
-            return self.params["pysr_config"]
+    def _build_pysr_config(self, params: dict[str, Any] | None = None):
+        params = params or self.params
+        if params.get("pysr_config") is not None:
+            return params["pysr_config"]
         from pysr import PySRRegressor
 
         kwargs = {
-            "model_selection": self.params["model_selection"],
-            "niterations": self.params["niterations"],
-            "maxsize": self.params["maxsize"],
-            "binary_operators": self.params["binary_operators"],
-            "unary_operators": self.params["unary_operators"],
+            "model_selection": params["model_selection"],
+            "niterations": params["niterations"],
+            "maxsize": params["maxsize"],
+            "binary_operators": params["binary_operators"],
+            "unary_operators": params["unary_operators"],
             "elementwise_loss": "loss(y, y_pred, weights) = (y - y_pred)^2 * weights",
-            "procs": self.params["procs"],
-            "parallelism": self.params["parallelism"],
-            "deterministic": self.params["deterministic"],
-            "timeout_in_seconds": self.params["timeout_in_seconds"],
+            "procs": params["procs"],
+            "parallelism": params["parallelism"],
+            "deterministic": params["deterministic"],
+            "timeout_in_seconds": params["timeout_in_seconds"],
         }
-        if self.params.get("random_state") is not None:
-            kwargs["random_state"] = int(self.params["random_state"])
+        if params.get("random_state") is not None:
+            kwargs["random_state"] = int(params["random_state"])
         return PySRRegressor(**kwargs)
+
+    def _budget_deadline(self) -> float | None:
+        if not self._fill_timeout_budget or self._explicit_timeout_seconds is None:
+            return None
+        budget_seconds = self._positive_int(self.params.get("timeout_in_seconds"))
+        if budget_seconds is None:
+            return None
+        return time.monotonic() + budget_seconds
+
+    @classmethod
+    def _remaining_budget_seconds(cls, deadline: float | None) -> int | None:
+        if deadline is None:
+            return None
+        return max(0, int(deadline - time.monotonic()))
 
     @staticmethod
     def _candidate_score(candidate) -> tuple[float, float]:
@@ -256,27 +276,52 @@ class SymbolFitRegressor(BaseWrapper):
             y_down = np.full_like(y_arr, float(self.params["y_uncertainty"]), dtype=float)
 
         cwd = os.getcwd()
-        with tempfile.TemporaryDirectory(prefix="symbolfit_") as tmpdir:
-            try:
-                os.chdir(tmpdir)
-                self.model = SymbolFit(
-                    x=X_arr,
-                    y=y_arr,
-                    y_up=y_up,
-                    y_down=y_down,
-                    pysr_config=self._build_pysr_config(),
-                    max_complexity=self.params["max_complexity"],
-                    input_rescale=self.params["input_rescale"],
-                    scale_y_by=self.params["scale_y_by"],
-                    max_stderr=self.params["max_stderr"],
-                    fit_y_unc=self.params["fit_y_unc"],
-                    random_seed=self.params.get("random_state"),
-                    loss_weights=self.params.get("loss_weights"),
-                )
-                self.model.fit()
-            finally:
-                os.chdir(cwd)
-        self._best_candidate = self._select_best_candidate()
+        deadline = self._budget_deadline()
+        best_model = None
+        best_candidate = None
+        best_score: tuple[float, float] | None = None
+        attempt = 0
+        while True:
+            remaining = self._remaining_budget_seconds(deadline)
+            if attempt > 0 and remaining is not None and remaining < self._MIN_BUDGET_REFIT_SECONDS:
+                break
+            attempt += 1
+            iteration_params = dict(self.params)
+            if remaining is not None:
+                iteration_params["timeout_in_seconds"] = max(1, remaining)
+            if iteration_params.get("random_state") is not None:
+                iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
+            with tempfile.TemporaryDirectory(prefix="symbolfit_") as tmpdir:
+                try:
+                    os.chdir(tmpdir)
+                    model = SymbolFit(
+                        x=X_arr,
+                        y=y_arr,
+                        y_up=y_up,
+                        y_down=y_down,
+                        pysr_config=self._build_pysr_config(iteration_params),
+                        max_complexity=iteration_params["max_complexity"],
+                        input_rescale=iteration_params["input_rescale"],
+                        scale_y_by=iteration_params["scale_y_by"],
+                        max_stderr=iteration_params["max_stderr"],
+                        fit_y_unc=iteration_params["fit_y_unc"],
+                        random_seed=iteration_params.get("random_state"),
+                        loss_weights=iteration_params.get("loss_weights"),
+                    )
+                    model.fit()
+                finally:
+                    os.chdir(cwd)
+            self.model = model
+            candidate = self._select_best_candidate()
+            score = self._candidate_score(candidate)
+            if best_candidate is None or (best_score is not None and score < best_score):
+                best_model = model
+                best_candidate = candidate
+                best_score = score
+            if deadline is None or time.monotonic() >= deadline:
+                break
+        self.model = best_model
+        self._best_candidate = best_candidate
         self._best_equation = self._extract_best_equation(self._best_candidate)
         self._equations = self.get_total_equations()
         self._callable = self._build_callable(self._best_equation)
