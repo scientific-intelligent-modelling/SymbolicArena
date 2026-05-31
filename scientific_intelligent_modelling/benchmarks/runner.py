@@ -1188,7 +1188,30 @@ def _build_periodic_snapshot_payload(
 ) -> dict[str, Any] | None:
     candidate = _extract_periodic_candidate(tool_name, experiment_dir)
     if not candidate:
-        return None
+        payload = build_result_payload(
+            tool_name=tool_name,
+            dataset=dataset,
+            params=params,
+            seed=seed,
+            started_at=started_at,
+            status="running",
+            error=None,
+            equation=None,
+            equation_count=0,
+            canonical_artifact=None,
+            canonical_artifact_error=None,
+            train_metrics=None,
+            valid_metrics=None,
+            id_metrics=None,
+            ood_metrics=None,
+            experiment_dir=str(experiment_dir),
+        )
+        payload["record_type"] = "periodic_heartbeat"
+        payload["checkpoint_index"] = int(checkpoint_index)
+        payload["elapsed_seconds"] = round(time.time() - started_at, 3)
+        payload["elapsed_minutes"] = max(0, int(round(payload["elapsed_seconds"] / 60.0)))
+        payload["candidate_available"] = False
+        return payload
 
     parameter_values = _candidate_parameter_values(candidate)
     canonical_artifact, canonical_artifact_error = safe_build_canonical_artifact(

@@ -566,6 +566,32 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertAlmostEqual(payload["id_test"]["rmse"], 0.0, places=10)
             self.assertAlmostEqual(payload["ood_test"]["rmse"], 0.0, places=10)
 
+    def test_build_periodic_snapshot_payload_records_heartbeat_without_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            exp_dir = root / "exp"
+            exp_dir.mkdir(parents=True, exist_ok=True)
+            _write_dataset(dataset_dir)
+
+            dataset = runner.load_canonical_dataset(dataset_dir)
+            payload = runner._build_periodic_snapshot_payload(
+                tool_name="fepysr",
+                dataset=dataset,
+                params={"timeout_in_seconds": 86400},
+                seed=520,
+                started_at=time.time() - 120,
+                experiment_dir=exp_dir,
+                checkpoint_index=1,
+            )
+
+            self.assertIsNotNone(payload)
+            self.assertEqual(payload["record_type"], "periodic_heartbeat")
+            self.assertEqual(payload["tool"], "fepysr")
+            self.assertEqual(payload["status"], "running")
+            self.assertFalse(payload["candidate_available"])
+            self.assertIsNone(payload["equation"])
+
     def test_write_progress_payload_writes_outer_and_experiment_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
