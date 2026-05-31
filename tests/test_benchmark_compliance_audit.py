@@ -183,6 +183,37 @@ def test_audit_treats_missing_or_null_nmse_as_metric_invalid(tmp_path: Path) -> 
     assert [row["failure_class"] for row in rows] == ["metric_invalid", "metric_invalid"]
 
 
+def test_audit_reads_noise_aware_run_paths_and_fields(tmp_path: Path) -> None:
+    module = load_for_test("audit")
+    batch_dir = tmp_path / "batch"
+    manifest_dir = batch_dir / "manifest"
+    manifest_dir.mkdir(parents=True)
+    (manifest_dir / "tasks.csv").write_text(
+        "\n".join(
+            [
+                "task_id,algorithm,dataset_id,dataset_dir,seed,noise_tag,noise_sigma,timeout_in_seconds,min_runtime_seconds,progress_snapshot_interval_seconds",
+                "pysr__seed520__noise001__d0,pysr,d0,sim-datasets-data/ssr50/d0,520,noise001,0.01,86400,82800,60",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _write_result(
+        batch_dir / "runs" / "pysr" / "seed520" / "noise001" / "d0",
+        seconds=83000.0,
+        metric=0.1,
+        artifact="x0",
+    )
+
+    summary = module.audit_batch(batch_dir=batch_dir)
+
+    assert summary == {"total_tasks": 1, "failed": 0, "passed": 1}
+    with (batch_dir / "audit" / "task_audit.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["noise_tag"] == "noise001"
+    assert rows[0]["noise_sigma"] == "0.01"
+
+
 def test_audit_launcher_runs_and_schema_matches_failure_classes(tmp_path: Path, monkeypatch) -> None:
     launcher_path = (
         Path(__file__).resolve().parents[1]
@@ -224,6 +255,8 @@ def test_audit_launcher_runs_and_schema_matches_failure_classes(tmp_path: Path, 
         "algorithm",
         "dataset_id",
         "seed",
+        "noise_tag",
+        "noise_sigma",
         "status",
         "runtime_seconds",
         "has_result",

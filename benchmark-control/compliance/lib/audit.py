@@ -14,6 +14,8 @@ TASK_AUDIT_FIELDS = [
     "algorithm",
     "dataset_id",
     "seed",
+    "noise_tag",
+    "noise_sigma",
     "status",
     "runtime_seconds",
     "has_result",
@@ -59,7 +61,7 @@ def audit_batch(*, batch_dir: Path) -> dict[str, int]:
 
 
 def _audit_task(batch_dir: Path, task: dict[str, str]) -> dict[str, Any]:
-    task_dir = batch_dir / "runs" / task["algorithm"] / f"seed{task['seed']}" / task["dataset_id"]
+    task_dir = _task_run_dir(batch_dir, task)
     result_path = task_dir / "result.json"
     progress_dir = task_dir / "progress"
     has_progress = progress_dir.exists() and any(progress_dir.glob("minute_*.json"))
@@ -112,6 +114,7 @@ def _audit_task(batch_dir: Path, task: dict[str, str]) -> dict[str, Any]:
     failure_class, reason = _classify_failure(
         result=result,
         runtime=runtime,
+        min_runtime=_task_min_runtime_seconds(task),
         has_progress=has_progress,
         metrics_valid=metrics_valid,
         artifact_valid=artifact_valid,
@@ -143,6 +146,7 @@ def _classify_failure(
     *,
     result: dict[str, Any],
     runtime: float,
+    min_runtime: int,
     has_progress: bool,
     metrics_valid: bool,
     artifact_valid: bool,
@@ -154,8 +158,8 @@ def _classify_failure(
         return "runtime_crash", _status_reason(result, fallback="runtime error")
     if _is_timeout_unrecovered(result, raw_status):
         return "timeout_unrecovered", _status_reason(result, fallback="timeout without recovered output")
-    if runtime < STAGE1_MIN_RUNTIME_SECONDS:
-        return "early_stop", f"runtime_seconds {runtime:.3f} < {STAGE1_MIN_RUNTIME_SECONDS}"
+    if runtime < min_runtime:
+        return "early_stop", f"runtime_seconds {runtime:.3f} < {min_runtime}"
     if not has_progress:
         return "missing_progress", "progress/minute_*.json not found"
     if not metrics_valid:
@@ -205,6 +209,16 @@ def _runtime_seconds(result: dict[str, Any]) -> float:
     return numeric_value if math.isfinite(numeric_value) else 0.0
 
 
+def _task_min_runtime_seconds(task: dict[str, str]) -> int:
+    raw = task.get("min_runtime_seconds")
+    if raw not in (None, ""):
+        try:
+            return int(float(raw))
+        except ValueError:
+            return STAGE1_MIN_RUNTIME_SECONDS
+    return STAGE1_MIN_RUNTIME_SECONDS
+
+
 def _metrics_valid(result: dict[str, Any]) -> bool:
     for split in ("valid", "id_test", "ood_test"):
         metrics = result.get(split)
@@ -226,6 +240,14 @@ def _artifact_valid(result: dict[str, Any]) -> bool:
     return isinstance(equation, str) and bool(equation.strip())
 
 
+def _task_run_dir(batch_dir: Path, task: dict[str, str]) -> Path:
+    base = batch_dir / "runs" / task["algorithm"] / f"seed{task['seed']}"
+    noise_tag = task.get("noise_tag") or "clean"
+    if noise_tag and f"__{noise_tag}__" in task.get("task_id", ""):
+        return base / noise_tag / task["dataset_id"]
+    return base / task["dataset_id"]
+
+
 def _row(
     *,
     task: dict[str, str],
@@ -245,6 +267,8 @@ def _row(
         "algorithm": task["algorithm"],
         "dataset_id": task["dataset_id"],
         "seed": task["seed"],
+        "noise_tag": task.get("noise_tag", "clean"),
+        "noise_sigma": task.get("noise_sigma", "0"),
         "status": status,
         "runtime_seconds": f"{runtime:.3f}",
         "has_result": str(has_result).lower(),

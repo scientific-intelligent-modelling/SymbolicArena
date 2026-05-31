@@ -132,6 +132,69 @@ def test_manifest_generation_reads_nested_ssr50_dataset_layout(tmp_path: Path) -
     assert rows[0]["dataset_dir"].startswith("ssr50/datasets/")
 
 
+def test_full24h_manifest_generation_writes_5850_noise_aware_tasks(tmp_path: Path) -> None:
+    from benchmark_control_compliance_manifest_import import load_for_test
+
+    module = load_for_test("manifest")
+    ssr50_root = tmp_path / "ssr50"
+    for index in range(50):
+        _write_dataset(ssr50_root, f"d{index:02d}")
+
+    selected_tools = (
+        "gplearn",
+        "pyoperon",
+        "pysr",
+        "dso",
+        "tpsr",
+        "e2esr",
+        "fepysr",
+        "jaxsr",
+        "QLattice",
+        "iMCTS",
+        "udsr",
+        "ragsr",
+        "symbolfit",
+    )
+    toolbox_config = tmp_path / "toolbox_config.json"
+    toolbox_config.write_text(
+        json.dumps(
+            {
+                "tool_mapping": {
+                    name: {"env": "sim_base", "regressor": name}
+                    for name in (*selected_tools, "llmsr", "drsr")
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    batch_dir = tmp_path / "benchmark-runs" / "formal24h" / "batch"
+    summary = module.generate_manifest(
+        toolbox_config_path=toolbox_config,
+        ssr50_root=ssr50_root,
+        batch_dir=batch_dir,
+        git_revision="abc123",
+        dataset_dir_base=tmp_path,
+        algorithms=selected_tools,
+        seeds=(520, 521, 522),
+        noise_sigmas=(0.0, 0.01, 0.05),
+        timeout_in_seconds=86400,
+        progress_snapshot_interval_seconds=60,
+        min_runtime_seconds=82800,
+    )
+
+    assert summary == {"total_algorithms": 13, "total_datasets": 50, "total_tasks": 5850}
+    with (batch_dir / "manifest" / "tasks.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 5850
+    assert {row["seed"] for row in rows} == {"520", "521", "522"}
+    assert {row["noise_tag"] for row in rows} == {"clean", "noise001", "noise005"}
+    assert {row["noise_sigma"] for row in rows} == {"0", "0.01", "0.05"}
+    assert {row["timeout_in_seconds"] for row in rows} == {"86400"}
+    assert {row["min_runtime_seconds"] for row in rows} == {"82800"}
+    assert "pysr__seed520__noise001__d00" in {row["task_id"] for row in rows}
+
+
 def test_load_for_test_restores_sys_path() -> None:
     from benchmark_control_compliance_manifest_import import load_for_test
 

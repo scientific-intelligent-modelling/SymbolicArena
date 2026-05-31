@@ -44,16 +44,20 @@ def _write_remote_result(
     tool_key: str,
     tool_arg: str,
     seed: int,
+    noise_tag: str | None = None,
     global_index: int,
     dataset_name: str,
     payload: dict[str, object],
 ) -> None:
+    task_id = f"{tool_key}_s{seed}_g{global_index:04d}"
+    if noise_tag:
+        task_id = f"{tool_key}_s{seed}_{noise_tag}_g{global_index:04d}"
     result_dir = (
         experiment_root
         / tool_key
         / f"seed{seed}"
         / "tasks"
-        / f"{tool_key}_s{seed}_g{global_index:04d}"
+        / task_id
         / "iaaccn22"
         / tool_arg
         / f"g{global_index:04d}_{dataset_name}"
@@ -116,6 +120,46 @@ def test_harvest_maps_scheduler_outputs_into_audit_runs_layout(tmp_path: Path) -
 
     audit_summary = audit.audit_batch(batch_dir=batch_dir)
     assert audit_summary == {"total_tasks": 2, "failed": 0, "passed": 2}
+
+
+def test_harvest_maps_noise_aware_outputs_into_noise_runs_layout(tmp_path: Path) -> None:
+    harvest = load_for_test("harvest")
+    batch_dir = tmp_path / "batch"
+    manifest_dir = batch_dir / "manifest"
+    manifest_dir.mkdir(parents=True)
+    (manifest_dir / "tasks.csv").write_text(
+        "\n".join(
+            [
+                "task_id,algorithm,dataset_id,dataset_dir,seed,noise_tag,noise_sigma,timeout_in_seconds,min_runtime_seconds,progress_snapshot_interval_seconds",
+                "pysr__seed520__noise001__d0,pysr,d0,sim-datasets-data/ssr50/d0,520,noise001,0.01,86400,82800,60",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    queue_dir = batch_dir / "queues"
+    queue_dir.mkdir()
+    (queue_dir / "ssr50_source.csv").write_text(
+        "global_index,dataset_id,dataset_name,dataset_dir,dataset_rel\n"
+        "1,d0,d0,sim-datasets-data/ssr50/d0,sim-datasets-data/ssr50/d0\n",
+        encoding="utf-8",
+    )
+    experiment_root = tmp_path / "experiments" / "batch"
+    _write_remote_result(
+        experiment_root,
+        tool_key="pysr",
+        tool_arg="pysr",
+        seed=520,
+        noise_tag="noise001",
+        global_index=1,
+        dataset_name="d0",
+        payload={"status": "ok", "runtime_seconds": 83000.0},
+    )
+
+    summary = harvest.harvest_batch(batch_dir=batch_dir, experiment_roots=[experiment_root])
+
+    assert summary == {"total_tasks": 1, "harvested": 1, "missing": 0}
+    assert (batch_dir / "runs" / "pysr" / "seed520" / "noise001" / "d0" / "result.json").exists()
 
 
 def test_harvest_launcher_accepts_repo_relative_paths(tmp_path: Path, monkeypatch) -> None:

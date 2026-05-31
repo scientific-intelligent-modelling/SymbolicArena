@@ -13,6 +13,8 @@ HARVEST_FIELDS = [
     "algorithm",
     "dataset_id",
     "seed",
+    "noise_tag",
+    "noise_sigma",
     "status",
     "source_result",
     "target_dir",
@@ -79,7 +81,12 @@ def _harvest_task(
 
     global_index = int(queue_row["global_index"])
     tool_key = _scheduler_tool_key(task["algorithm"])
-    scheduler_task_id = f"{tool_key}_s{seed}_g{global_index:04d}"
+    noise_tag = task.get("noise_tag") or "clean"
+    use_noise_dimension = _task_uses_noise_dimension(task)
+    if use_noise_dimension:
+        scheduler_task_id = f"{tool_key}_s{seed}_{noise_tag}_g{global_index:04d}"
+    else:
+        scheduler_task_id = f"{tool_key}_s{seed}_g{global_index:04d}"
     candidates = _find_candidates(
         experiment_roots=experiment_roots,
         tool_key=tool_key,
@@ -94,7 +101,10 @@ def _harvest_task(
         )
 
     candidate = _choose_candidate(candidates)
-    target_dir = batch_dir / "runs" / task["algorithm"] / f"seed{seed}" / dataset_id
+    if use_noise_dimension:
+        target_dir = batch_dir / "runs" / task["algorithm"] / f"seed{seed}" / noise_tag / dataset_id
+    else:
+        target_dir = batch_dir / "runs" / task["algorithm"] / f"seed{seed}" / dataset_id
     if not dry_run:
         _copy_candidate(candidate, target_dir)
     return _harvest_row(
@@ -145,6 +155,11 @@ def _scheduler_tool_key(algorithm: str) -> str:
         "QLattice": "qlattice",
         "iMCTS": "imcts",
     }.get(algorithm, algorithm.lower())
+
+
+def _task_uses_noise_dimension(task: dict[str, str]) -> bool:
+    noise_tag = task.get("noise_tag") or ""
+    return bool(noise_tag and f"__{noise_tag}__" in task.get("task_id", ""))
 
 
 def _find_candidates(
@@ -202,6 +217,8 @@ def _harvest_row(
         "algorithm": task["algorithm"],
         "dataset_id": task["dataset_id"],
         "seed": task["seed"],
+        "noise_tag": task.get("noise_tag", "clean"),
+        "noise_sigma": task.get("noise_sigma", "0"),
         "status": status,
         "source_result": source_result,
         "target_dir": target_dir,

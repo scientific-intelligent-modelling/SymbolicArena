@@ -142,6 +142,32 @@ def test_build_tasks_stable_half_uses_llm_bucket_params(tmp_path):
     assert all(task.params_name == "gplearn" and task.llm_model_bucket is None for task in tasks if task.tool == "gplearn")
 
 
+def test_build_tasks_includes_noise_dimension_in_task_ids(tmp_path: Path) -> None:
+    rows = [{"global_index": "1", "dataset_dir": "sim-datasets-data/ssr50/d0", "dataset_name": "d0"}]
+    tasks = scheduler._build_tasks(
+        rows,
+        tools=["pysr"],
+        seeds=[520, 521],
+        noise_sigmas=[0.0, 0.01],
+        queue_root=tmp_path / "queue",
+        params_root=tmp_path / "params",
+    )
+
+    assert [task.task_id for task in tasks] == [
+        "pysr_s520_clean_g0001",
+        "pysr_s520_noise001_g0001",
+        "pysr_s521_clean_g0001",
+        "pysr_s521_noise001_g0001",
+    ]
+    assert [task.params_name for task in tasks] == [
+        "pysr__clean",
+        "pysr__noise001",
+        "pysr__clean",
+        "pysr__noise001",
+    ]
+    assert [task.noise_tag for task in tasks] == ["clean", "noise001", "clean", "noise001"]
+
+
 def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
     source_csv = tmp_path / "smoke.csv"
     source_csv.write_text(

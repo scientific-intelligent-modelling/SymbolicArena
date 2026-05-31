@@ -22,6 +22,7 @@ def check_preflight_report(
     }
     requested_tools = [str(tool) for tool in report.get("requested_tools", [])]
     requested_envs = [str(env) for env in report.get("requested_envs", [])]
+    requested_params = [str(name) for name in report.get("requested_params", [])] or requested_tools
 
     issues: list[str] = []
     for host in expected_hosts:
@@ -34,6 +35,7 @@ def check_preflight_report(
             item=item,
             requested_tools=requested_tools,
             requested_envs=requested_envs,
+            requested_params=requested_params,
             issues=issues,
         )
 
@@ -59,18 +61,25 @@ def _check_host(
     item: dict[str, Any],
     requested_tools: list[str],
     requested_envs: list[str],
+    requested_params: list[str],
     issues: list[str],
 ) -> None:
     if item.get("ok") is False:
         issues.append(f"{host} preflight transport failed: {item.get('stage') or item.get('error') or 'unknown'}")
         return
-    _check_files(host, item.get("files"), requested_tools, issues)
+    _check_files(host, item.get("files"), requested_tools, requested_params, issues)
     _check_dataset_sync(host, item.get("dataset_sync"), issues)
-    _check_params(host, item.get("params"), requested_tools, issues)
+    _check_params(host, item.get("params"), requested_params, issues)
     _check_envs(host, item.get("envs"), requested_envs, issues)
 
 
-def _check_files(host: str, files: object, requested_tools: list[str], issues: list[str]) -> None:
+def _check_files(
+    host: str,
+    files: object,
+    requested_tools: list[str],
+    requested_params: list[str],
+    issues: list[str],
+) -> None:
     if not isinstance(files, dict):
         issues.append(f"{host} files report missing")
         return
@@ -83,7 +92,8 @@ def _check_files(host: str, files: object, requested_tools: list[str], issues: l
     ]
     for tool in requested_tools:
         required_labels.append(f"{tool}_wrapper")
-        required_labels.append(f"{tool}_params")
+    for params_name in requested_params:
+        required_labels.append(f"{params_name}_params")
     for label in required_labels:
         if label not in files:
             issues.append(f"{host} file {label} missing")
@@ -106,21 +116,22 @@ def _check_dataset_sync(host: str, dataset_sync: object, issues: list[str]) -> N
         issues.append(f"{host} dataset sync mismatch missing={missing} size={size} hash={hashes}")
 
 
-def _check_params(host: str, params: object, requested_tools: list[str], issues: list[str]) -> None:
+def _check_params(host: str, params: object, requested_params: list[str], issues: list[str]) -> None:
     if not isinstance(params, dict):
         issues.append(f"{host} params report missing")
         return
-    for tool in requested_tools:
-        payload = params.get(tool)
+    for params_name in requested_params:
+        payload = params.get(params_name)
         if not isinstance(payload, dict):
-            issues.append(f"{host} params {tool} missing")
+            issues.append(f"{host} params {params_name} missing")
             continue
         if payload.get("exists") is not True:
-            issues.append(f"{host} params {tool} file missing")
+            issues.append(f"{host} params {params_name} file missing")
         if payload.get("json_ok") is not True:
-            issues.append(f"{host} params {tool} json invalid")
+            issues.append(f"{host} params {params_name} json invalid")
+        tool = params_name.split("__", 1)[0].split("_", 1)[0]
         if tool in {"llmsr", "drsr"} and payload.get("llm_config_exists") is not True:
-            issues.append(f"{host} params {tool} llm config missing")
+            issues.append(f"{host} params {params_name} llm config missing")
 
 
 def _check_envs(host: str, env_report: object, requested_envs: list[str], issues: list[str]) -> None:

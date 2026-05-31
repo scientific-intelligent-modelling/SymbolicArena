@@ -138,6 +138,116 @@ def test_readiness_passes_for_complete_stage1_batch(tmp_path: Path) -> None:
     assert saved["ready"] is True
 
 
+def test_readiness_passes_for_formal24h_batch(tmp_path: Path) -> None:
+    readiness = load_for_test("readiness")
+    batch_dir = tmp_path / "batch"
+    tools = (
+        "gplearn",
+        "pyoperon",
+        "pysr",
+        "dso",
+        "tpsr",
+        "e2esr",
+        "fepysr",
+        "jaxsr",
+        "QLattice",
+        "iMCTS",
+        "udsr",
+        "ragsr",
+        "symbolfit",
+    )
+    noises = (("clean", "0"), ("noise001", "0.01"), ("noise005", "0.05"))
+    tasks = [
+        {
+            "task_id": f"{tool}__seed{seed}__{noise_tag}__dataset_{dataset_idx:04d}",
+            "algorithm": tool,
+            "dataset_id": f"dataset_{dataset_idx:04d}",
+            "dataset_dir": f"sim-datasets-data/ssr50/dataset_{dataset_idx:04d}",
+            "seed": str(seed),
+            "noise_tag": noise_tag,
+            "noise_sigma": noise_sigma,
+            "timeout_in_seconds": "86400",
+            "min_runtime_seconds": "82800",
+            "progress_snapshot_interval_seconds": "60",
+        }
+        for tool in tools
+        for seed in (520, 521, 522)
+        for noise_tag, noise_sigma in noises
+        for dataset_idx in range(50)
+    ]
+    datasets = [
+        {
+            "dataset_id": f"dataset_{dataset_idx:04d}",
+            "dataset_dir": f"sim-datasets-data/ssr50/dataset_{dataset_idx:04d}",
+        }
+        for dataset_idx in range(50)
+    ]
+    algorithms = {tool: {"env": "sim_base", "regressor": tool} for tool in tools}
+    _write_csv(batch_dir / "manifest" / "tasks.csv", tasks)
+    _write_csv(batch_dir / "manifest" / "datasets.csv", datasets)
+    _write_csv(
+        batch_dir / "manifest" / "noise_levels.csv",
+        [{"noise_tag": noise_tag, "noise_sigma": noise_sigma} for noise_tag, noise_sigma in noises],
+    )
+    (batch_dir / "manifest" / "algorithms.json").write_text(json.dumps(algorithms), encoding="utf-8")
+    _write_csv(
+        batch_dir / "queues" / "ssr50_source.csv",
+        [
+            {
+                "global_index": str(dataset_idx + 1),
+                "dataset_id": f"dataset_{dataset_idx:04d}",
+                "dataset_name": f"dataset_{dataset_idx:04d}",
+                "dataset_dir": f"sim-datasets-data/ssr50/dataset_{dataset_idx:04d}",
+                "dataset_rel": f"sim-datasets-data/ssr50/dataset_{dataset_idx:04d}",
+            }
+            for dataset_idx in range(50)
+        ],
+    )
+    _write_csv(
+        batch_dir / "queues" / "smoke_2datasets_source.csv",
+        [
+            {
+                "global_index": str(dataset_idx + 1),
+                "dataset_id": f"dataset_{dataset_idx:04d}",
+                "dataset_name": f"dataset_{dataset_idx:04d}",
+                "dataset_dir": f"sim-datasets-data/ssr50/dataset_{dataset_idx:04d}",
+                "dataset_rel": f"sim-datasets-data/ssr50/dataset_{dataset_idx:04d}",
+            }
+            for dataset_idx in range(2)
+        ],
+    )
+    _write_ready_batch(batch_dir)
+    _write_csv(batch_dir / "manifest" / "tasks.csv", tasks)
+    _write_csv(batch_dir / "manifest" / "datasets.csv", datasets)
+    _write_csv(
+        batch_dir / "manifest" / "noise_levels.csv",
+        [{"noise_tag": noise_tag, "noise_sigma": noise_sigma} for noise_tag, noise_sigma in noises],
+    )
+    (batch_dir / "manifest" / "algorithms.json").write_text(json.dumps(algorithms), encoding="utf-8")
+    for tool in tools:
+        params_tool = {"QLattice": "qlattice", "iMCTS": "imcts"}.get(tool, tool)
+        for noise_tag, noise_sigma in noises:
+            (batch_dir / "params").mkdir(parents=True, exist_ok=True)
+            (batch_dir / "params" / f"{params_tool}__{noise_tag}.json").write_text(
+                json.dumps(
+                    {
+                        "timeout_in_seconds": 86400,
+                        "progress_snapshot_interval_seconds": 60,
+                        "train_label_noise_sigma": float(noise_sigma),
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+    summary = readiness.check_readiness(batch_dir=batch_dir, profile="formal24h_13alg_3seed_3noise")
+
+    assert summary["ready"] is True
+    assert summary["total_tasks"] == 5850
+    assert summary["total_algorithms"] == 13
+    assert summary["total_noise_levels"] == 3
+    assert summary["issues"] == []
+
+
 def test_readiness_reports_missing_full_queue_and_scripts(tmp_path: Path) -> None:
     readiness = load_for_test("readiness")
     batch_dir = tmp_path / "batch"
@@ -203,8 +313,9 @@ def test_readiness_launcher_resolves_repo_relative_paths(tmp_path: Path, monkeyp
     fake_root = tmp_path / "repo"
     calls: list[Path] = []
 
-    def fake_check_readiness(*, batch_dir: Path) -> dict[str, object]:
+    def fake_check_readiness(*, batch_dir: Path, profile: str = "stage1_1h") -> dict[str, object]:
         calls.append(batch_dir)
+        assert profile == "stage1_1h"
         return {"ready": True, "issues": []}
 
     monkeypatch.setattr(launcher, "ROOT", fake_root)

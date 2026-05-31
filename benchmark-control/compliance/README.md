@@ -26,6 +26,22 @@ benchmark-runs/
 
 阶段一只验证预算合规和落盘合规。通过后再扩展到 `3 seeds × 24h × noise`。
 
+## 正式 24h 范围
+
+```text
+13 algorithms × SSR50 × seeds(520,521,522) × noise(0,0.01,0.05) × 24h
+```
+
+正式 24h 批次排除 `llmsr` 与 `drsr` 两个大模型算法，总任务数为 `5850`。三档噪声统一编码为：
+
+```text
+clean    = 0.0
+noise001 = 0.01
+noise005 = 0.05
+```
+
+该批次产物放在被 Git 忽略的 `benchmark-runs/formal24h/`，不放入 `frozen-results/`。
+
 ## 本地准备命令
 
 以下命令默认在仓库根目录执行。`prepare_batch.py` 和 `audit_batch.py` 都支持传入 repo-relative 路径；真实批次产物写入 `benchmark-runs/`，该目录已被 Git 忽略，不会纳入提交。
@@ -87,3 +103,37 @@ python benchmark-control/compliance/launchers/audit_batch.py \
 ```
 
 `collect_remote_batch.py` 只用过滤 `rsync` 拉取 `result.json`、`progress/`、launcher 状态等审计所需轻量产物；`harvest_batch.py` 只把收集到的调度结果映射到当前批次的 `runs/` 审计布局。上面的 prepare、collect、harvest 和 audit 命令不会启动远端实验，也不会触发远端 dispatch。
+
+## 正式 24h 本地控制面准备
+
+以下命令只生成本地 manifest、params、queues、deploy 和 readiness，不启动 smoke/full：
+
+```bash
+BATCH_ID="formal24h_13alg_ssr50_seed520-522_noise0-001-005_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "benchmark-runs/formal24h/${BATCH_ID}"
+ln -sfn "${BATCH_ID}" benchmark-runs/formal24h/latest
+
+python benchmark-control/compliance/launchers/prepare_batch.py \
+  --profile formal24h_13alg_3seed_3noise \
+  --toolbox-config scientific_intelligent_modelling/config/toolbox_config.json \
+  --ssr50-root sim-datasets-data/ssr50 \
+  --batch-dir "benchmark-runs/formal24h/${BATCH_ID}"
+
+python benchmark-control/compliance/launchers/write_full24h_queue_commands.py \
+  --batch-dir benchmark-runs/formal24h/latest
+
+python benchmark-control/compliance/launchers/check_stage1_readiness.py \
+  --profile formal24h_13alg_3seed_3noise \
+  --batch-dir benchmark-runs/formal24h/latest
+```
+
+期望 readiness 摘要：
+
+```text
+ready=true
+total_tasks=5850
+total_algorithms=13
+total_noise_levels=3
+```
+
+`deploy/02_smoke_dispatch_from_iaaccn22.sh` 的 smoke 规模是 `13 × 2 × 3 × 3 = 234` 个任务；`deploy/03_full_dispatch_from_iaaccn22.sh` 的 full 规模是 `5850` 个任务。

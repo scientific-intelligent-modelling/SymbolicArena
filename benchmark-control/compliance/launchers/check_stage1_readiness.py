@@ -22,9 +22,10 @@ def _resolve_repo_path(value: str) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", choices=["stage1_1h", "formal24h_13alg_3seed_3noise"], default="stage1_1h")
     parser.add_argument("--batch-dir", default="benchmark-runs/compliance/latest")
     args = parser.parse_args()
-    summary = check_readiness(batch_dir=_resolve_repo_path(args.batch_dir))
+    summary = check_readiness(batch_dir=_resolve_repo_path(args.batch_dir), profile=args.profile)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0 if summary["ready"] else 1
 

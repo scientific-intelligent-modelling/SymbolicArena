@@ -92,6 +92,31 @@ def test_preflight_gate_requires_tool_wrapper_and_param_file_hashes(tmp_path: Pa
     assert "iaaccn22 file gplearn_params missing" in summary["issues"]
 
 
+def test_preflight_gate_accepts_noise_aware_param_names(tmp_path: Path) -> None:
+    gate = load_for_test("preflight_gate")
+    report = _valid_report(["iaaccn22"])
+    report["requested_params"] = ["gplearn__clean", "gplearn__noise001"]
+    host = report["hosts"][0]
+    del host["files"]["gplearn_params"]
+    host["files"]["gplearn__clean_params"] = {"matches_expected": True}
+    host["files"]["gplearn__noise001_params"] = {"matches_expected": True}
+    host["params"] = {
+        "gplearn__clean": {"exists": True, "json_ok": True},
+        "gplearn__noise001": {"exists": True, "json_ok": True},
+    }
+    report_path = tmp_path / "preflight.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    summary = gate.check_preflight_report(
+        report_path=report_path,
+        expected_hosts=["iaaccn22"],
+        batch_dir=tmp_path / "batch",
+    )
+
+    assert summary["ready_for_smoke"] is True
+    assert summary["issues"] == []
+
+
 def test_preflight_gate_launcher_exits_nonzero_when_not_ready(tmp_path: Path, monkeypatch) -> None:
     launcher_path = (
         Path(__file__).resolve().parents[1]

@@ -81,8 +81,8 @@ FULL24H_ALGORITHMS = (
     "e2esr",
     "fepysr",
     "jaxsr",
-    "qlattice",
-    "imcts",
+    "QLattice",
+    "iMCTS",
     "udsr",
     "ragsr",
     "symbolfit",
@@ -123,13 +123,13 @@ def noise_tag_for_sigma(sigma: float) -> str:
 STAGE1_SPEC = ExperimentSpec(
     name="stage1_1h_compliance",
     algorithms=(
-        "qlattice",
+        "QLattice",
         "drsr",
         "dso",
         "e2esr",
         "fepysr",
         "gplearn",
-        "imcts",
+        "iMCTS",
         "jaxsr",
         "llmsr",
         "pyoperon",
@@ -229,8 +229,8 @@ def test_full24h_manifest_generation_writes_5850_noise_aware_tasks(tmp_path: Pat
                         "e2esr",
                         "fepysr",
                         "jaxsr",
-                        "qlattice",
-                        "imcts",
+                        "QLattice",
+                        "iMCTS",
                         "udsr",
                         "ragsr",
                         "symbolfit",
@@ -250,7 +250,7 @@ def test_full24h_manifest_generation_writes_5850_noise_aware_tasks(tmp_path: Pat
         batch_dir=batch_dir,
         git_revision="abc123",
         dataset_dir_base=tmp_path,
-        algorithms=("gplearn", "pyoperon", "pysr", "dso", "tpsr", "e2esr", "fepysr", "jaxsr", "qlattice", "imcts", "udsr", "ragsr", "symbolfit"),
+        algorithms=("gplearn", "pyoperon", "pysr", "dso", "tpsr", "e2esr", "fepysr", "jaxsr", "QLattice", "iMCTS", "udsr", "ragsr", "symbolfit"),
         seeds=(520, 521, 522),
         noise_sigmas=(0.0, 0.01, 0.05),
         timeout_in_seconds=86400,
@@ -892,7 +892,7 @@ TOOLS = "gplearn pyoperon pysr dso tpsr e2esr fepysr jaxsr qlattice imcts udsr r
 HOSTS = "iaaccn22 iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29"
 SEEDS = "520 521 522"
 NOISE_SIGMAS = "0 0.01 0.05"
-EXPECTED_SMOKE_TASKS = 702
+EXPECTED_SMOKE_TASKS = 234
 EXPECTED_FULL_TASKS = 5850
 ```
 

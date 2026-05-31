@@ -25,8 +25,8 @@ tpsr
 e2esr
 fepysr
 jaxsr
-qlattice
-imcts
+QLattice
+iMCTS
 udsr
 ragsr
 symbolfit
@@ -317,7 +317,7 @@ prepare → preflight → smoke → full → audit → repair/rerun
 任务数：
 
 ```text
-702
+234
 ```
 
 smoke 目标不是验证 24h runtime，而是验证：

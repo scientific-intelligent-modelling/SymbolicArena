@@ -43,8 +43,8 @@ tpsr
 e2esr
 fepysr
 jaxsr
-qlattice
-imcts
+QLattice
+iMCTS
 udsr
 ragsr
 symbolfit

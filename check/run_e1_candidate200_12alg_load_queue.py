@@ -93,6 +93,8 @@ class QueueTask:
     task_id: str
     tool: str
     seed: int
+    noise_tag: str
+    noise_sigma: float
     task_index: int
     rows: list[dict[str, str]]
     slice_path: Path
@@ -114,6 +116,13 @@ def _safe_text(value: object) -> str:
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return str(value)
+
+
+def _noise_tag_for_sigma(sigma: float) -> str:
+    if float(sigma) == 0.0:
+        return "clean"
+    scaled = int(round(float(sigma) * 100))
+    return f"noise{scaled:03d}"
 
 
 def _run(cmd: list[str], *, timeout: int = 60) -> subprocess.CompletedProcess[str]:
@@ -412,6 +421,12 @@ def _resolve_task_params_and_bucket(
     return params_name, bucket
 
 
+def _with_noise_params_name(params_name: str, noise_tag: str, *, use_noise_dimension: bool) -> str:
+    if not use_noise_dimension:
+        return params_name
+    return f"{params_name}__{noise_tag}"
+
+
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
@@ -429,42 +444,57 @@ def _build_tasks(
     seeds: list[int],
     queue_root: Path,
     params_root: Path,
+    noise_sigmas: list[float] | None = None,
     llm_model_assignment: str = "from-params",
     llm_model_buckets: list[str] | None = None,
     llm_default_bucket: str = "base",
 ) -> list[QueueTask]:
     tasks: list[QueueTask] = []
     llm_model_buckets = [bucket.strip().lower() for bucket in (llm_model_buckets or ["base", "turbo"]) if bucket.strip()]
+    use_noise_dimension = noise_sigmas is not None
+    resolved_noise_sigmas = [float(sigma) for sigma in (noise_sigmas if noise_sigmas is not None else [0.0])]
     for seed in seeds:
-        for tool in tools:
-            task_size = int(TOOL_CONFIG[tool]["task_size"])
-            for task_index, start in enumerate(range(0, len(rows), task_size), start=1):
-                task_rows = rows[start : start + task_size]
-                global_index = task_rows[0].get("global_index", str(task_index))
-                task_id = f"{tool}_s{seed}_g{int(global_index):04d}"
-                slice_path = queue_root / "slices" / tool / f"seed{seed}" / f"{task_id}.csv"
-                params_name, llm_model_bucket = _resolve_task_params_and_bucket(
-                    tool=tool,
-                    seed=seed,
-                    row=task_rows[0],
-                    task_index=task_index,
-                    params_root=params_root,
-                    llm_model_assignment=llm_model_assignment,
-                    llm_model_buckets=llm_model_buckets,
-                    llm_default_bucket=llm_default_bucket,
-                )
-                tasks.append(
-                    QueueTask(
-                        task_id=task_id,
+        for noise_sigma in resolved_noise_sigmas:
+            noise_tag = _noise_tag_for_sigma(noise_sigma)
+            for tool in tools:
+                task_size = int(TOOL_CONFIG[tool]["task_size"])
+                for task_index, start in enumerate(range(0, len(rows), task_size), start=1):
+                    task_rows = rows[start : start + task_size]
+                    global_index = task_rows[0].get("global_index", str(task_index))
+                    if use_noise_dimension:
+                        task_id = f"{tool}_s{seed}_{noise_tag}_g{int(global_index):04d}"
+                        slice_path = queue_root / "slices" / tool / f"seed{seed}" / noise_tag / f"{task_id}.csv"
+                    else:
+                        task_id = f"{tool}_s{seed}_g{int(global_index):04d}"
+                        slice_path = queue_root / "slices" / tool / f"seed{seed}" / f"{task_id}.csv"
+                    params_name, llm_model_bucket = _resolve_task_params_and_bucket(
                         tool=tool,
                         seed=seed,
+                        row=task_rows[0],
                         task_index=task_index,
-                        rows=task_rows,
-                        slice_path=slice_path,
-                        params_name=params_name,
-                        llm_model_bucket=llm_model_bucket,
+                        params_root=params_root,
+                        llm_model_assignment=llm_model_assignment,
+                        llm_model_buckets=llm_model_buckets,
+                        llm_default_bucket=llm_default_bucket,
                     )
-                )
+                    tasks.append(
+                        QueueTask(
+                            task_id=task_id,
+                            tool=tool,
+                            seed=seed,
+                            noise_tag=noise_tag,
+                            noise_sigma=noise_sigma,
+                            task_index=task_index,
+                            rows=task_rows,
+                            slice_path=slice_path,
+                            params_name=_with_noise_params_name(
+                                params_name,
+                                noise_tag,
+                                use_noise_dimension=use_noise_dimension,
+                            ),
+                            llm_model_bucket=llm_model_bucket,
+                        )
+                    )
     return tasks
 
 
@@ -559,6 +589,8 @@ def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
                 "task_id": task.task_id,
                 "tool": task.tool,
                 "seed": task.seed,
+                "noise_tag": task.noise_tag,
+                "noise_sigma": task.noise_sigma,
                 "task_index": task.task_index,
                 "expected": task.expected,
                 "params_name": task.params_name,
@@ -595,6 +627,8 @@ def _load_or_init_state(batch_name: str, tasks: list[QueueTask], queue_root: Pat
             for key, expected_value in {
                 "params_name": expected.params_name,
                 "llm_model_bucket": expected.llm_model_bucket,
+                "noise_tag": expected.noise_tag,
+                "noise_sigma": expected.noise_sigma,
             }.items():
                 current = task_state.get(key)
                 if current in (None, ""):
@@ -1088,6 +1122,8 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
             "batch_name": args.batch_name,
             "params_name": task.params_name,
             "llm_model_bucket": task.llm_model_bucket,
+            "noise_tag": task.noise_tag,
+            "noise_sigma": task.noise_sigma,
         }
     )
 
@@ -1134,6 +1170,8 @@ def _start_tasks_on_host(
                 "batch_name": args.batch_name,
                 "params_name": task.params_name,
                 "llm_model_bucket": task.llm_model_bucket,
+                "noise_tag": task.noise_tag,
+                "noise_sigma": task.noise_sigma,
             }
         )
         events.append(
@@ -1143,6 +1181,8 @@ def _start_tasks_on_host(
                 "host": host,
                 "tool": task.tool,
                 "seed": task.seed,
+                "noise_tag": task.noise_tag,
+                "noise_sigma": task.noise_sigma,
                 "params_name": task.params_name,
                 "llm_model_bucket": task.llm_model_bucket,
             }
@@ -1214,10 +1254,13 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
 def _summarize_state(state: dict[str, Any], host_states: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     counts = Counter(task["state"] for task in state["tasks"].values())
     by_tool_state: dict[str, Counter[str]] = {}
+    by_noise_state: dict[str, Counter[str]] = {}
     by_llm_bucket_state: dict[str, Counter[str]] = {}
     for task in state["tasks"].values():
         tool = str(task["tool"])
         by_tool_state.setdefault(tool, Counter())[str(task["state"])] += 1
+        noise_tag = str(task.get("noise_tag") or "clean")
+        by_noise_state.setdefault(noise_tag, Counter())[str(task["state"])] += 1
         bucket = task.get("llm_model_bucket")
         if bucket:
             by_llm_bucket_state.setdefault(str(bucket), Counter())[str(task["state"])] += 1
@@ -1226,6 +1269,7 @@ def _summarize_state(state: dict[str, Any], host_states: list[dict[str, Any]] | 
         "time": _now(),
         "task_states": dict(sorted(counts.items())),
         "by_tool": {tool: dict(sorted(counter.items())) for tool, counter in sorted(by_tool_state.items())},
+        "by_noise_tag": {tag: dict(sorted(counter.items())) for tag, counter in sorted(by_noise_state.items())},
         "by_llm_model_bucket": {
             bucket: dict(sorted(counter.items())) for bucket, counter in sorted(by_llm_bucket_state.items())
         },
@@ -1520,7 +1564,6 @@ from pathlib import Path
 
 REMOTE_ROOT = Path("/home/zhangziwen/workplace/scientific-intelligent-modelling")
 REMOTE_DATA_ROOT = Path("/home/zhangziwen/sim-datasets-data")
-PARAMS_ROOT = REMOTE_ROOT / "exp-planning/02.E1选择验证/generated/params"
 
 ENV_IMPORTS = {
     "sim_base": [
@@ -1629,15 +1672,19 @@ def check_dataset_sync(expected: list[dict]) -> dict:
     }
 
 
-def check_params(tools: list[str]) -> dict:
+def check_params(params_root_rel: str, params_names: list[str]) -> dict:
+    params_root = Path(params_root_rel)
+    if not params_root.is_absolute():
+        params_root = REMOTE_ROOT / params_root
     out = {}
-    for tool in tools:
-        path = PARAMS_ROOT / f"{tool}.json"
+    for params_name in params_names:
+        path = params_root / f"{params_name}.json"
         item = {"exists": path.exists(), "path": str(path)}
         if path.exists():
             try:
                 payload = json.loads(path.read_text(encoding="utf-8"))
                 item["json_ok"] = True
+                tool = params_name.split("__", 1)[0].split("_", 1)[0]
                 if tool in {"llmsr", "drsr"}:
                     item["inject_prompt_semantics"] = payload.get("inject_prompt_semantics")
                     item["canonical_prompt_variables"] = payload.get("canonical_prompt_variables")
@@ -1648,7 +1695,7 @@ def check_params(tools: list[str]) -> dict:
             except Exception as exc:
                 item["json_ok"] = False
                 item["error"] = repr(exc)
-        out[tool] = item
+        out[params_name] = item
     return out
 
 
@@ -1690,6 +1737,8 @@ def main() -> None:
         payload = json.loads(request_arg)
     tools = payload["tools"]
     envs = payload["envs"]
+    params_root_rel = payload.get("params_root_rel", "exp-planning/02.E1选择验证/generated/params")
+    params_names = payload.get("params_names") or tools
     local_head = payload.get("local_head")
     local_files = payload.get("local_files", {})
     local_hashes = payload.get("local_hashes", {})
@@ -1721,7 +1770,7 @@ def main() -> None:
         },
         "files": files,
         "dataset_sync": check_dataset_sync(expected_dataset_fingerprints),
-        "params": check_params(tools),
+        "params": check_params(params_root_rel, params_names),
         "envs": check_envs(envs),
     }, ensure_ascii=False))
 
@@ -1753,7 +1802,12 @@ def _local_file_hashes(local_files: dict[str, str]) -> dict[str, str | None]:
     return out
 
 
-def _preflight_local_files(source_csv_path: Path | None = None) -> dict[str, str]:
+def _preflight_local_files(
+    source_csv_path: Path | None = None,
+    *,
+    params_root_path: Path | None = None,
+    params_names: list[str] | None = None,
+) -> dict[str, str]:
     rels = {
         "scheduler": "check/run_e1_candidate200_12alg_load_queue.py",
         "launcher": "check/launch_e1_benchmark.py",
@@ -1768,8 +1822,16 @@ def _preflight_local_files(source_csv_path: Path | None = None) -> dict[str, str
             pass
     for tool, wrapper_path in sorted(WRAPPER_PATHS.items()):
         rels[f"{tool}_wrapper"] = wrapper_path
-    for tool in sorted(TOOL_CONFIG):
-        rels[f"{tool}_params"] = f"exp-planning/02.E1选择验证/generated/params/{TOOL_CONFIG[tool]['params']}.json"
+    if params_root_path is not None and params_names is not None:
+        root = params_root_path if params_root_path.is_absolute() else REPO_ROOT / params_root_path
+        for params_name in sorted(set(params_names)):
+            try:
+                rels[f"{params_name}_params"] = (root / f"{params_name}.json").relative_to(REPO_ROOT).as_posix()
+            except ValueError:
+                continue
+    else:
+        for tool in sorted(TOOL_CONFIG):
+            rels[f"{tool}_params"] = f"exp-planning/02.E1选择验证/generated/params/{TOOL_CONFIG[tool]['params']}.json"
     return rels
 
 
@@ -1823,14 +1885,29 @@ def _local_candidate_data_fingerprints(rows: list[dict[str, str]]) -> list[dict[
     return out
 
 
-def _run_preflight(args: argparse.Namespace) -> dict[str, Any]:
+def _run_preflight(args: argparse.Namespace, tasks: list[QueueTask] | None = None) -> dict[str, Any]:
     script = _write_preflight_script(args.queue_root_path)
     remote_script = Path("/tmp/e1_candidate200_12alg_preflight.py")
     rows = _read_rows(args.source_csv_path, expected_rows=args.expected_rows_value)
-    local_files = _preflight_local_files(args.source_csv_path)
+    params_root_path = getattr(args, "params_root_path", PARAMS_ROOT)
+    if tasks is None:
+        params_names = sorted({str(TOOL_CONFIG[tool]["params"]) for tool in args.tools})
+    else:
+        params_names = sorted({task.params_name for task in tasks})
+    local_files = _preflight_local_files(
+        args.source_csv_path,
+        params_root_path=params_root_path,
+        params_names=params_names,
+    )
+    try:
+        params_root_rel = params_root_path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        params_root_rel = str(params_root_path)
     request = {
         "tools": args.tools,
         "envs": _selected_envs(args.tools),
+        "params_root_rel": params_root_rel,
+        "params_names": params_names,
         "local_head": _local_git_head(),
         "local_hashes": _local_file_hashes(local_files),
         "local_files": local_files,
@@ -1874,6 +1951,7 @@ def _run_preflight(args: argparse.Namespace) -> dict[str, Any]:
         "hosts": host_reports,
         "requested_tools": args.tools,
         "requested_envs": _selected_envs(args.tools),
+        "requested_params": params_names,
     }
     if args.preflight_report:
         report_path = Path(args.preflight_report)
@@ -1895,6 +1973,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--hosts", nargs="+", default=list(DEFAULT_HOSTS))
     parser.add_argument("--tools", nargs="+", default=list(DEFAULT_TOOLS), choices=sorted(TOOL_CONFIG))
     parser.add_argument("--seeds", nargs="+", type=int, default=list(DEFAULT_SEEDS))
+    parser.add_argument("--noise-sigmas", nargs="*", type=float, default=None)
     parser.add_argument("--controller-host", default="iaaccn23")
     parser.add_argument("--use-internal-ips", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--remote-root", default=str(REMOTE_ROOT), help="默认远端仓库根目录。")
@@ -1988,6 +2067,7 @@ def _parse_args() -> argparse.Namespace:
     args.llm_default_bucket = str(args.llm_default_bucket).strip().lower()
     args.host_session_count_prefix = args.host_session_count_prefix or args.session_prefix
     args.tools = [str(tool).strip().lower() for tool in args.tools]
+    args.noise_sigmas = None if args.noise_sigmas is None else [float(sigma) for sigma in args.noise_sigmas]
     args.source_csv_path = Path(args.source_csv).expanduser()
     if not args.source_csv_path.is_absolute():
         args.source_csv_path = REPO_ROOT / args.source_csv_path
@@ -2013,6 +2093,7 @@ def main() -> None:
         rows,
         tools=args.tools,
         seeds=args.seeds,
+        noise_sigmas=args.noise_sigmas,
         queue_root=args.queue_root_path,
         params_root=args.params_root_path,
         llm_model_assignment=args.llm_model_assignment,
@@ -2034,6 +2115,7 @@ def main() -> None:
                 "host_remote_data_root_overrides": {k: str(v) for k, v in args.host_remote_data_root_overrides_parsed.items()},
                 "tools": args.tools,
                 "seeds": args.seeds,
+                "noise_sigmas": args.noise_sigmas or [0.0],
                 "tasks": len(tasks),
                 "tool_config": {tool: TOOL_CONFIG[tool] for tool in args.tools},
                 "load_tier_new_jobs": args.load_tier_new_jobs,
@@ -2051,7 +2133,7 @@ def main() -> None:
         flush=True,
     )
     if args.preflight_only:
-        summary = _run_preflight(args)
+        summary = _run_preflight(args, tasks)
         print(json.dumps({"event": "preflight_done", **summary}, ensure_ascii=False), flush=True)
         return
     if not args.dry_run:
