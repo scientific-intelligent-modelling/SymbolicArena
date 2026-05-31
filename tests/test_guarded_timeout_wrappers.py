@@ -22,6 +22,12 @@ def test_symbolfit_uses_guarded_internal_pysr_timeout() -> None:
     assert reg.params["timeout_in_seconds"] == 3300
 
 
+def test_symbolfit_short_smoke_budget_leaves_refit_and_write_guard() -> None:
+    reg = SymbolFitRegressor(timeout_in_seconds=600)
+
+    assert reg.params["timeout_in_seconds"] == 420
+
+
 def test_explicit_timeout_guard_overrides_default_guard() -> None:
     reg = SymbolFitRegressor(timeout_in_seconds=3600, timeout_guard_seconds=120)
 

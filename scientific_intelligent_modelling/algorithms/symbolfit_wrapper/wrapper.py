@@ -121,7 +121,8 @@ class SymbolFitRegressor(BaseWrapper):
         explicit_guard = cls._positive_int(raw_guard)
         if explicit_guard is not None:
             return explicit_guard
-        return min(300, max(1, int(timeout_seconds * 0.1)))
+        guard_ratio = 0.3 if timeout_seconds >= 600 else 0.1
+        return min(300, max(1, int(timeout_seconds * guard_ratio)))
 
     def _apply_internal_timeout_guard(self, raw_kwargs: dict[str, Any]) -> None:
         timeout_seconds = self._positive_int(raw_kwargs.get("timeout_in_seconds"))
