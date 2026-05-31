@@ -52,6 +52,7 @@ def _equation_function() -> str:
 
 class BenchmarkProgressSnapshotsTest(unittest.TestCase):
     def test_snapshot_capable_tools_default_to_one_minute_interval(self):
+        self.assertIn("symbolfit", runner._SNAPSHOT_CAPABLE_TOOL_KEYS)
         for tool in runner._SNAPSHOT_CAPABLE_TOOLS:
             with self.subTest(tool=tool):
                 params = {}
@@ -649,6 +650,44 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["record_type"], "final_best")
             self.assertEqual(payload["tool"], "symbolfit")
             self.assertEqual(payload["status"], "ok")
+            self.assertAlmostEqual(payload["valid"]["rmse"], 0.0, places=10)
+
+    def test_build_periodic_snapshot_payload_for_symbolfit_active_pysr_hof(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            exp_dir = root / "exp"
+            work_dir = exp_dir / "symbolfit_work" / "attempt_0001"
+            hof_dir = work_dir / "outputs_tmp" / "20260601_demo"
+            hof_dir.mkdir(parents=True, exist_ok=True)
+            _write_dataset(dataset_dir)
+            (hof_dir / "hall_of_fame.csv").write_text(
+                "Complexity,Loss,Equation\n"
+                "1,10.0,1.0\n"
+                "5,0.0,1 + 2*x0 + 3*x1\n",
+                encoding="utf-8",
+            )
+            (exp_dir / ".symbolfit_active_run.json").write_text(
+                json.dumps({"tool": "symbolfit", "attempt": 1, "work_dir": str(work_dir)}),
+                encoding="utf-8",
+            )
+
+            dataset = runner.load_canonical_dataset(dataset_dir)
+            payload = runner._build_periodic_snapshot_payload(
+                tool_name="symbolfit",
+                dataset=dataset,
+                params={"niterations": 100},
+                seed=520,
+                started_at=time.time() - 120,
+                experiment_dir=exp_dir,
+                checkpoint_index=1,
+            )
+
+            self.assertIsNotNone(payload)
+            self.assertEqual(payload["record_type"], "periodic_best")
+            self.assertEqual(payload["tool"], "symbolfit")
+            self.assertEqual(payload["status"], "ok")
+            self.assertEqual(payload["source_loss"], 0.0)
             self.assertAlmostEqual(payload["valid"]["rmse"], 0.0, places=10)
 
 

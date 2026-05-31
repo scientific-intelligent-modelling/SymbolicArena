@@ -46,6 +46,7 @@ _SNAPSHOT_CAPABLE_TOOLS = {
     "QLattice",
     "ragsr",
     "fepysr",
+    "symbolfit",
 }
 _SNAPSHOT_CAPABLE_TOOL_KEYS = {tool.lower() for tool in _SNAPSHOT_CAPABLE_TOOLS}
 
@@ -860,9 +861,7 @@ def _with_drsr_candidate_params(
     return candidate
 
 
-def _extract_pysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
-    base_dir = Path(experiment_dir)
-    candidate_paths = [base_dir / "hall_of_fame.csv", base_dir / "hall_of_fame.csv.bak"]
+def _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths: list[Path]) -> dict[str, Any] | None:
     best_loss = None
     best_item = None
     for path in candidate_paths:
@@ -889,8 +888,14 @@ def _extract_pysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, An
                     "equation": equation,
                     "loss": loss_val,
                     "complexity": row.get("Complexity"),
-                }
+                    }
     return best_item
+
+
+def _extract_pysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
+    base_dir = Path(experiment_dir)
+    candidate_paths = [base_dir / "hall_of_fame.csv", base_dir / "hall_of_fame.csv.bak"]
+    return _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths)
 
 
 def _extract_dso_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
@@ -1053,14 +1058,38 @@ def _extract_fepysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, 
 
 
 def _extract_symbolfit_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
-    path = Path(experiment_dir) / ".symbolfit_current_best.json"
+    base_dir = Path(experiment_dir)
+    path = base_dir / ".symbolfit_current_best.json"
     item = _read_json_file(path)
-    if not item:
+    if item:
+        equation = item.get("equation")
+        if isinstance(equation, str) and equation.strip():
+            return item
+
+    active = _read_json_file(base_dir / ".symbolfit_active_run.json")
+    if not active:
         return None
-    equation = item.get("equation")
-    if not isinstance(equation, str) or not equation.strip():
+    work_dir = active.get("work_dir")
+    if not isinstance(work_dir, str) or not work_dir.strip():
         return None
-    return item
+    work_path = Path(work_dir)
+    if not work_path.is_dir():
+        return None
+    candidate_paths = sorted(
+        [
+            *work_path.glob("outputs_tmp/*/hall_of_fame.csv"),
+            *work_path.glob("outputs_tmp/*/hall_of_fame.csv.bak"),
+        ],
+        key=lambda item_path: item_path.stat().st_mtime if item_path.exists() else 0,
+        reverse=True,
+    )
+    candidate = _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths)
+    if candidate is None:
+        return None
+    candidate["tool"] = "symbolfit"
+    candidate["source"] = "symbolfit_active_pysr_hall_of_fame"
+    candidate["attempt"] = active.get("attempt")
+    return candidate
 
 
 def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> dict[str, Any] | None:

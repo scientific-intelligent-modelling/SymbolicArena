@@ -260,6 +260,50 @@ def test_symbolfit_current_best_snapshot_supports_timeout_recovery(monkeypatch, 
     assert recovered["equation"] == "X0"
 
 
+def test_symbolfit_writes_active_pysr_work_dir_for_progress_snapshots(monkeypatch, tmp_path) -> None:
+    observed_work_dirs = []
+
+    class FakePySRRegressor:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class FakeTable:
+        def __len__(self):
+            return 1
+
+        def iterrows(self):
+            yield 0, {
+                "RMSE": 1.0,
+                "R2": 0.0,
+                "Parameterized equation": "X0",
+            }
+
+    class FakeSymbolFit:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.func_candidates = FakeTable()
+
+        def fit(self):
+            observed_work_dirs.append(symbolfit_module.Path.cwd())
+            return None
+
+    symbolfit_pkg = types.ModuleType("symbolfit")
+    symbolfit_submodule = types.ModuleType("symbolfit.symbolfit")
+    symbolfit_submodule.SymbolFit = FakeSymbolFit
+    monkeypatch.setitem(sys.modules, "pysr", types.SimpleNamespace(PySRRegressor=FakePySRRegressor))
+    monkeypatch.setitem(sys.modules, "symbolfit", symbolfit_pkg)
+    monkeypatch.setitem(sys.modules, "symbolfit.symbolfit", symbolfit_submodule)
+
+    reg = SymbolFitRegressor(exp_path=str(tmp_path), exp_name="case", n_features=1, timeout_in_seconds=10)
+    reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
+
+    exp_dir = tmp_path / "case"
+    active = (exp_dir / ".symbolfit_active_run.json").read_text(encoding="utf-8")
+    assert "symbolfit_work" in active
+    assert observed_work_dirs
+    assert exp_dir / "symbolfit_work" in observed_work_dirs[0].parents
+
+
 def test_symbolfit_short_budget_uses_external_deadline_with_guarded_inner_runs(monkeypatch) -> None:
     clock = {"now": 0.0}
     inner_timeouts = []

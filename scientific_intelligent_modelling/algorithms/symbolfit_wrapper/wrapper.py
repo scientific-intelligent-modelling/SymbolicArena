@@ -5,6 +5,7 @@ import os
 import re
 import tempfile
 import time
+from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -253,6 +254,38 @@ class SymbolFitRegressor(BaseWrapper):
         except Exception:
             return
 
+    @contextmanager
+    def _attempt_work_dir(self, attempt: int):
+        if self._experiment_dir is None:
+            with tempfile.TemporaryDirectory(prefix="symbolfit_") as tmpdir:
+                yield Path(tmpdir)
+            return
+        work_dir = (
+            self._experiment_dir
+            / "symbolfit_work"
+            / f"attempt_{int(attempt):04d}_{os.getpid()}_{int(time.time())}"
+        )
+        work_dir.mkdir(parents=True, exist_ok=True)
+        yield work_dir
+
+    def _write_active_run_snapshot(self, *, attempt: int, work_dir: Path) -> None:
+        if self._experiment_dir is None:
+            return
+        payload = {
+            "tool": "symbolfit",
+            "attempt": int(attempt),
+            "work_dir": str(work_dir),
+            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            path = self._experiment_dir / ".symbolfit_active_run.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = path.with_suffix(path.suffix + ".tmp")
+            tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp_path.replace(path)
+        except Exception:
+            return
+
     @staticmethod
     def _build_callable(expr: str):
         import sympy as sp
@@ -334,8 +367,9 @@ class SymbolFitRegressor(BaseWrapper):
                 )
             if iteration_params.get("random_state") is not None:
                 iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
-            with tempfile.TemporaryDirectory(prefix="symbolfit_") as tmpdir:
+            with self._attempt_work_dir(attempt) as tmpdir:
                 try:
+                    self._write_active_run_snapshot(attempt=attempt, work_dir=tmpdir)
                     os.chdir(tmpdir)
                     model = SymbolFit(
                         x=X_arr,
