@@ -72,6 +72,18 @@ def _sync_script(*, batch_dir: Path) -> str:
             "--exclude=__pycache__/",
             "--exclude=*.pyc",
             "--exclude=*.pyo",
+            "--exclude=benchmark-runs/formal24h/*/audit/",
+            "--exclude=benchmark-runs/formal24h/*/smoke/audit/",
+            "--exclude=benchmark-runs/formal24h/*/collect/",
+            "--exclude=benchmark-runs/formal24h/*/smoke/collect/",
+            "--exclude=benchmark-runs/formal24h/*/harvest/",
+            "--exclude=benchmark-runs/formal24h/*/smoke/harvest/",
+            "--exclude=benchmark-runs/formal24h/*/remote-experiments/",
+            "--exclude=benchmark-runs/formal24h/*/smoke/remote-experiments/",
+            "--exclude=benchmark-runs/formal24h/*/queues/load_queue_*/",
+            "--exclude=benchmark-runs/formal24h/*/smoke/queues/load_queue_*/",
+            "--exclude=benchmark-runs/formal24h/*/heartbeat.json",
+            "--exclude=benchmark-runs/formal24h/*/smoke/heartbeat.json",
         )
     )
     return f"""#!/usr/bin/env bash

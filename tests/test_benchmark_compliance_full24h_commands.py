@@ -29,6 +29,11 @@ def test_write_full24h_queue_commands_use_13_tools_3_seeds_3_noise(tmp_path: Pat
     smoke = (batch_dir / "deploy" / "02_smoke_dispatch_from_iaaccn22.sh").read_text(encoding="utf-8")
     full = (batch_dir / "deploy" / "03_full_dispatch_from_iaaccn22.sh").read_text(encoding="utf-8")
     assert "benchmark-runs/formal24h/latest" in sync
+    assert "--exclude=benchmark-runs/formal24h/*/audit/" in sync
+    assert "--exclude=benchmark-runs/formal24h/*/smoke/audit/" in sync
+    assert "--exclude=benchmark-runs/formal24h/*/remote-experiments/" in sync
+    assert "--exclude=benchmark-runs/formal24h/*/queues/load_queue_*/" in sync
+    assert "--exclude=benchmark-runs/formal24h/*/smoke/queues/load_queue_*/" in sync
     assert "--params-root benchmark-runs/formal24h/latest/params_smoke" in smoke
     assert "--expected-total-tasks 234" in smoke
     assert "--skip-support-sync" not in smoke
