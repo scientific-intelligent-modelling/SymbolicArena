@@ -53,6 +53,17 @@ class ResultArtifactsTest(unittest.TestCase):
         self.assertEqual(artifact["instantiated_expression"], "x0 + 2*x1")
         self.assertEqual(artifact["variables"], ["x0", "x1"])
 
+    def test_safe_build_canonical_artifact_for_symbolfit(self):
+        artifact, error = safe_build_canonical_artifact(
+            tool_name="symbolfit",
+            equation="1.5*x0 + sin(x1)",
+            expected_n_features=2,
+        )
+        self.assertIsNone(error)
+        self.assertEqual(artifact["tool_name"], "symbolfit")
+        self.assertEqual(artifact["normalized_expression"], "1.5*x0 + sin(x1)")
+        self.assertEqual(artifact["variables"], ["x0", "x1"])
+
     def test_safe_build_canonical_artifact_for_llmsr_function(self):
         raw = (
             "def equation(x0, x1, params):\n"

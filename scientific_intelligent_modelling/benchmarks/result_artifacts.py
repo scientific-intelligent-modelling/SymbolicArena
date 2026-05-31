@@ -92,6 +92,13 @@ def safe_build_canonical_artifact(
                 expected_n_features=expected_n_features,
                 shift_one_based=False,
             )
+        elif tool in {"symbolfit", "symbolfit_wrapper"}:
+            artifact = normalize_external_infix_artifact(
+                text,
+                tool_name="symbolfit",
+                expected_n_features=expected_n_features,
+                shift_one_based=False,
+            )
         else:
             raise ValueError(f"暂不支持的工具名: {tool_name!r}")
         artifact = validate_canonical_symbolic_program(artifact)
