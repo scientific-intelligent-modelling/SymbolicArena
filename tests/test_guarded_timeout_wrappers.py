@@ -4,6 +4,7 @@ import types
 import numpy as np
 
 from scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper import FePySRRegressor
+from scientific_intelligent_modelling.algorithms.QLattice_wrapper.wrapper import QLatticeRegressor
 from scientific_intelligent_modelling.algorithms.symbolfit_wrapper.wrapper import SymbolFitRegressor
 import scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper as fepysr_module
 import scientific_intelligent_modelling.algorithms.symbolfit_wrapper.wrapper as symbolfit_module
@@ -115,6 +116,57 @@ def test_fepysr_runtime_patch_sanitizes_nonfinite_features(monkeypatch) -> None:
     fepysr_impl_module.pysr_train(data_analyzer, None)
 
     assert observed == {"all_finite": True, "max_abs": FePySRRegressor._FEATURE_VALUE_LIMIT}
+
+
+def test_qlattice_standardizes_large_target_and_restores_predictions(monkeypatch) -> None:
+    observed = {}
+
+    class FakeModel:
+        def sympify(self, signif=4):
+            return "x0"
+
+        def predict(self, data):
+            return np.asarray(data["x0"], dtype=float)
+
+    class FakeQLattice:
+        def auto_run(self, **kwargs):
+            observed["target_mean"] = float(np.mean(kwargs["data"]["y"]))
+            observed["target_std"] = float(np.std(kwargs["data"]["y"]))
+            return [FakeModel()]
+
+    monkeypatch.setitem(sys.modules, "feyn", types.SimpleNamespace(QLattice=FakeQLattice))
+
+    y = np.asarray([1.0e9, 1.02e9, 1.04e9], dtype=float)
+    reg = QLatticeRegressor(n_epochs=1, target_standardize="auto")
+    reg.fit(np.asarray([[0.0], [1.0], [2.0]]), y)
+
+    assert reg._target_was_standardized is True
+    assert abs(observed["target_mean"]) < 1.0e-12
+    assert abs(observed["target_std"] - 1.0) < 1.0e-12
+    assert "x0" in reg.get_optimal_equation()
+    expected = reg._target_offset + reg._target_scale * np.asarray([0.0, 1.0])
+    np.testing.assert_allclose(reg.predict(np.asarray([[0.0], [1.0]])), expected)
+
+
+def test_qlattice_empty_search_falls_back_to_mean_constant(monkeypatch, tmp_path) -> None:
+    class FakeQLattice:
+        def auto_run(self, **kwargs):
+            return []
+
+    monkeypatch.setitem(sys.modules, "feyn", types.SimpleNamespace(QLattice=FakeQLattice))
+
+    reg = QLatticeRegressor(
+        n_epochs=2,
+        target_standardize=False,
+        exp_path=str(tmp_path),
+        exp_name="case",
+    )
+    reg.fit(np.asarray([[0.0], [1.0], [2.0]]), np.asarray([2.0, 4.0, 6.0]))
+
+    assert reg.get_optimal_equation() == "4"
+    assert reg.get_total_equations() == ["4"]
+    np.testing.assert_allclose(reg.predict(np.asarray([[0.0], [1.0]])), np.asarray([4.0, 4.0]))
+    assert (tmp_path / "case" / ".qlattice_current_best.json").exists()
 
 
 def test_symbolfit_repeats_successful_fit_until_timeout_budget(monkeypatch) -> None:

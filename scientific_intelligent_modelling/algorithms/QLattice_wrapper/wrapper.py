@@ -40,6 +40,11 @@ class QLatticeRegressor(BaseWrapper):
         self.params.setdefault("threads", 4)
         self._timeout_in_seconds = self._as_positive_float(self.params.pop("timeout_in_seconds", None))
         self._timeout_guard_seconds = self._as_positive_float(self.params.pop("timeout_guard_seconds", None)) or 5.0
+        self._target_standardize = self.params.pop("target_standardize", "auto")
+        self._target_standardize_threshold = (
+            self._as_positive_float(self.params.pop("target_standardize_threshold", None)) or 1.0e6
+        )
+        self._constant_fallback_on_empty = self._as_bool(self.params.pop("constant_fallback_on_empty", True))
         self._contract_n_features = self.params.pop("n_features", None)
         self._contract_feature_names = self.params.pop("feature_names", None)
         self._contract_target_name = self.params.pop("target_name", None)
@@ -57,6 +62,11 @@ class QLatticeRegressor(BaseWrapper):
         self._input_vars: List[str] = []
         self._output_name: str = 'y'
         self._lambdified = None
+        self._target_offset = 0.0
+        self._target_scale = 1.0
+        self._target_was_standardized = False
+        self._constant_prediction: Optional[float] = None
+        self._fallback_reason: Optional[str] = None
         # 候选方程字符串列表（便于序列化后仍可获取多个解）
         self._equations: List[str] = []
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
@@ -68,6 +78,14 @@ class QLatticeRegressor(BaseWrapper):
         except Exception:
             return None
         return value if value > 0 else None
+
+    @staticmethod
+    def _as_bool(value) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() not in {"0", "false", "no", "off", ""}
+        return bool(value)
 
     @classmethod
     def _resolve_progress_state_path(cls, exp_path, exp_name) -> Optional[str]:
@@ -82,7 +100,7 @@ class QLatticeRegressor(BaseWrapper):
         )
 
     @staticmethod
-    def _model_equation(model, signif: int) -> Optional[str]:
+    def _raw_model_equation(model, signif: int) -> Optional[str]:
         try:
             return str(model.sympify(signif=signif))
         except Exception:
@@ -90,6 +108,60 @@ class QLatticeRegressor(BaseWrapper):
                 return str(model)
             except Exception:
                 return None
+
+    def _model_equation(self, model, signif: int) -> Optional[str]:
+        raw_equation = self._raw_model_equation(model, signif)
+        return self._equation_on_original_target_scale(raw_equation)
+
+    @staticmethod
+    def _format_float(value: float) -> str:
+        return format(float(value), ".17g")
+
+    def _equation_on_original_target_scale(self, equation: Optional[str]) -> Optional[str]:
+        if not isinstance(equation, str) or not equation.strip():
+            return None
+        if not self._target_was_standardized:
+            return equation
+        offset = self._format_float(self._target_offset)
+        scale = self._format_float(self._target_scale)
+        return f"({offset}) + ({scale})*({equation})"
+
+    def _should_standardize_target(self, y: np.ndarray) -> bool:
+        mode = str(self._target_standardize).strip().lower()
+        if mode in {"0", "false", "no", "off", "never"}:
+            return False
+        finite_y = y[np.isfinite(y)]
+        if finite_y.size == 0:
+            return False
+        scale = float(np.std(finite_y))
+        if not np.isfinite(scale) or scale <= 0:
+            return False
+        if mode in {"1", "true", "yes", "on", "always"}:
+            return True
+        max_abs = float(np.max(np.abs(finite_y)))
+        return max(scale, max_abs) >= self._target_standardize_threshold
+
+    def _prepare_target_for_fit(self, y: np.ndarray) -> np.ndarray:
+        self._target_offset = 0.0
+        self._target_scale = 1.0
+        self._target_was_standardized = False
+        if not self._should_standardize_target(y):
+            return y
+        finite_y = y[np.isfinite(y)]
+        offset = float(np.mean(finite_y))
+        scale = float(np.std(finite_y))
+        if not np.isfinite(offset) or not np.isfinite(scale) or scale <= 0:
+            return y
+        self._target_offset = offset
+        self._target_scale = scale
+        self._target_was_standardized = True
+        return (y - offset) / scale
+
+    def _restore_target_scale(self, values) -> np.ndarray:
+        arr = np.asarray(values, dtype=float)
+        if self._target_was_standardized:
+            arr = self._target_offset + self._target_scale * arr
+        return arr
 
     def _criterion_name(self) -> Optional[str]:
         criterion = self.params.get("criterion", "bic")
@@ -149,11 +221,28 @@ class QLatticeRegressor(BaseWrapper):
         if best_model is None:
             return
         equation = self._model_equation(best_model, signif)
+        self._write_progress_state_from_equation(
+            equation,
+            epoch=epoch,
+            loss=self._criterion_value(best_model, criterion_name),
+            criterion_name=criterion_name,
+        )
+
+    def _write_progress_state_from_equation(
+        self,
+        equation: Optional[str],
+        *,
+        epoch: int,
+        loss: Optional[float],
+        criterion_name: Optional[str],
+    ) -> None:
+        if not self._progress_state_path:
+            return
         if not isinstance(equation, str) or not equation.strip():
             return
         payload = {
             "equation": equation,
-            "loss": self._criterion_value(best_model, criterion_name),
+            "loss": loss,
             "criterion": criterion_name,
             "complexity": self._estimate_complexity(equation),
             "epoch": int(epoch),
@@ -182,13 +271,14 @@ class QLatticeRegressor(BaseWrapper):
         y = np.asarray(y).reshape(-1)
         if X.ndim == 1:
             X = X.reshape(-1, 1)
+        y_for_fit = self._prepare_target_for_fit(y)
 
         # 构造 DataFrame
         n_features = X.shape[1]
         self._input_vars = [f"x{i}" for i in range(n_features)]
         self._output_name = self.params.get('output_name', self._contract_target_name or 'y')
         df = pd.DataFrame(X, columns=self._input_vars)
-        df[self._output_name] = y
+        df[self._output_name] = y_for_fit
 
         # 连接 QLattice（社区版需要联网）
         self._ql = feyn.QLattice()
@@ -244,11 +334,11 @@ class QLatticeRegressor(BaseWrapper):
                     criterion_name=criterion_name,
                 )
             if not models:
-                raise NoValidOutputError('QLattice.auto_run 未返回任何模型。')
+                return self._fit_constant_fallback(y, reason='QLattice.auto_run 未返回任何模型。')
         else:
             models = list(self._ql.auto_run(**auto_args))
             if not models:
-                raise NoValidOutputError('QLattice.auto_run 未返回任何模型。')
+                return self._fit_constant_fallback(y, reason='QLattice.auto_run 未返回任何模型。')
 
         self._models = models
         self._best_model = self._select_best_model(models, criterion_name)
@@ -268,6 +358,31 @@ class QLatticeRegressor(BaseWrapper):
         self._build_lambdify()
         return self
 
+    def _fit_constant_fallback(self, y: np.ndarray, *, reason: str):
+        if not self._constant_fallback_on_empty:
+            raise NoValidOutputError(reason)
+        finite_y = y[np.isfinite(y)]
+        if finite_y.size == 0:
+            raise NoValidOutputError(reason)
+        value = float(np.mean(finite_y))
+        if not np.isfinite(value):
+            raise NoValidOutputError(reason)
+        self._models = []
+        self._best_model = None
+        self.model = True
+        self._constant_prediction = value
+        self._fallback_reason = reason
+        self._expr_str = self._format_float(value)
+        self._equations = [self._expr_str]
+        self._build_lambdify()
+        self._write_progress_state_from_equation(
+            self._expr_str,
+            epoch=0,
+            loss=None,
+            criterion_name=self._criterion_name(),
+        )
+        return self
+
     def predict(self, X):
         """使用模型进行预测。"""
         if self.model is None:
@@ -279,16 +394,22 @@ class QLatticeRegressor(BaseWrapper):
         if X.shape[1] != len(self._input_vars):
             raise ValueError(f'特征维度不匹配：期望 {len(self._input_vars)} 列，实际 {X.shape[1]} 列。')
 
+        if self._constant_prediction is not None:
+            return np.full(X.shape[0], float(self._constant_prediction), dtype=float)
+
         # 优先使用原生 feyn 模型（更稳健），其次使用 lambdify
         if self._best_model is not None:
             import pandas as pd
             df = pd.DataFrame(X, columns=self._input_vars)
-            return np.asarray(self._best_model.predict(data=df))
+            return self._restore_target_scale(self._best_model.predict(data=df))
 
         if self._lambdified is not None:
             cols = [X[:, i] for i in range(X.shape[1])]
             y_pred = self._lambdified(*cols)
-            return np.asarray(y_pred)
+            y_pred = np.asarray(y_pred, dtype=float)
+            if y_pred.ndim == 0:
+                y_pred = np.full(X.shape[0], float(y_pred), dtype=float)
+            return y_pred
 
         raise RuntimeError('未找到可用的预测器（表达式或 QLattice 模型）。')
 
@@ -343,6 +464,8 @@ class QLatticeRegressor(BaseWrapper):
             'input_vars': self._input_vars,
             'output_name': self._output_name,
             'equations': self._equations,
+            'constant_prediction': self._constant_prediction,
+            'fallback_reason': self._fallback_reason,
         }
         return json.dumps(state, ensure_ascii=False)
 
@@ -355,6 +478,12 @@ class QLatticeRegressor(BaseWrapper):
         inst._input_vars = obj.get('input_vars') or []
         inst._output_name = obj.get('output_name') or 'y'
         inst._equations = obj.get('equations') or []
+        constant_prediction = obj.get('constant_prediction')
+        try:
+            inst._constant_prediction = float(constant_prediction) if constant_prediction is not None else None
+        except Exception:
+            inst._constant_prediction = None
+        inst._fallback_reason = obj.get('fallback_reason')
         inst._build_lambdify()
         return inst
 
