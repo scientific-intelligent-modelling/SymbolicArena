@@ -159,16 +159,20 @@ class SymbolFitRegressor(BaseWrapper):
     def _budget_deadline(self) -> float | None:
         if not self._fill_timeout_budget or self._explicit_timeout_seconds is None:
             return None
-        budget_seconds = self._positive_int(self.params.get("timeout_in_seconds"))
-        if budget_seconds is None:
-            return None
-        return time.monotonic() + budget_seconds
+        return time.monotonic() + self._explicit_timeout_seconds
 
     @classmethod
     def _remaining_budget_seconds(cls, deadline: float | None) -> int | None:
         if deadline is None:
             return None
         return max(0, int(deadline - time.monotonic()))
+
+    @classmethod
+    def _iteration_timeout_seconds(cls, *, base_timeout: int | None, remaining_seconds: int) -> int:
+        guarded_remaining = max(1, remaining_seconds - cls._resolve_timeout_guard(remaining_seconds, None))
+        if base_timeout is None:
+            return guarded_remaining
+        return max(1, min(base_timeout, guarded_remaining))
 
     @staticmethod
     def _candidate_score(candidate) -> tuple[float, float]:
@@ -282,6 +286,7 @@ class SymbolFitRegressor(BaseWrapper):
         best_candidate = None
         best_score: tuple[float, float] | None = None
         attempt = 0
+        base_timeout = self._positive_int(self.params.get("timeout_in_seconds"))
         while True:
             remaining = self._remaining_budget_seconds(deadline)
             if attempt > 0 and remaining is not None and remaining < self._MIN_BUDGET_REFIT_SECONDS:
@@ -289,7 +294,10 @@ class SymbolFitRegressor(BaseWrapper):
             attempt += 1
             iteration_params = dict(self.params)
             if remaining is not None:
-                iteration_params["timeout_in_seconds"] = max(1, remaining)
+                iteration_params["timeout_in_seconds"] = self._iteration_timeout_seconds(
+                    base_timeout=base_timeout,
+                    remaining_seconds=remaining,
+                )
             if iteration_params.get("random_state") is not None:
                 iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
             with tempfile.TemporaryDirectory(prefix="symbolfit_") as tmpdir:

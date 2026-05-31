@@ -216,3 +216,46 @@ def test_symbolfit_repeats_successful_fit_until_timeout_budget(monkeypatch) -> N
 
     assert len(fit_calls) >= 2
     assert reg.get_optimal_equation() == "X0"
+
+
+def test_symbolfit_short_budget_uses_external_deadline_with_guarded_inner_runs(monkeypatch) -> None:
+    clock = {"now": 0.0}
+    inner_timeouts = []
+
+    class FakePySRRegressor:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class FakeTable:
+        def __len__(self):
+            return 1
+
+        def iterrows(self):
+            yield 0, {
+                "RMSE": 1.0,
+                "R2": 0.0,
+                "Parameterized equation": "X0",
+            }
+
+    class FakeSymbolFit:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.func_candidates = FakeTable()
+
+        def fit(self):
+            inner_timeouts.append(self.kwargs["pysr_config"].kwargs["timeout_in_seconds"])
+            clock["now"] += 421.0 if len(inner_timeouts) == 1 else 120.0
+
+    symbolfit_pkg = types.ModuleType("symbolfit")
+    symbolfit_submodule = types.ModuleType("symbolfit.symbolfit")
+    symbolfit_submodule.SymbolFit = FakeSymbolFit
+    monkeypatch.setitem(sys.modules, "pysr", types.SimpleNamespace(PySRRegressor=FakePySRRegressor))
+    monkeypatch.setitem(sys.modules, "symbolfit", symbolfit_pkg)
+    monkeypatch.setitem(sys.modules, "symbolfit.symbolfit", symbolfit_submodule)
+    monkeypatch.setattr(symbolfit_module.time, "monotonic", lambda: clock["now"])
+
+    reg = SymbolFitRegressor(timeout_in_seconds=600)
+    reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
+
+    assert inner_timeouts[0] == 420
+    assert len(inner_timeouts) >= 2
