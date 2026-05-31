@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 from copy import deepcopy
 from typing import Any
@@ -59,6 +60,7 @@ class FePySRRegressor(BaseWrapper):
         "device",
         "fmn_only",
     }
+    _FEATURE_VALUE_LIMIT = 1.0e6
 
     def __init__(self, **kwargs):
         raw_kwargs = dict(kwargs)
@@ -207,6 +209,79 @@ class FePySRRegressor(BaseWrapper):
         except Exception:
             return float("inf")
 
+    @staticmethod
+    def _optional_import(name: str):
+        module = sys.modules.get(name)
+        if module is not None:
+            return module
+        try:
+            return __import__(name, fromlist=["*"])
+        except Exception:
+            return None
+
+    @classmethod
+    def _sanitize_fepysr_features(cls, data_analyzer) -> None:
+        features = getattr(data_analyzer, "stacked_numpy_features", None)
+        if features is None:
+            return
+        try:
+            arr = np.asarray(features, dtype=float)
+        except Exception:
+            return
+        if arr.size == 0:
+            return
+        limit = cls._FEATURE_VALUE_LIMIT
+        sanitized = np.nan_to_num(arr, nan=0.0, posinf=limit, neginf=-limit)
+        sanitized = np.clip(sanitized, -limit, limit)
+        if not np.array_equal(arr, sanitized):
+            data_analyzer.stacked_numpy_features = sanitized
+
+    @classmethod
+    def _patch_fepysr_runtime(cls) -> None:
+        feature_maker = cls._optional_import("fepysr.feature_maker")
+        if feature_maker is not None and hasattr(feature_maker, "replace_pysr_variables"):
+            current_replace = feature_maker.replace_pysr_variables
+            original_replace = getattr(current_replace, "_sim_original", current_replace)
+            if not getattr(current_replace, "_sim_safe_wrapper", False):
+
+                def safe_replace_pysr_variables(pysr_equation, feature_names):
+                    if isinstance(pysr_equation, bytes):
+                        pysr_equation = pysr_equation.decode("utf-8", errors="replace")
+                    elif not isinstance(pysr_equation, str):
+                        pysr_equation = str(pysr_equation)
+                    return original_replace(pysr_equation, feature_names)
+
+                safe_replace_pysr_variables._sim_original = original_replace
+                safe_replace_pysr_variables._sim_safe_wrapper = True
+                feature_maker.replace_pysr_variables = safe_replace_pysr_variables
+
+        pysr_train_module = cls._optional_import("fepysr.pysr_train")
+        fepysr_impl_module = cls._optional_import("fepysr.fepysr")
+        current_train = None
+        if pysr_train_module is not None and hasattr(pysr_train_module, "pysr_train"):
+            current_train = pysr_train_module.pysr_train
+        elif fepysr_impl_module is not None and hasattr(fepysr_impl_module, "pysr_train"):
+            current_train = fepysr_impl_module.pysr_train
+
+        if current_train is None:
+            return
+        if getattr(current_train, "_sim_safe_wrapper", False):
+            safe_pysr_train = current_train
+        else:
+            original_train = getattr(current_train, "_sim_original", current_train)
+
+            def safe_pysr_train(data_analyzer, *args, **kwargs):
+                cls._sanitize_fepysr_features(data_analyzer)
+                return original_train(data_analyzer, *args, **kwargs)
+
+            safe_pysr_train._sim_original = original_train
+            safe_pysr_train._sim_safe_wrapper = True
+
+        if pysr_train_module is not None:
+            pysr_train_module.pysr_train = safe_pysr_train
+        if fepysr_impl_module is not None:
+            fepysr_impl_module.pysr_train = safe_pysr_train
+
     def fit(self, X, y):
         self._validate_explicit_dataset_contract(
             X,
@@ -219,6 +294,7 @@ class FePySRRegressor(BaseWrapper):
             import pysr  # noqa: F401
             import torch
             from fepysr import FePySR
+            self._patch_fepysr_runtime()
         except Exception as err:  # pragma: no cover - exercised in integration env
             raise ImportError(
                 "FePySRRegressor 需要安装 fepysr、torch、hydra-core、pysr；"

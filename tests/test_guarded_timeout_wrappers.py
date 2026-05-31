@@ -63,6 +63,46 @@ def test_fepysr_repeats_successful_fit_until_timeout_budget(monkeypatch) -> None
     assert reg.get_optimal_equation() == "X0"
 
 
+def test_fepysr_runtime_patch_decodes_bytes_equations(monkeypatch) -> None:
+    feature_maker = types.ModuleType("fepysr.feature_maker")
+
+    def replace_pysr_variables(pysr_equation, feature_names):
+        assert isinstance(pysr_equation, str)
+        return f"{pysr_equation}:{','.join(feature_names)}"
+
+    feature_maker.replace_pysr_variables = replace_pysr_variables
+    monkeypatch.setitem(sys.modules, "fepysr.feature_maker", feature_maker)
+
+    FePySRRegressor._patch_fepysr_runtime()
+
+    assert feature_maker.replace_pysr_variables(b"x0 + x1", ["x0", "x1"]) == "x0 + x1:x0,x1"
+
+
+def test_fepysr_runtime_patch_sanitizes_nonfinite_features(monkeypatch) -> None:
+    pysr_train_module = types.ModuleType("fepysr.pysr_train")
+    fepysr_impl_module = types.ModuleType("fepysr.fepysr")
+    observed = {}
+
+    def pysr_train(data_analyzer, cfg, model=None):
+        features = np.asarray(data_analyzer.stacked_numpy_features)
+        observed["all_finite"] = bool(np.all(np.isfinite(features)))
+        observed["max_abs"] = float(np.max(np.abs(features)))
+        return "best", 0.0, 0.0, "model"
+
+    pysr_train_module.pysr_train = pysr_train
+    fepysr_impl_module.pysr_train = pysr_train
+    monkeypatch.setitem(sys.modules, "fepysr.pysr_train", pysr_train_module)
+    monkeypatch.setitem(sys.modules, "fepysr.fepysr", fepysr_impl_module)
+    data_analyzer = types.SimpleNamespace(
+        stacked_numpy_features=np.array([[np.inf, -np.inf, np.nan, 1.0e300, -2.0]])
+    )
+
+    FePySRRegressor._patch_fepysr_runtime()
+    fepysr_impl_module.pysr_train(data_analyzer, None)
+
+    assert observed == {"all_finite": True, "max_abs": FePySRRegressor._FEATURE_VALUE_LIMIT}
+
+
 def test_symbolfit_repeats_successful_fit_until_timeout_budget(monkeypatch) -> None:
     clock = {"now": 0.0}
     fit_calls = []
