@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,11 @@ def generate_noise_params(
         for sigma in noise_sigmas:
             tag = noise_tag_for_sigma(float(sigma))
             payload: dict[str, Any] = dict(base)
+            _apply_tool_budget_overrides(
+                tool=tool,
+                payload=payload,
+                timeout_in_seconds=int(timeout_in_seconds),
+            )
             payload["timeout_in_seconds"] = int(timeout_in_seconds)
             payload["progress_snapshot_interval_seconds"] = int(progress_snapshot_interval_seconds)
             payload["train_label_noise_sigma"] = float(sigma)
@@ -38,3 +44,16 @@ def generate_noise_params(
             )
             count += 1
     return {"tools": len(tools), "noise_levels": len(noise_sigmas), "params_files": count}
+
+
+def _apply_tool_budget_overrides(*, tool: str, payload: dict[str, Any], timeout_in_seconds: int) -> None:
+    if tool != "pyoperon" or timeout_in_seconds <= 3600:
+        return
+    try:
+        base_evaluations = int(float(payload.get("max_evaluations", 0)))
+    except (TypeError, ValueError):
+        return
+    if base_evaluations <= 0:
+        return
+    scaled_evaluations = math.ceil(base_evaluations * timeout_in_seconds / 3600 * 2)
+    payload["max_evaluations"] = max(base_evaluations, scaled_evaluations)

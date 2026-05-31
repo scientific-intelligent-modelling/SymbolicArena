@@ -26,8 +26,11 @@ def test_generate_noise_params_writes_13_by_3_files(tmp_path: Path) -> None:
         "symbolfit",
     )
     for tool in tools:
+        payload = {"timeout_in_seconds": 3600, "niterations": 1000000}
+        if tool == "pyoperon":
+            payload["max_evaluations"] = 500000
         (source / f"{tool}.json").write_text(
-            json.dumps({"timeout_in_seconds": 3600, "niterations": 1000000}),
+            json.dumps(payload),
             encoding="utf-8",
         )
 
@@ -44,9 +47,11 @@ def test_generate_noise_params_writes_13_by_3_files(tmp_path: Path) -> None:
     assert summary == {"tools": 13, "noise_levels": 3, "params_files": 39}
     clean = json.loads((output / "pysr__clean.json").read_text(encoding="utf-8"))
     noisy = json.loads((output / "pysr__noise001.json").read_text(encoding="utf-8"))
+    pyoperon = json.loads((output / "pyoperon__clean.json").read_text(encoding="utf-8"))
     assert clean["timeout_in_seconds"] == 86400
     assert clean["train_label_noise_enabled"] is False
     assert clean["train_label_noise_sigma"] == 0.0
+    assert pyoperon["max_evaluations"] == 24000000
     assert noisy["progress_snapshot_interval_seconds"] == 60
     assert noisy["train_label_noise_enabled"] is True
     assert noisy["train_label_noise_sigma"] == 0.01
