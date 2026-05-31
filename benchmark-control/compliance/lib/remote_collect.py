@@ -76,13 +76,25 @@ def collect_remote_batch(
             include_task_logs=include_task_logs,
         )
         (local_root / host).mkdir(parents=True, exist_ok=True)
-        proc = runner(command, text=True, capture_output=True, timeout=timeout)
+        try:
+            proc = runner(command, text=True, capture_output=True, timeout=timeout)
+            returncode = proc.returncode
+            stdout = proc.stdout or ""
+            stderr = proc.stderr or ""
+        except subprocess.TimeoutExpired as exc:
+            returncode = 124
+            stdout = _timeout_stream(exc.output)
+            stderr_parts = [f"command timed out after {exc.timeout} seconds"]
+            stderr = _timeout_stream(exc.stderr)
+            if stderr:
+                stderr_parts.append(stderr)
+            stderr = "\n".join(stderr_parts)
         results.append(
             {
                 "host": host,
-                "returncode": proc.returncode,
-                "stdout": (proc.stdout or "")[-4000:],
-                "stderr": (proc.stderr or "")[-4000:],
+                "returncode": returncode,
+                "stdout": stdout[-4000:],
+                "stderr": stderr[-4000:],
                 "local_root": str(local_root / host),
             }
         )
@@ -165,6 +177,14 @@ def _host_endpoint(host: str, *, use_internal_ips: bool) -> str:
         if suffix.isdigit() and 22 <= int(suffix) <= 29:
             return f"10.10.100.{int(suffix)}"
     return host
+
+
+def _timeout_stream(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
 
 
 def _write_results_csv(path: Path, results: list[dict[str, Any]]) -> None:

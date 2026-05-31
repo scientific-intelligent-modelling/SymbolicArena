@@ -45,6 +45,37 @@ def test_collect_uses_controller_local_path_and_internal_ips(tmp_path: Path) -> 
     assert [item["host"] for item in payload["results"]] == ["iaaccn22", "iaaccn23"]
 
 
+def test_collect_records_timeout_and_continues_other_hosts(tmp_path: Path) -> None:
+    collect = load_for_test("remote_collect")
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(cmd)
+        if len(calls) == 2:
+            raise subprocess.TimeoutExpired(cmd=cmd, timeout=5, output="partial", stderr="hung")
+        return subprocess.CompletedProcess(cmd, 0, "ok", "")
+
+    batch_dir = tmp_path / "batch"
+    summary = collect.collect_remote_batch(
+        batch_dir=batch_dir,
+        batch_id="compliance_batch",
+        hosts=["iaaccn22", "iaaccn25", "iaaccn26"],
+        remote_root=Path("/home/zhangziwen/workplace/scientific-intelligent-modelling"),
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        timeout=5,
+        runner=fake_run,
+    )
+
+    assert summary == {"total_hosts": 3, "succeeded": 2, "failed": 1}
+    assert len(calls) == 3
+    payload = json.loads((batch_dir / "collect" / "collect_summary.json").read_text(encoding="utf-8"))
+    timeout_result = payload["results"][1]
+    assert timeout_result["host"] == "iaaccn25"
+    assert timeout_result["returncode"] == 124
+    assert "timed out after 5 seconds" in timeout_result["stderr"]
+
+
 def test_collect_launcher_resolves_repo_relative_paths(tmp_path: Path, monkeypatch) -> None:
     launcher_path = (
         Path(__file__).resolve().parents[1]
