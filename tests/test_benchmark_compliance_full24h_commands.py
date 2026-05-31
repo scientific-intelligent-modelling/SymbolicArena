@@ -31,6 +31,7 @@ def test_write_full24h_queue_commands_use_13_tools_3_seeds_3_noise(tmp_path: Pat
     assert "benchmark-runs/formal24h/latest" in sync
     assert "--params-root benchmark-runs/formal24h/latest/params_smoke" in smoke
     assert "--expected-total-tasks 234" in smoke
+    assert "--skip-support-sync" not in smoke
     assert "--params-root benchmark-runs/formal24h/latest/params" in full
     assert "--tools gplearn pyoperon pysr dso tpsr e2esr fepysr jaxsr qlattice imcts udsr ragsr symbolfit" in full
     assert "--seeds 520 521 522" in full

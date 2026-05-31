@@ -209,7 +209,6 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --noise-sigmas {NOISE_SIGMAS} \\
   --controller-host iaaccn22 \\
   --use-internal-ips \\
-  --skip-support-sync \\
   --session-prefix formal24h_smoke_ \\
   --host-session-count-prefix formal24h_smoke_ \\
   --poll-seconds 60 \\
