@@ -65,6 +65,71 @@ def test_prepare_smoke_batch_writes_30_task_manifest(tmp_path: Path) -> None:
     assert (smoke_dir / "queues" / "smoke_2datasets_source.csv").exists()
 
 
+def test_prepare_formal24h_smoke_manifest_uses_smoke_budget(tmp_path: Path) -> None:
+    smoke = load_for_test("smoke")
+    batch_dir = tmp_path / "batch"
+    _write_csv(
+        batch_dir / "manifest" / "tasks.csv",
+        [
+            {
+                "task_id": "gplearn__seed520__clean__dataset_0000",
+                "algorithm": "gplearn",
+                "dataset_id": "dataset_0000",
+                "dataset_dir": "sim-datasets-data/ssr50/dataset_0000",
+                "seed": "520",
+                "noise_tag": "clean",
+                "noise_sigma": "0",
+                "timeout_in_seconds": "86400",
+                "min_runtime_seconds": "82800",
+                "progress_snapshot_interval_seconds": "60",
+            },
+            {
+                "task_id": "gplearn__seed520__clean__dataset_0001",
+                "algorithm": "gplearn",
+                "dataset_id": "dataset_0001",
+                "dataset_dir": "sim-datasets-data/ssr50/dataset_0001",
+                "seed": "520",
+                "noise_tag": "clean",
+                "noise_sigma": "0",
+                "timeout_in_seconds": "86400",
+                "min_runtime_seconds": "82800",
+                "progress_snapshot_interval_seconds": "60",
+            },
+        ],
+    )
+    _write_csv(
+        batch_dir / "queues" / "smoke_2datasets_source.csv",
+        [
+            {
+                "global_index": "1",
+                "dataset_id": "dataset_0000",
+                "dataset_name": "dataset_0000",
+                "dataset_dir": "sim-datasets-data/ssr50/dataset_0000",
+                "dataset_rel": "sim-datasets-data/ssr50/dataset_0000",
+            },
+            {
+                "global_index": "2",
+                "dataset_id": "dataset_0001",
+                "dataset_name": "dataset_0001",
+                "dataset_dir": "sim-datasets-data/ssr50/dataset_0001",
+                "dataset_rel": "sim-datasets-data/ssr50/dataset_0001",
+            },
+        ],
+    )
+    (batch_dir / "params_smoke").mkdir(parents=True)
+    (batch_dir / "params_smoke" / "gplearn__clean.json").write_text(
+        json.dumps({"timeout_in_seconds": 600}),
+        encoding="utf-8",
+    )
+
+    smoke.prepare_smoke_batch(batch_dir=batch_dir)
+
+    with (batch_dir / "smoke" / "manifest" / "tasks.csv").open(newline="", encoding="utf-8") as handle:
+        tasks = list(csv.DictReader(handle))
+    assert {row["timeout_in_seconds"] for row in tasks} == {"600"}
+    assert {row["min_runtime_seconds"] for row in tasks} == {"540"}
+
+
 def test_audit_gate_passes_only_when_all_expected_tasks_pass(tmp_path: Path) -> None:
     gate = load_for_test("audit_gate")
     batch_dir = tmp_path / "batch"
