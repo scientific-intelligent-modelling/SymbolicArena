@@ -95,7 +95,15 @@ def _resolve_dataset_dir(dataset_dir: str) -> str:
     return dataset_dir
 
 
-def _should_skip(row: dict[str, str], seed: int, completed: dict[str, dict[str, Any]], retry_failed: bool) -> bool:
+def _should_skip(
+    row: dict[str, str],
+    seed: int,
+    completed: dict[str, dict[str, Any]],
+    retry_failed: bool,
+    force_rerun: bool,
+) -> bool:
+    if force_rerun:
+        return False
     record = completed.get(_task_key(row, seed))
     if not record:
         return False
@@ -187,7 +195,7 @@ def _controller(args: argparse.Namespace) -> None:
     pending = [
         row
         for row in tasks
-        if not _should_skip(row, args.seed, completed, args.retry_failed)
+        if not _should_skip(row, args.seed, completed, args.retry_failed, args.force_rerun)
     ]
 
     print(f"tool: {args.tool}")
@@ -305,6 +313,11 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--seed", type=int, default=1314, help="随机种子")
     run_parser.add_argument("--workers", type=int, default=8, help="并发 worker 数")
     run_parser.add_argument("--retry-failed", action="store_true", help="是否重试 error 任务")
+    run_parser.add_argument(
+        "--force-rerun",
+        action="store_true",
+        help="忽略已有 task_status.jsonl 记录，强制重算切片内任务",
+    )
 
     task_parser = subparsers.add_parser("run-task", help="执行单个 benchmark 任务")
     task_parser.add_argument("--tool", required=True, help="工具名")

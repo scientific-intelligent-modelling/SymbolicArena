@@ -514,7 +514,7 @@ def _write_remote_support_script(queue_root: Path) -> Path:
 set -euo pipefail
 
 if [ "$#" -lt 12 ]; then
-  echo "Usage: $0 <batch> <task_id> <tool_key> <tool_arg> <seed> <workers> <env> <slice_rel> <params_rel> <host_label> <remote_root> <remote_data_root> [retry]" >&2
+  echo "Usage: $0 <batch> <task_id> <tool_key> <tool_arg> <seed> <workers> <env> <slice_rel> <params_rel> <host_label> <remote_root> <remote_data_root> [rerun_mode]" >&2
   exit 2
 fi
 
@@ -530,9 +530,11 @@ PARAMS_REL="$9"
 HOST_LABEL="${{10}}"
 REMOTE_ROOT="${{11}}"
 REMOTE_DATA_ROOT="${{12}}"
-RETRY_MODE="${{13:-}}"
+RERUN_MODE="${{13:-}}"
 EXTRA_ARGS=()
-if [ "$RETRY_MODE" = "retry" ]; then
+if [ "$RERUN_MODE" = "force" ]; then
+  EXTRA_ARGS+=(--force-rerun)
+elif [ "$RERUN_MODE" = "retry" ]; then
   EXTRA_ARGS+=(--retry-failed)
 fi
 
@@ -1076,7 +1078,7 @@ def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], ar
     support_remote = remote_root / support_rel
     slice_rel = _sync_task_slice(task)
     params_rel = str((args.params_root_path / f"{task.params_name}.json").relative_to(REPO_ROOT))
-    retry = "retry" if int(state_task.get("attempts") or 0) > 0 else "noretry"
+    rerun_mode = "force" if args.force_rerun_existing else ("retry" if int(state_task.get("attempts") or 0) > 0 else "noretry")
     tmux_command = (
         f"cd {shlex.quote(str(remote_root))} && "
         f"tmux new-session -d -s {shlex.quote(session)} "
@@ -1093,7 +1095,7 @@ def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], ar
         f"{shlex.quote(host)} "
         f"{shlex.quote(str(remote_root))} "
         f"{shlex.quote(str(remote_data_root))} "
-        f"{shlex.quote(retry)} "
+        f"{shlex.quote(rerun_mode)} "
         f"</dev/null >{shlex.quote(str(start_log))} 2>&1"
     )
     command = (
@@ -2051,6 +2053,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--skip-support-sync", action="store_true", help="跳过远端 support/slice/params 同步；仅在已手动预同步后使用。")
+    parser.add_argument(
+        "--force-rerun-existing",
+        action="store_true",
+        help="派发任务时让 launcher 忽略已有 done 状态，用于重跑审计失败但 launcher 状态为 ok 的任务。",
+    )
     parser.add_argument("--preflight-only", action="store_true")
     parser.add_argument("--preflight-report", default=None)
     parser.add_argument("--preflight-host-timeout", type=int, default=900)
