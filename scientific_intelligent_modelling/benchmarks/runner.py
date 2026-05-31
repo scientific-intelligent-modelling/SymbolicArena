@@ -664,11 +664,29 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
             raise ValueError(f"表达式变量索引越界: {name}, 输入维度={X_arr.shape[1]}")
         args.append(X_arr[:, idx])
 
-    def _broadcast_maximum(*values):
+    def _broadcast_maximum(*values, axis=None):
+        if len(values) == 1:
+            value = values[0]
+            if isinstance(value, np.ndarray) and value.dtype == object:
+                arrays = np.broadcast_arrays(*list(value))
+                return np.maximum.reduce(arrays)
+            if isinstance(value, (list, tuple)):
+                arrays = np.broadcast_arrays(*value)
+                return np.maximum.reduce(arrays)
+            return np.maximum.reduce(value, axis=axis)
         arrays = np.broadcast_arrays(*values)
         return np.maximum.reduce(arrays)
 
-    def _broadcast_minimum(*values):
+    def _broadcast_minimum(*values, axis=None):
+        if len(values) == 1:
+            value = values[0]
+            if isinstance(value, np.ndarray) and value.dtype == object:
+                arrays = np.broadcast_arrays(*list(value))
+                return np.minimum.reduce(arrays)
+            if isinstance(value, (list, tuple)):
+                arrays = np.broadcast_arrays(*value)
+                return np.minimum.reduce(arrays)
+            return np.minimum.reduce(value, axis=axis)
         arrays = np.broadcast_arrays(*values)
         return np.minimum.reduce(arrays)
 
