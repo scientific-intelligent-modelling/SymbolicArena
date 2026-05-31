@@ -108,6 +108,36 @@ def test_heartbeat_marks_missing_audit_as_needing_codex(tmp_path: Path) -> None:
     assert payload["latest_audit"] == ""
 
 
+def test_heartbeat_uses_load_queue_state_before_audit_exists(tmp_path: Path) -> None:
+    heartbeat = load_for_test("heartbeat")
+    batch_dir = tmp_path / "batch"
+    _write_manifest(batch_dir, ("d1", "d2", "d3", "d4", "d5"))
+    state_dir = batch_dir / "queues" / "load_queue_full" / "state"
+    state_dir.mkdir(parents=True)
+    (state_dir / "batch.state.json").write_text(
+        json.dumps(
+            {
+                "tasks": {
+                    "pending_task": {"state": "pending"},
+                    "running_task": {"state": "running"},
+                    "done_task": {"state": "done"},
+                    "failed_task": {"state": "failed"},
+                    "dispatching_task": {"state": "dispatching"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = heartbeat.write_heartbeat(batch_dir=batch_dir, phase="running")
+
+    assert payload["pending"] == 2
+    assert payload["running"] == 1
+    assert payload["finished"] == 1
+    assert payload["failed"] == 1
+    assert payload["needs_codex"] is True
+
+
 def test_heartbeat_resolves_latest_symlink_to_real_batch_id(tmp_path: Path) -> None:
     heartbeat = load_for_test("heartbeat")
     batch_dir = tmp_path / "compliance_15alg_ssr50_seed520_1h_20260529-235959"

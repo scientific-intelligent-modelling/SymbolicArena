@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -26,22 +27,32 @@ def write_heartbeat(
     audit_exists = failures_path.exists()
     total_tasks = len(task_rows)
     audit_complete = _audit_complete(total_tasks=total_tasks, audit_rows=len(task_audit_rows))
+    queue_counts = _read_latest_queue_counts(batch_dir)
     finished = _finished_count(
         total_tasks=total_tasks,
         failed=len(failures),
         audit_exists=audit_exists,
         audit_complete=audit_complete,
     )
+    if not audit_complete and queue_counts:
+        pending = queue_counts["pending"] + queue_counts["dispatching"]
+        running = queue_counts["running"]
+        finished = queue_counts["done"]
+        failed = queue_counts["failed"] + queue_counts["error"]
+    else:
+        pending = 0
+        running = 0
+        failed = len(failures)
     needs_codex = (not audit_exists) or (not audit_complete) or bool(failures)
     payload = {
         "batch_id": batch_dir.resolve().name,
         "phase": phase,
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "total_tasks": total_tasks,
-        "pending": 0,
-        "running": 0,
+        "pending": pending,
+        "running": running,
         "finished": finished,
-        "failed": len(failures),
+        "failed": failed,
         "stale": 0,
         "needs_codex": needs_codex,
         "codex_reason": _codex_reason(
@@ -65,6 +76,30 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return []
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def _read_latest_queue_counts(batch_dir: Path) -> Counter[str]:
+    state_dir = batch_dir / "queues" / "load_queue_full" / "state"
+    if not state_dir.exists():
+        return Counter()
+    state_files = sorted(
+        state_dir.glob("*.state.json"),
+        key=lambda state_path: state_path.stat().st_mtime,
+    )
+    if not state_files:
+        return Counter()
+    try:
+        state = json.loads(state_files[-1].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return Counter()
+    tasks = state.get("tasks")
+    if not isinstance(tasks, dict):
+        return Counter()
+    return Counter(
+        str(task.get("state") or "unknown")
+        for task in tasks.values()
+        if isinstance(task, dict)
+    )
 
 
 def _audit_complete(*, total_tasks: int, audit_rows: int) -> bool:
