@@ -139,15 +139,29 @@ def main() -> int:
     )
     _write_queue_sources(batch_dir=batch_dir, dataset_rows=_read_manifest_datasets(batch_dir))
     if args.profile == "formal24h_13alg_3seed_3noise":
+        params_tools = tuple(_params_tool_name(tool) for tool in tools)
         params_summary = generate_noise_params(
             source_params_root=_resolve_repo_path(args.source_params_root),
             output_params_root=batch_dir / "params",
-            tools=tuple(_params_tool_name(tool) for tool in tools),
+            tools=params_tools,
             noise_sigmas=noise_sigmas,
             timeout_in_seconds=timeout_in_seconds,
             progress_snapshot_interval_seconds=progress_interval,
         )
-        summary = {**summary, **params_summary}
+        smoke_params_summary = generate_noise_params(
+            source_params_root=_resolve_repo_path(args.source_params_root),
+            output_params_root=batch_dir / "params_smoke",
+            tools=params_tools,
+            noise_sigmas=noise_sigmas,
+            timeout_in_seconds=600,
+            progress_snapshot_interval_seconds=progress_interval,
+        )
+        summary = {
+            **summary,
+            **params_summary,
+            "smoke_params_files": smoke_params_summary["params_files"],
+            "smoke_timeout_in_seconds": 600,
+        }
     print(summary)
     return 0
 

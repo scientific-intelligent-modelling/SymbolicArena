@@ -327,6 +327,8 @@ smoke 目标不是验证 24h runtime，而是验证：
 - harvest/audit/rerun 能识别 noise 维度。
 - 每个算法能写出 progress 和 result。
 
+smoke 必须使用独立的 `params_smoke/` 参数目录，`timeout_in_seconds=600`；正式 full 才使用 `params/` 中的 `timeout_in_seconds=86400`。
+
 ### full
 
 只有 smoke audit 全绿后才启动：
@@ -355,4 +357,3 @@ benchmark-control/compliance/run-summaries/<batch_id>.md
 ```
 
 摘要进入 Git；完整实验产物不进入 Git。
-

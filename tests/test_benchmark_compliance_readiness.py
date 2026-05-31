@@ -238,6 +238,17 @@ def test_readiness_passes_for_formal24h_batch(tmp_path: Path) -> None:
                 ),
                 encoding="utf-8",
             )
+            (batch_dir / "params_smoke").mkdir(parents=True, exist_ok=True)
+            (batch_dir / "params_smoke" / f"{params_tool}__{noise_tag}.json").write_text(
+                json.dumps(
+                    {
+                        "timeout_in_seconds": 600,
+                        "progress_snapshot_interval_seconds": 60,
+                        "train_label_noise_sigma": float(noise_sigma),
+                    }
+                ),
+                encoding="utf-8",
+            )
 
     summary = readiness.check_readiness(batch_dir=batch_dir, profile="formal24h_13alg_3seed_3noise")
 

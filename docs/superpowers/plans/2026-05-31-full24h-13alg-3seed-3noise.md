@@ -908,6 +908,12 @@ Use params root:
 benchmark-runs/formal24h/latest/params
 ```
 
+For smoke dispatch, use the separate short-budget params root:
+
+```text
+benchmark-runs/formal24h/latest/params_smoke
+```
+
 Use session prefixes:
 
 ```text
@@ -1063,4 +1069,3 @@ Expected: commit succeeds.
 - Placeholder scan: no task depends on an unspecified future file or manual hand edit.
 - Type consistency: `noise_tag` uses `clean/noise001/noise005`; `noise_sigma` remains float in JSON and string in CSV.
 - Backward compatibility: Stage1 1h defaults remain available and existing tests must continue passing.
-

@@ -176,24 +176,35 @@ def _check_formal24h_algorithms(algorithms: dict[str, Any], issues: list[str]) -
 
 
 def _check_formal24h_params(batch_dir: Path, issues: list[str]) -> None:
+    _check_formal24h_params_root(batch_dir / "params", issues, timeout_in_seconds=86400, label="params")
+    _check_formal24h_params_root(batch_dir / "params_smoke", issues, timeout_in_seconds=600, label="params_smoke")
+
+
+def _check_formal24h_params_root(
+    params_root: Path,
+    issues: list[str],
+    *,
+    timeout_in_seconds: int,
+    label: str,
+) -> None:
     expected_sigmas = {"clean": 0.0, "noise001": 0.01, "noise005": 0.05}
     for algorithm in sorted(FORMAL24H_PARAM_KEYS):
         for noise_tag, sigma in expected_sigmas.items():
-            path = batch_dir / "params" / f"{algorithm}__{noise_tag}.json"
+            path = params_root / f"{algorithm}__{noise_tag}.json"
             if not path.exists():
-                issues.append(f"params/{algorithm}__{noise_tag}.json missing")
+                issues.append(f"{label}/{algorithm}__{noise_tag}.json missing")
                 continue
             try:
                 payload = json.loads(path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as exc:
-                issues.append(f"params/{algorithm}__{noise_tag}.json invalid json: {exc}")
+                issues.append(f"{label}/{algorithm}__{noise_tag}.json invalid json: {exc}")
                 continue
-            if payload.get("timeout_in_seconds") != 86400:
-                issues.append(f"params/{algorithm}__{noise_tag}.json timeout_in_seconds must be 86400")
+            if payload.get("timeout_in_seconds") != timeout_in_seconds:
+                issues.append(f"{label}/{algorithm}__{noise_tag}.json timeout_in_seconds must be {timeout_in_seconds}")
             if payload.get("progress_snapshot_interval_seconds") != 60:
-                issues.append(f"params/{algorithm}__{noise_tag}.json progress_snapshot_interval_seconds must be 60")
+                issues.append(f"{label}/{algorithm}__{noise_tag}.json progress_snapshot_interval_seconds must be 60")
             if float(payload.get("train_label_noise_sigma", -1)) != sigma:
-                issues.append(f"params/{algorithm}__{noise_tag}.json train_label_noise_sigma must be {sigma}")
+                issues.append(f"{label}/{algorithm}__{noise_tag}.json train_label_noise_sigma must be {sigma}")
 
 
 def _check_deploy_scripts(batch_dir: Path, issues: list[str]) -> None:

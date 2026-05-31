@@ -138,7 +138,7 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --source-csv benchmark-runs/formal24h/latest/queues/smoke_2datasets_source.csv \\
   --expected-rows 2 \\
   --queue-root benchmark-runs/formal24h/latest/queues/load_queue_smoke \\
-  --params-root benchmark-runs/formal24h/latest/params \\
+  --params-root benchmark-runs/formal24h/latest/params_smoke \\
   --hosts {HOSTS} \\
   --tools {TOOLS} \\
   --seeds {SEEDS} \\
@@ -202,7 +202,7 @@ python check/run_e1_candidate200_12alg_load_queue.py \\
   --source-csv benchmark-runs/formal24h/latest/queues/smoke_2datasets_source.csv \\
   --expected-rows 2 \\
   --queue-root benchmark-runs/formal24h/latest/queues/load_queue_smoke \\
-  --params-root benchmark-runs/formal24h/latest/params \\
+  --params-root benchmark-runs/formal24h/latest/params_smoke \\
   --hosts {HOSTS} \\
   --tools {TOOLS} \\
   --seeds {SEEDS} \\

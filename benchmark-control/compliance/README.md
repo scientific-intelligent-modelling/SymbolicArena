@@ -136,4 +136,4 @@ total_algorithms=13
 total_noise_levels=3
 ```
 
-`deploy/02_smoke_dispatch_from_iaaccn22.sh` 的 smoke 规模是 `13 × 2 × 3 × 3 = 234` 个任务；`deploy/03_full_dispatch_from_iaaccn22.sh` 的 full 规模是 `5850` 个任务。
+`deploy/02_smoke_dispatch_from_iaaccn22.sh` 的 smoke 规模是 `13 × 2 × 3 × 3 = 234` 个任务，并使用 `params_smoke/` 中的 `600s` 参数；`deploy/03_full_dispatch_from_iaaccn22.sh` 的 full 规模是 `5850` 个任务，并使用 `params/` 中的 `86400s` 参数。
