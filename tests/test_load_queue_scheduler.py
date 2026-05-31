@@ -303,7 +303,42 @@ def test_list_queue_sessions_does_not_mask_tmux_ls_timeout(monkeypatch):
     assert sessions is None
 
 
-def test_update_running_tasks_rechecks_session_when_tmux_ls_misses_running_session(tmp_path, monkeypatch):
+def test_update_running_tasks_rechecks_session_when_tmux_ls_unavailable(tmp_path, monkeypatch):
+    state = {
+        "tasks": {
+            "gplearn_s520_clean_g0004": {
+                "state": "running",
+                "assigned_host": "iaaccn25",
+                "session": "formal24h_full_gplearn_s520_clean_g0004",
+                "expected": 1,
+            }
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+
+    monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: True)
+
+    def fail_if_status_read(*_args, **_kwargs):
+        raise AssertionError("running tmux session should not be treated as finished")
+
+    monkeypatch.setattr(scheduler, "_read_task_statuses_bulk", fail_if_status_read)
+
+    scheduler._update_running_tasks(state, args)
+
+    assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "running"
+
+
+def test_update_running_tasks_trusts_valid_tmux_session_list_for_finished_task(tmp_path, monkeypatch):
     state = {
         "tasks": {
             "gplearn_s520_clean_g0004": {
@@ -326,13 +361,25 @@ def test_update_running_tasks_rechecks_session_when_tmux_ls_misses_running_sessi
     )
 
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
-    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: True)
 
-    def fail_if_status_read(*_args, **_kwargs):
-        raise AssertionError("running tmux session should not be treated as finished")
+    def fail_if_session_running_called(*_args, **_kwargs):
+        raise AssertionError("valid tmux session list should not trigger per-task SSH fallback")
 
-    monkeypatch.setattr(scheduler, "_read_task_statuses_bulk", fail_if_status_read)
+    monkeypatch.setattr(scheduler, "_session_running", fail_if_session_running_called)
+    monkeypatch.setattr(
+        scheduler,
+        "_read_task_statuses_bulk",
+        lambda *args, **kwargs: {
+            "gplearn_s520_clean_g0004": {
+                "read_error": None,
+                "seen": 1,
+                "done": 1,
+                "errors": 0,
+                "counts": {"ok": 1},
+            }
+        },
+    )
 
     scheduler._update_running_tasks(state, args)
 
-    assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "running"
+    assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "done"

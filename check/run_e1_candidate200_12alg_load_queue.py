@@ -1217,8 +1217,9 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         if host_sessions is not None:
             if session in host_sessions:
                 continue
-        if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
-            continue
+        else:
+            if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
+                continue
         finished_items.append((task_id, task))
 
     finished_by_host: dict[str, list[tuple[str, dict[str, Any]]]] = defaultdict(list)
