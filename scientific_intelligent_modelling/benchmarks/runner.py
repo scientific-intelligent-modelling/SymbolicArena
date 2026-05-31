@@ -1052,6 +1052,17 @@ def _extract_fepysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, 
     return item
 
 
+def _extract_symbolfit_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
+    path = Path(experiment_dir) / ".symbolfit_current_best.json"
+    item = _read_json_file(path)
+    if not item:
+        return None
+    equation = item.get("equation")
+    if not isinstance(equation, str) or not equation.strip():
+        return None
+    return item
+
+
 def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> dict[str, Any] | None:
     tool = str(tool_name).strip().lower()
     if tool == "llmsr":
@@ -1082,6 +1093,8 @@ def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> d
         return _extract_ragsr_periodic_candidate(experiment_dir)
     if tool == "fepysr":
         return _extract_fepysr_periodic_candidate(experiment_dir)
+    if tool == "symbolfit":
+        return _extract_symbolfit_periodic_candidate(experiment_dir)
     return None
 
 

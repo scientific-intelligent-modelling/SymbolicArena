@@ -6,6 +6,7 @@ import re
 import tempfile
 import time
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -55,6 +56,7 @@ class SymbolFitRegressor(BaseWrapper):
         "fill_timeout_budget",
     }
     _MIN_BUDGET_REFIT_SECONDS = 5
+    _CURRENT_BEST_FILENAME = ".symbolfit_current_best.json"
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
         "random_state",
         "pysr_config",
@@ -70,6 +72,7 @@ class SymbolFitRegressor(BaseWrapper):
         self._contract_target_name = raw_kwargs.get("target_name")
         self._explicit_timeout_seconds = self._positive_int(raw_kwargs.get("timeout_in_seconds"))
         self._fill_timeout_budget = bool(raw_kwargs.get("fill_timeout_budget", True))
+        self._experiment_dir = self._resolve_experiment_dir(raw_kwargs)
         self.params = self._validate_and_normalize_params(raw_kwargs)
         self._apply_internal_timeout_guard(raw_kwargs)
         self.model = None
@@ -167,6 +170,17 @@ class SymbolFitRegressor(BaseWrapper):
             return None
         return max(0, int(deadline - time.monotonic()))
 
+    @staticmethod
+    def _resolve_experiment_dir(raw_params: dict[str, Any]) -> Path | None:
+        exp_path = raw_params.get("exp_path")
+        exp_name = raw_params.get("exp_name")
+        if not exp_path or not exp_name:
+            return None
+        try:
+            return Path(str(exp_path)).expanduser().resolve() / str(exp_name)
+        except Exception:
+            return None
+
     @classmethod
     def _iteration_timeout_seconds(cls, *, base_timeout: int | None, remaining_seconds: int) -> int:
         guarded_remaining = max(1, remaining_seconds - cls._resolve_timeout_guard(remaining_seconds, None))
@@ -218,6 +232,26 @@ class SymbolFitRegressor(BaseWrapper):
                         expr = re.sub(rf"\b{re.escape(str(name))}\b", str(best), expr)
                 return expr
         raise ValueError("SymbolFit 候选中没有可用表达式字段")
+
+    def _write_current_best_snapshot(self, *, attempt: int, score: tuple[float, float]) -> None:
+        if self._experiment_dir is None or not self._best_equation:
+            return
+        payload = {
+            "tool": "symbolfit",
+            "equation": self._best_equation,
+            "equations": list(self._equations or [self._best_equation]),
+            "attempt": int(attempt),
+            "score": float(score[0]) if score and np.isfinite(score[0]) else None,
+            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            path = self._experiment_dir / self._CURRENT_BEST_FILENAME
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = path.with_suffix(path.suffix + ".tmp")
+            tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp_path.replace(path)
+        except Exception:
+            return
 
     @staticmethod
     def _build_callable(expr: str):
@@ -327,6 +361,12 @@ class SymbolFitRegressor(BaseWrapper):
                 best_model = model
                 best_candidate = candidate
                 best_score = score
+                self.model = best_model
+                self._best_candidate = best_candidate
+                self._best_equation = self._extract_best_equation(self._best_candidate)
+                self._equations = self.get_total_equations()
+                self._callable = self._build_callable(self._best_equation)
+                self._write_current_best_snapshot(attempt=attempt, score=best_score)
             if deadline is None or time.monotonic() >= deadline:
                 break
         self.model = best_model
