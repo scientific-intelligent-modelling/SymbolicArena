@@ -283,3 +283,56 @@ def test_next_pending_uses_available_llm_bucket_before_non_llm():
     picked = scheduler._next_pending_task_id(state, _scheduler_args())
 
     assert picked == "pending_turbo"
+
+
+def test_list_queue_sessions_does_not_mask_tmux_ls_timeout(monkeypatch):
+    def fake_ssh(_host, command, **_kwargs):
+        if "|| true" in command:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return subprocess.CompletedProcess(command, 124, "", "timeout")
+
+    monkeypatch.setattr(scheduler, "_ssh", fake_ssh)
+
+    sessions = scheduler._list_queue_sessions(
+        "iaaccn25",
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+    )
+
+    assert sessions is None
+
+
+def test_update_running_tasks_rechecks_session_when_tmux_ls_misses_running_session(tmp_path, monkeypatch):
+    state = {
+        "tasks": {
+            "gplearn_s520_clean_g0004": {
+                "state": "running",
+                "assigned_host": "iaaccn25",
+                "session": "formal24h_full_gplearn_s520_clean_g0004",
+                "expected": 1,
+            }
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+
+    monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
+    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: True)
+
+    def fail_if_status_read(*_args, **_kwargs):
+        raise AssertionError("running tmux session should not be treated as finished")
+
+    monkeypatch.setattr(scheduler, "_read_task_statuses_bulk", fail_if_status_read)
+
+    scheduler._update_running_tasks(state, args)
+
+    assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "running"

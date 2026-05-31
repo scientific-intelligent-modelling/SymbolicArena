@@ -1057,14 +1057,18 @@ def _session_running(host: str, session: str, *, controller_host: str, use_inter
 def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: bool, session_prefix: str) -> set[str] | None:
     result = _ssh(
         host,
-        f"timeout 30 tmux ls 2>/dev/null | cut -d: -f1 | grep '^{shlex.quote(session_prefix)}' || true",
+        "timeout 30 tmux ls 2>/dev/null",
         controller_host=controller_host,
         use_internal_ips=use_internal_ips,
         timeout=45,
     )
     if result.returncode != 0:
         return None
-    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    return {
+        line.split(":", 1)[0].strip()
+        for line in result.stdout.splitlines()
+        if line.split(":", 1)[0].strip().startswith(session_prefix)
+    }
 
 
 def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> tuple[str, str]:
@@ -1213,7 +1217,7 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         if host_sessions is not None:
             if session in host_sessions:
                 continue
-        elif _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
+        if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
             continue
         finished_items.append((task_id, task))
 
