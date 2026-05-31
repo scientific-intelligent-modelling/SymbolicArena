@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from scientific_intelligent_modelling.benchmarks import runner
+from scientific_intelligent_modelling.benchmarks.metrics import regression_metrics
 from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
 
 
@@ -87,6 +88,18 @@ class _NoValidOutputFakeRegressor(_FakeRegressor):
 
 
 class BenchmarkRunnerTest(unittest.TestCase):
+    def test_regression_metrics_penalize_nonfinite_predictions_with_finite_nmse(self):
+        metrics = regression_metrics(
+            np.asarray([1.0, 2.0, 3.0]),
+            np.asarray([1.0, np.nan, np.inf]),
+            acc_threshold=0.1,
+        )
+
+        self.assertIsNotNone(metrics["nmse"])
+        self.assertTrue(np.isfinite(metrics["nmse"]))
+        self.assertIsNotNone(metrics["rmse"])
+        self.assertTrue(np.isfinite(metrics["rmse"]))
+
     def test_predict_from_canonical_artifact_reports_uninstantiated_params(self):
         artifact = {
             "normalized_expression": "c0 + x0",
@@ -118,6 +131,17 @@ class BenchmarkRunnerTest(unittest.TestCase):
         self.assertEqual(pred.shape, (3,))
         self.assertTrue(np.all(np.isfinite(pred)))
         self.assertAlmostEqual(pred[1], 3.0, places=10)
+
+    def test_predict_from_canonical_artifact_vectorizes_sympy_min_max(self):
+        artifact = {
+            "tool_name": "ragsr",
+            "instantiated_expression": "Min(0.5, x0**2) + Max(x1, 1.0)",
+        }
+        X = np.asarray([[0.25, 0.0], [2.0, 3.0]])
+
+        pred = runner._predict_from_canonical_artifact(artifact, X)
+
+        np.testing.assert_allclose(pred, np.asarray([1.0625, 3.5]))
 
     def test_run_benchmark_task_writes_outer_and_experiment_results(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -451,7 +475,7 @@ dataset:
             )
 
             original_extract = runner._extract_periodic_candidate
-            runner._extract_periodic_candidate = lambda tool, exp_dir: {"equation": "log(-x0)"}
+            runner._extract_periodic_candidate = lambda tool, exp_dir: {"equation": "x9"}
             try:
                 payload = runner._recover_timeout_payload_from_candidate(
                     tool_name="udsr",

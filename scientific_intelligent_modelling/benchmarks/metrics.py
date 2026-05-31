@@ -128,17 +128,37 @@ def regression_metrics(
             "nmse": None,
             "acc_tau": None,
         }
+    if not np.all(np.isfinite(y_true)):
+        return {
+            "mse": None,
+            "rmse": None,
+            "mae": None,
+            "r2": None,
+            "nmse": None,
+            "acc_tau": None,
+        }
 
     residual = y_pred - y_true
+    finite_residual = residual[np.isfinite(residual)]
+    max_abs_target = float(np.max(np.abs(y_true))) if y_true.size else 1.0
+    max_abs_residual = float(np.max(np.abs(finite_residual))) if finite_residual.size else 0.0
+    residual_limit = min(max(1.0, max_abs_target * 10.0, max_abs_residual), 1.0e150)
+    residual = np.nan_to_num(
+        residual,
+        nan=residual_limit,
+        posinf=residual_limit,
+        neginf=-residual_limit,
+    )
+    residual = np.clip(residual, -residual_limit, residual_limit)
     mse = float(np.mean(np.square(residual)))
     rmse = float(math.sqrt(mse))
     mae = float(np.mean(np.abs(residual)))
     y_mean = float(np.mean(y_true))
     ss_res = float(np.sum(np.square(residual)))
     ss_tot = float(np.sum(np.square(y_true - y_mean)))
-    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+    r2 = 1.0 - min(ss_res / ss_tot, 1.0e300) if ss_tot > 0 else float("nan")
     denom = float(np.mean(np.square(y_true))) if y_true.size else float("nan")
-    nmse = float(mse / denom) if denom and not math.isnan(denom) else float("nan")
+    nmse = float(min(mse / denom, 1.0e300)) if denom and not math.isnan(denom) else float("nan")
     acc_tau = (
         acc_within_threshold(y_true, y_pred, acc_threshold)
         if acc_threshold is not None

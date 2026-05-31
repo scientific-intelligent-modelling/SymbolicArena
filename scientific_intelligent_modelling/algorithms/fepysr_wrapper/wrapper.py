@@ -52,6 +52,8 @@ class FePySRRegressor(BaseWrapper):
         "progress_snapshot_interval_seconds",
         "timeout_guard_seconds",
         "fill_timeout_budget",
+        "existing_exp_dir",
+        "exp_dir",
     }
     _MIN_BUDGET_REFIT_SECONDS = 5
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
@@ -59,8 +61,10 @@ class FePySRRegressor(BaseWrapper):
         "custom_pysr_model",
         "device",
         "fmn_only",
+        "max_fit_attempt_seconds",
     }
     _FEATURE_VALUE_LIMIT = 1.0e6
+    _CURRENT_BEST_FILENAME = ".fepysr_current_best.json"
 
     def __init__(self, **kwargs):
         raw_kwargs = dict(kwargs)
@@ -69,12 +73,16 @@ class FePySRRegressor(BaseWrapper):
         self._contract_target_name = raw_kwargs.get("target_name")
         self._explicit_timeout_seconds = self._positive_int(raw_kwargs.get("timeout_in_seconds"))
         self._fill_timeout_budget = bool(raw_kwargs.get("fill_timeout_budget", True))
+        self._experiment_dir = self._resolve_experiment_dir(raw_kwargs)
+        self._existing_exp_dir = self._resolve_existing_exp_dir(raw_kwargs)
         self.params = self._validate_and_normalize_params(raw_kwargs)
         self._apply_internal_timeout_guard(raw_kwargs)
         self.model = None
         self._equations: list[str] = []
         self._best_equation: str | None = None
         self._callable = None
+        if self._existing_exp_dir is not None:
+            self._load_current_best_snapshot(self._existing_exp_dir)
 
     @classmethod
     def _validate_and_normalize_params(cls, raw_params: dict[str, Any]) -> dict[str, Any]:
@@ -114,6 +122,7 @@ class FePySRRegressor(BaseWrapper):
             "maxsize",
             "maxdepth",
             "timeout_in_seconds",
+            "max_fit_attempt_seconds",
         ):
             if key in raw_params and raw_params[key] is not None:
                 raw_params[key] = int(raw_params[key])
@@ -192,11 +201,46 @@ class FePySRRegressor(BaseWrapper):
             return None
         return time.monotonic() + budget_seconds
 
+    @staticmethod
+    def _resolve_experiment_dir(raw_params: dict[str, Any]):
+        exp_path = raw_params.get("exp_path")
+        exp_name = raw_params.get("exp_name")
+        if not exp_path or not exp_name:
+            return None
+        try:
+            from pathlib import Path
+
+            return Path(str(exp_path)).expanduser().resolve() / str(exp_name)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _resolve_existing_exp_dir(raw_params: dict[str, Any]):
+        raw = raw_params.get("existing_exp_dir") or raw_params.get("exp_dir")
+        if not raw:
+            return None
+        try:
+            from pathlib import Path
+
+            path = Path(str(raw)).expanduser().resolve()
+            return path if path.exists() else None
+        except Exception:
+            return None
+
     @classmethod
     def _remaining_budget_seconds(cls, deadline: float | None) -> int | None:
         if deadline is None:
             return None
         return max(0, int(deadline - time.monotonic()))
+
+    @classmethod
+    def _fit_attempt_timeout_seconds(cls, params: dict[str, Any], remaining: int | None) -> int | None:
+        if remaining is None:
+            return cls._positive_int(params.get("timeout_in_seconds"))
+        explicit = cls._positive_int(params.get("max_fit_attempt_seconds"))
+        if explicit is not None:
+            return max(1, min(remaining, explicit))
+        return max(1, min(remaining, 1200, max(1, remaining // 4)))
 
     @staticmethod
     def _equation_score(expr: str, X_arr: np.ndarray, y_arr: np.ndarray) -> float:
@@ -282,6 +326,43 @@ class FePySRRegressor(BaseWrapper):
         if fepysr_impl_module is not None:
             fepysr_impl_module.pysr_train = safe_pysr_train
 
+    def _write_current_best_snapshot(self, *, attempt: int, score: float) -> None:
+        if self._experiment_dir is None or not self._best_equation:
+            return
+        payload = {
+            "tool": "fepysr",
+            "equation": self._best_equation,
+            "equations": list(self._equations),
+            "attempt": int(attempt),
+            "score": float(score) if np.isfinite(score) else None,
+            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            path = self._experiment_dir / self._CURRENT_BEST_FILENAME
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = path.with_suffix(path.suffix + ".tmp")
+            tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp_path.replace(path)
+        except Exception:
+            return
+
+    def _load_current_best_snapshot(self, experiment_dir) -> None:
+        try:
+            path = experiment_dir / self._CURRENT_BEST_FILENAME
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return
+        equation = payload.get("equation")
+        if not isinstance(equation, str) or not equation.strip():
+            return
+        self._best_equation = equation
+        self._equations = [
+            str(item)
+            for item in payload.get("equations", [equation])
+            if isinstance(item, str) and item.strip()
+        ]
+        self._callable = self._build_callable(self._best_equation)
+
     def fit(self, X, y):
         self._validate_explicit_dataset_contract(
             X,
@@ -318,9 +399,12 @@ class FePySRRegressor(BaseWrapper):
             attempt += 1
             iteration_params = dict(self.params)
             if remaining is not None:
-                iteration_params["timeout_in_seconds"] = max(1, remaining)
+                attempt_timeout = self._fit_attempt_timeout_seconds(iteration_params, remaining)
+                if attempt_timeout is not None:
+                    iteration_params["timeout_in_seconds"] = attempt_timeout
             if iteration_params.get("random_state") is not None:
                 iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
+            iteration_params.pop("max_fit_attempt_seconds", None)
             model = FePySR(
                 overrides=self._build_overrides(iteration_params),
                 custom_pysr_model=iteration_params.get("custom_pysr_model"),
@@ -334,6 +418,13 @@ class FePySRRegressor(BaseWrapper):
                     best_model = model
                     best_equation = eq
                     best_score = score
+                    self._best_equation = best_equation
+                    self._equations = [
+                        item
+                        for idx, item in enumerate(equations)
+                        if item and item not in equations[:idx]
+                    ]
+                    self._write_current_best_snapshot(attempt=attempt, score=best_score)
             elif best_model is None:
                 best_model = model
             if deadline is None or time.monotonic() >= deadline:

@@ -59,8 +59,22 @@ def test_fepysr_repeats_successful_fit_until_timeout_budget(monkeypatch) -> None
     reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
 
     assert len(fit_calls) >= 2
+    assert any("pysr_params.timeout_in_seconds=2" in item for item in fit_calls[0])
     assert all(not any("pysr_params.random_state" in item for item in call) for call in fit_calls)
     assert reg.get_optimal_equation() == "X0"
+
+
+def test_fepysr_current_best_snapshot_supports_timeout_recovery(tmp_path) -> None:
+    exp_dir = tmp_path / "case"
+    reg = FePySRRegressor(exp_path=str(tmp_path), exp_name="case", n_features=1)
+    reg._best_equation = "X0"
+    reg._equations = ["X0"]
+
+    reg._write_current_best_snapshot(attempt=1, score=0.0)
+
+    recovered = FePySRRegressor(existing_exp_dir=str(exp_dir), n_features=1)
+    assert recovered.get_optimal_equation() == "X0"
+    np.testing.assert_allclose(recovered.predict(np.array([[1.0], [2.0]])), np.array([1.0, 2.0]))
 
 
 def test_fepysr_runtime_patch_decodes_bytes_equations(monkeypatch) -> None:

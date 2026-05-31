@@ -45,6 +45,7 @@ _SNAPSHOT_CAPABLE_TOOLS = {
     "tpsr",
     "QLattice",
     "ragsr",
+    "fepysr",
 }
 _SNAPSHOT_CAPABLE_TOOL_KEYS = {tool.lower() for tool in _SNAPSHOT_CAPABLE_TOOLS}
 
@@ -663,8 +664,40 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
             raise ValueError(f"表达式变量索引越界: {name}, 输入维度={X_arr.shape[1]}")
         args.append(X_arr[:, idx])
 
-    fn = sp.lambdify(free_symbols, expr, modules="numpy")
-    pred = fn(*args)
+    def _broadcast_maximum(*values):
+        arrays = np.broadcast_arrays(*values)
+        return np.maximum.reduce(arrays)
+
+    def _broadcast_minimum(*values):
+        arrays = np.broadcast_arrays(*values)
+        return np.minimum.reduce(arrays)
+
+    fn = sp.lambdify(
+        free_symbols,
+        expr,
+        modules=[
+            {
+                "Max": _broadcast_maximum,
+                "Min": _broadcast_minimum,
+                "amax": _broadcast_maximum,
+                "amin": _broadcast_minimum,
+            },
+            "numpy",
+        ],
+    )
+    try:
+        pred = fn(*args)
+    except ValueError:
+        scalar_fn = sp.lambdify(
+            free_symbols,
+            expr,
+            modules=[{"Max": max, "Min": min, "Abs": abs}, "math"],
+        )
+        values = []
+        for row in X_arr:
+            row_args = [float(row[int(str(sym)[1:])]) for sym in free_symbols]
+            values.append(float(scalar_fn(*row_args)))
+        pred = np.asarray(values, dtype=float)
     pred_arr = np.asarray(pred, dtype=float)
     if pred_arr.ndim == 0:
         pred_arr = np.full(X_arr.shape[0], float(pred_arr), dtype=float)
@@ -990,6 +1023,17 @@ def _extract_ragsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, A
     return item
 
 
+def _extract_fepysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
+    path = Path(experiment_dir) / ".fepysr_current_best.json"
+    item = _read_json_file(path)
+    if not item:
+        return None
+    equation = item.get("equation")
+    if not isinstance(equation, str) or not equation.strip():
+        return None
+    return item
+
+
 def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> dict[str, Any] | None:
     tool = str(tool_name).strip().lower()
     if tool == "llmsr":
@@ -1018,6 +1062,8 @@ def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> d
         return _extract_jaxsr_periodic_candidate(experiment_dir)
     if tool == "ragsr":
         return _extract_ragsr_periodic_candidate(experiment_dir)
+    if tool == "fepysr":
+        return _extract_fepysr_periodic_candidate(experiment_dir)
     return None
 
 
