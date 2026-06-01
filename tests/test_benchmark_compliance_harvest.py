@@ -211,6 +211,47 @@ def test_harvest_prefers_candidate_from_state_assigned_host(tmp_path: Path) -> N
     assert "iaaccn23" in source["source_result"]
 
 
+def test_harvest_marks_missing_when_assigned_host_has_no_candidate(tmp_path: Path) -> None:
+    harvest = load_for_test("harvest")
+    batch_dir = tmp_path / "batch"
+    _write_manifest(batch_dir)
+    state_dir = batch_dir / "queues" / "load_queue_full" / "state"
+    state_dir.mkdir(parents=True)
+    (state_dir / "formal24h.state.json").write_text(
+        json.dumps(
+            {
+                "tasks": {
+                    "qlattice_s520_g0001": {
+                        "state": "running",
+                        "assigned_host": "iaaccn23",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    duplicate_root = tmp_path / "remote-experiments" / "iaaccn25"
+    _write_remote_result(
+        duplicate_root,
+        tool_key="qlattice",
+        tool_arg="QLattice",
+        seed=520,
+        global_index=1,
+        dataset_name="Keijzer-11",
+        payload={"status": "ok", "runtime_seconds": 1.0},
+    )
+
+    summary = harvest.harvest_batch(batch_dir=batch_dir, experiment_roots=[duplicate_root])
+
+    assert summary == {"total_tasks": 2, "harvested": 0, "missing": 2}
+    result = batch_dir / "runs" / "QLattice" / "seed520" / "Keijzer-11" / "result.json"
+    assert not result.exists()
+    with (batch_dir / "harvest" / "harvested_tasks.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["status"] == "missing"
+    assert rows[0]["reason"] == "result not found for qlattice_s520_g0001"
+
+
 def test_harvest_launcher_accepts_repo_relative_paths(tmp_path: Path, monkeypatch) -> None:
     launcher_path = (
         Path(__file__).resolve().parents[1]

@@ -99,9 +99,7 @@ def _harvest_task(
     )
     assigned_host = assigned_hosts.get(scheduler_task_id)
     if assigned_host:
-        assigned_candidates = [candidate for candidate in candidates if candidate.source_host == assigned_host]
-        if assigned_candidates:
-            candidates = assigned_candidates
+        candidates = [candidate for candidate in candidates if candidate.source_host == assigned_host]
     if not candidates:
         return _harvest_row(
             task,
