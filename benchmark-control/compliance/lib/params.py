@@ -51,6 +51,7 @@ def _apply_tool_budget_overrides(*, tool: str, payload: dict[str, Any], timeout_
         return
     if tool == "gplearn":
         payload["n_jobs"] = 1
+        payload["low_memory"] = True
         return
     if tool != "pyoperon":
         return

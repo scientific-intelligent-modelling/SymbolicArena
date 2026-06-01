@@ -54,6 +54,7 @@ def test_generate_noise_params_writes_13_by_3_files(tmp_path: Path) -> None:
     assert clean["train_label_noise_sigma"] == 0.0
     assert pyoperon["max_evaluations"] == 1152000000
     assert gplearn["n_jobs"] == 1
+    assert gplearn["low_memory"] is True
     assert noisy["progress_snapshot_interval_seconds"] == 60
     assert noisy["train_label_noise_enabled"] is True
     assert noisy["train_label_noise_sigma"] == 0.01
