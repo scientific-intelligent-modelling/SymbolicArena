@@ -1217,6 +1217,14 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         if host_sessions is not None:
             if session in host_sessions:
                 continue
+            # tmux ls 在高负载机器上可能返回缺失的瞬时快照；缺席时再做一次精确确认。
+            if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
+                _append_event(
+                    args.batch_name,
+                    {"event": "task_session_list_missed_live_session", "task_id": task_id, "host": host, "session": session},
+                    args.queue_root_path,
+                )
+                continue
         else:
             if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
                 continue
