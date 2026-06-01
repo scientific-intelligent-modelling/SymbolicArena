@@ -303,7 +303,7 @@ def test_list_queue_sessions_does_not_mask_tmux_ls_timeout(monkeypatch):
     assert sessions is None
 
 
-def test_update_running_tasks_rechecks_session_when_tmux_ls_unavailable(tmp_path, monkeypatch):
+def test_update_running_tasks_keeps_running_when_tmux_ls_unavailable(tmp_path, monkeypatch):
     state = {
         "tasks": {
             "gplearn_s520_clean_g0004": {
@@ -326,7 +326,11 @@ def test_update_running_tasks_rechecks_session_when_tmux_ls_unavailable(tmp_path
     )
 
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: None)
-    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: True)
+
+    def fail_if_session_running_called(*_args, **_kwargs):
+        raise AssertionError("host-level tmux ls failure should not trigger per-task SSH fallback")
+
+    monkeypatch.setattr(scheduler, "_session_running", fail_if_session_running_called)
 
     def fail_if_status_read(*_args, **_kwargs):
         raise AssertionError("running tmux session should not be treated as finished")

@@ -1210,6 +1210,7 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
             )
 
     finished_items: list[tuple[str, dict[str, Any]]] = []
+    unverified_hosts_reported: set[str] = set()
     for task_id, task in running_items:
         host = str(task["assigned_host"])
         session = str(task["session"])
@@ -1226,8 +1227,15 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                 )
                 continue
         else:
-            if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
-                continue
+            # host 级列表都不可用时，不做逐任务 SSH 兜底，避免单机超时拖死整轮调度。
+            if host not in unverified_hosts_reported:
+                _append_event(
+                    args.batch_name,
+                    {"event": "host_session_list_unavailable_keep_running", "host": host},
+                    args.queue_root_path,
+                )
+                unverified_hosts_reported.add(host)
+            continue
         finished_items.append((task_id, task))
 
     finished_by_host: dict[str, list[tuple[str, dict[str, Any]]]] = defaultdict(list)
