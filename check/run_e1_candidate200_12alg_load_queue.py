@@ -110,6 +110,53 @@ def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
 
+def _parse_time(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=None)
+
+
+def _task_timeout_seconds(task: dict[str, Any], args: argparse.Namespace) -> int | None:
+    params_name = task.get("params_name")
+    params_root = getattr(args, "params_root_path", None)
+    if not params_name or params_root is None:
+        return None
+    params_path = Path(params_root) / f"{params_name}.json"
+    try:
+        payload = json.loads(params_path.read_text(encoding="utf-8"))
+        timeout = payload.get("timeout_in_seconds")
+        return None if timeout is None else int(timeout)
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def _host_unavailable_requeue_reason(task: dict[str, Any], args: argparse.Namespace, now_text: str) -> str | None:
+    grace_seconds = int(getattr(args, "host_unavailable_grace_seconds", 0) or 0)
+    if grace_seconds <= 0:
+        return None
+    started_at = _parse_time(task.get("started_at"))
+    unavailable_since = _parse_time(task.get("host_unavailable_since"))
+    now_at = _parse_time(now_text)
+    timeout_seconds = _task_timeout_seconds(task, args)
+    if started_at is None or unavailable_since is None or now_at is None or timeout_seconds is None:
+        return None
+    runtime_seconds = int((now_at - started_at).total_seconds())
+    unavailable_seconds = int((now_at - unavailable_since).total_seconds())
+    if runtime_seconds < timeout_seconds + grace_seconds:
+        return None
+    if unavailable_seconds < grace_seconds:
+        return None
+    return (
+        "host unavailable after budget grace: "
+        f"runtime_seconds={runtime_seconds}, timeout_seconds={timeout_seconds}, "
+        f"unavailable_seconds={unavailable_seconds}, grace_seconds={grace_seconds}"
+    )
+
+
 def _safe_text(value: object) -> str:
     if value is None:
         return ""
@@ -1216,6 +1263,7 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         session = str(task["session"])
         host_sessions = sessions_by_host.get(host)
         if host_sessions is not None:
+            task.pop("host_unavailable_since", None)
             if session in host_sessions:
                 continue
             # tmux ls 在高负载机器上可能返回缺失的瞬时快照；缺席时再做一次精确确认。
@@ -1228,6 +1276,33 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                 continue
         else:
             # host 级列表都不可用时，不做逐任务 SSH 兜底，避免单机超时拖死整轮调度。
+            now_text = _now()
+            task.setdefault("host_unavailable_since", now_text)
+            task["host_unavailable_last_at"] = now_text
+            requeue_reason = _host_unavailable_requeue_reason(task, args, now_text)
+            if requeue_reason:
+                task.update(
+                    {
+                        "state": "pending",
+                        "assigned_host": None,
+                        "session": None,
+                        "ended_at": None,
+                        "error": f"{requeue_reason}; previous_host={host}",
+                        "last_unavailable_host": host,
+                    }
+                )
+                task.pop("host_unavailable_since", None)
+                _append_event(
+                    args.batch_name,
+                    {
+                        "event": "task_requeued_after_host_unavailable_budget_grace",
+                        "task_id": task_id,
+                        "host": host,
+                        "reason": requeue_reason,
+                    },
+                    args.queue_root_path,
+                )
+                continue
             if host not in unverified_hosts_reported:
                 _append_event(
                     args.batch_name,
@@ -2013,6 +2088,12 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--poll-seconds", type=int, default=60)
     parser.add_argument("--retry-limit", type=int, default=1)
+    parser.add_argument(
+        "--host-unavailable-grace-seconds",
+        type=int,
+        default=7200,
+        help="host 持续不可达且任务已超过 timeout+该宽限后，将任务重置为 pending 以便在其它机器重跑；0 表示禁用。",
+    )
     parser.add_argument("--max-jobs-per-host", type=int, default=100)
     parser.add_argument("--default-max-running-per-tool", type=int, default=0, help="0 表示不限制单工具全局 running 数")
     parser.add_argument("--max-new-jobs-per-host-per-poll", type=int, default=2)

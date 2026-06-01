@@ -342,6 +342,57 @@ def test_update_running_tasks_keeps_running_when_tmux_ls_unavailable(tmp_path, m
     assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "running"
 
 
+def test_update_running_tasks_requeues_unavailable_host_after_budget_grace(tmp_path, monkeypatch):
+    params_root = tmp_path / "params"
+    params_root.mkdir()
+    (params_root / "gplearn__clean.json").write_text(
+        json.dumps({"timeout_in_seconds": 3600}),
+        encoding="utf-8",
+    )
+    state = {
+        "tasks": {
+            "gplearn_s520_clean_g0004": {
+                "state": "running",
+                "assigned_host": "iaaccn29",
+                "session": "formal24h_full_gplearn_s520_clean_g0004",
+                "expected": 1,
+                "started_at": "2026-06-01T00:00:00",
+                "host_unavailable_since": "2026-06-01T01:05:00",
+                "params_name": "gplearn__clean",
+                "attempts": 1,
+            }
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+        params_root_path=params_root,
+        host_unavailable_grace_seconds=600,
+    )
+
+    monkeypatch.setattr(scheduler, "_now", lambda: "2026-06-01T01:20:00")
+    monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: None)
+
+    def fail_if_status_read(*_args, **_kwargs):
+        raise AssertionError("unavailable host should be requeued without reading task status")
+
+    monkeypatch.setattr(scheduler, "_read_task_statuses_bulk", fail_if_status_read)
+
+    scheduler._update_running_tasks(state, args)
+
+    task = state["tasks"]["gplearn_s520_clean_g0004"]
+    assert task["state"] == "pending"
+    assert task["assigned_host"] is None
+    assert task["session"] is None
+    assert "host unavailable" in task["error"]
+
+
 def test_update_running_tasks_rechecks_session_when_tmux_ls_omits_live_session(tmp_path, monkeypatch):
     state = {
         "tasks": {
