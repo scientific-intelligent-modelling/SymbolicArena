@@ -25,6 +25,7 @@ HARVEST_FIELDS = [
 @dataclass(frozen=True)
 class HarvestCandidate:
     result_path: Path
+    source_host: str
 
 
 def harvest_batch(
@@ -35,6 +36,7 @@ def harvest_batch(
 ) -> dict[str, int]:
     tasks = _read_csv(batch_dir / "manifest" / "tasks.csv")
     queue_index = _read_queue_index(batch_dir / "queues")
+    assigned_hosts = _read_assigned_hosts(batch_dir / "queues")
     harvest_dir = batch_dir / "harvest"
     harvest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -45,6 +47,7 @@ def harvest_batch(
             batch_dir=batch_dir,
             task=task,
             queue_index=queue_index,
+            assigned_hosts=assigned_hosts,
             experiment_roots=experiment_roots,
             dry_run=dry_run,
         )
@@ -70,6 +73,7 @@ def _harvest_task(
     batch_dir: Path,
     task: dict[str, str],
     queue_index: dict[str, dict[str, str]],
+    assigned_hosts: dict[str, str],
     experiment_roots: list[Path],
     dry_run: bool,
 ) -> dict[str, Any]:
@@ -93,6 +97,11 @@ def _harvest_task(
         seed=seed,
         scheduler_task_id=scheduler_task_id,
     )
+    assigned_host = assigned_hosts.get(scheduler_task_id)
+    if assigned_host:
+        assigned_candidates = [candidate for candidate in candidates if candidate.source_host == assigned_host]
+        if assigned_candidates:
+            candidates = assigned_candidates
     if not candidates:
         return _harvest_row(
             task,
@@ -150,6 +159,28 @@ def _read_queue_index(queue_dir: Path) -> dict[str, dict[str, str]]:
     return index
 
 
+def _read_assigned_hosts(queue_dir: Path) -> dict[str, str]:
+    state_dir = queue_dir / "load_queue_full" / "state"
+    if not state_dir.exists():
+        return {}
+    assigned_hosts: dict[str, str] = {}
+    for path in sorted(state_dir.glob("*.state.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        tasks = payload.get("tasks")
+        if not isinstance(tasks, dict):
+            continue
+        for task_id, task in tasks.items():
+            if not isinstance(task, dict):
+                continue
+            assigned_host = str(task.get("assigned_host") or "").strip()
+            if assigned_host:
+                assigned_hosts[str(task_id)] = assigned_host
+    return assigned_hosts
+
+
 def _scheduler_tool_key(algorithm: str) -> str:
     return {
         "QLattice": "qlattice",
@@ -171,6 +202,7 @@ def _find_candidates(
 ) -> list[HarvestCandidate]:
     candidates: list[HarvestCandidate] = []
     for root in experiment_roots:
+        source_host = root.name
         direct_task_dir = root / tool_key / f"seed{seed}" / "tasks" / scheduler_task_id
         task_dirs = [direct_task_dir] if direct_task_dir.exists() else []
         task_dirs.extend(
@@ -180,7 +212,7 @@ def _find_candidates(
         )
         for task_dir in task_dirs:
             for result_path in task_dir.glob("**/result.json"):
-                candidates.append(HarvestCandidate(result_path=result_path))
+                candidates.append(HarvestCandidate(result_path=result_path, source_host=source_host))
     return candidates
 
 
