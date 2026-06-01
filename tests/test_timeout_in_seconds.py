@@ -46,6 +46,9 @@ def test_pyoperon_progress_loop_keeps_max_time_as_int(monkeypatch, tmp_path):
             seen_max_time_types.append(type(self.max_time))
             assert isinstance(self.max_time, int)
 
+        def predict(self, X):
+            return np.asarray(X)[:, 0]
+
         def get_model_string(self, model):
             return "X1"
 
@@ -65,6 +68,51 @@ def test_pyoperon_progress_loop_keeps_max_time_as_int(monkeypatch, tmp_path):
     reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
 
     assert seen_max_time_types == [int]
+
+
+def test_pyoperon_progress_loop_ignores_implicit_generation_cap(monkeypatch, tmp_path):
+    fit_calls = []
+    fake_clock = {"now": 0.0}
+
+    class FakeSymbolicRegressor:
+        def __init__(self, **kwargs):
+            self.max_time = kwargs.get("max_time")
+            self.generations = kwargs.get("generations")
+            self.warm_start = kwargs.get("warm_start", False)
+            self.model_ = "X1"
+            self.stats_ = {"model_complexity": 1}
+            self.pareto_front_ = [{"model": "X1", "minimum_description_length": 0.0, "mean_squared_error": 0.0}]
+
+        def fit(self, X, y):
+            fit_calls.append(self.max_time)
+            fake_clock["now"] += 1.0
+
+        def predict(self, X):
+            return np.asarray(X)[:, 0]
+
+        def get_model_string(self, model):
+            return "X1"
+
+    pyoperon_module = types.ModuleType("pyoperon")
+    sklearn_module = types.ModuleType("pyoperon.sklearn")
+    sklearn_module.SymbolicRegressor = FakeSymbolicRegressor
+    monkeypatch.setitem(sys.modules, "pyoperon", pyoperon_module)
+    monkeypatch.setitem(sys.modules, "pyoperon.sklearn", sklearn_module)
+    monkeypatch.setattr(
+        "scientific_intelligent_modelling.algorithms.pyoperon_wrapper.wrapper.time.time",
+        lambda: fake_clock["now"],
+    )
+
+    reg = OperonRegressor(
+        exp_path=str(tmp_path),
+        exp_name="case",
+        timeout_in_seconds=3,
+        allowed_symbols="add,mul,constant,variable",
+    )
+    reg.params["generations"] = 1
+    reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
+
+    assert len(fit_calls) == 3
 
 
 def test_dso_build_fit_config_preserves_logdir_and_disables_gp_meld():

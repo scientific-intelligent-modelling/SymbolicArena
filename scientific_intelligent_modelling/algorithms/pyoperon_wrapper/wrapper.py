@@ -105,6 +105,9 @@ class OperonRegressor(BaseWrapper):
         self._contract_n_features = raw_kwargs.get("n_features")
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
+        self._explicit_generation_budget = any(
+            key in raw_kwargs for key in ("generations", "niterations", "niteration")
+        )
         self.params = self._validate_and_normalize_params(raw_kwargs)
         self.model = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
@@ -307,7 +310,9 @@ class OperonRegressor(BaseWrapper):
             self.model = model
             started_at = time.time()
             completed = 0
-            while completed < total_generations:
+            time_budget_driven = max_time is not None and not self._explicit_generation_budget
+            # 未显式给 generations 时，进度模式必须以 wall-time 为主预算，避免快数据集先耗尽隐式代数上限。
+            while time_budget_driven or completed < total_generations:
                 if completed > 0:
                     model.warm_start = True
                     model.generations = 1
