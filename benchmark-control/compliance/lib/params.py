@@ -47,7 +47,12 @@ def generate_noise_params(
 
 
 def _apply_tool_budget_overrides(*, tool: str, payload: dict[str, Any], timeout_in_seconds: int) -> None:
-    if tool != "pyoperon" or timeout_in_seconds <= 3600:
+    if timeout_in_seconds <= 3600:
+        return
+    if tool == "gplearn":
+        payload["n_jobs"] = 1
+        return
+    if tool != "pyoperon":
         return
     try:
         base_evaluations = int(float(payload.get("max_evaluations", 0)))

@@ -48,10 +48,12 @@ def test_generate_noise_params_writes_13_by_3_files(tmp_path: Path) -> None:
     clean = json.loads((output / "pysr__clean.json").read_text(encoding="utf-8"))
     noisy = json.loads((output / "pysr__noise001.json").read_text(encoding="utf-8"))
     pyoperon = json.loads((output / "pyoperon__clean.json").read_text(encoding="utf-8"))
+    gplearn = json.loads((output / "gplearn__clean.json").read_text(encoding="utf-8"))
     assert clean["timeout_in_seconds"] == 86400
     assert clean["train_label_noise_enabled"] is False
     assert clean["train_label_noise_sigma"] == 0.0
     assert pyoperon["max_evaluations"] == 1152000000
+    assert gplearn["n_jobs"] == 1
     assert noisy["progress_snapshot_interval_seconds"] == 60
     assert noisy["train_label_noise_enabled"] is True
     assert noisy["train_label_noise_sigma"] == 0.01
