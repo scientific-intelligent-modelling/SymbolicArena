@@ -51,7 +51,7 @@ def test_generate_noise_params_writes_13_by_3_files(tmp_path: Path) -> None:
     assert clean["timeout_in_seconds"] == 86400
     assert clean["train_label_noise_enabled"] is False
     assert clean["train_label_noise_sigma"] == 0.0
-    assert pyoperon["max_evaluations"] == 24000000
+    assert pyoperon["max_evaluations"] == 1152000000
     assert noisy["progress_snapshot_interval_seconds"] == 60
     assert noisy["train_label_noise_enabled"] is True
     assert noisy["train_label_noise_sigma"] == 0.01

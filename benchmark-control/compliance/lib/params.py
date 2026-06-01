@@ -55,5 +55,5 @@ def _apply_tool_budget_overrides(*, tool: str, payload: dict[str, Any], timeout_
         return
     if base_evaluations <= 0:
         return
-    scaled_evaluations = math.ceil(base_evaluations * timeout_in_seconds / 3600 * 2)
+    scaled_evaluations = math.ceil(base_evaluations * timeout_in_seconds / 3600 * 96)
     payload["max_evaluations"] = max(base_evaluations, scaled_evaluations)
