@@ -693,7 +693,40 @@ def _load_or_init_state(batch_name: str, tasks: list[QueueTask], queue_root: Pat
     return state
 
 
+def _normalize_pending_task_state(state: dict[str, Any]) -> int:
+    cleaned = 0
+    runtime_keys = (
+        "host",
+        "session",
+        "session_name",
+        "started_at",
+        "ended_at",
+        "error",
+        "last_status_read_error",
+        "last_status_read_error_at",
+        "status_read_error_since",
+        "host_unavailable_since",
+        "host_unavailable_last_at",
+    )
+    for task in state.get("tasks", {}).values():
+        if task.get("state") != "pending":
+            continue
+        changed = False
+        if task.get("assigned_host") is not None:
+            task["assigned_host"] = None
+            changed = True
+        for key in runtime_keys:
+            if key in task:
+                task.pop(key, None)
+                changed = True
+        if changed:
+            task["last_pending_runtime_cleanup_at"] = _now()
+            cleaned += 1
+    return cleaned
+
+
 def _save_state(state: dict[str, Any], queue_root: Path) -> None:
+    _normalize_pending_task_state(state)
     state["updated_at"] = _now()
     path = _state_path(state["batch_name"], queue_root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1244,6 +1277,7 @@ def _start_tasks_on_host(
 
 
 def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> None:
+    _normalize_pending_task_state(state)
     running_items = [(task_id, task) for task_id, task in state["tasks"].items() if task.get("state") == "running"]
     sessions_by_host: dict[str, set[str] | None] = {}
     for _, task in running_items:

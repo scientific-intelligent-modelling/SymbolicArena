@@ -528,3 +528,62 @@ def test_update_running_tasks_keeps_running_when_finished_status_read_fails(tmp_
     assert task["last_status_read_error_at"] == "2026-06-01T01:00:00"
     assert task["status_read_error_since"] == "2026-06-01T01:00:00"
     assert "last_requeue_reason" not in task
+
+
+def test_update_running_tasks_normalizes_pending_runtime_fields(tmp_path, monkeypatch):
+    state = {
+        "tasks": {
+            "gplearn_s520_clean_g0004": {
+                "state": "pending",
+                "assigned_host": None,
+                "host": "iaaccn25",
+                "session": "formal24h_full_gplearn_s520_clean_g0004",
+                "session_name": "formal24h_full_gplearn_s520_clean_g0004",
+                "started_at": "2026-06-01T00:00:00",
+                "ended_at": "2026-06-01T01:00:00",
+                "error": "stale error",
+                "last_status_read_error": "old read error",
+                "last_status_read_error_at": "2026-06-01T01:00:00",
+                "status_read_error_since": "2026-06-01T01:00:00",
+                "host_unavailable_since": "2026-06-01T00:30:00",
+                "host_unavailable_last_at": "2026-06-01T00:40:00",
+                "last_requeue_reason": "manual retry",
+                "last_requeued_at": "2026-06-01T01:01:00",
+            }
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+
+    monkeypatch.setattr(scheduler, "_now", lambda: "2026-06-01T02:00:00")
+
+    scheduler._update_running_tasks(state, args)
+
+    task = state["tasks"]["gplearn_s520_clean_g0004"]
+    assert task["state"] == "pending"
+    assert task["assigned_host"] is None
+    for key in (
+        "host",
+        "session",
+        "session_name",
+        "started_at",
+        "ended_at",
+        "error",
+        "last_status_read_error",
+        "last_status_read_error_at",
+        "status_read_error_since",
+        "host_unavailable_since",
+        "host_unavailable_last_at",
+    ):
+        assert key not in task
+    assert task["last_requeue_reason"] == "manual retry"
+    assert task["last_requeued_at"] == "2026-06-01T01:01:00"
+    assert task["last_pending_runtime_cleanup_at"] == "2026-06-01T02:00:00"
