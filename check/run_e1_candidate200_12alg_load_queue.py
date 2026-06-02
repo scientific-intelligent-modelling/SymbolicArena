@@ -1336,6 +1336,7 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         missing = max(0, expected - int(status.get("seen") or 0))
         errors = int(status.get("errors") or 0)
         if status.get("read_error"):
+            requeue_reason = f"task_status_read_failed: {status['read_error']}"
             task.update(
                 {
                     "state": "pending",
@@ -1343,7 +1344,9 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                     "session": None,
                     "started_at": None,
                     "ended_at": None,
-                    "error": status["read_error"],
+                    "error": None,
+                    "last_requeued_at": _now(),
+                    "last_requeue_reason": requeue_reason,
                 }
             )
             task.pop("host_unavailable_since", None)
@@ -1353,6 +1356,7 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
             task.update({"state": "done", "ended_at": _now(), "error": None})
             _append_event(args.batch_name, {"event": "task_done", "task_id": task_id, "host": host, "status_counts": status.get("counts", {})}, args.queue_root_path)
         elif int(task.get("attempts") or 0) <= args.retry_limit:
+            requeue_reason = f"retry_after_incomplete_status: missing={missing}, errors={errors}"
             task.update(
                 {
                     "state": "pending",
@@ -1360,7 +1364,9 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                     "session": None,
                     "started_at": None,
                     "ended_at": None,
-                    "error": f"未完整收口: missing={missing}, errors={errors}",
+                    "error": None,
+                    "last_requeued_at": _now(),
+                    "last_requeue_reason": requeue_reason,
                 }
             )
             task.pop("host_unavailable_since", None)
