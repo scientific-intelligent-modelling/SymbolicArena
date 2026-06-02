@@ -1265,6 +1265,9 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         if host_sessions is not None:
             task.pop("host_unavailable_since", None)
             if session in host_sessions:
+                task.pop("status_read_error_since", None)
+                task.pop("last_status_read_error", None)
+                task.pop("last_status_read_error_at", None)
                 continue
             # tmux ls 在高负载机器上可能返回缺失的瞬时快照；缺席时再做一次精确确认。
             if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
@@ -1339,24 +1342,27 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         missing = max(0, expected - int(status.get("seen") or 0))
         errors = int(status.get("errors") or 0)
         if status.get("read_error"):
-            requeue_reason = f"task_status_read_failed: {status['read_error']}"
-            task.update(
+            now_text = _now()
+            task.setdefault("status_read_error_since", now_text)
+            task["last_status_read_error"] = status["read_error"]
+            task["last_status_read_error_at"] = now_text
+            task["ended_at"] = None
+            task["error"] = None
+            _append_event(
+                args.batch_name,
                 {
-                    "state": "pending",
-                    "assigned_host": None,
-                    "session": None,
-                    "started_at": None,
-                    "ended_at": None,
-                    "error": None,
-                    "last_requeued_at": _now(),
-                    "last_requeue_reason": requeue_reason,
-                }
+                    "event": "task_status_read_failed_keep_running",
+                    "task_id": task_id,
+                    "host": host,
+                    "error": status["read_error"],
+                },
+                args.queue_root_path,
             )
-            task.pop("host_unavailable_since", None)
-            task.pop("host_unavailable_last_at", None)
-            _append_event(args.batch_name, {"event": "task_status_read_failed", "task_id": task_id, "host": host, "error": status["read_error"]}, args.queue_root_path)
         elif int(status.get("done") or 0) == expected and errors == 0:
             task.update({"state": "done", "ended_at": _now(), "error": None})
+            task.pop("status_read_error_since", None)
+            task.pop("last_status_read_error", None)
+            task.pop("last_status_read_error_at", None)
             _append_event(args.batch_name, {"event": "task_done", "task_id": task_id, "host": host, "status_counts": status.get("counts", {})}, args.queue_root_path)
         elif int(task.get("attempts") or 0) <= args.retry_limit:
             requeue_reason = f"retry_after_incomplete_status: missing={missing}, errors={errors}"
@@ -1374,9 +1380,15 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
             )
             task.pop("host_unavailable_since", None)
             task.pop("host_unavailable_last_at", None)
+            task.pop("status_read_error_since", None)
+            task.pop("last_status_read_error", None)
+            task.pop("last_status_read_error_at", None)
             _append_event(args.batch_name, {"event": "task_retry_pending", "task_id": task_id, "host": host, "status": status}, args.queue_root_path)
         else:
             task.update({"state": "failed", "ended_at": _now(), "error": f"超过重试上限: missing={missing}, errors={errors}"})
+            task.pop("status_read_error_since", None)
+            task.pop("last_status_read_error", None)
+            task.pop("last_status_read_error_at", None)
             _append_event(args.batch_name, {"event": "task_failed", "task_id": task_id, "host": host, "status": status}, args.queue_root_path)
 
 

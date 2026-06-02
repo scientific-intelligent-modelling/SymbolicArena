@@ -474,3 +474,57 @@ def test_update_running_tasks_marks_done_when_session_absent_after_precise_reche
     scheduler._update_running_tasks(state, args)
 
     assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "done"
+
+
+def test_update_running_tasks_keeps_running_when_finished_status_read_fails(tmp_path, monkeypatch):
+    state = {
+        "tasks": {
+            "gplearn_s520_clean_g0004": {
+                "state": "running",
+                "assigned_host": "iaaccn25",
+                "session": "formal24h_full_gplearn_s520_clean_g0004",
+                "expected": 1,
+                "started_at": "2026-06-01T00:00:00",
+                "attempts": 1,
+            }
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+
+    monkeypatch.setattr(scheduler, "_now", lambda: "2026-06-01T01:00:00")
+    monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
+    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        scheduler,
+        "_read_task_statuses_bulk",
+        lambda *args, **kwargs: {
+            "gplearn_s520_clean_g0004": {
+                "read_error": "transient ssh error",
+                "seen": 0,
+                "done": 0,
+                "errors": 0,
+                "counts": {},
+            }
+        },
+    )
+
+    scheduler._update_running_tasks(state, args)
+
+    task = state["tasks"]["gplearn_s520_clean_g0004"]
+    assert task["state"] == "running"
+    assert task["assigned_host"] == "iaaccn25"
+    assert task["session"] == "formal24h_full_gplearn_s520_clean_g0004"
+    assert task["started_at"] == "2026-06-01T00:00:00"
+    assert task["last_status_read_error"] == "transient ssh error"
+    assert task["last_status_read_error_at"] == "2026-06-01T01:00:00"
+    assert task["status_read_error_since"] == "2026-06-01T01:00:00"
+    assert "last_requeue_reason" not in task
