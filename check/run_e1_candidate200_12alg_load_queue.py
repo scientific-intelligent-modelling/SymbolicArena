@@ -1286,8 +1286,11 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                         "state": "pending",
                         "assigned_host": None,
                         "session": None,
+                        "started_at": None,
                         "ended_at": None,
-                        "error": f"{requeue_reason}; previous_host={host}",
+                        "error": None,
+                        "last_requeued_at": now_text,
+                        "last_requeue_reason": requeue_reason,
                         "last_unavailable_host": host,
                     }
                 )
@@ -1641,9 +1644,21 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                     for event in start_events:
                         _append_event(args.batch_name, event, args.queue_root_path)
                 except Exception as exc:
+                    requeue_reason = f"dispatch_failed: {repr(exc)}"
                     for task_id, _, state_task in selected_items:
-                        state_task["state"] = "pending"
-                        state_task["error"] = repr(exc)
+                        state_task.update(
+                            {
+                                "state": "pending",
+                                "assigned_host": None,
+                                "session": None,
+                                "started_at": None,
+                                "ended_at": None,
+                                "error": None,
+                                "last_requeued_at": _now(),
+                                "last_requeue_reason": requeue_reason,
+                                "last_dispatch_error": repr(exc),
+                            }
+                        )
                     _append_event(
                         args.batch_name,
                         {

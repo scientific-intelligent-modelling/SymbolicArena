@@ -390,7 +390,12 @@ def test_update_running_tasks_requeues_unavailable_host_after_budget_grace(tmp_p
     assert task["state"] == "pending"
     assert task["assigned_host"] is None
     assert task["session"] is None
-    assert "host unavailable" in task["error"]
+    assert task["started_at"] is None
+    assert task["ended_at"] is None
+    assert task["error"] is None
+    assert "host unavailable" in task["last_requeue_reason"]
+    assert task["last_requeued_at"] == "2026-06-01T01:20:00"
+    assert task["last_unavailable_host"] == "iaaccn29"
 
 
 def test_update_running_tasks_rechecks_session_when_tmux_ls_omits_live_session(tmp_path, monkeypatch):
