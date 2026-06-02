@@ -16,6 +16,15 @@ def test_fepysr_uses_guarded_internal_pysr_timeout() -> None:
     assert reg.params["timeout_in_seconds"] == 3300
 
 
+def test_fepysr_fill_deadline_uses_full_explicit_timeout(monkeypatch) -> None:
+    monkeypatch.setattr(fepysr_module.time, "monotonic", lambda: 100.0)
+
+    reg = FePySRRegressor(timeout_in_seconds=3600)
+
+    assert reg.params["timeout_in_seconds"] == 3300
+    assert reg._budget_deadline() == 3700.0
+
+
 def test_symbolfit_uses_guarded_internal_pysr_timeout() -> None:
     reg = SymbolFitRegressor(timeout_in_seconds=3600)
 

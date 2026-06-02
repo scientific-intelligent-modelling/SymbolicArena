@@ -196,7 +196,7 @@ class FePySRRegressor(BaseWrapper):
     def _budget_deadline(self) -> float | None:
         if not self._fill_timeout_budget or self._explicit_timeout_seconds is None:
             return None
-        budget_seconds = self._positive_int(self.params.get("timeout_in_seconds"))
+        budget_seconds = self._positive_int(self._explicit_timeout_seconds)
         if budget_seconds is None:
             return None
         return time.monotonic() + budget_seconds
