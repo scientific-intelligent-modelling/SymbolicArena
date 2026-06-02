@@ -48,6 +48,7 @@ def _write_remote_result(
     global_index: int,
     dataset_name: str,
     payload: dict[str, object],
+    report_payload: dict[str, object] | None = None,
 ) -> None:
     task_id = f"{tool_key}_s{seed}_g{global_index:04d}"
     if noise_tag:
@@ -64,6 +65,22 @@ def _write_remote_result(
     )
     result_dir.mkdir(parents=True)
     (result_dir / "result.json").write_text(json.dumps(payload), encoding="utf-8")
+    if report_payload is not None:
+        log_dir = (
+            experiment_root
+            / tool_key
+            / f"seed{seed}"
+            / "tasks"
+            / task_id
+            / "iaaccn22"
+            / "__launcher__"
+            / "logs"
+        )
+        log_dir.mkdir(parents=True, exist_ok=True)
+        (log_dir / f"{global_index}_{dataset_name}.report.json").write_text(
+            json.dumps(report_payload),
+            encoding="utf-8",
+        )
     progress_dir = result_dir / "progress"
     progress_dir.mkdir()
     (progress_dir / "minute_0001.json").write_text("{}", encoding="utf-8")
@@ -160,6 +177,66 @@ def test_harvest_maps_noise_aware_outputs_into_noise_runs_layout(tmp_path: Path)
 
     assert summary == {"total_tasks": 1, "harvested": 1, "missing": 0}
     assert (batch_dir / "runs" / "pysr" / "seed520" / "noise001" / "d0" / "result.json").exists()
+
+
+def test_harvest_preserves_launcher_report_runtime_for_budget_audit(tmp_path: Path) -> None:
+    harvest = load_for_test("harvest")
+    audit = load_for_test("audit")
+    batch_dir = tmp_path / "batch"
+    manifest_dir = batch_dir / "manifest"
+    manifest_dir.mkdir(parents=True)
+    (manifest_dir / "tasks.csv").write_text(
+        "\n".join(
+            [
+                "task_id,algorithm,dataset_id,dataset_dir,seed,noise_tag,noise_sigma,timeout_in_seconds,min_runtime_seconds,progress_snapshot_interval_seconds",
+                "QLattice__seed520__clean__d0,QLattice,d0,sim-datasets-data/ssr50/d0,520,clean,0,86400,82800,60",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    queue_dir = batch_dir / "queues"
+    queue_dir.mkdir()
+    (queue_dir / "ssr50_source.csv").write_text(
+        "global_index,dataset_id,dataset_name,dataset_dir,dataset_rel\n"
+        "1,d0,d0,sim-datasets-data/ssr50/d0,sim-datasets-data/ssr50/d0\n",
+        encoding="utf-8",
+    )
+    experiment_root = tmp_path / "remote-experiments" / "iaaccn22"
+    _write_remote_result(
+        experiment_root,
+        tool_key="qlattice",
+        tool_arg="QLattice",
+        seed=520,
+        noise_tag="clean",
+        global_index=1,
+        dataset_name="d0",
+        payload={
+            "status": "ok",
+            "valid": {"nmse": 0.1},
+            "id_test": {"nmse": 0.1},
+            "ood_test": {"nmse": 0.1},
+            "canonical_artifact": {"expression": "x0"},
+        },
+        report_payload={
+            "status": "ok",
+            "seconds": 86404.725,
+            "budget_exhausted": True,
+            "recovered_from_timeout": True,
+            "termination_reason": "budget_exhausted_with_output",
+            "timeout_type": "budget_exhausted_with_output",
+        },
+    )
+
+    summary = harvest.harvest_batch(batch_dir=batch_dir, experiment_roots=[experiment_root])
+
+    assert summary == {"total_tasks": 1, "harvested": 1, "missing": 0}
+    result_path = batch_dir / "runs" / "QLattice" / "seed520" / "clean" / "d0" / "result.json"
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    assert result["runtime_seconds"] == 86404.725
+    assert result["budget_exhausted"] is True
+    assert (result_path.parent / "launcher_report.json").exists()
+    assert audit.audit_batch(batch_dir=batch_dir) == {"total_tasks": 1, "failed": 0, "passed": 1}
 
 
 def test_harvest_prefers_candidate_from_state_assigned_host(tmp_path: Path) -> None:

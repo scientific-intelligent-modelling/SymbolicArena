@@ -26,6 +26,7 @@ HARVEST_FIELDS = [
 class HarvestCandidate:
     result_path: Path
     source_host: str
+    task_dir: Path
 
 
 def harvest_batch(
@@ -210,7 +211,9 @@ def _find_candidates(
         )
         for task_dir in task_dirs:
             for result_path in task_dir.glob("**/result.json"):
-                candidates.append(HarvestCandidate(result_path=result_path, source_host=source_host))
+                candidates.append(
+                    HarvestCandidate(result_path=result_path, source_host=source_host, task_dir=task_dir)
+                )
     return candidates
 
 
@@ -220,18 +223,84 @@ def _choose_candidate(candidates: list[HarvestCandidate]) -> HarvestCandidate:
 
 def _copy_candidate(candidate: HarvestCandidate, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(candidate.result_path, target_dir / "result.json")
+    report_path = _find_launcher_report(candidate.task_dir)
+    _copy_result_with_report_metadata(
+        result_path=candidate.result_path,
+        report_path=report_path,
+        target_path=target_dir / "result.json",
+    )
+    if report_path is not None:
+        shutil.copy2(report_path, target_dir / "launcher_report.json")
     progress_dir = candidate.result_path.parent / "progress"
     if progress_dir.exists():
         shutil.copytree(progress_dir, target_dir / "progress", dirs_exist_ok=True)
     source_payload = {
         "source_result": str(candidate.result_path),
         "source_run_dir": str(candidate.result_path.parent),
+        "source_report": str(report_path) if report_path is not None else "",
     }
     (target_dir / "harvest_source.json").write_text(
         json.dumps(source_payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _find_launcher_report(task_dir: Path) -> Path | None:
+    reports = sorted((task_dir / "__launcher__" / "logs").glob("*.report.json"))
+    reports.extend(
+        path
+        for path in sorted(task_dir.glob("**/__launcher__/logs/*.report.json"))
+        if path not in reports
+    )
+    if not reports:
+        return None
+    return max(reports, key=lambda path: path.stat().st_mtime)
+
+
+def _copy_result_with_report_metadata(
+    *,
+    result_path: Path,
+    report_path: Path | None,
+    target_path: Path,
+) -> None:
+    result_payload = _read_json_object(result_path)
+    if result_payload is None:
+        shutil.copy2(result_path, target_path)
+        return
+
+    if report_path is not None:
+        report_payload = _read_json_object(report_path)
+        if report_payload is not None:
+            _merge_launcher_report_metadata(result_payload, report_payload)
+
+    target_path.write_text(
+        json.dumps(result_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _read_json_object(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _merge_launcher_report_metadata(result: dict[str, Any], report: dict[str, Any]) -> None:
+    seconds = report.get("seconds")
+    if "runtime_seconds" not in result and seconds not in (None, ""):
+        result["runtime_seconds"] = seconds
+    if "seconds" not in result and seconds not in (None, ""):
+        result["seconds"] = seconds
+    for key in (
+        "budget_exhausted",
+        "recovered_from_timeout",
+        "termination_reason",
+        "timeout_type",
+    ):
+        if key not in result and key in report:
+            result[key] = report[key]
 
 
 def _harvest_row(
