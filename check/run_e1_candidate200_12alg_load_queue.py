@@ -1336,13 +1336,35 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         missing = max(0, expected - int(status.get("seen") or 0))
         errors = int(status.get("errors") or 0)
         if status.get("read_error"):
-            task.update({"state": "pending", "error": status["read_error"]})
+            task.update(
+                {
+                    "state": "pending",
+                    "assigned_host": None,
+                    "session": None,
+                    "started_at": None,
+                    "ended_at": None,
+                    "error": status["read_error"],
+                }
+            )
+            task.pop("host_unavailable_since", None)
+            task.pop("host_unavailable_last_at", None)
             _append_event(args.batch_name, {"event": "task_status_read_failed", "task_id": task_id, "host": host, "error": status["read_error"]}, args.queue_root_path)
         elif int(status.get("done") or 0) == expected and errors == 0:
             task.update({"state": "done", "ended_at": _now(), "error": None})
             _append_event(args.batch_name, {"event": "task_done", "task_id": task_id, "host": host, "status_counts": status.get("counts", {})}, args.queue_root_path)
         elif int(task.get("attempts") or 0) <= args.retry_limit:
-            task.update({"state": "pending", "error": f"未完整收口: missing={missing}, errors={errors}"})
+            task.update(
+                {
+                    "state": "pending",
+                    "assigned_host": None,
+                    "session": None,
+                    "started_at": None,
+                    "ended_at": None,
+                    "error": f"未完整收口: missing={missing}, errors={errors}",
+                }
+            )
+            task.pop("host_unavailable_since", None)
+            task.pop("host_unavailable_last_at", None)
             _append_event(args.batch_name, {"event": "task_retry_pending", "task_id": task_id, "host": host, "status": status}, args.queue_root_path)
         else:
             task.update({"state": "failed", "ended_at": _now(), "error": f"超过重试上限: missing={missing}, errors={errors}"})
