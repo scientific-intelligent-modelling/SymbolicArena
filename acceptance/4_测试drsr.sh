@@ -107,7 +107,6 @@ params = {
     "max_params": int(max_params),
     "evaluate_timeout_seconds": int(evaluate_timeout_seconds),
     "persist_all_samples": True,
-    "seed": seed,
     "n_features": len(ds["feature_names"]),
     "feature_names": ds["feature_names"],
     "target_name": ds["target_name"],
