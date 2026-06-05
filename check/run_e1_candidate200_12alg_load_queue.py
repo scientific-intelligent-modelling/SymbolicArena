@@ -1159,12 +1159,22 @@ def _session_running(host: str, session: str, *, controller_host: str, use_inter
 def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: bool, session_prefix: str) -> set[str] | None:
     result = _ssh(
         host,
-        "timeout 30 tmux ls 2>/dev/null",
+        "timeout 30 tmux ls 2>&1",
         controller_host=controller_host,
         use_internal_ips=use_internal_ips,
         timeout=45,
     )
     if result.returncode != 0:
+        text = f"{result.stdout or ''}\n{result.stderr or ''}".lower()
+        if result.returncode == 124 or "timeout" in text:
+            return None
+        if (
+            "no server running" in text
+            or "failed to connect to server" in text
+            or "no sessions" in text
+            or not text.strip()
+        ):
+            return set()
         return None
     return {
         line.split(":", 1)[0].strip()

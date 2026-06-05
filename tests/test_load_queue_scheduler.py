@@ -324,6 +324,27 @@ def test_list_queue_sessions_does_not_mask_tmux_ls_timeout(monkeypatch):
     assert sessions is None
 
 
+def test_list_queue_sessions_treats_empty_tmux_server_as_no_sessions(monkeypatch):
+    def fake_ssh(_host, command, **_kwargs):
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            "",
+            "no server running on /tmp/tmux-1000/default",
+        )
+
+    monkeypatch.setattr(scheduler, "_ssh", fake_ssh)
+
+    sessions = scheduler._list_queue_sessions(
+        "iaaccn25",
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal3h_smoke_",
+    )
+
+    assert sessions == set()
+
+
 def test_update_running_tasks_keeps_running_when_tmux_ls_unavailable(tmp_path, monkeypatch):
     state = {
         "tasks": {
