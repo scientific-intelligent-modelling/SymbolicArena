@@ -40,15 +40,14 @@ def recover_snapshots(
     recovered_rows: list[dict[str, str]] = []
     missing_rows: list[dict[str, str]] = []
     invalid_rows: list[dict[str, str]] = []
+    snapshot_index = index_snapshot_candidates(
+        source_roots=source_roots,
+        snapshot_name=snapshot_name,
+    )
 
     for task in tasks:
         scheduler_task_id = _scheduler_task_id(task, queue_index)
-        candidates = _find_snapshot_candidates(
-            source_roots=source_roots,
-            task=task,
-            scheduler_task_id=scheduler_task_id,
-            snapshot_name=snapshot_name,
-        )
+        candidates = snapshot_index.get(scheduler_task_id, [])
         base_row = _row(task, scheduler_task_id=scheduler_task_id)
         if not candidates:
             missing_rows.append({**base_row, "status": "missing", "reason": "snapshot not found"})
@@ -139,27 +138,27 @@ def _scheduler_tool_key(algorithm: str) -> str:
     }.get(algorithm, algorithm.lower())
 
 
-def _find_snapshot_candidates(
-    *,
-    source_roots: list[Path],
-    task: dict[str, str],
-    scheduler_task_id: str,
-    snapshot_name: str,
-) -> list[Path]:
-    tool_key = _scheduler_tool_key(task["algorithm"])
-    seed_dir = f"seed{task['seed']}"
-    candidates: list[Path] = []
+def index_snapshot_candidates(*, source_roots: list[Path], snapshot_name: str) -> dict[str, list[Path]]:
+    index: dict[str, list[Path]] = {}
     for source_root in source_roots:
-        direct_task_dir = source_root / tool_key / seed_dir / "tasks" / scheduler_task_id
-        task_dirs = [direct_task_dir] if direct_task_dir.exists() else []
-        task_dirs.extend(
-            path
-            for path in source_root.glob(f"**/{tool_key}/{seed_dir}/tasks/{scheduler_task_id}")
-            if path not in task_dirs
-        )
-        for task_dir in task_dirs:
-            candidates.extend(task_dir.glob(f"**/progress/{snapshot_name}"))
-    return candidates
+        if not source_root.exists():
+            continue
+        for snapshot_path in source_root.rglob(snapshot_name):
+            if snapshot_path.parent.name != "progress":
+                continue
+            scheduler_task_id = _scheduler_task_id_from_snapshot_path(snapshot_path)
+            if scheduler_task_id:
+                index.setdefault(scheduler_task_id, []).append(snapshot_path)
+    return index
+
+
+def _scheduler_task_id_from_snapshot_path(snapshot_path: Path) -> str:
+    parts = snapshot_path.parts
+    scheduler_task_id = ""
+    for part_index, part in enumerate(parts):
+        if part == "tasks" and part_index + 1 < len(parts):
+            scheduler_task_id = parts[part_index + 1]
+    return scheduler_task_id
 
 
 def _choose_candidate(candidates: list[Path]) -> Path:

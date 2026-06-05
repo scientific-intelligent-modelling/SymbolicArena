@@ -145,6 +145,32 @@ def test_recover_formal3h_snapshot_into_runs_layout(tmp_path: Path) -> None:
     assert rows[0]["task_id"] == "dso__seed521__clean__g0032"
 
 
+def test_snapshot_index_maps_scheduler_task_ids(tmp_path: Path) -> None:
+    recovery = load_compliance_module("snapshot_recovery")
+    source_root = tmp_path / "experiments" / "formal24h_batch"
+    snapshot_path = (
+        source_root
+        / "dso"
+        / "seed521"
+        / "tasks"
+        / "dso_s521_clean_g0032"
+        / "iaaccn22"
+        / "dso"
+        / "g0032_case"
+        / "progress"
+        / "minute_0180.json"
+    )
+    snapshot_path.parent.mkdir(parents=True)
+    snapshot_path.write_text("{}", encoding="utf-8")
+
+    index = recovery.index_snapshot_candidates(
+        source_roots=[source_root],
+        snapshot_name="minute_0180.json",
+    )
+
+    assert index == {"dso_s521_clean_g0032": [snapshot_path]}
+
+
 def test_recover_formal3h_rejects_invalid_snapshot(tmp_path: Path) -> None:
     recovery = load_compliance_module("snapshot_recovery")
     batch_dir = tmp_path / "formal3h"
