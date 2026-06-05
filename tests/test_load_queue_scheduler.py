@@ -168,6 +168,27 @@ def test_build_tasks_includes_noise_dimension_in_task_ids(tmp_path: Path) -> Non
     assert [task.noise_tag for task in tasks] == ["clean", "noise001", "clean", "noise001"]
 
 
+def test_scheduler_filters_tasks_by_allowlist(tmp_path: Path) -> None:
+    allowlist = tmp_path / "missing_tasks.csv"
+    allowlist.write_text("task_id\npysr_s520_clean_g0001\n", encoding="utf-8")
+    rows = [
+        {"global_index": "1", "dataset_dir": "sim-datasets-data/ssr50/g0001", "dataset_name": "g0001"},
+        {"global_index": "2", "dataset_dir": "sim-datasets-data/ssr50/g0002", "dataset_name": "g0002"},
+    ]
+    tasks = scheduler._build_tasks(
+        rows,
+        tools=["pysr"],
+        seeds=[520],
+        noise_sigmas=[0.0],
+        queue_root=tmp_path / "queue",
+        params_root=tmp_path / "params",
+    )
+
+    filtered = scheduler._filter_tasks_by_allowlist(tasks, allowlist)
+
+    assert [task.task_id for task in filtered] == ["pysr_s520_clean_g0001"]
+
+
 def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
     source_csv = tmp_path / "smoke.csv"
     source_csv.write_text(

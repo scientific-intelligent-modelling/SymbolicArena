@@ -223,11 +223,14 @@ def _choose_candidate(candidates: list[HarvestCandidate]) -> HarvestCandidate:
 
 def _copy_candidate(candidate: HarvestCandidate, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
+    target_result = target_dir / "result.json"
+    if _has_recovered_result(target_result) and not _candidate_has_usable_result(candidate.result_path):
+        return
     report_path = _find_launcher_report(candidate.task_dir)
     _copy_result_with_report_metadata(
         result_path=candidate.result_path,
         report_path=report_path,
-        target_path=target_dir / "result.json",
+        target_path=target_result,
     )
     if report_path is not None:
         shutil.copy2(report_path, target_dir / "launcher_report.json")
@@ -243,6 +246,41 @@ def _copy_candidate(candidate: HarvestCandidate, target_dir: Path) -> None:
         json.dumps(source_payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _has_recovered_result(path: Path) -> bool:
+    payload = _read_json_object(path)
+    return bool(payload and payload.get("recovered_from_24h"))
+
+
+def _candidate_has_usable_result(path: Path) -> bool:
+    payload = _read_json_object(path)
+    if payload is None:
+        return False
+    status = str(payload.get("status", "")).strip().lower()
+    if status == "error":
+        return False
+    if status == "timed_out" and not (payload.get("recovered_from_timeout") or payload.get("timeout_type") == "budget_exhausted_with_output"):
+        return False
+    return _has_metrics(payload) and _has_artifact(payload)
+
+
+def _has_metrics(payload: dict[str, Any]) -> bool:
+    for split in ("valid", "id_test", "ood_test"):
+        metrics = payload.get(split)
+        if not isinstance(metrics, dict):
+            return False
+        if metrics.get("nmse") is None:
+            return False
+    return True
+
+
+def _has_artifact(payload: dict[str, Any]) -> bool:
+    artifact = payload.get("canonical_artifact")
+    if isinstance(artifact, dict) and any(value for value in artifact.values()):
+        return True
+    equation = payload.get("equation")
+    return isinstance(equation, str) and bool(equation.strip())
 
 
 def _find_launcher_report(task_dir: Path) -> Path | None:

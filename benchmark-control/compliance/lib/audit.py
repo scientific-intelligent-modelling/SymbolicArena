@@ -201,7 +201,7 @@ def _status_reason(result: dict[str, Any], *, fallback: str) -> str:
 
 
 def _runtime_seconds(result: dict[str, Any]) -> float:
-    value = result.get("runtime_seconds", result.get("seconds", 0.0))
+    value = result.get("runtime_seconds", result.get("seconds", result.get("elapsed_seconds", 0.0)))
     try:
         numeric_value = float(value)
     except (TypeError, ValueError):

@@ -545,6 +545,28 @@ def _build_tasks(
     return tasks
 
 
+def _read_task_id_allowlist(path: Path) -> set[str]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
+        raise ValueError(f"任务 allowlist 为空: {path}")
+    column = "scheduler_task_id" if "scheduler_task_id" in rows[0] else "task_id"
+    if column not in rows[0]:
+        raise ValueError(f"任务 allowlist 缺少 task_id 或 scheduler_task_id 列: {path}")
+    task_ids = {str(row.get(column, "")).strip() for row in rows if str(row.get(column, "")).strip()}
+    if not task_ids:
+        raise ValueError(f"任务 allowlist 没有有效任务 ID: {path}")
+    return task_ids
+
+
+def _filter_tasks_by_allowlist(tasks: list[QueueTask], allowlist_csv: Path) -> list[QueueTask]:
+    allowed_task_ids = _read_task_id_allowlist(allowlist_csv)
+    filtered = [task for task in tasks if task.task_id in allowed_task_ids]
+    if not filtered:
+        raise ValueError(f"任务 allowlist 未匹配任何调度任务: {allowlist_csv}")
+    return filtered
+
+
 def _materialize_slices(tasks: list[QueueTask]) -> None:
     for task in tasks:
         if not task.slice_path.exists():
@@ -2157,6 +2179,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-rows", type=int, default=200, help="任务清单期望行数；传 0 表示不校验。")
     parser.add_argument("--queue-root", default=str(QUEUE_ROOT), help="本地/远端仓库内队列状态、切片和支持脚本目录。")
     parser.add_argument("--params-root", default=str(PARAMS_ROOT), help="参数 JSON 所在目录。")
+    parser.add_argument("--task-id-allowlist-csv", default=None, help="只调度 CSV 中列出的 task_id 或 scheduler_task_id。")
     parser.add_argument("--hosts", nargs="+", default=list(DEFAULT_HOSTS))
     parser.add_argument("--tools", nargs="+", default=list(DEFAULT_TOOLS), choices=sorted(TOOL_CONFIG))
     parser.add_argument("--seeds", nargs="+", type=int, default=list(DEFAULT_SEEDS))
@@ -2275,6 +2298,11 @@ def _parse_args() -> argparse.Namespace:
     args.params_root_path = Path(args.params_root).expanduser()
     if not args.params_root_path.is_absolute():
         args.params_root_path = REPO_ROOT / args.params_root_path
+    args.task_id_allowlist_csv_path = None
+    if args.task_id_allowlist_csv:
+        args.task_id_allowlist_csv_path = Path(args.task_id_allowlist_csv).expanduser()
+        if not args.task_id_allowlist_csv_path.is_absolute():
+            args.task_id_allowlist_csv_path = REPO_ROOT / args.task_id_allowlist_csv_path
     args.expected_rows_value = None if args.expected_rows == 0 else args.expected_rows
     unknown = sorted(set(args.tools) - set(TOOL_CONFIG))
     if unknown:
@@ -2298,6 +2326,8 @@ def main() -> None:
         llm_model_buckets=args.llm_model_buckets_parsed,
         llm_default_bucket=args.llm_default_bucket,
     )
+    if args.task_id_allowlist_csv_path is not None:
+        tasks = _filter_tasks_by_allowlist(tasks, args.task_id_allowlist_csv_path)
     print(
         json.dumps(
             {

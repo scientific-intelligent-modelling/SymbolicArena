@@ -13,6 +13,9 @@ FULL24H_NOISE_LEVELS = (0.0, 0.01, 0.05)
 FULL24H_TIMEOUT_SECONDS = 86400
 FULL24H_MIN_RUNTIME_SECONDS = 82800
 FULL24H_PROGRESS_INTERVAL_SECONDS = 60
+FULL3H_TIMEOUT_SECONDS = 10800
+FULL3H_MIN_RUNTIME_SECONDS = 10500
+FULL3H_PROGRESS_INTERVAL_SECONDS = 60
 FULL24H_ALGORITHMS = (
     "gplearn",
     "pyoperon",
@@ -167,3 +170,30 @@ FULL24H_SPEC = ExperimentSpec(
         progress_snapshot_interval_seconds=FULL24H_PROGRESS_INTERVAL_SECONDS,
     ),
 )
+
+FORMAL3H_SPEC = ExperimentSpec(
+    name="formal3h_13alg_3seed_3noise",
+    algorithms=FULL24H_ALGORITHMS,
+    seeds=FULL24H_SEEDS,
+    noise_levels=tuple(NoiseLevelSpec(tag=noise_tag_for_sigma(sigma), sigma=sigma) for sigma in FULL24H_NOISE_LEVELS),
+    budget=BudgetSpec(
+        name="formal3h",
+        timeout_in_seconds=FULL3H_TIMEOUT_SECONDS,
+        min_runtime_seconds=FULL3H_MIN_RUNTIME_SECONDS,
+        progress_snapshot_interval_seconds=FULL3H_PROGRESS_INTERVAL_SECONDS,
+    ),
+)
+
+EXPERIMENT_SPECS = {
+    "stage1_1h": STAGE1_SPEC,
+    STAGE1_SPEC.name: STAGE1_SPEC,
+    FULL24H_SPEC.name: FULL24H_SPEC,
+    FORMAL3H_SPEC.name: FORMAL3H_SPEC,
+}
+
+
+def get_experiment_spec(profile: str) -> ExperimentSpec:
+    try:
+        return EXPERIMENT_SPECS[profile]
+    except KeyError as exc:
+        raise ValueError(f"unknown experiment profile: {profile}") from exc

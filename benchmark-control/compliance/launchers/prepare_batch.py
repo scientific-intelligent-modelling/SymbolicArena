@@ -11,8 +11,12 @@ LIB = ROOT / "benchmark-control" / "compliance" / "lib"
 sys.path.insert(0, str(LIB))
 
 from manifest import generate_manifest
-from models import FULL24H_SPEC, STAGE1_SPEC
+from models import FORMAL3H_SPEC, FULL24H_SPEC, STAGE1_SPEC, ExperimentSpec, get_experiment_spec
 from params import generate_noise_params
+
+
+FORMAL_PROFILES = {FULL24H_SPEC.name, FORMAL3H_SPEC.name}
+PROFILE_CHOICES = ("stage1_1h", STAGE1_SPEC.name, FULL24H_SPEC.name, FORMAL3H_SPEC.name)
 
 
 def _git_revision() -> str:
@@ -29,25 +33,23 @@ def _resolve_repo_path(value: str) -> Path:
 def _parse_tools(raw: list[str] | None, *, profile: str) -> tuple[str, ...]:
     if raw:
         return tuple(raw)
-    if profile == "formal24h_13alg_3seed_3noise":
-        return FULL24H_SPEC.algorithms
-    return STAGE1_SPEC.algorithms
+    return _spec_for_profile(profile).algorithms
 
 
 def _parse_seeds(raw: list[int] | None, *, profile: str) -> tuple[int, ...]:
     if raw:
         return tuple(raw)
-    if profile == "formal24h_13alg_3seed_3noise":
-        return FULL24H_SPEC.seeds
-    return STAGE1_SPEC.seeds
+    return _spec_for_profile(profile).seeds
 
 
 def _parse_noise_sigmas(raw: list[float] | None, *, profile: str) -> tuple[float, ...]:
     if raw:
         return tuple(float(value) for value in raw)
-    if profile == "formal24h_13alg_3seed_3noise":
-        return tuple(level.sigma for level in FULL24H_SPEC.noise_levels)
-    return tuple(level.sigma for level in STAGE1_SPEC.noise_levels)
+    return tuple(level.sigma for level in _spec_for_profile(profile).noise_levels)
+
+
+def _spec_for_profile(profile: str) -> ExperimentSpec:
+    return get_experiment_spec(profile)
 
 
 def _params_tool_name(tool: str) -> str:
@@ -60,8 +62,7 @@ def _params_tool_name(tool: str) -> str:
 def _budget_value(value: int | None, *, profile: str, field: str) -> int:
     if value is not None:
         return value
-    spec = FULL24H_SPEC if profile == "formal24h_13alg_3seed_3noise" else STAGE1_SPEC
-    return int(getattr(spec.budget, field))
+    return int(getattr(_spec_for_profile(profile).budget, field))
 
 
 def _write_queue_sources(*, batch_dir: Path, dataset_rows: list[dict[str, str]]) -> None:
@@ -101,7 +102,7 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--profile", choices=["stage1_1h", "formal24h_13alg_3seed_3noise"], default="stage1_1h")
+    parser.add_argument("--profile", choices=PROFILE_CHOICES, default="stage1_1h")
     parser.add_argument("--toolbox-config", default="scientific_intelligent_modelling/config/toolbox_config.json")
     parser.add_argument("--ssr50-root", default="sim-datasets-data/ssr50")
     parser.add_argument("--source-params-root", default="exp-planning/02.E1选择验证/generated/params")
@@ -130,7 +131,7 @@ def main() -> int:
         batch_dir=batch_dir,
         git_revision=_git_revision(),
         dataset_dir_base=ROOT,
-        algorithms=tools if args.profile == "formal24h_13alg_3seed_3noise" else None,
+        algorithms=tools if args.profile in FORMAL_PROFILES else None,
         seeds=seeds,
         noise_sigmas=noise_sigmas,
         timeout_in_seconds=timeout_in_seconds,
@@ -138,7 +139,7 @@ def main() -> int:
         progress_snapshot_interval_seconds=progress_interval,
     )
     _write_queue_sources(batch_dir=batch_dir, dataset_rows=_read_manifest_datasets(batch_dir))
-    if args.profile == "formal24h_13alg_3seed_3noise":
+    if args.profile in FORMAL_PROFILES:
         params_tools = tuple(_params_tool_name(tool) for tool in tools)
         params_summary = generate_noise_params(
             source_params_root=_resolve_repo_path(args.source_params_root),
