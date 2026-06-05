@@ -6,10 +6,12 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DATASET_DIR="${DATASET_DIR:-${REPO_ROOT}/examples/stressstrain}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${REPO_ROOT}/acceptance_runs}"
 SEED="${SEED:-1314}"
-NITERATIONS="${NITERATIONS:-5}"
-POPULATION_SIZE="${POPULATION_SIZE:-20}"
-POPULATIONS="${POPULATIONS:-4}"
-MAXSIZE="${MAXSIZE:-20}"
+NITERATIONS="${NITERATIONS:-200}"
+POPULATION_SIZE="${POPULATION_SIZE:-64}"
+POPULATIONS="${POPULATIONS:-8}"
+MAXSIZE="${MAXSIZE:-30}"
+PROCS="${PROCS:-1}"
+TIMEOUT_IN_SECONDS="${TIMEOUT_IN_SECONDS:-3600}"
 PYTHON_JULIAPKG_PROJECT="${PYTHON_JULIAPKG_PROJECT:-${HOME}/pyjuliapkg_pysr_acceptance}"
 
 cd "${REPO_ROOT}"
@@ -77,7 +79,7 @@ def evaluate(reg, pair):
     }.items()}
 
 
-dataset_dir, output_root, seed, niterations, population_size, populations, maxsize = sys.argv[1:]
+dataset_dir, output_root, seed, niterations, population_size, populations, maxsize, procs, timeout_in_seconds = sys.argv[1:]
 seed = int(seed)
 output_dir = Path(output_root) / "pysr_stressstrain"
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -90,9 +92,10 @@ params = {
     "population_size": int(population_size),
     "populations": int(populations),
     "maxsize": int(maxsize),
-    "procs": 1,
-    "progress": False,
-    "verbosity": 0,
+    "procs": int(procs),
+    "progress": True,
+    "verbosity": 1,
+    "timeout_in_seconds": int(timeout_in_seconds),
     "random_state": seed,
     "n_features": len(ds["feature_names"]),
     "feature_names": ds["feature_names"],
@@ -125,4 +128,4 @@ finally:
 PY
 
 PYTHONPATH=. PYTHON_JULIAPKG_PROJECT="${PYTHON_JULIAPKG_PROJECT}" \
-conda run -n sim_base python "${RUNNER_PY}" "$DATASET_DIR" "$OUTPUT_ROOT" "$SEED" "$NITERATIONS" "$POPULATION_SIZE" "$POPULATIONS" "$MAXSIZE"
+conda run -n sim_base python "${RUNNER_PY}" "$DATASET_DIR" "$OUTPUT_ROOT" "$SEED" "$NITERATIONS" "$POPULATION_SIZE" "$POPULATIONS" "$MAXSIZE" "$PROCS" "$TIMEOUT_IN_SECONDS"

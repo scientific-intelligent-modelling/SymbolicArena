@@ -6,8 +6,10 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DATASET_DIR="${DATASET_DIR:-${REPO_ROOT}/examples/stressstrain}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${REPO_ROOT}/acceptance_runs}"
 SEED="${SEED:-1314}"
-NITERATIONS="${NITERATIONS:-2}"
-SAMPLES_PER_ITERATION="${SAMPLES_PER_ITERATION:-1}"
+NITERATIONS="${NITERATIONS:-200}"
+SAMPLES_PER_ITERATION="${SAMPLES_PER_ITERATION:-4}"
+MAX_PARAMS="${MAX_PARAMS:-12}"
+TIMEOUT_IN_SECONDS="${TIMEOUT_IN_SECONDS:-3600}"
 LLM_CONFIG="${1:-${SIM_LLM_CONFIG:-}}"
 
 if [[ -z "${LLM_CONFIG}" ]]; then
@@ -85,7 +87,7 @@ def evaluate(reg, pair):
     }.items()}
 
 
-dataset_dir, output_root, seed, niterations, samples_per_iteration, llm_config = sys.argv[1:]
+dataset_dir, output_root, seed, niterations, samples_per_iteration, max_params, timeout_in_seconds, llm_config = sys.argv[1:]
 seed = int(seed)
 output_dir = Path(output_root) / "llmsr_stressstrain"
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -97,11 +99,11 @@ params = {
     "exp_name": "llmsr_stressstrain_acceptance",
     "llm_config_path": llm_config,
     "metadata_path": ds["metadata_path"],
-    "background": "Calculate Stress from Strain and Temperature using a compact symbolic regression formula.",
+    "background": "Calculate Stress given Strain and Temperature",
     "niterations": int(niterations),
     "samples_per_iteration": int(samples_per_iteration),
-    "timeout_in_seconds": 1800,
-    "max_params": 10,
+    "timeout_in_seconds": int(timeout_in_seconds),
+    "max_params": int(max_params),
     "persist_all_samples": True,
     "seed": seed,
     "n_features": len(ds["feature_names"]),
@@ -136,4 +138,4 @@ finally:
         raise SystemExit(1)
 PY
 
-PYTHONPATH=. conda run -n sim_llm python "${RUNNER_PY}" "$DATASET_DIR" "$OUTPUT_ROOT" "$SEED" "$NITERATIONS" "$SAMPLES_PER_ITERATION" "$LLM_CONFIG"
+PYTHONPATH=. conda run -n sim_llm python "${RUNNER_PY}" "$DATASET_DIR" "$OUTPUT_ROOT" "$SEED" "$NITERATIONS" "$SAMPLES_PER_ITERATION" "$MAX_PARAMS" "$TIMEOUT_IN_SECONDS" "$LLM_CONFIG"
