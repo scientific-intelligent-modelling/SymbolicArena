@@ -179,6 +179,53 @@ def test_harvest_maps_noise_aware_outputs_into_noise_runs_layout(tmp_path: Path)
     assert (batch_dir / "runs" / "pysr" / "seed520" / "noise001" / "d0" / "result.json").exists()
 
 
+def test_harvest_counts_existing_recovered_result_without_remote_candidate(tmp_path: Path) -> None:
+    harvest = load_for_test("harvest")
+    batch_dir = tmp_path / "batch"
+    manifest_dir = batch_dir / "manifest"
+    manifest_dir.mkdir(parents=True)
+    (manifest_dir / "tasks.csv").write_text(
+        "\n".join(
+            [
+                "task_id,algorithm,dataset_id,dataset_dir,seed,noise_tag,noise_sigma,timeout_in_seconds,min_runtime_seconds,progress_snapshot_interval_seconds",
+                "dso__seed521__clean__g0032,dso,g0032,sim-datasets-data/ssr50/g0032,521,clean,0.0,10800,10500,60",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    queue_dir = batch_dir / "queues"
+    queue_dir.mkdir()
+    (queue_dir / "ssr50_source.csv").write_text(
+        "global_index,dataset_id,dataset_name,dataset_dir,dataset_rel\n"
+        "32,g0032,g0032,sim-datasets-data/ssr50/g0032,sim-datasets-data/ssr50/g0032\n",
+        encoding="utf-8",
+    )
+    run_dir = batch_dir / "runs" / "dso" / "seed521" / "clean" / "g0032"
+    (run_dir / "progress").mkdir(parents=True)
+    (run_dir / "progress" / "minute_0180.json").write_text("{}", encoding="utf-8")
+    (run_dir / "result.json").write_text(
+        json.dumps(
+            {
+                "status": "ok",
+                "runtime_seconds": 10809.0,
+                "valid": {"nmse": 0.1},
+                "id_test": {"nmse": 0.2},
+                "ood_test": {"nmse": 0.3},
+                "canonical_artifact": {"expression": "x0 + 1"},
+                "recovered_from_24h": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = harvest.harvest_batch(batch_dir=batch_dir, experiment_roots=[tmp_path / "empty"])
+
+    assert summary == {"total_tasks": 1, "harvested": 1, "missing": 0}
+    rows = list(csv.DictReader((batch_dir / "harvest" / "harvested_tasks.csv").open(newline="", encoding="utf-8")))
+    assert rows[0]["source_result"].endswith("runs/dso/seed521/clean/g0032/result.json")
+
+
 def test_harvest_preserves_launcher_report_runtime_for_budget_audit(tmp_path: Path) -> None:
     harvest = load_for_test("harvest")
     audit = load_for_test("audit")

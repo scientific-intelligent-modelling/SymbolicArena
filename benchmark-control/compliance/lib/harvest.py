@@ -92,6 +92,7 @@ def _harvest_task(
         scheduler_task_id = f"{tool_key}_s{seed}_{noise_tag}_g{global_index:04d}"
     else:
         scheduler_task_id = f"{tool_key}_s{seed}_g{global_index:04d}"
+    target_dir = _target_dir(batch_dir, task, use_noise_dimension=use_noise_dimension)
     candidates = _find_candidates(
         experiment_roots=experiment_roots,
         tool_key=tool_key,
@@ -102,6 +103,14 @@ def _harvest_task(
     if assigned_host:
         candidates = [candidate for candidate in candidates if candidate.source_host == assigned_host]
     if not candidates:
+        recovered_result = target_dir / "result.json"
+        if _has_recovered_result(recovered_result):
+            return _harvest_row(
+                task,
+                status="harvested",
+                source_result=str(recovered_result),
+                target_dir=str(target_dir),
+            )
         return _harvest_row(
             task,
             status="missing",
@@ -109,10 +118,6 @@ def _harvest_task(
         )
 
     candidate = _choose_candidate(candidates)
-    if use_noise_dimension:
-        target_dir = batch_dir / "runs" / task["algorithm"] / f"seed{seed}" / noise_tag / dataset_id
-    else:
-        target_dir = batch_dir / "runs" / task["algorithm"] / f"seed{seed}" / dataset_id
     if not dry_run:
         _copy_candidate(candidate, target_dir)
     return _harvest_row(
@@ -190,6 +195,15 @@ def _scheduler_tool_key(algorithm: str) -> str:
 def _task_uses_noise_dimension(task: dict[str, str]) -> bool:
     noise_tag = task.get("noise_tag") or ""
     return bool(noise_tag and f"__{noise_tag}__" in task.get("task_id", ""))
+
+
+def _target_dir(batch_dir: Path, task: dict[str, str], *, use_noise_dimension: bool) -> Path:
+    seed = task["seed"]
+    dataset_id = task["dataset_id"]
+    if use_noise_dimension:
+        noise_tag = task.get("noise_tag") or "clean"
+        return batch_dir / "runs" / task["algorithm"] / f"seed{seed}" / noise_tag / dataset_id
+    return batch_dir / "runs" / task["algorithm"] / f"seed{seed}" / dataset_id
 
 
 def _find_candidates(
