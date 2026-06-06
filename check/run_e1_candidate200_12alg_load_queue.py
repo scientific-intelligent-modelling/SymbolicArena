@@ -176,7 +176,10 @@ def _run(cmd: list[str], *, timeout: int = 60) -> subprocess.CompletedProcess[st
     try:
         return subprocess.run(cmd, text=True, capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout, check=False)
     except subprocess.TimeoutExpired as exc:
-        return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), _safe_text(exc.stderr) or "timeout")
+        stderr = _safe_text(exc.stderr)
+        if "timeout" not in stderr.lower():
+            stderr = (stderr + "\ntimeout").strip()
+        return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), stderr)
 
 
 def _run_bytes(cmd: list[str], *, input_bytes: bytes, timeout: int = 60) -> subprocess.CompletedProcess[str]:
@@ -189,7 +192,10 @@ def _run_bytes(cmd: list[str], *, input_bytes: bytes, timeout: int = 60) -> subp
             _safe_text(proc.stderr),
         )
     except subprocess.TimeoutExpired as exc:
-        return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), _safe_text(exc.stderr) or "timeout")
+        stderr = _safe_text(exc.stderr)
+        if "timeout" not in stderr.lower():
+            stderr = (stderr + "\ntimeout").strip()
+        return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), stderr)
 
 
 def _host_number(host: str) -> str | None:
@@ -227,6 +233,8 @@ def _ssh(host: str, command: str, *, controller_host: str, use_internal_ips: boo
             "-o",
             "ConnectTimeout=10",
             "-o",
+            "LogLevel=ERROR",
+            "-o",
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",
@@ -256,6 +264,8 @@ def _ssh_script(
             "-o",
             "ConnectTimeout=10",
             "-o",
+            "LogLevel=ERROR",
+            "-o",
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",
@@ -281,6 +291,8 @@ def _scp(local_path: Path, host: str, remote_path: Path, *, controller_host: str
             "BatchMode=yes",
             "-o",
             "ConnectTimeout=10",
+            "-o",
+            "LogLevel=ERROR",
             "-o",
             "StrictHostKeyChecking=no",
             "-o",
@@ -308,6 +320,8 @@ def _scp(local_path: Path, host: str, remote_path: Path, *, controller_host: str
             "BatchMode=yes",
             "-o",
             "ConnectTimeout=10",
+            "-o",
+            "LogLevel=ERROR",
             "-o",
             "StrictHostKeyChecking=no",
             "-o",
@@ -1225,7 +1239,7 @@ def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], ar
 
 def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> None:
     command, session = _task_submit_line(task, host, state_task, args)
-    result = _ssh(host, command, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, timeout=30)
+    result = _ssh(host, command, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips, timeout=90)
     if result.returncode != 0:
         raise RuntimeError(f"{host} 启动 {task.task_id} 失败: {result.stderr or result.stdout}")
     state_task.update(
@@ -1268,7 +1282,7 @@ def _start_tasks_on_host(
         script,
         controller_host=args.controller_host,
         use_internal_ips=args.use_internal_ips,
-        timeout=max(30, min(180, 10 + 3 * len(task_items))),
+        timeout=max(90, min(240, 30 + 10 * len(task_items))),
     )
     if result.returncode != 0:
         raise RuntimeError(f"{host} 批量启动 {len(task_items)} 个任务失败: {result.stderr or result.stdout}")
