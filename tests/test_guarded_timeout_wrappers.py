@@ -25,6 +25,15 @@ def test_fepysr_fill_deadline_uses_full_explicit_timeout(monkeypatch) -> None:
     assert reg._budget_deadline() == 3700.0
 
 
+def test_fepysr_fit_attempt_timeout_accounts_for_nested_experiments() -> None:
+    params = {
+        "timeout_in_seconds": 10500,
+        "num_experiments": 8,
+    }
+
+    assert FePySRRegressor._fit_attempt_timeout_seconds(params, 10800) == 150
+
+
 def test_symbolfit_uses_guarded_internal_pysr_timeout() -> None:
     reg = SymbolFitRegressor(timeout_in_seconds=3600)
 
@@ -71,7 +80,7 @@ def test_fepysr_repeats_successful_fit_until_timeout_budget(monkeypatch) -> None
     monkeypatch.setitem(sys.modules, "fepysr", types.SimpleNamespace(FePySR=FakeFePySR))
     monkeypatch.setattr(fepysr_module.time, "monotonic", lambda: clock["now"])
 
-    reg = FePySRRegressor(timeout_in_seconds=10)
+    reg = FePySRRegressor(timeout_in_seconds=10, num_experiments=1)
     reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
 
     assert len(fit_calls) >= 2

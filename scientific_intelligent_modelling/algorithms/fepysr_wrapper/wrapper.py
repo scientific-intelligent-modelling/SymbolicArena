@@ -239,8 +239,13 @@ class FePySRRegressor(BaseWrapper):
             return cls._positive_int(params.get("timeout_in_seconds"))
         explicit = cls._positive_int(params.get("max_fit_attempt_seconds"))
         if explicit is not None:
-            return max(1, min(remaining, explicit))
-        return max(1, min(remaining, 1200, max(1, remaining // 4)))
+            attempt_budget = max(1, min(remaining, explicit))
+        else:
+            attempt_budget = max(1, min(remaining, 1200, max(1, remaining // 4)))
+        nested_experiments = cls._positive_int(params.get("num_experiments")) or 1
+        if nested_experiments <= 1:
+            return attempt_budget
+        return max(1, attempt_budget // nested_experiments)
 
     @staticmethod
     def _equation_score(expr: str, X_arr: np.ndarray, y_arr: np.ndarray) -> float:
