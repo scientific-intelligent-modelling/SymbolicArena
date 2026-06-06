@@ -55,6 +55,26 @@ def test_fepysr_bootstrap_attempt_uses_small_fmn_search() -> None:
     assert params["timeout_in_seconds"] == 150
 
 
+def test_fepysr_bootstrap_repeats_until_candidate_exists() -> None:
+    params = {
+        "timeout_in_seconds": 150,
+        "num_experiments": 8,
+        "num_workers": 4,
+        "fmn_epochs": 30,
+    }
+
+    FePySRRegressor._apply_bootstrap_attempt_params(
+        params,
+        attempt=2,
+        has_best_equation=False,
+        remaining=10800,
+    )
+
+    assert params["num_experiments"] == 1
+    assert params["num_workers"] == 1
+    assert params["fmn_epochs"] == 5
+
+
 def test_symbolfit_uses_guarded_internal_pysr_timeout() -> None:
     reg = SymbolFitRegressor(timeout_in_seconds=3600)
 

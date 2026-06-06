@@ -259,7 +259,7 @@ class FePySRRegressor(BaseWrapper):
         has_best_equation: bool,
         remaining: int | None,
     ) -> None:
-        if attempt != 1 or has_best_equation or remaining is None or params.get("fmn_only"):
+        if has_best_equation or remaining is None or params.get("fmn_only"):
             return
         num_experiments = cls._positive_int(params.get("num_experiments"))
         if num_experiments is not None:
