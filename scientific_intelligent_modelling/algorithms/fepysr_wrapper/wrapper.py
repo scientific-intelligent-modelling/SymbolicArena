@@ -56,6 +56,9 @@ class FePySRRegressor(BaseWrapper):
         "exp_dir",
     }
     _MIN_BUDGET_REFIT_SECONDS = 5
+    _BOOTSTRAP_MAX_EXPERIMENTS = 1
+    _BOOTSTRAP_MAX_FMN_EPOCHS = 5
+    _BOOTSTRAP_MAX_PYSR_TIMEOUT_SECONDS = 300
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
         "overrides",
         "custom_pysr_model",
@@ -247,6 +250,33 @@ class FePySRRegressor(BaseWrapper):
             return attempt_budget
         return max(1, attempt_budget // nested_experiments)
 
+    @classmethod
+    def _apply_bootstrap_attempt_params(
+        cls,
+        params: dict[str, Any],
+        *,
+        attempt: int,
+        has_best_equation: bool,
+        remaining: int | None,
+    ) -> None:
+        if attempt != 1 or has_best_equation or remaining is None or params.get("fmn_only"):
+            return
+        num_experiments = cls._positive_int(params.get("num_experiments"))
+        if num_experiments is not None:
+            params["num_experiments"] = min(num_experiments, cls._BOOTSTRAP_MAX_EXPERIMENTS)
+        num_workers = cls._positive_int(params.get("num_workers"))
+        if num_workers is not None:
+            params["num_workers"] = min(num_workers, cls._BOOTSTRAP_MAX_EXPERIMENTS)
+        fmn_epochs = cls._positive_int(params.get("fmn_epochs"))
+        if fmn_epochs is not None:
+            params["fmn_epochs"] = min(fmn_epochs, cls._BOOTSTRAP_MAX_FMN_EPOCHS)
+        timeout_seconds = cls._positive_int(params.get("timeout_in_seconds"))
+        if timeout_seconds is not None:
+            params["timeout_in_seconds"] = max(
+                1,
+                min(timeout_seconds, remaining, cls._BOOTSTRAP_MAX_PYSR_TIMEOUT_SECONDS),
+            )
+
     @staticmethod
     def _equation_score(expr: str, X_arr: np.ndarray, y_arr: np.ndarray) -> float:
         try:
@@ -407,6 +437,12 @@ class FePySRRegressor(BaseWrapper):
                 attempt_timeout = self._fit_attempt_timeout_seconds(iteration_params, remaining)
                 if attempt_timeout is not None:
                     iteration_params["timeout_in_seconds"] = attempt_timeout
+                self._apply_bootstrap_attempt_params(
+                    iteration_params,
+                    attempt=attempt,
+                    has_best_equation=best_equation is not None,
+                    remaining=remaining,
+                )
             if iteration_params.get("random_state") is not None:
                 iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
             iteration_params.pop("max_fit_attempt_seconds", None)
