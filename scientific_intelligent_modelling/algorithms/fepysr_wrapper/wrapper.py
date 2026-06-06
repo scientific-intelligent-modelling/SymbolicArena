@@ -427,6 +427,15 @@ class FePySRRegressor(BaseWrapper):
             target_name=self._contract_target_name,
             context="FePySRRegressor.fit",
         )
+        X_arr = np.asarray(X, dtype=float)
+        y_arr = np.asarray(y, dtype=float).reshape(-1, 1)
+        deadline = self._budget_deadline()
+        baseline_score = self._install_mean_constant_baseline(y_arr)
+        self._write_current_best_snapshot(
+            attempt=0,
+            score=baseline_score,
+            source="mean_constant_baseline",
+        )
         try:
             import pysr  # noqa: F401
             import torch
@@ -438,17 +447,8 @@ class FePySRRegressor(BaseWrapper):
                 "请先创建/激活 sim_fepysr 环境。"
             ) from err
 
-        X_arr = np.asarray(X, dtype=float)
-        y_arr = np.asarray(y, dtype=float).reshape(-1, 1)
         X_tensor = torch.as_tensor(X_arr, dtype=torch.float64)
         y_tensor = torch.as_tensor(y_arr, dtype=torch.float64)
-        deadline = self._budget_deadline()
-        baseline_score = self._install_mean_constant_baseline(y_arr)
-        self._write_current_best_snapshot(
-            attempt=0,
-            score=baseline_score,
-            source="mean_constant_baseline",
-        )
         best_model = None
         best_equation = self._best_equation
         best_score = baseline_score

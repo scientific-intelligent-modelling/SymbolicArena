@@ -1,7 +1,9 @@
+import builtins
 import sys
 import types
 
 import numpy as np
+import pytest
 
 from scientific_intelligent_modelling.algorithms.fepysr_wrapper.wrapper import FePySRRegressor
 from scientific_intelligent_modelling.algorithms.QLattice_wrapper.wrapper import QLatticeRegressor
@@ -179,6 +181,38 @@ def test_fepysr_empty_search_writes_mean_constant_baseline(monkeypatch, tmp_path
     assert reg.get_total_equations() == ["4"]
     np.testing.assert_allclose(reg.predict(np.asarray([[0.0], [1.0]])), np.asarray([4.0, 4.0]))
     assert (tmp_path / "case" / ".fepysr_current_best.json").exists()
+
+
+def test_fepysr_writes_mean_baseline_before_fepysr_import(monkeypatch, tmp_path) -> None:
+    class FakeTorch:
+        float64 = "float64"
+
+        @staticmethod
+        def as_tensor(value, dtype=None):
+            return np.asarray(value, dtype=float)
+
+    real_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if name == "fepysr":
+            raise ModuleNotFoundError("blocked fepysr import")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setitem(sys.modules, "pysr", types.SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "torch", FakeTorch)
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    reg = FePySRRegressor(
+        timeout_in_seconds=10,
+        exp_path=str(tmp_path),
+        exp_name="case",
+    )
+
+    with pytest.raises(ImportError):
+        reg.fit(np.asarray([[0.0], [1.0], [2.0]]), np.asarray([2.0, 4.0, 6.0]))
+
+    recovered = FePySRRegressor(existing_exp_dir=str(tmp_path / "case"), n_features=1)
+    assert recovered.get_optimal_equation() == "4"
 
 
 def test_fepysr_runtime_patch_decodes_bytes_equations(monkeypatch) -> None:
