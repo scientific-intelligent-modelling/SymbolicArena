@@ -361,7 +361,26 @@ class FePySRRegressor(BaseWrapper):
         if fepysr_impl_module is not None:
             fepysr_impl_module.pysr_train = safe_pysr_train
 
-    def _write_current_best_snapshot(self, *, attempt: int, score: float) -> None:
+    @staticmethod
+    def _format_constant_equation(value: float) -> str:
+        if not np.isfinite(value):
+            value = 0.0
+        text = format(float(value), ".17g")
+        return "0" if text == "-0" else text
+
+    def _install_mean_constant_baseline(self, y_arr: np.ndarray) -> float:
+        target = np.asarray(y_arr, dtype=float).reshape(-1)
+        finite_target = target[np.isfinite(target)]
+        value = float(np.mean(finite_target)) if finite_target.size else 0.0
+        equation = self._format_constant_equation(value)
+        self._best_equation = equation
+        self._equations = [equation]
+        self._callable = self._build_callable(equation)
+        if not finite_target.size:
+            return 0.0
+        return float(np.mean((np.full_like(finite_target, value, dtype=float) - finite_target) ** 2))
+
+    def _write_current_best_snapshot(self, *, attempt: int, score: float, source: str | None = None) -> None:
         if self._experiment_dir is None or not self._best_equation:
             return
         payload = {
@@ -372,6 +391,8 @@ class FePySRRegressor(BaseWrapper):
             "score": float(score) if np.isfinite(score) else None,
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
+        if source:
+            payload["source"] = source
         try:
             path = self._experiment_dir / self._CURRENT_BEST_FILENAME
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -422,10 +443,16 @@ class FePySRRegressor(BaseWrapper):
         X_tensor = torch.as_tensor(X_arr, dtype=torch.float64)
         y_tensor = torch.as_tensor(y_arr, dtype=torch.float64)
         deadline = self._budget_deadline()
+        baseline_score = self._install_mean_constant_baseline(y_arr)
+        self._write_current_best_snapshot(
+            attempt=0,
+            score=baseline_score,
+            source="mean_constant_baseline",
+        )
         best_model = None
-        best_equation = None
-        best_score = float("inf")
-        equations: list[str] = []
+        best_equation = self._best_equation
+        best_score = baseline_score
+        equations: list[str] = list(self._equations)
         attempt = 0
         while True:
             remaining = self._remaining_budget_seconds(deadline)
@@ -465,9 +492,11 @@ class FePySRRegressor(BaseWrapper):
                         for idx, item in enumerate(equations)
                         if item and item not in equations[:idx]
                     ]
-                    self._write_current_best_snapshot(attempt=attempt, score=best_score)
-            elif best_model is None:
-                best_model = model
+                    self._write_current_best_snapshot(
+                        attempt=attempt,
+                        score=best_score,
+                        source="fepysr_fit",
+                    )
             if deadline is None or time.monotonic() >= deadline:
                 break
         self.model = best_model

@@ -143,6 +143,44 @@ def test_fepysr_current_best_snapshot_supports_timeout_recovery(tmp_path) -> Non
     np.testing.assert_allclose(recovered.predict(np.array([[1.0], [2.0]])), np.array([1.0, 2.0]))
 
 
+def test_fepysr_empty_search_writes_mean_constant_baseline(monkeypatch, tmp_path) -> None:
+    clock = {"now": 0.0}
+
+    class FakeTorch:
+        float64 = "float64"
+
+        @staticmethod
+        def as_tensor(value, dtype=None):
+            return np.asarray(value, dtype=float)
+
+    class FakeFePySR:
+        best_equation_ = ""
+
+        def __init__(self, overrides, custom_pysr_model=None):
+            self.overrides = overrides
+
+        def fit(self, X, y):
+            clock["now"] += 10.0
+
+    monkeypatch.setitem(sys.modules, "pysr", types.SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "torch", FakeTorch)
+    monkeypatch.setitem(sys.modules, "fepysr", types.SimpleNamespace(FePySR=FakeFePySR))
+    monkeypatch.setattr(fepysr_module.time, "monotonic", lambda: clock["now"])
+
+    reg = FePySRRegressor(
+        timeout_in_seconds=10,
+        num_experiments=1,
+        exp_path=str(tmp_path),
+        exp_name="case",
+    )
+    reg.fit(np.asarray([[0.0], [1.0], [2.0]]), np.asarray([2.0, 4.0, 6.0]))
+
+    assert reg.get_optimal_equation() == "4"
+    assert reg.get_total_equations() == ["4"]
+    np.testing.assert_allclose(reg.predict(np.asarray([[0.0], [1.0]])), np.asarray([4.0, 4.0]))
+    assert (tmp_path / "case" / ".fepysr_current_best.json").exists()
+
+
 def test_fepysr_runtime_patch_decodes_bytes_equations(monkeypatch) -> None:
     feature_maker = types.ModuleType("fepysr.feature_maker")
 
