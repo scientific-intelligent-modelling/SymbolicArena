@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import numpy as np
 import yaml
@@ -64,3 +65,48 @@ def test_drsr_wrapper_prompt_semantics_follow_metadata(tmp_path: Path):
     assert "  - x0: Strain" in spec
     assert "  - x1: Temperature" in spec
     assert "  - y: Stress" in spec
+
+
+def test_drsr_restores_best_history_full_function_with_feature_names(tmp_path: Path):
+    exp_dir = tmp_path / "drsr_exp"
+    best_dir = exp_dir / "best_history"
+    best_dir.mkdir(parents=True)
+    best_sample = {
+        "iteration": 3,
+        "sample_order": 10,
+        "score": -0.001,
+        "mse": 0.001,
+        "nmse": 0.01,
+        "params": [1.5, -2.0, 0.25],
+        "function": '''
+def equation(strain: np.ndarray, temp: np.ndarray, params: np.ndarray) -> np.ndarray:
+    """Candidate saved by DRSR best_history."""
+    return params[0] * strain + params[1] * temp + params[2]
+''',
+    }
+    (best_dir / "best_sample_10.json").write_text(
+        json.dumps(best_sample, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    X = np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]], dtype=float)
+    y = 1.5 * X[:, 0] - 2.0 * X[:, 1] + 0.25
+    reg = DRSRRegressor(
+        existing_exp_dir=str(exp_dir),
+        niterations=1,
+        samples_per_iteration=1,
+        n_features=2,
+        feature_names=["strain", "temp"],
+        target_name="stress",
+    )
+
+    reg.fit(X, y)
+
+    eq = reg.get_optimal_equation()
+    pred = reg.predict(X)
+    assert "params[0] * col0" in eq
+    assert "params[1] * col1" in eq
+    assert "strain" not in eq
+    assert "temp" not in eq
+    assert "params[0] * x + params[1] * v" not in eq
+    assert np.allclose(pred, y)

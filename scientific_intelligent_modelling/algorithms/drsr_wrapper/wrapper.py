@@ -543,6 +543,18 @@ class DRSRRegressor(BaseWrapper):
             lines = lines[1:]
 
         if lines and lines[0].lstrip().startswith("def "):
+            try:
+                tree = ast.parse(stripped)
+                func = next((node for node in tree.body if isinstance(node, ast.FunctionDef)), None)
+                if func is not None:
+                    for node in reversed(func.body):
+                        if isinstance(node, ast.Return):
+                            expr = ast.get_source_segment(stripped, node.value)
+                            if expr:
+                                return f"return {expr.strip()}\n"
+            except Exception:
+                pass
+
             body = "\n".join(lines[1:])
             return textwrap.dedent(body).rstrip("\n") + "\n"
 
@@ -679,14 +691,16 @@ class DRSRRegressor(BaseWrapper):
                 continue
             try:
                 cleaned_body = self._clean_equation_body(equation)
+                canonical_body = self._canonicalize_equation_variable_names(cleaned_body)
                 candidate_params = entry.get("params")
                 candidate_params_arr = None
                 if isinstance(candidate_params, list):
                     candidate_params_arr = np.asarray(candidate_params, dtype=float)
-                candidate_func = self._compile_equation(cleaned_body, self._n_features)
+                candidate_func = self._compile_equation(canonical_body, self._n_features)
                 if not self._validate_compiled_equation(candidate_func, X, candidate_params_arr):
                     continue
-                self._equation_body = equation
+                entry["equation"] = canonical_body
+                self._equation_body = canonical_body
                 self._equation_func = candidate_func
                 if candidate_params_arr is not None:
                     best_params = candidate_params_arr
@@ -731,7 +745,12 @@ class DRSRRegressor(BaseWrapper):
         inst._best_params = np.array(best_params) if best_params is not None else None
         if inst._equation_body:
             try:
-                inst._equation_func = inst._compile_equation(inst._equation_body, inst._n_features)
+                inst._equation_func = inst._compile_equation(
+                    inst._equation_body,
+                    inst._n_features,
+                    feature_names=inst._feature_names,
+                    prompt_feature_names=inst._prompt_feature_names,
+                )
                 inst.model_ready = True
             except Exception:
                 inst._equation_func = None
@@ -929,18 +948,23 @@ class DRSRRegressor(BaseWrapper):
         return only_line + '\n'
 
     @staticmethod
-    def _inject_feature_aliases(body: str, n_features: Optional[int] = None) -> str:
+    def _inject_feature_aliases(
+        body: str,
+        n_features: Optional[int] = None,
+        feature_names: Optional[List[str]] = None,
+        prompt_feature_names: Optional[List[str]] = None,
+    ) -> str:
         """
         当已有方程体仍使用旧版变量名（x/v/x0/x1）时，注入别名变量提升兼容性。
         """
         if not isinstance(body, str):
             return body
         n = 0 if (n_features is None or n_features <= 0) else int(n_features)
-        names = DRSRRegressor._collect_variable_names(body)
+        variable_names = DRSRRegressor._collect_variable_names(body) or set()
         x_indices = sorted(
             {
                 int(match.group(1))
-                for name in names
+                for name in variable_names
                 for match in [re.fullmatch(r"x(\d+)", name)]
                 if match is not None
             }
@@ -962,8 +986,19 @@ class DRSRRegressor(BaseWrapper):
             for i in range(n):
                 alias_map[f"x{i}"] = f"col{i}"
 
+        for candidate_names in (feature_names, prompt_feature_names):
+            if not isinstance(candidate_names, list):
+                continue
+            for i, name in enumerate(candidate_names[:n]):
+                if not isinstance(name, str):
+                    continue
+                name = name.strip()
+                if not name or not name.isidentifier() or name in {"np", "numpy", "params"}:
+                    continue
+                alias_map[name] = f"col{i}"
+
         for old_name, new_name in alias_map.items():
-            if old_name in names and old_name not in ("col" + new_name[3:] if new_name.startswith("col") else ""):
+            if old_name in variable_names and old_name != new_name:
                 aliases.append(f"{old_name} = {new_name}")
         # 去重，保持固定注入顺序
         aliases = list(dict.fromkeys(aliases))
@@ -1011,12 +1046,73 @@ class DRSRRegressor(BaseWrapper):
                 names.add(node.id)
         return names
 
+    def _canonicalize_equation_variable_names(self, body: str) -> str:
+        """把候选中的真实特征名规范成 col0/col1/...，保证导出的方程自洽可执行。"""
+        if not isinstance(body, str):
+            return ""
+
+        n = 0 if (self._n_features is None or self._n_features <= 0) else int(self._n_features)
+        variable_names = self._collect_variable_names(body) or set()
+        replacements: dict[str, str] = {}
+
+        def add_names(names: Optional[List[str]]) -> None:
+            if not isinstance(names, list):
+                return
+            for i, name in enumerate(names[:n]):
+                if not isinstance(name, str):
+                    continue
+                name = name.strip()
+                if not name or not name.isidentifier() or name in {"np", "numpy", "params"}:
+                    continue
+                replacements[name] = f"col{i}"
+
+        add_names(self._feature_names)
+        add_names(self._prompt_feature_names)
+
+        x_indices = sorted(
+            {
+                int(match.group(1))
+                for name in variable_names
+                for match in [re.fullmatch(r"x(\d+)", name)]
+                if match is not None
+            }
+        )
+        one_based_x = bool(x_indices) and 0 not in x_indices and min(x_indices) >= 1 and max(x_indices) <= n
+        if n >= 1:
+            replacements.setdefault("x", "col0")
+            replacements.setdefault("x0", "col0")
+        if n >= 2:
+            replacements.setdefault("v", "col1")
+        if one_based_x:
+            for i in range(1, n + 1):
+                replacements.setdefault(f"x{i}", f"col{i - 1}")
+        else:
+            for i in range(n):
+                replacements.setdefault(f"x{i}", f"col{i}")
+
+        active = {old: new for old, new in replacements.items() if old in variable_names and old != new}
+        if not active:
+            return body
+
+        pattern = re.compile(r"\b(" + "|".join(re.escape(k) for k in sorted(active, key=len, reverse=True)) + r")\b")
+        return pattern.sub(lambda match: active[match.group(1)], body)
+
     @staticmethod
-    def _compile_equation(body: str, n_features: Optional[int] = None):
+    def _compile_equation(
+        body: str,
+        n_features: Optional[int] = None,
+        feature_names: Optional[List[str]] = None,
+        prompt_feature_names: Optional[List[str]] = None,
+    ):
         """编译方程，动态适配特征数量"""
         # 清理方程体，移除测试代码
         cleaned_body = DRSRRegressor._clean_equation_body(body)
-        body_with_aliases = DRSRRegressor._inject_feature_aliases(cleaned_body, n_features)
+        body_with_aliases = DRSRRegressor._inject_feature_aliases(
+            cleaned_body,
+            n_features,
+            feature_names=feature_names,
+            prompt_feature_names=prompt_feature_names,
+        )
         code = DRSRRegressor._wrap_equation(body_with_aliases, n_features)
         ns = {}
         # 提供 numpy 命名以支持方程体中的 np.sin/np.cos 等写法
