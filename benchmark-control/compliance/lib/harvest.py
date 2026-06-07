@@ -38,6 +38,7 @@ def harvest_batch(
     tasks = _read_csv(batch_dir / "manifest" / "tasks.csv")
     queue_index = _read_queue_index(batch_dir / "queues")
     assigned_hosts = _read_assigned_hosts(batch_dir / "queues")
+    candidate_index = _build_candidate_index(experiment_roots)
     harvest_dir = batch_dir / "harvest"
     harvest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -50,6 +51,7 @@ def harvest_batch(
             queue_index=queue_index,
             assigned_hosts=assigned_hosts,
             experiment_roots=experiment_roots,
+            candidate_index=candidate_index,
             dry_run=dry_run,
         )
         rows.append(row)
@@ -76,6 +78,7 @@ def _harvest_task(
     queue_index: dict[str, dict[str, str]],
     assigned_hosts: dict[str, str],
     experiment_roots: list[Path],
+    candidate_index: dict[tuple[str, str, str], list[HarvestCandidate]],
     dry_run: bool,
 ) -> dict[str, Any]:
     dataset_id = task["dataset_id"]
@@ -95,6 +98,7 @@ def _harvest_task(
     target_dir = _target_dir(batch_dir, task, use_noise_dimension=use_noise_dimension)
     candidates = _find_candidates(
         experiment_roots=experiment_roots,
+        candidate_index=candidate_index,
         tool_key=tool_key,
         seed=seed,
         scheduler_task_id=scheduler_task_id,
@@ -209,10 +213,14 @@ def _target_dir(batch_dir: Path, task: dict[str, str], *, use_noise_dimension: b
 def _find_candidates(
     *,
     experiment_roots: list[Path],
+    candidate_index: dict[tuple[str, str, str], list[HarvestCandidate]] | None,
     tool_key: str,
     seed: str,
     scheduler_task_id: str,
 ) -> list[HarvestCandidate]:
+    if candidate_index is not None:
+        return list(candidate_index.get((tool_key, str(seed), scheduler_task_id), []))
+
     candidates: list[HarvestCandidate] = []
     for root in experiment_roots:
         source_host = root.name
@@ -229,6 +237,45 @@ def _find_candidates(
                     HarvestCandidate(result_path=result_path, source_host=source_host, task_dir=task_dir)
                 )
     return candidates
+
+
+def _build_candidate_index(experiment_roots: list[Path]) -> dict[tuple[str, str, str], list[HarvestCandidate]]:
+    index: dict[tuple[str, str, str], list[HarvestCandidate]] = {}
+    for root in experiment_roots:
+        source_host = root.name
+        if not root.exists():
+            continue
+        for result_path in root.glob("**/result.json"):
+            parsed = _parse_remote_result_path(root, result_path)
+            if parsed is None:
+                continue
+            tool_key, seed, scheduler_task_id, task_dir = parsed
+            key = (tool_key, seed, scheduler_task_id)
+            index.setdefault(key, []).append(
+                HarvestCandidate(result_path=result_path, source_host=source_host, task_dir=task_dir)
+            )
+    return index
+
+
+def _parse_remote_result_path(root: Path, result_path: Path) -> tuple[str, str, str, Path] | None:
+    try:
+        parts = result_path.relative_to(root).parts
+    except ValueError:
+        return None
+    for index, part in enumerate(parts[:-3]):
+        seed_part = parts[index + 1]
+        if not seed_part.startswith("seed"):
+            continue
+        if parts[index + 2] != "tasks":
+            continue
+        scheduler_task_id = parts[index + 3]
+        if not scheduler_task_id:
+            continue
+        tool_key = part
+        seed = seed_part.removeprefix("seed")
+        task_dir = root.joinpath(*parts[: index + 4])
+        return tool_key, seed, scheduler_task_id, task_dir
+    return None
 
 
 def _choose_candidate(candidates: list[HarvestCandidate]) -> HarvestCandidate:
