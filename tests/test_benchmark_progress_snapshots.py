@@ -70,6 +70,166 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
         self.assertEqual(interval, 30)
         self.assertNotIn("progress_snapshot_interval_seconds", params)
 
+    def test_write_progress_payload_can_use_fixed_checkpoint_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = {
+                "tool": "ragsr",
+                "elapsed_seconds": 125.0,
+                "record_type": "periodic_best",
+            }
+
+            written = runner._write_progress_payload(
+                payload,
+                primary_dir=root / "progress",
+                snapshot_minute_index=1,
+            )
+
+            self.assertEqual(written, [root / "progress" / "minute_0001.json"])
+            self.assertTrue((root / "progress" / "minute_0001.json").exists())
+            self.assertFalse((root / "progress" / "minute_0002.json").exists())
+
+    def test_final_progress_payload_uses_budget_minute_when_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            exp_dir = root / "exp"
+            result = {
+                "status": "ok",
+                "equation": "x0 + 1",
+                "canonical_artifact": {"normalized_expression": "x0 + 1"},
+                "seconds": 10845.3,
+                "params": {"timeout_in_seconds": 10800},
+            }
+
+            runner._write_final_progress_payload_if_requested(
+                result=result,
+                progress_snapshot_interval_seconds=60,
+                output_dir=root / "out",
+                experiment_dir=exp_dir,
+            )
+
+            self.assertTrue((root / "out" / "progress" / "minute_0180.json").exists())
+            self.assertTrue((exp_dir / "progress" / "minute_0180.json").exists())
+            self.assertFalse((root / "out" / "progress" / "minute_0181.json").exists())
+
+    def test_periodic_snapshot_loop_schedules_against_absolute_targets(self):
+        class FakeStopEvent:
+            def __init__(self):
+                self.now = 100.0
+                self.waits = []
+                self.write_count = 0
+
+            def wait(self, seconds):
+                if self.write_count >= 2:
+                    return True
+                self.waits.append(round(seconds, 3))
+                self.now += max(0.0, float(seconds))
+                return False
+
+        fake_stop = FakeStopEvent()
+        captured_indexes = []
+
+        def fake_time():
+            return fake_stop.now
+
+        def fake_build_payload(**kwargs):
+            fake_stop.now += 5.0
+            return {
+                "tool": kwargs["tool_name"],
+                "elapsed_seconds": fake_stop.now - kwargs["started_at"],
+                "checkpoint_index": kwargs["checkpoint_index"],
+            }
+
+        def fake_write_payload(payload, *, primary_dir, experiment_dir=None, snapshot_minute_index=None):
+            captured_indexes.append(snapshot_minute_index)
+            fake_stop.write_count += 1
+            return [Path(primary_dir) / f"minute_{snapshot_minute_index:04d}.json"]
+
+        old_time = runner.time.time
+        old_build = runner._build_periodic_snapshot_payload
+        old_write = runner._write_progress_payload
+        try:
+            runner.time.time = fake_time
+            runner._build_periodic_snapshot_payload = fake_build_payload
+            runner._write_progress_payload = fake_write_payload
+
+            runner._periodic_snapshot_loop(
+                stop_event=fake_stop,
+                interval_seconds=60,
+                tool_name="ragsr",
+                dataset=None,
+                params={},
+                seed=1,
+                started_at=100.0,
+                output_dir=Path("/tmp/out"),
+                experiment_dir=Path("/tmp/exp"),
+            )
+        finally:
+            runner.time.time = old_time
+            runner._build_periodic_snapshot_payload = old_build
+            runner._write_progress_payload = old_write
+
+        self.assertEqual(captured_indexes, [1, 2])
+        self.assertEqual(fake_stop.waits, [60.0, 55.0])
+
+    def test_periodic_snapshot_loop_backfills_overdue_minutes(self):
+        class FakeStopEvent:
+            def __init__(self):
+                self.now = 100.0
+                self.write_count = 0
+
+            def wait(self, seconds):
+                if self.write_count >= 2:
+                    return True
+                self.now += max(0.0, float(seconds))
+                return False
+
+        fake_stop = FakeStopEvent()
+        writes = []
+
+        def fake_time():
+            return fake_stop.now
+
+        def fake_build_payload(**kwargs):
+            fake_stop.now += 125.0
+            return {
+                "tool": kwargs["tool_name"],
+                "elapsed_seconds": fake_stop.now - kwargs["started_at"],
+                "checkpoint_index": kwargs["checkpoint_index"],
+                "record_type": "periodic_best",
+            }
+
+        def fake_write_payload(payload, *, primary_dir, experiment_dir=None, snapshot_minute_index=None):
+            writes.append((snapshot_minute_index, payload["record_type"], payload.get("backfilled_from_minute")))
+            fake_stop.write_count += 1
+            return [Path(primary_dir) / f"minute_{snapshot_minute_index:04d}.json"]
+
+        old_time = runner.time.time
+        old_build = runner._build_periodic_snapshot_payload
+        old_write = runner._write_progress_payload
+        try:
+            runner.time.time = fake_time
+            runner._build_periodic_snapshot_payload = fake_build_payload
+            runner._write_progress_payload = fake_write_payload
+
+            runner._periodic_snapshot_loop(
+                stop_event=fake_stop,
+                interval_seconds=60,
+                tool_name="ragsr",
+                dataset=None,
+                params={},
+                seed=1,
+                started_at=100.0,
+                output_dir=Path("/tmp/out"),
+                experiment_dir=Path("/tmp/exp"),
+            )
+        finally:
+            runner.time.time = old_time
+            runner._build_periodic_snapshot_payload = old_build
+            runner._write_progress_payload = old_write
+
+        self.assertEqual(writes, [(1, "periodic_backfill", 3), (2, "periodic_backfill", 3), (3, "periodic_best", None)])
+
     def test_build_periodic_snapshot_payload_for_llmsr(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

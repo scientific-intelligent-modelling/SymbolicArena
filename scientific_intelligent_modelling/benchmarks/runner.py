@@ -1127,7 +1127,18 @@ def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> d
     return None
 
 
-def _progress_snapshot_filename(payload: dict[str, Any]) -> str:
+def _progress_snapshot_filename(
+    payload: dict[str, Any],
+    *,
+    snapshot_minute_index: int | None = None,
+) -> str:
+    if snapshot_minute_index is not None:
+        try:
+            elapsed_minutes = max(0, int(snapshot_minute_index))
+        except Exception:
+            elapsed_minutes = 0
+        return f"minute_{elapsed_minutes:04d}.json"
+
     elapsed_seconds = payload.get("elapsed_seconds")
     try:
         elapsed_minutes = max(0, int(round(float(elapsed_seconds) / 60.0)))
@@ -1136,13 +1147,74 @@ def _progress_snapshot_filename(payload: dict[str, Any]) -> str:
     return f"minute_{elapsed_minutes:04d}.json"
 
 
+def _progress_minute_index_from_elapsed(
+    elapsed_seconds: Any,
+    *,
+    interval_seconds: int,
+) -> int | None:
+    try:
+        elapsed = float(elapsed_seconds)
+        interval = int(interval_seconds)
+    except Exception:
+        return None
+    if interval <= 0 or not math.isfinite(elapsed):
+        return None
+    return max(0, int(elapsed // interval))
+
+
+def _progress_budget_minute_index(
+    result: dict[str, Any],
+    *,
+    interval_seconds: int,
+) -> int | None:
+    params = result.get("params")
+    if not isinstance(params, dict):
+        return None
+    try:
+        timeout_seconds = float(params.get("timeout_in_seconds"))
+        elapsed_seconds = float(result.get("seconds") or 0.0)
+        interval = int(interval_seconds)
+    except Exception:
+        return None
+    if interval <= 0 or timeout_seconds <= 0 or not math.isfinite(timeout_seconds):
+        return None
+    if not math.isfinite(elapsed_seconds):
+        return None
+    if elapsed_seconds < max(0.0, timeout_seconds - interval):
+        return None
+    return max(1, int(round(timeout_seconds / interval)))
+
+
+def _build_progress_backfill_payload(
+    payload: dict[str, Any],
+    *,
+    snapshot_minute_index: int,
+    backfilled_from_minute: int,
+    interval_seconds: int,
+) -> dict[str, Any]:
+    backfill_payload = dict(payload)
+    backfill_payload["record_type"] = "periodic_backfill"
+    backfill_payload["source_record_type"] = payload.get("record_type")
+    backfill_payload["backfilled_from_minute"] = int(backfilled_from_minute)
+    backfill_payload["backfilled_from_checkpoint_index"] = payload.get("checkpoint_index")
+    backfill_payload["source_elapsed_seconds"] = payload.get("elapsed_seconds")
+    backfill_payload["checkpoint_index"] = int(snapshot_minute_index)
+    backfill_payload["elapsed_seconds"] = round(float(snapshot_minute_index * interval_seconds), 3)
+    backfill_payload["elapsed_minutes"] = int(snapshot_minute_index)
+    return backfill_payload
+
+
 def _write_progress_payload(
     payload: dict[str, Any],
     *,
     primary_dir: str | Path,
     experiment_dir: str | Path | None = None,
+    snapshot_minute_index: int | None = None,
 ) -> list[Path]:
-    filename = _progress_snapshot_filename(payload)
+    filename = _progress_snapshot_filename(
+        payload,
+        snapshot_minute_index=snapshot_minute_index,
+    )
     paths: list[Path] = [Path(primary_dir).resolve() / filename]
     if experiment_dir:
         paths.append(Path(experiment_dir).resolve() / _PROGRESS_DIRNAME / filename)
@@ -1412,9 +1484,13 @@ def _periodic_snapshot_loop(
     output_dir: Path,
     experiment_dir: str | Path,
 ) -> None:
-    checkpoint_index = 0
-    while not stop_event.wait(interval_seconds):
-        checkpoint_index += 1
+    last_written_minute_index = 0
+    next_target_minute_index = 1
+    while True:
+        target_time = started_at + next_target_minute_index * interval_seconds
+        wait_seconds = max(0.0, target_time - time.time())
+        if stop_event.wait(wait_seconds):
+            break
         payload = _build_periodic_snapshot_payload(
             tool_name=tool_name,
             dataset=dataset,
@@ -1422,15 +1498,40 @@ def _periodic_snapshot_loop(
             seed=seed,
             started_at=started_at,
             experiment_dir=experiment_dir,
-            checkpoint_index=checkpoint_index,
+            checkpoint_index=next_target_minute_index,
         )
         if payload is None:
+            next_target_minute_index += 1
             continue
+        elapsed_minute_index = _progress_minute_index_from_elapsed(
+            payload.get("elapsed_seconds"),
+            interval_seconds=interval_seconds,
+        )
+        snapshot_minute_index = max(
+            next_target_minute_index,
+            elapsed_minute_index if elapsed_minute_index is not None else next_target_minute_index,
+        )
+        for missing_minute_index in range(last_written_minute_index + 1, snapshot_minute_index):
+            backfill_payload = _build_progress_backfill_payload(
+                payload,
+                snapshot_minute_index=missing_minute_index,
+                backfilled_from_minute=snapshot_minute_index,
+                interval_seconds=interval_seconds,
+            )
+            _write_progress_payload(
+                backfill_payload,
+                primary_dir=output_dir / _PROGRESS_DIRNAME,
+                experiment_dir=experiment_dir,
+                snapshot_minute_index=missing_minute_index,
+            )
         _write_progress_payload(
             payload,
             primary_dir=output_dir / _PROGRESS_DIRNAME,
             experiment_dir=experiment_dir,
+            snapshot_minute_index=snapshot_minute_index,
         )
+        last_written_minute_index = snapshot_minute_index
+        next_target_minute_index = max(next_target_minute_index + 1, last_written_minute_index + 1)
 
 
 def _write_final_progress_payload_if_requested(
@@ -1459,10 +1560,15 @@ def _write_final_progress_payload_if_requested(
         elapsed_seconds = 0.0
     payload["elapsed_seconds"] = round(elapsed_seconds, 3)
     payload["elapsed_minutes"] = max(0, int(round(elapsed_seconds / 60.0)))
+    snapshot_minute_index = _progress_budget_minute_index(
+        result,
+        interval_seconds=progress_snapshot_interval_seconds,
+    )
     _write_progress_payload(
         payload,
         primary_dir=output_dir / _PROGRESS_DIRNAME,
         experiment_dir=experiment_dir,
+        snapshot_minute_index=snapshot_minute_index,
     )
 
 
