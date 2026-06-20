@@ -91,6 +91,7 @@ class GPLearnRegressor(BaseWrapper):
         kwargs = dict(kwargs)
         self._exp_path = kwargs.get("exp_path")
         self._exp_name = kwargs.get("exp_name")
+        self._timeout_in_seconds = self._as_positive_float(kwargs.get("timeout_in_seconds"))
         self._contract_n_features = kwargs.get("n_features")
         self._contract_feature_names = kwargs.get("feature_names")
         self._contract_target_name = kwargs.get("target_name")
@@ -314,6 +315,19 @@ class GPLearnRegressor(BaseWrapper):
             return None
         return os.path.join(os.path.abspath(exp_path.strip()), exp_name.strip(), cls._PROGRESS_STATE_FILENAME)
 
+    @staticmethod
+    def _as_positive_float(value: Any) -> float | None:
+        try:
+            parsed = float(value)
+        except Exception:
+            return None
+        return parsed if parsed > 0 else None
+
+    def _time_budget_exhausted(self, started_at: float) -> bool:
+        if self._timeout_in_seconds is None:
+            return False
+        return (time.time() - started_at) >= self._timeout_in_seconds
+
     def _write_progress_state_from_model(self):
         if not self._progress_state_path or self.model is None:
             return
@@ -357,6 +371,7 @@ class GPLearnRegressor(BaseWrapper):
         params = dict(self.params)
         total_generations = int(params.get("generations", 1) or 1)
         total_generations = max(1, total_generations)
+        started_at = time.time()
 
         if self._progress_state_path:
             params["warm_start"] = False
@@ -365,6 +380,8 @@ class GPLearnRegressor(BaseWrapper):
             self.model.fit(X, y)
             self._write_progress_state_from_model()
             for generation in range(2, total_generations + 1):
+                if self._time_budget_exhausted(started_at):
+                    break
                 self.model.warm_start = True
                 self.model.generations = generation
                 self.model.fit(X, y)

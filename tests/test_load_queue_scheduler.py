@@ -189,6 +189,40 @@ def test_scheduler_filters_tasks_by_allowlist(tmp_path: Path) -> None:
     assert [task.task_id for task in filtered] == ["pysr_s520_clean_g0001"]
 
 
+def test_reap_remote_task_processes_matches_owned_subprocesses(monkeypatch):
+    commands = []
+
+    def fake_ssh(host, command, **kwargs):
+        commands.append((host, command, kwargs))
+        return subprocess.CompletedProcess(command, 0, "killed\n", "")
+
+    monkeypatch.setattr(scheduler, "_ssh", fake_ssh)
+
+    task = {
+        "task_id": "gplearn_s520_clean_g0001",
+        "assigned_host": "iaaccn23",
+        "session": "formal24h_full_gplearn_s520_clean_g0001",
+        "tool": "gplearn",
+    }
+    result = scheduler._reap_remote_task_processes(
+        "iaaccn23",
+        task,
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        reason="unit-test",
+    )
+
+    assert result is True
+    assert commands[0][0] == "iaaccn23"
+    assert commands[0][2]["controller_host"] == "iaaccn22"
+    assert commands[0][2]["use_internal_ips"] is True
+    command = commands[0][1]
+    assert "subprocess_runner.py" in command
+    assert "gplearn_s520_clean_g0001" in command
+    assert "formal24h_full_gplearn_s520_clean_g0001" in command
+    assert "os.killpg" in command
+
+
 def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
     source_csv = tmp_path / "smoke.csv"
     source_csv.write_text(
@@ -420,6 +454,7 @@ def test_update_running_tasks_requeues_unavailable_host_after_budget_grace(tmp_p
 
     monkeypatch.setattr(scheduler, "_now", lambda: "2026-06-01T01:20:00")
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler, "_reap_remote_task_processes", lambda *args, **kwargs: True)
 
     def fail_if_status_read(*_args, **_kwargs):
         raise AssertionError("unavailable host should be requeued without reading task status")
@@ -499,6 +534,7 @@ def test_update_running_tasks_marks_done_when_session_absent_after_precise_reche
 
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
     monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: False)
+    monkeypatch.setattr(scheduler, "_reap_remote_task_processes", lambda *args, **kwargs: True)
     monkeypatch.setattr(
         scheduler,
         "_read_task_statuses_bulk",

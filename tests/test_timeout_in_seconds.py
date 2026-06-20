@@ -115,6 +115,56 @@ def test_pyoperon_progress_loop_ignores_implicit_generation_cap(monkeypatch, tmp
     assert len(fit_calls) == 3
 
 
+def test_gplearn_progress_loop_stops_when_wall_time_budget_is_exhausted(monkeypatch, tmp_path):
+    fit_generations = []
+    fake_clock = {"now": 0.0}
+
+    class FakeSymbolicRegressor:
+        def __init__(self, **kwargs):
+            self.generations = kwargs.get("generations")
+            self.warm_start = kwargs.get("warm_start", False)
+            self._program = "X0"
+            self.run_details_ = {
+                "generation": [0],
+                "best_fitness": [1.0],
+                "best_length": [1],
+                "generation_time": [0.1],
+            }
+            self.n_features_in_ = 1
+
+        def fit(self, X, y):
+            fit_generations.append(self.generations)
+            fake_clock["now"] += 10.0
+            self._program = f"X0_gen_{self.generations}"
+            self.run_details_["generation"] = [self.generations - 1]
+            return self
+
+        def predict(self, X):
+            return np.asarray(X)[:, 0]
+
+    gplearn_module = types.ModuleType("gplearn")
+    genetic_module = types.ModuleType("gplearn.genetic")
+    genetic_module.SymbolicRegressor = FakeSymbolicRegressor
+    monkeypatch.setitem(sys.modules, "gplearn", gplearn_module)
+    monkeypatch.setitem(sys.modules, "gplearn.genetic", genetic_module)
+    monkeypatch.setattr(
+        "scientific_intelligent_modelling.algorithms.gplearn_wrapper.wrapper.time.time",
+        lambda: fake_clock["now"],
+    )
+
+    reg = GPLearnRegressor(
+        exp_path=str(tmp_path),
+        exp_name="case",
+        timeout_in_seconds=15,
+        generations=1000000,
+        population_size=4,
+    )
+    reg.fit(np.array([[1.0], [2.0]]), np.array([1.0, 2.0]))
+
+    assert fit_generations == [1, 2]
+    assert (tmp_path / "case" / ".gplearn_current_best.json").exists()
+
+
 def test_dso_build_fit_config_preserves_logdir_and_disables_gp_meld():
     base_config = {
         "experiment": {"logdir": "/tmp/dso-logdir", "exp_name": "case"},
@@ -152,6 +202,35 @@ def test_subprocess_runner_handle_fit_strips_timeout_meta_param():
 
     assert result["serialized_model"] == "dummy-model"
     assert seen["kwargs"] == {"alpha": 1}
+    assert seen["shape"] == ((2, 1), (2,))
+
+
+def test_subprocess_runner_forwards_timeout_to_project_wrappers():
+    seen = {}
+
+    class DummyProjectRegressor:
+        __module__ = "scientific_intelligent_modelling.algorithms.fake_wrapper.wrapper"
+
+        def __init__(self, **kwargs):
+            seen["kwargs"] = dict(kwargs)
+
+        def fit(self, X, y):
+            seen["shape"] = (tuple(X.shape), tuple(y.shape))
+
+        def serialize(self):
+            return "dummy-model"
+
+    result = subprocess_runner.handle_fit(
+        DummyProjectRegressor,
+        {
+            "tool_name": "dummy",
+            "data": {"X": [[1.0], [2.0]], "y": [3.0, 4.0]},
+            "params": {"timeout_in_seconds": 5, "alpha": 1},
+        },
+    )
+
+    assert result["serialized_model"] == "dummy-model"
+    assert seen["kwargs"] == {"timeout_in_seconds": 5, "alpha": 1}
     assert seen["shape"] == ((2, 1), (2,))
 
 

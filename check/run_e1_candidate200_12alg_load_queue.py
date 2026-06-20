@@ -597,7 +597,7 @@ def _write_remote_support_script(queue_root: Path) -> Path:
 set -euo pipefail
 
 if [ "$#" -lt 12 ]; then
-  echo "Usage: $0 <batch> <task_id> <tool_key> <tool_arg> <seed> <workers> <env> <slice_rel> <params_rel> <host_label> <remote_root> <remote_data_root> [rerun_mode]" >&2
+  echo "Usage: $0 <batch> <task_id> <tool_key> <tool_arg> <seed> <workers> <env> <slice_rel> <params_rel> <host_label> <remote_root> <remote_data_root> [rerun_mode] [session_name]" >&2
   exit 2
 fi
 
@@ -614,6 +614,7 @@ HOST_LABEL="${{10}}"
 REMOTE_ROOT="${{11}}"
 REMOTE_DATA_ROOT="${{12}}"
 RERUN_MODE="${{13:-}}"
+SESSION_NAME="${{14:-}}"
 EXTRA_ARGS=()
 if [ "$RERUN_MODE" = "force" ]; then
   EXTRA_ARGS+=(--force-rerun)
@@ -636,12 +637,21 @@ export NUMBA_NUM_THREADS=1
 export NUMBA_THREADING_LAYER=workqueue
 export TF_NUM_INTRAOP_THREADS=1
 export TF_NUM_INTEROP_THREADS=1
+export SIM_QUEUE_TASK_ID="$TASK_ID"
+export SIM_QUEUE_SESSION="$SESSION_NAME"
+
+OUTPUT_ROOT="$REMOTE_ROOT/experiments/$BATCH_NAME/$TOOL_KEY/seed$SEED/tasks/$TASK_ID/$HOST_LABEL"
+mkdir -p "$OUTPUT_ROOT"
+LAUNCHER_PGID="$(ps -o pgid= -p "$$" 2>/dev/null | tr -d ' ' || true)"
+cat > "$OUTPUT_ROOT/.queue_process.json" <<META
+{{"task_id":"$TASK_ID","session":"$SESSION_NAME","launcher_pid":$$,"launcher_pgid":"$LAUNCHER_PGID","host":"$HOST_LABEL","started_at":"$(date -Is)"}}
+META
 
 conda run -n "$ENV_NAME" python check/launch_e1_benchmark.py run \\
   --tool "$TOOL_ARG" \\
   --slice-csv "$REMOTE_ROOT/$SLICE_REL" \\
   --params-json "$REMOTE_ROOT/$PARAMS_REL" \\
-  --output-root "$REMOTE_ROOT/experiments/$BATCH_NAME/$TOOL_KEY/seed$SEED/tasks/$TASK_ID/$HOST_LABEL" \\
+  --output-root "$OUTPUT_ROOT" \\
   --seed "$SEED" \\
   --workers "$WORKERS" \\
   "${{EXTRA_ARGS[@]}}"
@@ -1226,6 +1236,7 @@ def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], ar
         f"{shlex.quote(str(remote_root))} "
         f"{shlex.quote(str(remote_data_root))} "
         f"{shlex.quote(rerun_mode)} "
+        f"{shlex.quote(session)} "
         f"</dev/null >{shlex.quote(str(start_log))} 2>&1"
     )
     command = (
@@ -1322,6 +1333,163 @@ def _start_tasks_on_host(
     return events
 
 
+def _reap_remote_task_processes(
+    host: str,
+    task: dict[str, Any],
+    *,
+    controller_host: str,
+    use_internal_ips: bool,
+    reason: str,
+) -> bool:
+    task_id = str(task.get("task_id") or "")
+    session = str(task.get("session") or "")
+    tool = str(task.get("tool") or "")
+    if not task_id and not session:
+        return False
+
+    target_json = json.dumps(
+        {
+            "task_id": task_id,
+            "session": session,
+            "tool": tool,
+            "reason": reason,
+        },
+        ensure_ascii=True,
+    )
+    command = f"""python3 - <<'PY'
+import json
+import os
+import pathlib
+import re
+import signal
+import time
+
+TARGET = {target_json}
+
+def _decode(path):
+    try:
+        return path.read_bytes().replace(b"\\0", b"\\n").decode(errors="replace")
+    except Exception:
+        return ""
+
+def _matches_process(proc):
+    try:
+        cmd = _decode(proc / "cmdline").replace("\\n", " ")
+        if "subprocess_runner.py" not in cmd:
+            return None
+        stat = (proc / "stat").read_text().split()
+        pid = int(proc.name)
+        pgrp = int(stat[4])
+        marker_matched = False
+        env_text = _decode(proc / "environ")
+        task_id = TARGET.get("task_id") or ""
+        session = TARGET.get("session") or ""
+        if task_id and f"SIM_QUEUE_TASK_ID={{task_id}}" in env_text:
+            marker_matched = True
+        if session and f"SIM_QUEUE_SESSION={{session}}" in env_text:
+            marker_matched = True
+
+        parsed_tool = None
+        match = re.search(r"(/tmp/tmp[^ ]+\\.json)", cmd)
+        if match:
+            try:
+                payload = json.loads(pathlib.Path(match.group(1)).read_text())
+                parsed_tool = payload.get("tool_name") or (payload.get("params") or {{}}).get("tool_name")
+                exp_path = str((payload.get("params") or {{}}).get("exp_path") or "")
+                if task_id and f"/tasks/{{task_id}}/" in exp_path:
+                    marker_matched = True
+            except Exception:
+                pass
+
+        expected_tool = TARGET.get("tool") or ""
+        if expected_tool and parsed_tool and parsed_tool != expected_tool:
+            return None
+        if not marker_matched:
+            return None
+        if pgrp <= 1:
+            return None
+        return {{"pid": pid, "pgrp": pgrp, "tool": parsed_tool}}
+    except Exception:
+        return None
+
+def _still_running(item):
+    proc = pathlib.Path("/proc") / str(item["pid"])
+    try:
+        if not proc.exists():
+            return False
+        stat = (proc / "stat").read_text().split()
+        return stat[2] != "Z"
+    except Exception:
+        return False
+
+matches = []
+for entry in pathlib.Path("/proc").iterdir():
+    if not entry.name.isdigit():
+        continue
+    item = _matches_process(entry)
+    if item:
+        matches.append(item)
+
+for item in matches:
+    try:
+        os.killpg(item["pgrp"], signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    except Exception as exc:
+        print(f"TERM_ERROR pid={{item['pid']}} pgrp={{item['pgrp']}} {{type(exc).__name__}}: {{exc}}")
+
+time.sleep(3)
+remaining = [item for item in matches if _still_running(item)]
+for item in remaining:
+    try:
+        os.killpg(item["pgrp"], signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except Exception as exc:
+        print(f"KILL_ERROR pid={{item['pid']}} pgrp={{item['pgrp']}} {{type(exc).__name__}}: {{exc}}")
+
+time.sleep(1)
+still = [item for item in matches if _still_running(item)]
+print(json.dumps({{"matched": len(matches), "remaining": len(still), "target": TARGET}}, sort_keys=True))
+raise SystemExit(0 if not still else 1)
+PY"""
+    result = _ssh(
+        host,
+        command,
+        controller_host=controller_host,
+        use_internal_ips=use_internal_ips,
+        timeout=45,
+    )
+    return result.returncode == 0
+
+
+def _reap_remote_task_processes_for_state(
+    batch_name: str,
+    task_id: str,
+    host: str,
+    task: dict[str, Any],
+    args: argparse.Namespace,
+    *,
+    reason: str,
+) -> bool:
+    ok = _reap_remote_task_processes(
+        host,
+        {**task, "task_id": task_id},
+        controller_host=args.controller_host,
+        use_internal_ips=args.use_internal_ips,
+        reason=reason,
+    )
+    task["last_reap_attempt_at"] = _now()
+    task["last_reap_reason"] = reason
+    task["last_reap_ok"] = ok
+    _append_event(
+        batch_name,
+        {"event": "task_process_reap", "task_id": task_id, "host": host, "reason": reason, "ok": ok},
+        args.queue_root_path,
+    )
+    return ok
+
+
 def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> None:
     _normalize_pending_task_state(state)
     running_items = [(task_id, task) for task_id, task in state["tasks"].items() if task.get("state") == "running"]
@@ -1364,6 +1532,14 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
             task["host_unavailable_last_at"] = now_text
             requeue_reason = _host_unavailable_requeue_reason(task, args, now_text)
             if requeue_reason:
+                _reap_remote_task_processes_for_state(
+                    args.batch_name,
+                    task_id,
+                    host,
+                    task,
+                    args,
+                    reason=requeue_reason,
+                )
                 task.update(
                     {
                         "state": "pending",
@@ -1439,6 +1615,14 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                 args.queue_root_path,
             )
         elif int(status.get("done") or 0) == expected and errors == 0:
+            _reap_remote_task_processes_for_state(
+                args.batch_name,
+                task_id,
+                host,
+                task,
+                args,
+                reason="task_done_session_closed",
+            )
             task.update({"state": "done", "ended_at": _now(), "error": None})
             task.pop("status_read_error_since", None)
             task.pop("last_status_read_error", None)
@@ -1446,6 +1630,14 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
             _append_event(args.batch_name, {"event": "task_done", "task_id": task_id, "host": host, "status_counts": status.get("counts", {})}, args.queue_root_path)
         elif int(task.get("attempts") or 0) <= args.retry_limit:
             requeue_reason = f"retry_after_incomplete_status: missing={missing}, errors={errors}"
+            _reap_remote_task_processes_for_state(
+                args.batch_name,
+                task_id,
+                host,
+                task,
+                args,
+                reason=requeue_reason,
+            )
             task.update(
                 {
                     "state": "pending",
@@ -1465,6 +1657,14 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
             task.pop("last_status_read_error_at", None)
             _append_event(args.batch_name, {"event": "task_retry_pending", "task_id": task_id, "host": host, "status": status}, args.queue_root_path)
         else:
+            _reap_remote_task_processes_for_state(
+                args.batch_name,
+                task_id,
+                host,
+                task,
+                args,
+                reason=f"task_failed_after_retry_limit: missing={missing}, errors={errors}",
+            )
             task.update({"state": "failed", "ended_at": _now(), "error": f"超过重试上限: missing={missing}, errors={errors}"})
             task.pop("status_read_error_since", None)
             task.pop("last_status_read_error", None)
