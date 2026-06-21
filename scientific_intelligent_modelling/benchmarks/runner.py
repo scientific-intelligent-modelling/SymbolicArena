@@ -1491,47 +1491,50 @@ def _periodic_snapshot_loop(
         wait_seconds = max(0.0, target_time - time.time())
         if stop_event.wait(wait_seconds):
             break
-        payload = _build_periodic_snapshot_payload(
-            tool_name=tool_name,
-            dataset=dataset,
-            params=params,
-            seed=seed,
-            started_at=started_at,
-            experiment_dir=experiment_dir,
-            checkpoint_index=next_target_minute_index,
-        )
-        if payload is None:
-            next_target_minute_index += 1
-            continue
-        elapsed_minute_index = _progress_minute_index_from_elapsed(
-            payload.get("elapsed_seconds"),
-            interval_seconds=interval_seconds,
-        )
-        snapshot_minute_index = max(
-            next_target_minute_index,
-            elapsed_minute_index if elapsed_minute_index is not None else next_target_minute_index,
-        )
-        for missing_minute_index in range(last_written_minute_index + 1, snapshot_minute_index):
-            backfill_payload = _build_progress_backfill_payload(
-                payload,
-                snapshot_minute_index=missing_minute_index,
-                backfilled_from_minute=snapshot_minute_index,
+        try:
+            payload = _build_periodic_snapshot_payload(
+                tool_name=tool_name,
+                dataset=dataset,
+                params=params,
+                seed=seed,
+                started_at=started_at,
+                experiment_dir=experiment_dir,
+                checkpoint_index=next_target_minute_index,
+            )
+            if payload is None:
+                next_target_minute_index += 1
+                continue
+            elapsed_minute_index = _progress_minute_index_from_elapsed(
+                payload.get("elapsed_seconds"),
                 interval_seconds=interval_seconds,
             )
+            snapshot_minute_index = max(
+                next_target_minute_index,
+                elapsed_minute_index if elapsed_minute_index is not None else next_target_minute_index,
+            )
+            for missing_minute_index in range(last_written_minute_index + 1, snapshot_minute_index):
+                backfill_payload = _build_progress_backfill_payload(
+                    payload,
+                    snapshot_minute_index=missing_minute_index,
+                    backfilled_from_minute=snapshot_minute_index,
+                    interval_seconds=interval_seconds,
+                )
+                _write_progress_payload(
+                    backfill_payload,
+                    primary_dir=output_dir / _PROGRESS_DIRNAME,
+                    experiment_dir=experiment_dir,
+                    snapshot_minute_index=missing_minute_index,
+                )
             _write_progress_payload(
-                backfill_payload,
+                payload,
                 primary_dir=output_dir / _PROGRESS_DIRNAME,
                 experiment_dir=experiment_dir,
-                snapshot_minute_index=missing_minute_index,
+                snapshot_minute_index=snapshot_minute_index,
             )
-        _write_progress_payload(
-            payload,
-            primary_dir=output_dir / _PROGRESS_DIRNAME,
-            experiment_dir=experiment_dir,
-            snapshot_minute_index=snapshot_minute_index,
-        )
-        last_written_minute_index = snapshot_minute_index
-        next_target_minute_index = max(next_target_minute_index + 1, last_written_minute_index + 1)
+            last_written_minute_index = snapshot_minute_index
+            next_target_minute_index = max(next_target_minute_index + 1, last_written_minute_index + 1)
+        except Exception:
+            next_target_minute_index += 1
 
 
 def _write_final_progress_payload_if_requested(
