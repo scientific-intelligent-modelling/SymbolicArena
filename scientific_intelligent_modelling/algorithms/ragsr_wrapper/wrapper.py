@@ -399,8 +399,40 @@ class RAGSRRegressor(BaseWrapper):
         if hasattr(self.model, "model"):
             value = self.model.model()
             if value is not None:
-                return str(value)
+                raw_expr = str(value)
+                # model() 只反变换了 y_scaler，公式中的变量仍期待 x_scaler 归一化后的输入。
+                # 需要将 x_scaler (MinMaxScaler) 变换嵌入公式，使其可直接接受原始 X。
+                return self._embed_x_scaler_into_expression(raw_expr)
         raise RuntimeError("RAG-SR 未能导出模型表达式")
+
+    def _embed_x_scaler_into_expression(self, expr: str) -> str:
+        """将 MinMaxScaler 的 x 变换嵌入公式，把 ARGi 替换为 (xi - min)/(max - min)。"""
+        x_scaler = getattr(self.model, "x_scaler", None)
+        if x_scaler is None:
+            return expr
+        try:
+            data_min = x_scaler.data_min_
+            data_max = x_scaler.data_max_
+        except AttributeError:
+            return expr
+
+        import re as _re
+        result = expr
+        # 替换 ARG0, ARG1, ... 为 MinMax 变换后的表达式
+        # model_to_string 将变量写成 x_0, x_1, ... 或 ARG0, ARG1, ...
+        for i in range(len(data_min)):
+            lo = float(data_min[i])
+            hi = float(data_max[i])
+            span = hi - lo
+            if abs(span) < 1e-30:
+                # 常量特征，替换为 0.0
+                replacement = "0.0"
+            else:
+                replacement = f"((x_{i} - {lo}) / {span})"
+            # 替换 ARGi 和 x_i 两种命名格式
+            result = _re.sub(rf"\bARG{i}\b", replacement, result)
+            result = _re.sub(rf"\bx_{i}\b", replacement, result)
+        return result
 
     def get_optimal_equation(self):
         if self._equation is None:

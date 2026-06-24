@@ -690,7 +690,7 @@ class TPSRRegressor(BaseWrapper):
         self.all_trees = []
 
         # TPSR 的核心结果来自搜索得到的完整候选程序，而不是重新跑一遍预训练 E2E 回归器。
-        # 这里优先取 “MCTS + refinement” 的表达式；若 refinement 失败，则退回到 no-ref 结果。
+        # 这里优先取 "MCTS + refinement" 的表达式；若 refinement 失败，则退回到 no-ref 结果。
         try:
             _, refined_expr, refined_trees = refine_for_sample(
                 args,
@@ -713,11 +713,23 @@ class TPSRRegressor(BaseWrapper):
         except Exception:
             raw_expr, raw_trees = None, []
 
-        candidate_exprs = []
-        for expr in (refined_expr, raw_expr):
-            if isinstance(expr, str) and expr.strip():
-                candidate_exprs.append(expr)
+        # rescale: 将标准化空间的树反变换回原始变量空间
+        scaler = getattr(self, "_tpsr_scaler", None)
+        scale_params = getattr(self, "_tpsr_scale_params", None)
+        if scaler is not None and scale_params is not None:
+            def _rescale_tree(tree):
+                try:
+                    return scaler.rescale_function(equation_env, tree, *scale_params)
+                except Exception:
+                    return tree
 
+            if isinstance(refined_trees, list):
+                refined_trees = [_rescale_tree(t) if t is not None else t for t in refined_trees]
+            if isinstance(raw_trees, list):
+                raw_trees = [_rescale_tree(t) if t is not None else t for t in raw_trees]
+
+        candidate_exprs = []
+        # 优先从 rescaled tree 提取 infix（比字符串更可靠）
         for tree_group in (refined_trees, raw_trees):
             if not isinstance(tree_group, list):
                 continue
@@ -727,6 +739,11 @@ class TPSRRegressor(BaseWrapper):
                 text = str(tree.infix() if hasattr(tree, "infix") else tree).strip()
                 if text:
                     candidate_exprs.append(text)
+
+        # 字符串表达式作为 fallback（未 rescaled，只在 tree rescale 全失败时有用）
+        for expr in (refined_expr, raw_expr):
+            if isinstance(expr, str) and expr.strip():
+                candidate_exprs.append(expr)
 
         # 去重并保留顺序
         seen = set()
@@ -1067,10 +1084,25 @@ class TPSRRegressor(BaseWrapper):
                 y,
                 self.params.get("reward_sample_limit"),
             )
+
+            # StandardScaler 标准化 — 预训练 Transformer 期望标准化输入
+            from scientific_intelligent_modelling.algorithms.tpsr_wrapper.tpsr.symbolicregression.model.utils_wrapper import (
+                StandardScaler as TPSRStandardScaler,
+            )
+            rescale = bool(self.params.get("rescale", True))
+            if rescale:
+                self._tpsr_scaler = TPSRStandardScaler()
+                scaled_X = self._tpsr_scaler.fit_transform(np.asarray(reward_X))
+                self._tpsr_scale_params = self._tpsr_scaler.get_params()
+            else:
+                self._tpsr_scaler = None
+                self._tpsr_scale_params = None
+                scaled_X = np.asarray(reward_X)
+
             samples = {
-                "x_to_fit": [np.asarray(reward_X)],
+                "x_to_fit": [scaled_X],
                 "y_to_fit": [np.asarray(reward_y)],
-                "x_to_pred": [np.asarray(reward_X)],
+                "x_to_pred": [scaled_X],
                 "y_to_pred": [np.asarray(reward_y)],
             }
 
