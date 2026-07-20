@@ -1,0 +1,141 @@
+{
+  "version": "analysis_15alg_effects_20260627",
+  "created_at": "2026-06-27",
+  "local_analysis_dir": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627",
+  "local_outputs": {
+    "summary_csv": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/algorithm_summary_with_fepysr_rerun.csv",
+    "selected_runs_csv": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/selected_runs_with_fepysr_rerun.csv",
+    "remote_scan_json": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/remote_scan_with_fepysr_rerun.json",
+    "scan_script": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/scan_remote_effects.py",
+    "human_readable_paths": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/EXPERIMENT_PATHS.md",
+    "summary_csv_all_recovered": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/algorithm_summary_all_recovered.csv",
+    "selected_runs_csv_all_recovered": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/selected_runs_all_recovered.csv",
+    "remote_scan_after_llmsr_recovery": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/analysis_15alg_effects_20260627/remote_scan_after_llmsr_recovery.json"
+  },
+  "remote": {
+    "repo_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling",
+    "experiments_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments",
+    "hosts": [
+      {
+        "label": "iaaccn22",
+        "address": "iaaccn22"
+      },
+      {
+        "label": "iaaccn23",
+        "address": "10.10.100.23"
+      },
+      {
+        "label": "iaaccn24",
+        "address": "10.10.100.24"
+      },
+      {
+        "label": "iaaccn25",
+        "address": "10.10.100.25"
+      },
+      {
+        "label": "iaaccn26",
+        "address": "10.10.100.26"
+      },
+      {
+        "label": "iaaccn27",
+        "address": "10.10.100.27"
+      },
+      {
+        "label": "iaaccn28",
+        "address": "10.10.100.28"
+      },
+      {
+        "label": "iaaccn29",
+        "address": "10.10.100.29"
+      }
+    ]
+  },
+  "selection_policy": {
+    "total_selected_runs": 6750,
+    "runs_per_algorithm": 450,
+    "notes": [
+      "Use formal3h 20260622 main batch for most non-LLM algorithms.",
+      "Overlay fepysr rerun results for the 44 rerun tasks.",
+      "Use formal3h_tpsr_ragsr_rerun_20260624-115748 for tpsr and ragsr.",
+      "Use drsr3h 20260618-162355 batch for drsr.",
+      "Use llmsr3h 20260614 batch for llmsr; llmsr_s521_clean_g0048 was recovered and written back on 2026-07-19."
+    ],
+    "total_ok_runs": 6750
+  },
+  "sources": [
+    {
+      "name": "formal3h_main_20260622",
+      "role": "base_results",
+      "algorithms": [
+        "QLattice",
+        "dso",
+        "e2esr",
+        "gplearn",
+        "iMCTS",
+        "jaxsr",
+        "pyoperon",
+        "pysr",
+        "symbolfit",
+        "udsr",
+        "fepysr_base_406_ok"
+      ],
+      "remote_experiment_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658",
+      "remote_control_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658"
+    },
+    {
+      "name": "fepysr_rerun_overlay_20260624",
+      "role": "overlay",
+      "algorithms": [
+        "fepysr"
+      ],
+      "selected_runs": 44,
+      "remote_experiment_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658_fepysr_rerun",
+      "remote_queue_latest": "/home/zhangziwen/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658/queues/load_queue_fepysr_rerun/state/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658_fepysr_rerun.latest.json"
+    },
+    {
+      "name": "tpsr_ragsr_rerun_20260624",
+      "role": "replacement",
+      "algorithms": [
+        "tpsr",
+        "ragsr"
+      ],
+      "remote_experiment_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/formal3h_tpsr_ragsr_rerun_20260624-115748",
+      "remote_control_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_tpsr_ragsr_rerun_20260624-115748"
+    },
+    {
+      "name": "llmsr3h_20260614",
+      "role": "llm_results",
+      "algorithms": [
+        "llmsr"
+      ],
+      "selected_status": {
+        "ok": 450
+      },
+      "remote_experiment_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/llmsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260614-220442",
+      "local_control_root": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/llmsr3h/llmsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260614-220442",
+      "recovery": {
+        "task_id": "llmsr_s521_clean_g0048",
+        "dataset_id": "feynman-i.11.19",
+        "recovered_at": "2026-07-19 21:45:12",
+        "normalized_expression": "c0*x0*x1 + c1*x2*x3",
+        "id_test_nmse": 0.3246691804777049,
+        "ood_test_nmse": 0.3288034818846632,
+        "outer_backup": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/llmsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260614-220442/llmsr/seed521/tasks/llmsr_s521_clean_g0048/iaaccn26/llmsr/g0048_feynman-i.11.19/result.json.timeout_backup_20260719-214512",
+        "inner_backup": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/llmsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260614-220442/llmsr/seed521/tasks/llmsr_s521_clean_g0048/iaaccn26/llmsr/g0048_feynman-i.11.19/experiments/g0048_feynman-i.11.19_llmsr_seed521_20260615-162520/result.json.timeout_backup_20260719-214512"
+      }
+    },
+    {
+      "name": "drsr3h_20260618_162355",
+      "role": "llm_results",
+      "algorithms": [
+        "drsr"
+      ],
+      "selected_status": {
+        "ok": 450
+      },
+      "remote_experiment_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/drsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260618-162355",
+      "local_control_root": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/drsr3h/drsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260618-162355"
+    }
+  ],
+  "updated_at": "2026-07-19"
+}

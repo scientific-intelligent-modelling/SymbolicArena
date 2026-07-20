@@ -1,0 +1,109 @@
+{
+  "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+  "component_flags": {
+    "aif": false,
+    "dsr": true,
+    "lspt": false,
+    "gp_meld": true,
+    "linear_poly": true
+  },
+  "component_notes": "保持 tool_name=udsr 与 wrapper_dir=udsr_wrapper；当前算法口径固定为 DSO controller + LINEAR/poly token + GP-meld，不标称 full uDSR。",
+  "timeout_in_seconds": 3600,
+  "progress_snapshot_interval_seconds": 60,
+  "task": {
+    "task_type": "regression",
+    "function_set": [
+      "add",
+      "sub",
+      "mul",
+      "div",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "sqrt",
+      1.0,
+      "const",
+      "poly"
+    ],
+    "metric": "inv_nrmse",
+    "metric_params": [
+      1.0
+    ],
+    "threshold": 1e-12,
+    "protected": false,
+    "poly_optimizer_params": {
+      "degree": 3,
+      "coef_tol": 1e-6,
+      "regressor": "dso_least_squares",
+      "regressor_params": {
+        "cutoff_p_value": 1.0,
+        "n_max_terms": null,
+        "coef_tol": 1e-6
+      }
+    }
+  },
+  "training": {
+    "n_samples": 2000000,
+    "batch_size": 1000,
+    "epsilon": 0.05,
+    "baseline": "R_e",
+    "n_cores_batch": 1
+  },
+  "policy_optimizer": {
+    "policy_optimizer_type": "pg",
+    "learning_rate": 0.0005,
+    "entropy_weight": 0.03,
+    "entropy_gamma": 0.7
+  },
+  "gp_meld": {
+    "run_gp_meld": true,
+    "population_size": 100,
+    "generations": 20,
+    "crossover_operator": "cxOnePoint",
+    "p_crossover": 0.5,
+    "mutation_operator": "multi_mutate",
+    "p_mutate": 0.5,
+    "tournament_size": 5,
+    "train_n": 50,
+    "mutate_tree_max": 3,
+    "verbose": false,
+    "parallel_eval": false
+  },
+  "prior": {
+    "length": {
+      "min_": 4,
+      "max_": 100,
+      "on": true
+    },
+    "repeat": {
+      "tokens": "const",
+      "min_": null,
+      "max_": 3,
+      "on": true
+    },
+    "inverse": {
+      "on": true
+    },
+    "trig": {
+      "on": true
+    },
+    "const": {
+      "on": true
+    },
+    "no_inputs": {
+      "on": true
+    },
+    "uniform_arity": {
+      "on": true
+    },
+    "soft_length": {
+      "loc": 10,
+      "scale": 5,
+      "on": true
+    },
+    "domain_range": {
+      "on": true
+    }
+  }
+}

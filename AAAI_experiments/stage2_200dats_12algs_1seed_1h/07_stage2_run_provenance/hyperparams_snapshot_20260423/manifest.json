@@ -1,0 +1,84 @@
+{
+  "snapshot_name": "基准算法超参数快照",
+  "snapshot_date": "2026-04-23",
+  "source_dir": "exp-planning/02.E1选择验证/generated/params",
+  "purpose": "固定保存当前 E1 与后续 10 算法验证阶段使用的超参数口径",
+  "algorithms": [
+    {
+      "tool": "gplearn",
+      "wave": "W1",
+      "family": "经典 GP",
+      "file": "gplearn.json"
+    },
+    {
+      "tool": "llmsr",
+      "wave": "W1",
+      "family": "纯 LLM-based SR",
+      "file": "llmsr.json"
+    },
+    {
+      "tool": "pyoperon",
+      "wave": "W2",
+      "family": "现代 EA / tree-search",
+      "file": "pyoperon.json"
+    },
+    {
+      "tool": "drsr",
+      "wave": "W2",
+      "family": "LLM-hybrid / DSR",
+      "file": "drsr.json"
+    },
+    {
+      "tool": "pysr",
+      "wave": "W3",
+      "family": "现代演化式 SR",
+      "file": "pysr.json"
+    },
+    {
+      "tool": "dso",
+      "wave": "W4",
+      "family": "纯 RL-based SR",
+      "file": "dso.json"
+    },
+    {
+      "tool": "tpsr",
+      "wave": "W5",
+      "family": "Transformer + planning",
+      "file": "tpsr.json"
+    },
+    {
+      "tool": "e2esr",
+      "phase": "E3/E6",
+      "family": "E2E Transformer-based SR",
+      "file": "e2esr.json"
+    },
+    {
+      "tool": "QLattice",
+      "phase": "E3/E6",
+      "family": "图结构搜索",
+      "file": "qlattice.json"
+    },
+    {
+      "tool": "iMCTS",
+      "phase": "E3/E6",
+      "family": "MCTS-based SR",
+      "file": "imcts.json"
+    },
+    {
+      "tool": "udsr",
+      "phase": "E3/E6",
+      "family": "uDSR-trunk / DSO + LINEAR token + GP-meld",
+      "file": "udsr.json"
+    },
+    {
+      "tool": "ragsr",
+      "phase": "E3/E6",
+      "family": "RAG-SR / EvolutionaryForest",
+      "file": "ragsr.json"
+    }
+  ],
+  "global_defaults": {
+    "timeout_in_seconds": 3600,
+    "progress_snapshot_interval_seconds": 60
+  }
+}

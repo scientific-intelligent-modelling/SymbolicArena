@@ -1,0 +1,5 @@
+stage_dir	stage_name	scale	main_outputs	notes
+stage1_664dats_2probes_1seed_1h	Stage 1 dual-probe screening	664 datasets × 2 probes × 1 seed × 1h	one_seed_probe_task_results_1328.csv; one_seed_probe_dataset_compare_664.csv; stage1_candidate200_flat_200.csv	从 664 筛到 Candidate-200
+stage2_200dats_12algs_1seed_1h	Stage 2 12-alg calibration	200 datasets × 12 algorithms × 1 seed × 1h	e1_12_dataset_algorithm_nmse_table_2400.csv; candidate200_e1_nmse_by_dataset_wide_12alg.csv; probe4 selection reports	用 Candidate-200 校准 12 算法并支撑 Probe-4 选择
+stage3_664dats_4probes_3seeds_1h	Stage 3 Probe-4 full-664 validation	664 datasets × 4 probes × 3 seeds × 1h	probe4_postprocess_run_level.csv; probe4_postprocess_dataset_algorithm.csv; probe4_postprocess_dataset_level.csv	用 Probe-4 在全 664 数据集上三种子验证，并支撑 SSR-50/Core-50 选择
+stage4_ssr50_15algs_3seeds_3noise_3h	Stage 4 SSR-50 final leaderboard	50 datasets × 15 algorithms × 3 seeds × 3 noise × 3h	algorithm_summary_with_fepysr_rerun.csv; selected_runs_with_fepysr_rerun.csv; selected_runs_by_task_wide_15alg.csv	最终 15 算法 SSR-50 打榜，包含 drsr/llmsr 独立补跑和 fepysr rerun overlay
