@@ -157,6 +157,25 @@ def _write_stage3(path: Path, *, datasets: int = 2, drop_last: bool = False) -> 
     _write_csv(path, rows)
 
 
+def _write_stage3_raw(path: Path, *, datasets: int = 2) -> None:
+    rows: list[dict[str, object]] = []
+    for tool in STAGE3_TOOLS:
+        for index in range(1, datasets + 1):
+            for seed in SEEDS:
+                rows.append(
+                    {
+                        "method": tool,
+                        "dataset_id": f"g{index:04d}",
+                        "seed": seed,
+                        "result_result_path": f"/remote/{tool}/g{index:04d}/result.json",
+                        "result_equation": "raw_equation",
+                        "result_normalized_expression": "x0 + 1",
+                        "result_instantiated_expression": "x0 + 2",
+                    }
+                )
+    _write_csv(path, rows)
+
+
 def _write_audit_gate(batch_dir: Path, expected: int) -> None:
     path = batch_dir / "audit" / "audit_gate_summary.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -243,12 +262,15 @@ def test_full_merge_requires_exact_stage3_keyspace_and_writes_seven_algorithms(
     _write_audit_gate(batch_dir, len(tasks))
     stage3_path = tmp_path / "stage3.csv"
     _write_stage3(stage3_path)
+    stage3_raw_path = tmp_path / "stage3_raw.csv"
+    _write_stage3_raw(stage3_raw_path)
 
     summary = module.analyze_batch(
         batch_dir=batch_dir,
         stage3_run_level=stage3_path,
         output_dir=batch_dir / "analysis",
         allow_incomplete=False,
+        stage3_raw_digest=stage3_raw_path,
     )
 
     assert summary["final_ready"] is True
@@ -258,6 +280,9 @@ def test_full_merge_requires_exact_stage3_keyspace_and_writes_seven_algorithms(
     leaderboard = _read_csv(batch_dir / "analysis" / "full664_7alg_leaderboard.csv")
     assert len(run_rows) == 42
     assert {row["algorithm"] for row in run_rows} == set(TOOLS + STAGE3_TOOLS)
+    stage3_row = next(row for row in run_rows if row["algorithm"] == "dso")
+    assert stage3_row["expression_canonical"] == "x0 + 2"
+    assert stage3_row["result_path"].startswith("/remote/dso/")
     assert len(leaderboard) == 7
     assert [int(row["Rank"]) for row in leaderboard] == list(range(1, 8))
 

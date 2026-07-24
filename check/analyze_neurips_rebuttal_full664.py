@@ -32,6 +32,12 @@ DEFAULT_STAGE3_RUN_LEVEL = (
     / "stage3_664dats_4probes_3seeds_1h"
     / "probe4_postprocess_run_level.csv"
 )
+DEFAULT_STAGE3_RAW_DIGEST = (
+    REPO_ROOT
+    / "A_Neurips_experiments"
+    / "stage3_664dats_4probes_3seeds_1h"
+    / "probe4_current_run_level_raw_digest_7968.csv"
+)
 
 NEW3_ALGORITHMS = ("fepysr", "jaxsr", "symbolfit")
 STAGE3_ALGORITHMS = ("dso", "imcts", "pyoperon", "udsr")
@@ -444,6 +450,7 @@ def _load_stage3_rows(
     path: Path,
     expected_dataset_seeds: set[tuple[str, int]],
     dataset_metadata: dict[str, dict[str, Any]],
+    raw_digest_path: Path | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     source_rows = _read_csv(path)
     actual_keys: list[tuple[str, str, int | None]] = []
@@ -472,11 +479,34 @@ def _load_stage3_rows(
             f"missing_sample={missing}, extra_sample={extra}"
         )
 
+    raw_by_key: dict[tuple[str, str, int | None], dict[str, str]] = {}
+    if raw_digest_path is not None:
+        raw_rows = _read_csv(raw_digest_path)
+        for raw in raw_rows:
+            key = (
+                _text(raw.get("method") or raw.get("algorithm")).lower(),
+                _text(raw.get("dataset_id")),
+                _int(raw.get("seed")),
+            )
+            if key in raw_by_key:
+                raise ValueError(f"Stage3 raw digest 存在重复键: {key}")
+            raw_by_key[key] = raw
+        raw_key_set = set(raw_by_key)
+        if raw_key_set != expected_keys:
+            missing = sorted(expected_keys - raw_key_set)[:5]
+            extra = sorted(raw_key_set - expected_keys)[:5]
+            raise ValueError(
+                "Stage3 raw digest 键空间不一致: "
+                f"rows={len(raw_rows)}, expected={len(expected_keys)}, "
+                f"missing_sample={missing}, extra_sample={extra}"
+            )
+
     out: list[dict[str, Any]] = []
     for row in source_rows:
         algorithm = _text(row.get("method_norm")).lower()
         dataset_id = _text(row.get("dataset_id"))
         seed = _int(row.get("seed_norm"))
+        raw = raw_by_key.get((algorithm, dataset_id, seed), {})
         metadata = dataset_metadata[dataset_id]
         identity = not _bool(row.get("wrong_dataset_flag"))
         present = not _bool(row.get("synthetic_missing_row"))
@@ -498,7 +528,14 @@ def _load_stage3_rows(
         )
         metric_complete = bool(metric_complete_raw and identity)
         valid_output = bool(valid_output_raw and identity)
-        equation = _text(row.get("result_equation"))
+        equation = _text(
+            raw.get("result_equation") or row.get("result_equation")
+        )
+        expression_canonical = _text(
+            raw.get("result_instantiated_expression")
+            or raw.get("result_normalized_expression")
+            or equation
+        )
         out.append(
             {
                 "task_id": f"{algorithm}__seed{seed}__clean__{dataset_id}",
@@ -523,7 +560,7 @@ def _load_stage3_rows(
                 "metric_complete_raw": metric_complete_raw,
                 "has_expression": _bool(row.get("result_has_expression_raw"))
                 if _text(row.get("result_has_expression_raw"))
-                else bool(equation),
+                else bool(expression_canonical),
                 "id_test_nmse": None,
                 "ood_test_nmse": None,
                 "id_log_nmse": id_log,
@@ -544,8 +581,8 @@ def _load_stage3_rows(
                     nonnegative=True,
                 ),
                 "equation": equation,
-                "expression_canonical": equation,
-                "result_path": "",
+                "expression_canonical": expression_canonical,
+                "result_path": _text(raw.get("result_result_path")),
                 "experiment_dir": "",
                 "source_group": "stage3_probe4",
                 "run_outcome_class": _text(row.get("run_outcome_class")),
@@ -559,6 +596,12 @@ def _load_stage3_rows(
         "algorithms": len(STAGE3_ALGORITHMS),
         "expected_rows": len(expected_keys),
         "keyspace_valid": True,
+        "raw_digest_path": (
+            str(raw_digest_path.resolve())
+            if raw_digest_path is not None
+            else None
+        ),
+        "raw_digest_rows": len(raw_by_key),
     }
     return out, diagnostics
 
@@ -694,6 +737,7 @@ def analyze_batch(
     stage3_run_level: Path | None,
     output_dir: Path,
     allow_incomplete: bool,
+    stage3_raw_digest: Path | None = None,
 ) -> dict[str, Any]:
     """生成新三算法汇总，并可选严格合并 Stage3 四算法。"""
     tasks_path = batch_dir / "manifest" / "tasks.csv"
@@ -729,6 +773,7 @@ def analyze_batch(
             stage3_run_level,
             expected_dataset_seeds,
             dataset_metadata,
+            stage3_raw_digest,
         )
 
     audit_gate = _load_audit_gate(
@@ -830,6 +875,11 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_STAGE3_RUN_LEVEL,
     )
     parser.add_argument(
+        "--stage3-raw-digest",
+        type=Path,
+        default=DEFAULT_STAGE3_RAW_DIGEST,
+    )
+    parser.add_argument(
         "--skip-stage3",
         action="store_true",
         help="只输出新三算法汇总，不合并 Stage3 四算法",
@@ -852,11 +902,15 @@ def main() -> int:
         else batch_dir / "analysis"
     )
     stage3 = None if args.skip_stage3 else args.stage3_run_level.resolve()
+    stage3_raw = (
+        None if args.skip_stage3 else args.stage3_raw_digest.resolve()
+    )
     summary = analyze_batch(
         batch_dir=batch_dir,
         stage3_run_level=stage3,
         output_dir=output_dir,
         allow_incomplete=args.allow_incomplete,
+        stage3_raw_digest=stage3_raw,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
