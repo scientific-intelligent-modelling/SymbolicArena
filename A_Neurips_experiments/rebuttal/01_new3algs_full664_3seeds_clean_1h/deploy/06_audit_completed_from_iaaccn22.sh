@@ -44,24 +44,33 @@ for suffix in 23 24 25 26 27 28 29; do
   ip="10.10.100.${suffix}"
   report="$REPORT_DIR/$host.json"
 
-  timeout 20 scp \
-    -o BatchMode=yes \
-    -o ConnectTimeout=10 \
-    "$AUDITOR" \
-    "$STATE_SNAPSHOT" \
-    "$ip:/tmp/" || {
-      jq -n \
-        --arg host "$host" \
-        '{
-          host: $host,
-          done_tasks: 0,
-          validated_results: 0,
-          passed: false,
-          issues: [{issue: "sync_failed"}]
-        }' > "$report"
-      failed=1
-      continue
-    }
+  sync_ok=0
+  for sync_attempt in 1 2 3; do
+    if timeout 90 scp \
+      -o BatchMode=yes \
+      -o ConnectTimeout=10 \
+      "$AUDITOR" \
+      "$STATE_SNAPSHOT" \
+      "$ip:/tmp/"; then
+      sync_ok=1
+      break
+    fi
+    echo "$host 同步失败，第 $sync_attempt 次重试" >&2
+    sleep 5
+  done
+  if [[ "$sync_ok" -ne 1 ]]; then
+    jq -n \
+      --arg host "$host" \
+      '{
+        host: $host,
+        done_tasks: 0,
+        validated_results: 0,
+        passed: false,
+        issues: [{issue: "sync_failed"}]
+      }' > "$report"
+    failed=1
+    continue
+  fi
 
   timeout 60 ssh \
     -o BatchMode=yes \

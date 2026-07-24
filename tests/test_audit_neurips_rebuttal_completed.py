@@ -160,3 +160,6 @@ def test_completed_audit_deploy_uses_one_immutable_state_snapshot() -> None:
     assert '--state "$STATE_SNAPSHOT"' in content
     assert '"$STATE_SNAPSHOT" \\' in content
     assert "' \"$STATE_SNAPSHOT\"" in content
+    assert "for sync_attempt in 1 2 3; do" in content
+    assert "timeout 90 scp" in content
+    assert 'if [[ "$sync_ok" -ne 1 ]]; then' in content
