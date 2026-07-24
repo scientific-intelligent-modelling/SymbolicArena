@@ -11,7 +11,9 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
+import copy
 import hashlib
 import json
 import math
@@ -85,15 +87,13 @@ class FormulaInfo:
 
 
 class _FormulaSubstituter(ast.NodeTransformer):
-    def __init__(self, constants: dict[str, float], aliases: dict[str, str]):
-        self.constants = constants
-        self.aliases = aliases
+    def __init__(self, replacements: dict[str, ast.AST]):
+        self.replacements = replacements
 
     def visit_Name(self, node: ast.Name) -> ast.AST:  # noqa: N802
-        if node.id in self.aliases:
-            return ast.copy_location(ast.Name(id=self.aliases[node.id], ctx=node.ctx), node)
-        if node.id in self.constants:
-            return ast.copy_location(ast.Constant(value=self.constants[node.id]), node)
+        replacement = self.replacements.get(node.id)
+        if replacement is not None and isinstance(node.ctx, ast.Load):
+            return ast.copy_location(copy.deepcopy(replacement), node)
         return node
 
 
@@ -138,11 +138,79 @@ def _array_alias(node: ast.AST, arg_names: set[str]) -> str | None:
     return None
 
 
-def _replace_args(expr: str, arg_names: list[str]) -> str:
+def _formula_arg_feature_indices(
+    arg_names: list[str],
+    variable_order: list[str],
+) -> tuple[list[int], list[str]]:
+    if not variable_order:
+        return list(range(len(arg_names))), []
+    indices: list[int | None] = [None] * len(arg_names)
+    used: set[int] = set()
+    for arg_index, name in enumerate(arg_names):
+        matches = [
+            index
+            for index, feature in enumerate(variable_order)
+            if feature == name and index not in used
+        ]
+        if matches:
+            indices[arg_index] = matches[0]
+            used.add(matches[0])
+
+    unmatched_args = [
+        index for index, feature_index in enumerate(indices)
+        if feature_index is None
+    ]
+    unmatched_features = [
+        index for index in range(len(variable_order))
+        if index not in used
+    ]
+    issues: list[str] = []
+    if len(unmatched_args) == len(unmatched_features):
+        for arg_index, feature_index in zip(
+            unmatched_args,
+            unmatched_features,
+            strict=True,
+        ):
+            indices[arg_index] = feature_index
+            issues.append(
+                "formula_arg_mapped_by_remaining_position:"
+                f"{arg_names[arg_index]}->{variable_order[feature_index]}"
+            )
+    else:
+        for arg_index in unmatched_args:
+            fallback = min(arg_index, max(0, len(variable_order) - 1))
+            indices[arg_index] = fallback
+        if unmatched_args:
+            issues.append("formula_arg_mapping_not_bijective")
+    return [int(index) for index in indices if index is not None], issues
+
+
+def _replace_args(
+    expr: str,
+    arg_names: list[str],
+    variable_order: list[str] | None = None,
+) -> str:
     out = expr
+    indices, _ = _formula_arg_feature_indices(
+        arg_names,
+        variable_order or arg_names,
+    )
     # 长变量名优先，避免把 `alpha` 中的 `a` 误替换。
-    for idx, name in sorted(enumerate(arg_names), key=lambda item: len(item[1]), reverse=True):
-        out = re.sub(rf"\b{re.escape(name)}\b", f"x{idx}", out)
+    for arg_index, name in sorted(
+        enumerate(arg_names),
+        key=lambda item: len(item[1]),
+        reverse=True,
+    ):
+        out = re.sub(
+            rf"\b{re.escape(name)}\b",
+            f"__symf_arg_{arg_index}__",
+            out,
+        )
+    for arg_index, feature_index in enumerate(indices):
+        out = out.replace(
+            f"__symf_arg_{arg_index}__",
+            f"x{feature_index}",
+        )
     return out
 
 
@@ -151,7 +219,11 @@ def _operator_names(expr: str) -> list[str]:
     return sorted(name for name in names if name not in {"where"})
 
 
-def _extract_formula(path: Path, target_name: str) -> FormulaInfo:
+def _extract_formula(
+    path: Path,
+    target_name: str,
+    variable_order: list[str] | None = None,
+) -> FormulaInfo:
     if not path.exists():
         return FormulaInfo(False, "missing_formula_py", None, [], {}, {}, None, None, None, None, None, [], [], [])
     try:
@@ -167,7 +239,7 @@ def _extract_formula(path: Path, target_name: str) -> FormulaInfo:
         funcs = [node for node in tree.body if isinstance(node, ast.FunctionDef)]
         func = next((node for node in funcs if node.name == target_name), None)
         if func is None and funcs:
-            # 有些历史数据 target_name 与函数名不完全一致时，保守选择最后一个非 helper 函数。
+            # 历史数据的 target_name 可能与函数名不完全一致。
             helper_names = {"div", "exp", "log", "sqrt", "sin", "cos", "tan", "abs"}
             non_helpers = [node for node in funcs if node.name not in helper_names]
             func = non_helpers[-1] if non_helpers else funcs[-1]
@@ -178,6 +250,10 @@ def _extract_formula(path: Path, target_name: str) -> FormulaInfo:
         arg_name_set = set(arg_names)
         constants: dict[str, float] = dict(global_constants)
         aliases: dict[str, str] = {}
+        replacements: dict[str, ast.AST] = {
+            name: ast.Constant(value=value)
+            for name, value in global_constants.items()
+        }
         ret_node: ast.AST | None = None
         for stmt in func.body:
             if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
@@ -185,10 +261,22 @@ def _extract_formula(path: Path, target_name: str) -> FormulaInfo:
                 alias = _array_alias(stmt.value, arg_name_set)
                 if alias is not None:
                     aliases[name] = alias
+                    replacements[name] = ast.Name(
+                        id=alias,
+                        ctx=ast.Load(),
+                    )
                 else:
                     value = _safe_eval_constant(stmt.value)
                     if value is not None:
                         constants[name] = value
+                        replacements[name] = ast.Constant(value=value)
+                    else:
+                        substituted = _FormulaSubstituter(
+                            replacements
+                        ).visit(copy.deepcopy(stmt.value))
+                        replacements[name] = ast.fix_missing_locations(
+                            substituted
+                        )
             if isinstance(stmt, ast.Return) and stmt.value is not None:
                 ret_node = stmt.value
                 break
@@ -196,16 +284,21 @@ def _extract_formula(path: Path, target_name: str) -> FormulaInfo:
             raise ValueError("目标函数中未找到 return")
 
         return_raw = _clean_expr_text(ast.unparse(ret_node))
-        ret_sub_ast = _FormulaSubstituter(constants, aliases).visit(ast.fix_missing_locations(ret_node))
+        ret_sub_ast = _FormulaSubstituter(replacements).visit(
+            copy.deepcopy(ret_node)
+        )
         ast.fix_missing_locations(ret_sub_ast)
         return_sub = _clean_expr_text(ast.unparse(ret_sub_ast))
-        expression_x = _replace_args(return_sub, arg_names)
+        expression_x = _replace_args(
+            return_sub,
+            arg_names,
+            variable_order,
+        )
         operators = _operator_names(expression_x)
         protected_ops = sorted(set(operators) & PROTECTED_OPS)
 
         try:
             expr = sp.sympify(expression_x, locals=SYM_LOCALS)
-            expr = sp.simplify(expr)
             sympy_sstr = sp.sstr(expr)
             formula_hash = hashlib.sha256(sp.srepr(expr).encode("utf-8")).hexdigest()
             free_symbols = sorted(str(symbol) for symbol in expr.free_symbols)
@@ -349,26 +442,133 @@ def _json_dumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
-def main() -> None:
-    outdir = DEFAULT_OUTDIR
+def _catalog_value(item: pd.Series, *keys: str) -> Any:
+    for key in keys:
+        if key not in item:
+            continue
+        value = item.get(key)
+        if value is None or (isinstance(value, float) and math.isnan(value)):
+            continue
+        text = str(value).strip()
+        if text:
+            return value
+    return None
+
+
+def _resolve_repo_path(value: Any) -> Path:
+    path = Path(str(value))
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
+def prepare_parameters(
+    *,
+    catalog_csv: Path,
+    outdir: Path,
+    expected_datasets: int | None = None,
+    probe_samples: int = PROBE_SAMPLES_PER_DATASET,
+    probe_random_seed: int = PROBE_RANDOM_SEED,
+) -> dict[str, Any]:
+    """从 Core50 或 Full664 catalog 生成统一 formal judge 参数。"""
+    catalog_csv = catalog_csv.resolve()
+    outdir = outdir.resolve()
     outdir.mkdir(parents=True, exist_ok=True)
-    core = pd.read_csv(CORE50_CSV)
+    catalog = pd.read_csv(catalog_csv)
+    if expected_datasets is not None and len(catalog) != expected_datasets:
+        raise ValueError(
+            f"catalog 数据集数错误: actual={len(catalog)}, "
+            f"expected={expected_datasets}"
+        )
+
+    identities: list[tuple[str, str]] = []
+    for _, item in catalog.iterrows():
+        index_value = _catalog_value(item, "global_index", "core50_index")
+        if index_value is None:
+            raise ValueError("catalog 缺少 global_index/core50_index")
+        global_index = int(index_value)
+        gid = str(
+            _catalog_value(item, "dataset_id", "gid")
+            or f"g{global_index:04d}"
+        )
+        dataset_dir_value = _catalog_value(
+            item,
+            "dataset_dir",
+            "dataset_rel",
+        )
+        if dataset_dir_value is None:
+            raise ValueError(f"{gid} 缺少 dataset_dir")
+        identities.append((gid, str(dataset_dir_value)))
+    gids = [gid for gid, _ in identities]
+    if len(gids) != len(set(gids)):
+        raise ValueError("catalog 存在重复稳定 gid")
+    dataset_dirs = [dataset_dir for _, dataset_dir in identities]
+    if len(dataset_dirs) != len(set(dataset_dirs)):
+        raise ValueError("catalog 存在重复 dataset_dir")
+
     rows: list[dict[str, Any]] = []
     unresolved: list[dict[str, Any]] = []
 
-    for _, item in core.iterrows():
-        dataset_dir = REPO_ROOT / str(item["dataset_dir"])
-        metadata_path = REPO_ROOT / str(item["metadata_yaml"])
-        formula_path = REPO_ROOT / str(item["formula_py"])
+    for _, item in catalog.iterrows():
+        global_index = int(
+            _catalog_value(item, "global_index", "core50_index")
+        )
+        gid = str(
+            _catalog_value(item, "dataset_id", "gid")
+            or f"g{global_index:04d}"
+        )
+        dataset_name = str(
+            _catalog_value(item, "dataset_name", "dataset") or gid
+        )
+        dataset_dir_value = str(
+            _catalog_value(item, "dataset_dir", "dataset_rel")
+        )
+        dataset_dir = _resolve_repo_path(dataset_dir_value)
+        metadata_value = _catalog_value(item, "metadata_yaml")
+        metadata_path = (
+            _resolve_repo_path(metadata_value)
+            if metadata_value is not None
+            else dataset_dir / "metadata.yaml"
+        )
+        formula_value = _catalog_value(item, "formula_py")
+        formula_path = (
+            _resolve_repo_path(formula_value)
+            if formula_value is not None
+            else dataset_dir / "formula.py"
+        )
         meta = _load_yaml(metadata_path)
         meta_features = _feature_names(meta)
         meta_target = _target_name(meta)
-        target_name = str(item["target_name"])
-        formula = _extract_formula(formula_path, target_name)
+        target_name = str(
+            _catalog_value(item, "target_name")
+            or meta_target
+            or ""
+        )
         train_header = _csv_header(dataset_dir / "train.csv")
         csv_features = [col for col in train_header if col != target_name]
-        probe_ranges, probe_sources = _probe_ranges(meta, dataset_dir, meta_features or csv_features)
-        expected_symbols = {f"x{i}" for i in range(len(meta_features or csv_features or formula.arg_names))}
+        declared_features = meta_features or csv_features
+        formula = _extract_formula(
+            formula_path,
+            target_name,
+            variable_order=declared_features or None,
+        )
+        features = meta_features or csv_features or formula.arg_names
+        formula_arg_indices, formula_mapping_issues = (
+            _formula_arg_feature_indices(
+                formula.arg_names,
+                features,
+            )
+        )
+        feature_count_value = _catalog_value(item, "feature_count")
+        feature_count = (
+            int(feature_count_value)
+            if feature_count_value is not None
+            else len(features)
+        )
+        probe_ranges, probe_sources = _probe_ranges(
+            meta,
+            dataset_dir,
+            features,
+        )
+        expected_symbols = {f"x{i}" for i in range(feature_count)}
         extra_free_symbols = sorted(set(formula.free_symbols) - expected_symbols)
         unused_feature_symbols = sorted(expected_symbols - set(formula.free_symbols))
 
@@ -377,13 +577,17 @@ def main() -> None:
             issue_list.append("missing_metadata_yaml")
         if not formula_path.exists():
             issue_list.append("missing_formula_py")
+        if not target_name:
+            issue_list.append("missing_target_name")
         if meta_target and meta_target != target_name:
-            issue_list.append(f"target_mismatch: core50={target_name}, metadata={meta_target}")
+            issue_list.append(
+                f"target_mismatch: catalog={target_name}, "
+                f"metadata={meta_target}"
+            )
         if meta_features and csv_features and meta_features != csv_features:
             issue_list.append("metadata_features_not_equal_csv_feature_order")
-        if formula.arg_names and meta_features and formula.arg_names != meta_features:
-            issue_list.append("formula_args_not_equal_metadata_features")
-        if len(probe_ranges) != len(meta_features or csv_features):
+        issue_list.extend(formula_mapping_issues)
+        if len(probe_ranges) != feature_count:
             issue_list.append("probe_range_count_mismatch")
         if any(not (math.isfinite(r[0]) and math.isfinite(r[1])) for r in probe_ranges):
             issue_list.append("probe_range_missing_or_nonfinite")
@@ -394,17 +598,18 @@ def main() -> None:
 
         var_map = {
             f"x{i}": name
-            for i, name in enumerate(meta_features or csv_features or formula.arg_names)
+            for i, name in enumerate(features)
         }
         reverse_map = {v: k for k, v in var_map.items()}
         judge_policy = {
             "ground_truth_source": "formula.py",
             "target_function": formula.target_function,
-            "variable_order": meta_features or csv_features or formula.arg_names,
+            "variable_order": features,
+            "formula_arg_feature_indices": formula_arg_indices,
             "anonymous_variable_map": var_map,
             "physical_to_anonymous_map": reverse_map,
-            "probe_samples": PROBE_SAMPLES_PER_DATASET,
-            "probe_random_seed": PROBE_RANDOM_SEED,
+            "probe_samples": probe_samples,
+            "probe_random_seed": probe_random_seed,
             "probe_range_policy": "union(metadata train_range, metadata ood_range), fallback split min/max",
             "cas_equivalence_enabled": formula.ok and not formula.protected_ops,
             "numeric_equivalence_enabled": formula.ok,
@@ -416,18 +621,31 @@ def main() -> None:
         }
 
         row = {
-            "core50_index": int(item["core50_index"]),
-            "dataset": str(item["dataset_name"]),
-            "gid": f"g{int(item['core50_index']):04d}",
-            "dataset_dir": str(item["dataset_dir"]),
-            "family": str(item["family"]),
+            "core50_index": global_index,
+            "global_index": global_index,
+            "dataset": dataset_name,
+            "gid": gid,
+            "dataset_dir": dataset_dir_value,
+            "dataset_rel": str(
+                _catalog_value(item, "dataset_rel", "dataset_dir")
+            ),
+            "family": str(_catalog_value(item, "family") or ""),
+            "subgroup": str(_catalog_value(item, "subgroup") or ""),
+            "metadata_yaml": str(metadata_path),
+            "formula_py": str(formula_path),
             "target_name": target_name,
             "metadata_target_name": meta_target,
-            "feature_count": int(item["feature_count"]),
+            "feature_count": feature_count,
             "metadata_feature_names": _json_dumps(meta_features),
             "csv_feature_names": _json_dumps(csv_features),
             "formula_target_function": formula.target_function,
             "formula_arg_names": _json_dumps(formula.arg_names),
+            "formula_arg_feature_indices": _json_dumps(
+                formula_arg_indices
+            ),
+            "formula_arg_mapping_issues": _json_dumps(
+                formula_mapping_issues
+            ),
             "variable_map_x_to_feature": _json_dumps(var_map),
             "feature_to_x_map": _json_dumps(reverse_map),
             "formula_return_raw": formula.return_raw,
@@ -444,8 +662,8 @@ def main() -> None:
             "local_aliases": _json_dumps(formula.local_aliases),
             "probe_ranges": _json_dumps(probe_ranges),
             "probe_range_sources": _json_dumps(probe_sources),
-            "probe_samples": PROBE_SAMPLES_PER_DATASET,
-            "probe_random_seed": PROBE_RANDOM_SEED,
+            "probe_samples": probe_samples,
+            "probe_random_seed": probe_random_seed,
             "cas_equivalence_enabled": bool(judge_policy["cas_equivalence_enabled"]),
             "numeric_equivalence_enabled": bool(judge_policy["numeric_equivalence_enabled"]),
             "judge_policy": _json_dumps(judge_policy),
@@ -457,6 +675,7 @@ def main() -> None:
             unresolved.append(
                 {
                     "core50_index": row["core50_index"],
+                    "gid": row["gid"],
                     "dataset": row["dataset"],
                     "dataset_dir": row["dataset_dir"],
                     "issue": issue,
@@ -468,6 +687,7 @@ def main() -> None:
     params = pd.DataFrame(rows)
     unresolved_columns = [
         "core50_index",
+        "gid",
         "dataset",
         "dataset_dir",
         "issue",
@@ -480,19 +700,29 @@ def main() -> None:
 
     summary = {
         "created_at": datetime.now().isoformat(timespec="seconds"),
-        "core50_csv": str(CORE50_CSV.relative_to(REPO_ROOT)),
+        "catalog_csv": str(catalog_csv),
         "datasets": int(len(params)),
         "auto_confirmed": int(params["auto_confirmed"].sum()),
         "needs_review": int((~params["auto_confirmed"]).sum()),
         "formula_parse_ok": int(params["gt_expression_sympy"].notna().sum()),
         "protected_operator_datasets": int(params["gt_protected_ops"].ne("[]").sum()),
-        "probe_samples_per_dataset": PROBE_SAMPLES_PER_DATASET,
-        "probe_random_seed": PROBE_RANDOM_SEED,
-        "unresolved_issue_counts": dict(unresolved_df["issue"].value_counts()) if not unresolved_df.empty else {},
+        "probe_samples_per_dataset": probe_samples,
+        "probe_random_seed": probe_random_seed,
+        "unresolved_issue_counts": (
+            {
+                str(issue): int(count)
+                for issue, count in unresolved_df["issue"]
+                .value_counts()
+                .items()
+            }
+            if not unresolved_df.empty
+            else {}
+        ),
         "deepseek_api_needed": False,
         "notes": [
             "未使用大模型 API；仅做本地 metadata/formula/csv 审计。",
-            "含 protected ops 的数据集不建议只靠 CAS，后续 formal judge 必须以 formula.py 数值语义做 numeric equivalence fallback。",
+            "含 protected ops 的数据集不建议只靠 CAS；"
+            "formal judge 必须使用 formula.py 数值语义兜底。",
         ],
     }
     (outdir / "symf_formal_judge_config.json").write_text(
@@ -509,13 +739,14 @@ def main() -> None:
         f"- Needs review: `{summary['needs_review']}`",
         f"- Formula parse ok: `{summary['formula_parse_ok']}`",
         f"- Protected-operator datasets: `{summary['protected_operator_datasets']}`",
-        f"- Probe samples per dataset: `{PROBE_SAMPLES_PER_DATASET}`",
-        f"- Probe random seed: `{PROBE_RANDOM_SEED}`",
+        f"- Probe samples per dataset: `{probe_samples}`",
+        f"- Probe random seed: `{probe_random_seed}`",
         "- DeepSeek / LLM API needed: `false` for current audit.",
         "",
         "## 输出文件",
         "",
-        "- `symf_formal_judge_parameters.csv`: 每个数据集的公式来源、变量映射、probe 范围和 judge policy。",
+        "- `symf_formal_judge_parameters.csv`: "
+        "公式来源、变量映射、probe 范围和 judge policy。",
         "- `symf_formal_judge_unresolved.csv`: 需要人工确认的问题项。",
         "- `symf_formal_judge_config.json`: 机器可读摘要。",
         "",
@@ -523,12 +754,40 @@ def main() -> None:
         "",
     ]
     if unresolved_df.empty:
-        lines.append("- 所有 Core-50 数据集的必要参数均已自动确认，可以进入 formal judge 实现。")
+        lines.append(
+            "- 所有数据集的必要参数均已自动确认，可以进入 formal judge。"
+        )
     else:
         lines.append("- 有部分数据集需要确认，优先查看 `symf_formal_judge_unresolved.csv`。")
         lines.append("")
         lines.append(unresolved_df.head(80).to_markdown(index=False))
     (outdir / "README.md").write_text("\n".join(lines), encoding="utf-8")
+    return summary
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--catalog-csv", type=Path, default=CORE50_CSV)
+    parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR)
+    parser.add_argument("--expected-datasets", type=int)
+    parser.add_argument(
+        "--probe-samples",
+        type=int,
+        default=PROBE_SAMPLES_PER_DATASET,
+    )
+    parser.add_argument(
+        "--probe-random-seed",
+        type=int,
+        default=PROBE_RANDOM_SEED,
+    )
+    args = parser.parse_args()
+    summary = prepare_parameters(
+        catalog_csv=args.catalog_csv,
+        outdir=args.outdir,
+        expected_datasets=args.expected_datasets,
+        probe_samples=args.probe_samples,
+        probe_random_seed=args.probe_random_seed,
+    )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 
