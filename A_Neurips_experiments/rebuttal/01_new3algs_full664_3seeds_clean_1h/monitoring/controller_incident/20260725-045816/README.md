@@ -29,6 +29,14 @@
   `controller.lock.after_restart.json`。
 - 第二次同 batch 加锁测试返回码为 `1`，并报告已有控制器持锁。
 - 清理后的存活 session 数与唯一任务数一致，重复任务数为 `0`。
+- 加锁控制器首次完整轮询后，队列为：
+  - `118` done；
+  - `145` running；
+  - `5713` pending。
+- 该轮询后再次检查得到 `139` 个存活 session、`139` 个唯一任务，
+  重复任务数仍为 `0`；其余 state 中的 running 任务正在等待控制器回收。
+- `monitoring/completed_audit/20260725-051626/summary.json` 对当时全部
+  `118` 个 done 任务完成跨主机审计，`118/118` 通过，问题数为 `0`。
 - 没有删除或移动任何结果目录；最终 harvest 继续按 state 中的
   `assigned_host` 选择规范结果。
 
@@ -46,3 +54,5 @@
 - `controller.lock.after_restart.json`
 - `live_sessions.after_locked_restart.tsv`
 - `duplicate_task_ids.after_locked_restart.txt`
+- `live_sessions.after_first_locked_poll.tsv`
+- `latest.after_first_locked_poll.json`

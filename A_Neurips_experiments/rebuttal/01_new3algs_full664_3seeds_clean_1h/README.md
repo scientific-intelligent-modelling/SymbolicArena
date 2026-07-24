@@ -81,6 +81,13 @@ bash A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/deploy/0
 ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 `monitoring/completed_audit/<timestamp>/`。
 
+队列控制器按 `batch_name` 持有 `state/*.controller.lock` 单实例锁。
+重复启动同一批次必须立即失败，不能同时使用 tmux 和 nohup 启动两个
+控制器。`20260725-045816` 的双控制器事件、重复 session 清理清单、
+加锁重启和首轮 `118/118` 结果审计证据保存在
+`monitoring/controller_incident/20260725-045816/`。事件处理没有删除或
+移动结果；harvest 仍按最终 state 的 `assigned_host` 选择规范结果。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
