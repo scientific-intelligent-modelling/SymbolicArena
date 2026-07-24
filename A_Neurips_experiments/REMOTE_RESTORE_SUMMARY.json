@@ -1,5 +1,5 @@
 {
-  "audit_note": "Stage1-3 remote status is inherited from the 2026-07-20 read-only audit; Stage4 remote paths were not rechecked because 3000 result JSON files are archived locally.",
+  "audit_note": "Stage1-3 remote status is inherited from the 2026-07-20 read-only audit. Stage4 path counts cover the 3000-run clean batch only; its JSON files are archived locally. The 9000 noisy runs are preserved as a run-level CSV without per-task source paths or JSON files.",
   "by_remote_exists": {
     "no": 166,
     "not_checked": 3000,
@@ -29,6 +29,7 @@
       "by_remote_exists": {
         "not_checked": 3000
       },
+      "scope_note": "Known per-task paths cover the clean batch only; 9000 noisy run rows have no source path in the frozen summary.",
       "total": 3000
     }
   },
@@ -215,9 +216,18 @@
     }
   },
   "local_archive": {
-    "stage4_expected_results": 3000,
-    "stage4_archived_results": 3000,
-    "stage4_archive_path": "stage4_core50_12algs_5seeds_clean_1h/run_archive/results"
+    "stage4_clean_expected_results": 3000,
+    "stage4_clean_archived_result_json": 3000,
+    "stage4_clean_archive_path": "stage4_core50_12algs_5seeds_4noise_1h/run_archive/results",
+    "stage4_noise_levels": [
+      0.01,
+      0.05,
+      0.1
+    ],
+    "stage4_noise_run_rows": 9000,
+    "stage4_noise_run_table": "stage4_core50_12algs_5seeds_4noise_1h/noise_robustness/noise_final_runs.csv",
+    "stage4_noise_result_json_archived": 0,
+    "stage4_total_observed_runs": 12000
   },
   "total_paths": 13696
 }

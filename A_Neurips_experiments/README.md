@@ -2,7 +2,8 @@
 
 这个目录整理 NeurIPS 版本使用的四阶段实验链。Stage 1--3 与后续 AAAI
 归档共享同一批上游筛选和 Probe-4 实验；Stage 4 保留 NeurIPS 论文实际使用的
-Core-50 十二算法五种子 clean 批次，不使用 AAAI 后续的 SSR-50 十五算法实验。
+Core-50 十二算法五种子 clean 主榜和三个 noisy-training 鲁棒性档位，不使用
+AAAI 后续的 SSR-50 十五算法实验。
 
 ## 目录
 
@@ -19,11 +20,12 @@ Core-50 十二算法五种子 clean 批次，不使用 AAAI 后续的 SSR-50 十
   - 阶段三：`664 datasets × 4 probes × 3 seeds × 1h`
   - 目标是用 Probe-4 在全 664 数据集上三种子验证，并支撑 Core-50 选择
 
-- `stage4_core50_12algs_5seeds_clean_1h/`
-  - 阶段四：`50 datasets × 12 algorithms × 5 seeds × clean × 1h`
-  - 原始批次：`core50_12alg_5seed_all_20260502-065700`
-  - 目标是生成 NeurIPS Core-50 clean 排行榜和正式符号保真指标
-  - 包内保存 `3000/3000` 条归档 `result.json`
+- `stage4_core50_12algs_5seeds_4noise_1h/`
+  - 阶段四：`50 datasets × 12 algorithms × 5 seeds × 4 conditions × 1h`
+  - 条件是 `clean`、`sigma=0.01`、`sigma=0.05`、`sigma=0.10`
+  - clean 原始批次：`core50_12alg_5seed_all_20260502-065700`
+  - 目标是生成 clean 排行榜、正式符号保真指标和 noisy-training 鲁棒性分析
+  - 包内保存 `3000/3000` 个 clean `result.json` 和 `9000` 条 noisy run-level 记录
 
 ## 阶段关系
 
@@ -34,13 +36,15 @@ Stage 2: Candidate-200 十二算法校准
   -> Probe-4
 Stage 3: Probe-4 Full-664 三种子验证
   -> Core-50
-Stage 4: Core-50 十二算法五种子 clean 正式评测
+Stage 4: Core-50 十二算法五种子 clean 主榜 + 三档 noisy-training 鲁棒性评测
 ```
 
 NeurIPS Stage 4 与 AAAI Stage 4 不是同一批实验：
 
-- NeurIPS：`12 algorithms × 50 datasets × 5 seeds × clean × 1h = 3000`
+- NeurIPS：`12 algorithms × 50 datasets × 5 seeds × 4 conditions × 1h = 12000`
+  - `clean + sigma 0.01 + sigma 0.05 + sigma 0.10`
 - AAAI：`15 algorithms × 50 datasets × 3 seeds × 3 noise × 3h = 6750`
+  - `clean + noise001 + noise005`
 
 ## 归档边界
 
@@ -50,8 +54,9 @@ NeurIPS Stage 4 与 AAAI Stage 4 不是同一批实验：
 
 - 四阶段主要结果表和选择材料
 - Stage 3 的 7968 条 run-level raw digest
-- Stage 4 的 3000 个归档 `result.json`
-- Stage 4 的数值排行榜、formal SYM-F、论文表和运行参数快照
+- Stage 4 的 3000 个 clean 归档 `result.json`
+- Stage 4 的 9000 条 noisy run-level 记录与按 sigma 汇总
+- Stage 4 的数值排行榜、formal SYM-F、noise 表、论文表和运行参数快照
 - 来源映射、文件清单和 SHA256 校验
 
 不包含：
@@ -60,6 +65,7 @@ NeurIPS Stage 4 与 AAAI Stage 4 不是同一批实验：
 - conda / Julia 环境
 - LLM API key
 - Stage 4 原始实验目录中的完整日志、checkpoint 和 minute snapshots
+- Stage 4 noisy runs 的逐任务原始 `result.json`
 
 ## 恢复审计
 
@@ -73,9 +79,10 @@ REMOTE_RESULT_PATHS_MISSING.tsv
 STAGE2_SOURCE_PATH_GAPS.tsv
 ```
 
-Stage 1--3 的远端状态沿用 2026-07-20 的只读审计。NeurIPS Stage 4 的
-3000 条原始远端路径尚未重新 SSH 核验，但对应的 3000 个结果 JSON 已经复制到
-Stage 4 的 `run_archive/results/`，因此主要结果和表格不依赖远端在线状态。
+Stage 1--3 的远端状态沿用 2026-07-20 的只读审计。NeurIPS Stage 4 clean
+批次的 3000 条原始远端路径尚未重新 SSH 核验，但对应的 3000 个结果 JSON
+已经复制到 Stage 4 的 `run_archive/results/`。三个 noisy 档位保留了 9000 条
+run-level 记录和论文汇总表，但当前包没有逐任务原始 JSON 或远端来源路径。
 
 ## 完整性校验
 
@@ -89,7 +96,7 @@ sha256sum -c 99_audit/checksums.sha256
 cd ../stage3_664dats_4probes_3seeds_1h
 sha256sum -c CHECKSUMS.sha256
 
-cd ../stage4_core50_12algs_5seeds_clean_1h
+cd ../stage4_core50_12algs_5seeds_4noise_1h
 sha256sum -c CHECKSUMS.sha256
 
 cd ..

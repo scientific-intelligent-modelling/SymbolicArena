@@ -82,6 +82,7 @@ sha256sum -c 99_audit/checksums.sha256
 - 这个包回答的是“Candidate-200 上如何选 Probe-4”。
 - Probe-4 后续全 664 三种子验证已经迁移到 `../stage3_664dats_4probes_3seeds_1h/`。
 - 它不是最终 SSR-50 打榜包。
-- 如果要追 NeurIPS 最终 `12 algorithms × 50 datasets × 5 seeds × clean × 1h`，
-  应查看 `../stage4_core50_12algs_5seeds_clean_1h/`。后续 AAAI 的
+- 如果要追 NeurIPS 最终 `12 algorithms × 50 datasets × 5 seeds × 4 conditions × 1h`，
+  应查看 `../stage4_core50_12algs_5seeds_4noise_1h/`。四个条件是 clean 和
+  `sigma=0.01/0.05/0.10`。后续 AAAI 的
   `15 algorithms × 50 datasets × 3 seeds × 3 noise × 3h` 不属于本归档。

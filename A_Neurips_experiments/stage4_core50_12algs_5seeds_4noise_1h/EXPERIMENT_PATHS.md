@@ -2,12 +2,13 @@
 
 生成时间：2026-07-25
 
-本文件只描述 `A_Neurips_experiments/stage4_core50_12algs_5seeds_clean_1h` 这一层的来源，不改写 Stage1-3。
+本文件只描述 `A_Neurips_experiments/stage4_core50_12algs_5seeds_4noise_1h`
+这一层的来源，不改写 Stage1-3。
 
 ## 本地整理目录
 
 ```text
-/home/family/workplace/scientific-intelligent-modelling/A_Neurips_experiments/stage4_core50_12algs_5seeds_clean_1h
+/home/family/workplace/scientific-intelligent-modelling/A_Neurips_experiments/stage4_core50_12algs_5seeds_4noise_1h
 ```
 
 ## 上游冻结包
@@ -104,18 +105,50 @@ experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/.../result.j
 2. 本包不保证原始 `tasks/.../result.json` 目录树仍然随包分发。
 3. 真正做 run-level 复盘时，优先使用 `run_archive/results/*.json`；只有需要回到原任务目录结构时，才额外去找外部 `experiments/` 树。
 
+## Noise 鲁棒性来源
+
+Noise 材料来自冻结包中的：
+
+```text
+frozen-results/neurips26/final-experiments/03_core50_12alg_final/noise_robustness/
+```
+
+协议与规模：
+
+```text
+noisy-training / clean-test
+sigma = 0.01, 0.05, 0.10
+12 algorithms x 50 datasets x 5 seeds x 3 sigmas = 9000 runs
+```
+
+当前包保留：
+
+```text
+noise_robustness/noise_final_runs.csv
+noise_robustness/noise_completion_summary.csv
+noise_robustness/robustness_components.csv
+paper_tables/table13_noise_robustness_summary.csv
+paper_tables/table14_noise_by_sigma.csv
+```
+
+当前冻结包没有给出 noisy runs 的逐任务 JSON 归档或逐行原始路径。因此
+`9000` 条 noisy run-level 记录可用于复核论文汇总，但不能仅凭本包恢复各任务的
+原始日志、checkpoint 或 `result.json` 文件。
+
 ## 使用建议
 
 1. 看 clean 最终跑完多少，先查 `run_archive/summary.json`。
 2. 看每条 run 的归档结果，先查 `run_archive/results/`。
 3. 看最终数值榜单，优先查 `collected_results/`，必要时和 `run_archive/analysis/` 交叉核对。
 4. 看 formal symbolic fidelity，查 `formal_analysis/`。
+5. 看 noise robustness，查 `noise_robustness/` 以及论文 Table 13/14。
 
 ## provenance 风险提示
 
 这里至少有两层混合来源需要显式记住：
 
-1. `formal_analysis/`、`hexagon/`、`paper_tables/` 来自 NeurIPS 冻结包的下游分析。
+1. `formal_analysis/`、`hexagon/`、`noise_robustness/`、`paper_tables/` 来自
+   NeurIPS 冻结包的下游分析。
 2. `run_archive/analysis/`、`manifest.csv`、`summary.json`、`state/`、`results/` 来自 `exp-planning` 的运行归档生成目录。
 
 因此：
