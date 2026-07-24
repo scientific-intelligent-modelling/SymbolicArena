@@ -101,6 +101,74 @@ def normalize_algorithm(name: Any) -> str:
     return value
 
 
+def stable_gid(row: Any) -> str:
+    value = row.get("gid") if hasattr(row, "get") else None
+    if value is not None and not (
+        isinstance(value, float) and math.isnan(value)
+    ):
+        text = str(value).strip()
+        if text:
+            return text
+    dataset = row.get("dataset") if hasattr(row, "get") else None
+    return str(dataset or "").strip()
+
+
+def bool_value(value: Any) -> bool:
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def load_expected_runs_from_run_level(
+    path: Path,
+    *,
+    algorithms: set[str] | None = None,
+    expected_runs: int | None = None,
+) -> pd.DataFrame:
+    """读取统一 run-level CSV，并执行稳定运行身份校验。"""
+    frame = pd.read_csv(path)
+    required = {
+        "algorithm",
+        "gid",
+        "dataset",
+        "seed",
+        "status",
+        "valid_output",
+        "metric_complete",
+        "result_path",
+        "expression_canonical",
+    }
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"run-level CSV 缺少字段: {sorted(missing)}")
+    frame = frame.copy()
+    frame["algorithm"] = frame["algorithm"].map(normalize_algorithm)
+    frame["gid"] = frame["gid"].astype(str).str.strip()
+    frame["seed"] = pd.to_numeric(
+        frame["seed"],
+        errors="raise",
+    ).astype("Int64")
+    frame["valid_output"] = frame["valid_output"].map(bool_value)
+    frame["metric_complete"] = frame["metric_complete"].map(bool_value)
+    if algorithms is not None:
+        normalized = {normalize_algorithm(value) for value in algorithms}
+        frame = frame[frame["algorithm"].isin(normalized)].copy()
+    keys = ["algorithm", "gid", "seed"]
+    duplicate_rows = int(frame.duplicated(keys, keep=False).sum())
+    if duplicate_rows:
+        raise ValueError(
+            f"run-level CSV 存在重复 algorithm/gid/seed: {duplicate_rows}"
+        )
+    if expected_runs is not None and len(frame) != expected_runs:
+        raise ValueError(
+            f"run-level 行数错误: actual={len(frame)}, "
+            f"expected={expected_runs}"
+        )
+    return frame.reset_index(drop=True)
+
+
 def sympy_locals(n_features: int = 128) -> dict[str, Any]:
     out: dict[str, Any] = {f"x{i}": sp.Symbol(f"x{i}") for i in range(n_features)}
     out.update({f"c{i}": sp.Symbol(f"c{i}") for i in range(128)})
@@ -389,22 +457,37 @@ def nmse_and_errors(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float | Non
 def load_gt_probe_cache(params_df: pd.DataFrame) -> dict[str, dict[str, Any]]:
     cache: dict[str, dict[str, Any]] = {}
     for _, row in params_df.iterrows():
-        dataset = str(row["dataset"])
+        dataset_key = stable_gid(row)
         dataset_dir = REPO_ROOT / str(row["dataset_dir"])
         feature_names = json_loads(row.get("metadata_feature_names"), [])
         feature_count = int(row["feature_count"])
         func = load_formula_function(dataset_dir, row.get("formula_target_function"), row.get("target_name"))
         if func is None:
-            cache[dataset] = {"error": "formula_function_missing"}
+            cache[dataset_key] = {"error": "formula_function_missing"}
             continue
         try:
             samples = generate_probe_samples(row)
+            arg_feature_indices = json_loads(
+                row.get("formula_arg_feature_indices"),
+                list(range(feature_count)),
+            )
+            if not isinstance(arg_feature_indices, list) or not all(
+                isinstance(index, int)
+                and 0 <= index < feature_count
+                for index in arg_feature_indices
+            ):
+                raise ValueError("invalid_formula_arg_feature_indices")
             with np.errstate(all="ignore"):
-                y_gt = func(*[samples[:, i] for i in range(feature_count)])
+                y_gt = func(
+                    *[
+                        samples[:, feature_index]
+                        for feature_index in arg_feature_indices
+                    ]
+                )
             y_gt = np.asarray(y_gt, dtype=float)
             if y_gt.shape == ():
                 y_gt = np.full(samples.shape[0], float(y_gt))
-            cache[dataset] = {
+            cache[dataset_key] = {
                 "samples": samples,
                 "y_gt": y_gt.reshape(-1),
                 "feature_count": feature_count,
@@ -412,7 +495,9 @@ def load_gt_probe_cache(params_df: pd.DataFrame) -> dict[str, dict[str, Any]]:
                 "error": None,
             }
         except Exception as exc:
-            cache[dataset] = {"error": f"{exc.__class__.__name__}: {exc}"}
+            cache[dataset_key] = {
+                "error": f"{exc.__class__.__name__}: {exc}"
+            }
     return cache
 
 
@@ -496,8 +581,11 @@ def should_run_numeric_equivalence(pred_expr: sp.Expr | None, pred_vars: set[str
 
 
 def expression_from_result_path(result_path: Any) -> tuple[str | None, str, str | None]:
-    path = Path(str(result_path or ""))
-    if not path.exists():
+    text = str(result_path or "").strip()
+    if not text or text.lower() in {"nan", "none", "null"}:
+        return None, "csv_fallback", "missing_result_json"
+    path = Path(text)
+    if not path.is_file():
         return None, "csv_fallback", "missing_result_json"
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -549,7 +637,10 @@ def build_expected_runs(clean_df: pd.DataFrame, expr_df: pd.DataFrame) -> pd.Dat
 
 
 def run_formal_metrics(params_df: pd.DataFrame, expected_runs: pd.DataFrame) -> pd.DataFrame:
-    params_by_dataset = {str(row["dataset"]): row for _, row in params_df.iterrows()}
+    params_by_gid = {
+        stable_gid(row): row
+        for _, row in params_df.iterrows()
+    }
     probe_cache = load_gt_probe_cache(params_df)
     rows: list[dict[str, Any]] = []
 
@@ -558,7 +649,8 @@ def run_formal_metrics(params_df: pd.DataFrame, expected_runs: pd.DataFrame) -> 
         if row_idx % 100 == 0:
             print(f"[symf] processed {row_idx}/{total}", file=sys.stderr, flush=True)
         dataset = str(run["dataset"])
-        params = params_by_dataset.get(dataset)
+        gid = stable_gid(run)
+        params = params_by_gid.get(gid)
         if params is None:
             rows.append({"algorithm": run.get("algorithm"), "gid": run.get("gid"), "dataset": dataset, "seed": run.get("seed"), "sym_f_formal": 0.0, "failure_reason": "missing_dataset_params"})
             continue
@@ -596,7 +688,7 @@ def run_formal_metrics(params_df: pd.DataFrame, expected_runs: pd.DataFrame) -> 
 
         run_numeric, numeric_skip_reason = should_run_numeric_equivalence(pred_expr, pred_vars, gt_vars)
         if valid_for_symbolic and run_numeric:
-            numeric = numeric_equivalence(pred_expr, dataset, probe_cache)
+            numeric = numeric_equivalence(pred_expr, gid, probe_cache)
         else:
             numeric = {
                 "numeric_equiv": False,
@@ -698,7 +790,7 @@ def write_outputs(outdir: Path, metrics: pd.DataFrame, params_df: pd.DataFrame) 
     alg_summary = (
         dataset_summary.groupby("algorithm", dropna=False)
         .agg(
-            datasets=("dataset", "nunique"),
+            datasets=("gid", "nunique"),
             SYM_F_formal=("sym_f_formal", lambda x: 100 * float(np.mean(x))),
             exact_equiv_rate=("equiv_final_rate", "mean"),
             cas_equiv_rate=("cas_equiv_rate", "mean"),
@@ -770,13 +862,38 @@ def main() -> None:
     parser.add_argument("--params-csv", default=str(DEFAULT_PARAMS_CSV))
     parser.add_argument("--clean-runs-csv", default=str(DEFAULT_CLEAN_RUNS_CSV))
     parser.add_argument("--expressions-csv", default=str(DEFAULT_EXPRESSIONS_CSV))
+    parser.add_argument(
+        "--run-level-csv",
+        help="直接读取统一 run-level CSV；提供后忽略 clean/expressions 两个输入",
+    )
+    parser.add_argument(
+        "--algorithms",
+        help="仅保留逗号分隔的算法集合，例如 fepysr,jaxsr,symbolfit",
+    )
+    parser.add_argument("--expected-runs", type=int)
     parser.add_argument("--outdir", default=str(DEFAULT_OUTDIR))
     args = parser.parse_args()
 
     params_df = pd.read_csv(args.params_csv)
-    clean_df = pd.read_csv(args.clean_runs_csv)
-    expr_df = pd.read_csv(args.expressions_csv)
-    expected_runs = build_expected_runs(clean_df, expr_df)
+    if args.run_level_csv:
+        algorithms = (
+            {
+                item.strip()
+                for item in args.algorithms.split(",")
+                if item.strip()
+            }
+            if args.algorithms
+            else None
+        )
+        expected_runs = load_expected_runs_from_run_level(
+            Path(args.run_level_csv),
+            algorithms=algorithms,
+            expected_runs=args.expected_runs,
+        )
+    else:
+        clean_df = pd.read_csv(args.clean_runs_csv)
+        expr_df = pd.read_csv(args.expressions_csv)
+        expected_runs = build_expected_runs(clean_df, expr_df)
     metrics = run_formal_metrics(params_df, expected_runs)
     write_outputs(Path(args.outdir), metrics, params_df)
     print(
