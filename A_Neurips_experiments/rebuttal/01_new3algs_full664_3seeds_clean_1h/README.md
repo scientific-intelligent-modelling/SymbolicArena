@@ -42,6 +42,7 @@
 - `queues/full664_source.csv`：正式调度数据源和正式队列状态。
 - `smoke/`：18 条 smoke 任务、参数、队列和审计产物。
 - `deploy/`：同步、preflight、smoke、正式调度和收集审计脚本。
+- `analysis/`：新三算法 run-level 汇总与 Stage 3 合并后的 7 算法榜单。
 - `BATCH_NAME.txt`：冻结的正式 batch ID。
 - `SOURCE_MAP.tsv`：关键材料来源映射。
 
@@ -68,6 +69,24 @@ bash A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/deploy/0
 `03_full_dispatch_from_iaaccn22.sh`。正式任务完成后再运行
 `04_collect_audit_from_iaaccn22.sh`。
 
+## 指标汇总
+
+`04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
+后，会自动运行：
+
+```bash
+python check/analyze_neurips_rebuttal_full664.py \
+  --batch-dir A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h
+```
+
+分析器保留 manifest 的完整期望网格。ID/OOD NMSE 先执行
+`log10(max(NMSE, 1e-12))` 并截断到 `[-12, 12]`，各自缺失值在算法
+均值中按 `+12` 计入。最终排名按 penalized mean OOD log NMSE 升序。
+
+运行期间仅可用 `--allow-incomplete` 生成诊断预览；预览会标记为
+`INCOMPLETE_PREVIEW`，不得用于论文结论。正式模式会要求结果完整、
+数据身份无冲突且 audit gate 通过，否则直接拒绝生成最终榜单。
+
 ## 最终产物
 
 正式审计闭环后至少输出：
@@ -77,5 +96,8 @@ bash A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/deploy/0
 - 可计算时输出 SYM-F、Exact 和 TreeSim。
 - 与 Stage 3 的 `dso`、`imcts`、`pyoperon`、`udsr` 按相同
   full-664、seeds 520--522、clean、1h 口径合并成 7 算法比较表。
+- `analysis/new3_run_level.csv` 与 `new3_algorithm_summary.csv`。
+- `analysis/full664_7alg_run_level.csv` 与
+  `full664_7alg_leaderboard.csv`。
 
 在 5976 条任务完成并通过审计之前，不得把该目录描述成最终结果。

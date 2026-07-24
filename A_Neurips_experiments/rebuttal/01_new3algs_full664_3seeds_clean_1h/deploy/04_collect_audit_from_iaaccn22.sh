@@ -43,3 +43,9 @@ python benchmark-control/compliance/launchers/audit_batch.py \
 python benchmark-control/compliance/launchers/check_audit_success.py \
   --batch-dir "$BATCH_DIR" \
   --expected-total-tasks 5976
+
+python check/analyze_neurips_rebuttal_full664.py \
+  --batch-dir "$BATCH_DIR" \
+  --stage3-run-level \
+  "A_Neurips_experiments/stage3_664dats_4probes_3seeds_1h/probe4_postprocess_run_level.csv" \
+  --output-dir "$BATCH_DIR/analysis"
