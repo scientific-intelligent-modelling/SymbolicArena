@@ -102,6 +102,13 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 个 done 任务全部验证通过，8 台主机均通过且 `issue_count=0`；证据
 保存在 `monitoring/completed_audit/20260725-075212/`。
 
+审计器还会将每个 `result.json.params` 与 `params/<tool>__clean.json`
+逐项对照。只排除已由 runner 消费的快照/噪声控制字段，以及
+`exp_path`、特征名、目标名等数据集动态字段；其余静态算法参数必须
+完全一致。`20260725-075703` 对当前 `551/551` 个 done 任务再次通过
+该参数审计，证据保存在
+`monitoring/completed_audit/20260725-075703/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
