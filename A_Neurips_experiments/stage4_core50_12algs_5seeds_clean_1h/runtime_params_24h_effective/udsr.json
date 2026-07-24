@@ -1,0 +1,110 @@
+{
+  "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+  "component_flags": {
+    "aif": false,
+    "dsr": true,
+    "gp_meld": true,
+    "linear_poly": true,
+    "lspt": false
+  },
+  "component_notes": "note tool_name=udsr note wrapper_dir=udsr_wrapper current note DSO controller + LINEAR/poly token + GP-meld note full uDSR ",
+  "gp_meld": {
+    "crossover_operator": "cxOnePoint",
+    "generations": 20,
+    "mutate_tree_max": 3,
+    "mutation_operator": "multi_mutate",
+    "p_crossover": 0.5,
+    "p_mutate": 0.5,
+    "parallel_eval": false,
+    "population_size": 100,
+    "run_gp_meld": true,
+    "tournament_size": 5,
+    "train_n": 50,
+    "verbose": false
+  },
+  "policy_optimizer": {
+    "entropy_gamma": 0.7,
+    "entropy_weight": 0.03,
+    "learning_rate": 0.0005,
+    "policy_optimizer_type": "pg"
+  },
+  "prior": {
+    "const": {
+      "on": true
+    },
+    "domain_range": {
+      "on": true
+    },
+    "inverse": {
+      "on": true
+    },
+    "length": {
+      "max_": 100,
+      "min_": 4,
+      "on": true
+    },
+    "no_inputs": {
+      "on": true
+    },
+    "repeat": {
+      "max_": 3,
+      "min_": null,
+      "on": true,
+      "tokens": "const"
+    },
+    "soft_length": {
+      "loc": 10,
+      "on": true,
+      "scale": 5
+    },
+    "trig": {
+      "on": true
+    },
+    "uniform_arity": {
+      "on": true
+    }
+  },
+  "progress_snapshot_interval_seconds": 60,
+  "task": {
+    "function_set": [
+      "add",
+      "sub",
+      "mul",
+      "div",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "sqrt",
+      1.0,
+      "const",
+      "poly"
+    ],
+    "metric": "inv_nrmse",
+    "metric_params": [
+      1.0
+    ],
+    "poly_optimizer_params": {
+      "coef_tol": 1e-06,
+      "degree": 3,
+      "regressor": "dso_least_squares",
+      "regressor_params": {
+        "coef_tol": 1e-06,
+        "cutoff_p_value": 1.0,
+        "n_max_terms": null
+      }
+    },
+    "protected": false,
+    "task_type": "regression",
+    "threshold": 1e-12
+  },
+  "timeout_guard_seconds": 5,
+  "timeout_in_seconds": 86400,
+  "training": {
+    "baseline": "R_e",
+    "batch_size": 1000,
+    "epsilon": 0.05,
+    "n_cores_batch": 1,
+    "n_samples": 200000000
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0015_III.21.20_3_0",
+  "task_global_index": 15,
+  "dataset": "III.21.20_3_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0015/iaaccn27/llmsr/g0015_III.21.20_3_0/experiments/g0015_III.21.20_3_0_llmsr_seed3_20260502-100754",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "j",
+    "rho_c_0",
+    "q",
+    "A_vec"
+  ],
+  "target_name": "m",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 3612.726,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential\n\n    Variables:\n    - Independents:\n  - x0: the current density\n  - x1: the charge carrier density\n  - x2: the elementary charge\n  - x3: the vector potential\n- Dependent:\n  - y: the mass of a charge carrier\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return params[0] * x1 * x2**2 / (x0 * np.sqrt(1 + (x3 / (x2 * x1))**2)) + params[1] * x0 * x1 * x2 / (x0**2 + x1**2) + params[2] * x3 * x1 * x2 / (x0 * x2**2) + params[3] * np.exp(-x0 * x1 * x2 / (x0**2 + x1**2)) + params[4] * x0**2 * x1**2 / (x2**3) + params[5] * x3**2 * x1**2 / (x0**2 * x2**2)\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential\n\n    Variables:\n    - Independents:\n  - x0: the current density\n  - x1: the charge carrier density\n  - x2: the elementary charge\n  - x3: the vector potential\n- Dependent:\n  - y: the mass of a charge carrier\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return params[0] * x1 * x2**2 / (x0 * np.sqrt(1 + (x3 / (x2 * x1))**2)) + params[1] * x0 * x1 * x2 / (x0**2 + x1**2) + params[2] * x3 * x1 * x2 / (x0 * x2**2) + params[3] * np.exp(-x0 * x1 * x2 / (x0**2 + x1**2)) + params[4] * x0**2 * x1**2 / (x2**3) + params[5] * x3**2 * x1**2 / (x0**2 * x2**2)\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential\n\n    Variables:\n    - Independents:\n  - x0: the current density\n  - x1: the charge carrier density\n  - x2: the elementary charge\n  - x3: the vector potential\n- Dependent:\n  - y: the mass of a charge carrier\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return params[0] * x1 * x2**2 / (x0 * np.sqrt(1 + (x3 / (x2 * x1))**2)) + params[1] * x0 * x1 * x2 / (x0**2 + x1**2) + params[2] * x3 * x1 * x2 / (x0 * x2**2) + params[3] * np.exp(-x0 * x1 * x2 / (x0**2 + x1**2)) + params[4] * x0**2 * x1**2 / (x2**3) + params[5] * x3**2 * x1**2 / (x0**2 * x2**2)\n\n",
+    "return_expression_source": "params[0] * x1 * x2 ** 2 / (x0 * np.sqrt(1 + (x3 / (x2 * x1)) ** 2)) + params[1] * x0 * x1 * x2 / (x0 ** 2 + x1 ** 2) + params[2] * x3 * x1 * x2 / (x0 * x2 ** 2) + params[3] * np.exp(-x0 * x1 * x2 / (x0 ** 2 + x1 ** 2)) + params[4] * x0 ** 2 * x1 ** 2 / x2 ** 3 + params[5] * x3 ** 2 * x1 ** 2 / (x0 ** 2 * x2 ** 2)",
+    "normalized_expression": "c0*x1*x2**2/(x0*sqrt(1 + x3**2/(x1**2*x2**2))) + c1*x0*x1*x2/(x0**2 + x1**2) + c2*x1*x3/(x0*x2) + c3*exp(-x0*x1*x2/(x0**2 + x1**2)) + c4*x0**2*x1**2/x2**3 + c5*x1**2*x3**2/(x0**2*x2**2)",
+    "instantiated_expression": "-0.5954875507945299*x1*x2**2/(x0*sqrt(1 + x3**2/(x1**2*x2**2))) + -0.36009451291490296*x0*x1*x2/(x0**2 + x1**2) + -3.0128424421009106*x1*x3/(x0*x2) + -0.09266124697315936*exp(-x0*x1*x2/(x0**2 + x1**2)) + -4.55020377993417e-06*x0**2*x1**2/x2**3 + -0.053327291138191124*x1**2*x3**2/(x0**2*x2**2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -0.5954875507945299,
+      -0.36009451291490296,
+      -3.0128424421009106,
+      -0.09266124697315936,
+      -4.55020377993417e-06,
+      -0.053327291138191124,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 90,
+    "tree_depth": 8,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x1*x2**2/(x0*sqrt(1 + x3**2/(x1**2*x2**2))) + c1*x0*x1*x2/(x0**2 + x1**2) + c2*x1*x3/(x0*x2) + c3*exp(-x0*x1*x2/(x0**2 + x1**2)) + c4*x0**2*x1**2/x2**3 + c5*x1**2*x3**2/(x0**2*x2**2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.7004375979881627,
+    "r2": 0.8852259466139598,
+    "nmse": 0.10389315438092127,
+    "acc_0_1": 0.34792
+  },
+  "valid": {
+    "rmse": 2.095612750555061,
+    "r2": 0.8396497587848379,
+    "nmse": 0.14531010999519925,
+    "acc_0_1": 0.3512
+  },
+  "id_test": {
+    "rmse": 1.6097952419397445,
+    "r2": 0.8873083323005629,
+    "nmse": 0.10146856002012382,
+    "acc_0_1": 0.3468
+  },
+  "ood_test": {
+    "rmse": 225984.97182093168,
+    "r2": -1991.5743242427645,
+    "nmse": 1992.5566287466,
+    "acc_0_1": 0.1402
+  },
+  "finished_at": "2026-05-02 11:08:07",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0015/iaaccn27/llmsr/g0015_III.21.20_3_0/experiments",
+    "exp_name": "g0015_III.21.20_3_0_llmsr_seed3",
+    "n_features": 4,
+    "feature_names": [
+      "j",
+      "rho_c_0",
+      "q",
+      "A_vec"
+    ],
+    "target_name": "m",
+    "original_feature_names": [
+      "j",
+      "rho_c_0",
+      "q",
+      "A_vec"
+    ],
+    "original_target_name": "m",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the mass of a charge carrier given the current density, the charge carrier density, the elementary charge and the vector potential",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0/metadata.yaml",
+    "feature_descriptions": [
+      "the current density",
+      "the charge carrier density",
+      "the elementary charge",
+      "the vector potential"
+    ],
+    "target_description": "the mass of a charge carrier"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,119 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0050_BPG9",
+  "task_global_index": 50,
+  "dataset": "BPG9",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0050/iaaccn29/pyoperon/g0050_BPG9/experiments/g0050_BPG9_pyoperon_seed0_20260502-074421",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 8.099,
+  "equation": "(1.798 + ((-1.772) * sin((0.708 * X2))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(1.798 + ((-1.772) * sin((0.708 * X2))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return 1.798 - 1.772*sin(0.708*x0)\n",
+    "return_expression_source": "1.798 - 1.772*sin(0.708*x0)",
+    "normalized_expression": "1.798 - 1.772*sin(0.708*x0)",
+    "instantiated_expression": "1.798 - 1.772*sin(0.708*x0)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 8,
+    "tree_depth": 5,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.798 - 1.772*sin(0.708*x0)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.22029722682754035,
+    "r2": 0.8464126272005688,
+    "nmse": 0.13856012938770657,
+    "acc_0_1": 0.852
+  },
+  "valid": {
+    "rmse": 0.196367688072073,
+    "r2": 0.8607465174606896,
+    "nmse": 0.12801449569727016,
+    "acc_0_1": 0.868
+  },
+  "id_test": {
+    "rmse": 0.22010526908480174,
+    "r2": 0.8761006348809037,
+    "nmse": 0.10928666686596121,
+    "acc_0_1": 0.826
+  },
+  "ood_test": {
+    "rmse": 0.05003821277679719,
+    "r2": -29.110411596870303,
+    "nmse": 27.808824188754254,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 07:44:29",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0050/iaaccn29/pyoperon/g0050_BPG9/experiments",
+    "exp_name": "g0050_BPG9_pyoperon_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,165 @@
+{
+  "tool": "drsr",
+  "task_label": "g0040_feynman-i.29.16",
+  "task_global_index": 40,
+  "dataset": "feynman-i.29.16",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0040/iaaccn23/drsr/g0040_feynman-i.29.16/experiments/g0040_feynman-i.29.16_drsr_seed0_20260502-073738",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3901.245,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle\n\n    Variables:\n    - Independents:\n  - x0: x_1, Wavelength\n  - x1: x_2, Wavelength\n  - x2: theta_1, Angle\n  - x3: theta_2, Angle\n- Dependent:\n  - y: x, Wavelength\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x0 * x1 + params[6] * x2 * x3",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle\n\n    Variables:\n    - Independents:\n  - x0: x_1, Wavelength\n  - x1: x_2, Wavelength\n  - x2: theta_1, Angle\n  - x3: theta_2, Angle\n- Dependent:\n  - y: x, Wavelength\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x0 * x1 + params[6] * x2 * x3",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle\n\n    Variables:\n    - Independents:\n  - x0: x_1, Wavelength\n  - x1: x_2, Wavelength\n  - x2: theta_1, Angle\n  - x3: theta_2, Angle\n- Dependent:\n  - y: x, Wavelength\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x0 * x1 + params[6] * x2 * x3",
+    "return_expression_source": "params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x0 * x1 + params[6] * x2 * x3",
+    "normalized_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x3 + c5*x0*x1 + c6*x2*x3",
+    "instantiated_expression": "0.4443569600708317 + 0.9815759794747511*x0 + 0.9858190031739669*x1 + -0.23410805525993036*x2 + -0.2308139820195183*x3 + -0.09080030332715387*x0*x1 + 0.0744055933476487*x2*x3",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.4443569600708317,
+      0.9815759794747511,
+      0.9858190031739669,
+      -0.23410805525993036,
+      -0.2308139820195183,
+      -0.09080030332715387,
+      0.0744055933476487,
+      0.1876960021650842,
+      0.3065910171484645,
+      -0.37101816433303747
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 22,
+    "tree_depth": 3,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*x3 + c5*x0*x1 + c6*x2*x3"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.0319319711405934,
+    "r2": 0.8841245790422201,
+    "nmse": 0.04942637530692927,
+    "acc_0_1": 0.181
+  },
+  "valid": {
+    "rmse": 1.1083492328126157,
+    "r2": 0.8524885617357525,
+    "nmse": 0.06116182669744013,
+    "acc_0_1": 0.173
+  },
+  "id_test": {
+    "rmse": 1.1236146269018474,
+    "r2": 0.8518973808331758,
+    "nmse": 0.06507879964561014,
+    "acc_0_1": 0.17
+  },
+  "ood_test": {
+    "rmse": 12.031742878728387,
+    "r2": -47.43703237048285,
+    "nmse": 0.29104761903665827,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:42:39",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0040/iaaccn23/drsr/g0040_feynman-i.29.16/experiments",
+    "exp_name": "g0040_feynman-i.29.16_drsr_seed0",
+    "n_features": 4,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Wavelength given Wavelength, Wavelength, Angle, Angle",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16/metadata.yaml",
+    "feature_descriptions": [
+      "x_1, Wavelength",
+      "x_2, Wavelength",
+      "theta_1, Angle",
+      "theta_2, Angle"
+    ],
+    "target_description": "x, Wavelength"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

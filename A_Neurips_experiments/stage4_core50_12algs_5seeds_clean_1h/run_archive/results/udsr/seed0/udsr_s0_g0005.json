@@ -1,0 +1,223 @@
+{
+  "tool": "udsr",
+  "task_label": "g0005_Keijzer-11",
+  "task_global_index": 5,
+  "dataset": "Keijzer-11",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-11",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-11"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed0/tasks/udsr_s0_g0005/iaaccn25/udsr/g0005_Keijzer-11/experiments/g0005_Keijzer-11_udsr_seed0_20260502-070021",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 18,
+  "valid_rows": 2,
+  "id_test_rows": 361201,
+  "ood_test_rows": 200,
+  "seconds": 3614.601,
+  "equation": "-0.211991*x1**3 - 0.170934*x1**2*x2 - 0.564311*x1**2 + 0.341166*x1*x2**2 + 2.34227*x1*x2 + 1.02402*x1 - 0.0424866*x2**3 - 0.462204*x2**2 - 0.787495*x2 + sin(3.6111468782181*x1) + 0.163367",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "udsr",
+    "raw_equation": "-0.211991*x1**3 - 0.170934*x1**2*x2 - 0.564311*x1**2 + 0.341166*x1*x2**2 + 2.34227*x1*x2 + 1.02402*x1 - 0.0424866*x2**3 - 0.462204*x2**2 - 0.787495*x2 + sin(3.6111468782181*x1) + 0.163367",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return -0.211991*x0**3 - 0.170934*x0**2*x1 - 0.564311*x0**2 + 0.341166*x0*x1**2 + 2.34227*x0*x1 + 1.02402*x0 - 0.0424866*x1**3 - 0.462204*x1**2 - 0.787495*x1 + sin(3.6111468782181*x0) + 0.163367\n",
+    "return_expression_source": "-0.211991*x0**3 - 0.170934*x0**2*x1 - 0.564311*x0**2 + 0.341166*x0*x1**2 + 2.34227*x0*x1 + 1.02402*x0 - 0.0424866*x1**3 - 0.462204*x1**2 - 0.787495*x1 + sin(3.6111468782181*x0) + 0.163367",
+    "normalized_expression": "-0.211991*x0**3 - 0.170934*x0**2*x1 - 0.564311*x0**2 + 0.341166*x0*x1**2 + 2.34227*x0*x1 + 1.02402*x0 - 0.0424866*x1**3 - 0.462204*x1**2 - 0.787495*x1 + sin(3.6111468782181*x0) + 0.163367",
+    "instantiated_expression": "-0.211991*x0**3 - 0.170934*x0**2*x1 - 0.564311*x0**2 + 0.341166*x0*x1**2 + 2.34227*x0*x1 + 1.02402*x0 - 0.0424866*x1**3 - 0.462204*x1**2 - 0.787495*x1 + sin(3.6111468782181*x0) + 0.163367",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 48,
+    "tree_depth": 4,
+    "normalization_mode": "udsr_dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-0.211991*x0**3 - 0.170934*x0**2*x1 - 0.564311*x0**2 + 0.341166*x0*x1**2 + 2.34227*x0*x1 + 1.02402*x0 - 0.0424866*x1**3 - 0.462204*x1**2 - 0.787495*x1 + sin(3.6111468782181*x0) + 0.163367",
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "Benchmark uDSR trunk variant: DSO controller + LINEAR/poly token + GP-meld, without AIF recursive decomposition or LSPT pretraining."
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.13989180995628783,
+    "r2": 0.9969258813155881,
+    "nmse": 0.001957037020357556,
+    "acc_0_1": 0.5555555555555556
+  },
+  "valid": {
+    "rmse": 8.252306475746225,
+    "r2": -8.222185540451434,
+    "nmse": 8.89816789111433,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 6.551313143664151,
+    "r2": -3.3536519913225424,
+    "nmse": 4.353596611911282,
+    "acc_0_1": 0.05294282131001852
+  },
+  "ood_test": {
+    "rmse": 12.315556575886745,
+    "r2": -3.720683052936396,
+    "nmse": 4.718142737066818,
+    "acc_0_1": 0.005
+  },
+  "finished_at": "2026-05-02 08:00:35",
+  "params": {
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "保持 tool_name=udsr 与 wrapper_dir=udsr_wrapper；当前算法口径固定为 DSO controller + LINEAR/poly token + GP-meld，不标称 full uDSR。",
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log",
+        "sqrt",
+        1.0,
+        "const",
+        "poly"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false,
+      "poly_optimizer_params": {
+        "degree": 3,
+        "coef_tol": 1e-06,
+        "regressor": "dso_least_squares",
+        "regressor_params": {
+          "cutoff_p_value": 1.0,
+          "n_max_terms": null,
+          "coef_tol": 1e-06
+        }
+      }
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "baseline": "R_e",
+      "n_cores_batch": 1
+    },
+    "policy_optimizer": {
+      "policy_optimizer_type": "pg",
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "gp_meld": {
+      "run_gp_meld": true,
+      "population_size": 100,
+      "generations": 20,
+      "crossover_operator": "cxOnePoint",
+      "p_crossover": 0.5,
+      "mutation_operator": "multi_mutate",
+      "p_mutate": 0.5,
+      "tournament_size": 5,
+      "train_n": 50,
+      "mutate_tree_max": 3,
+      "verbose": false,
+      "parallel_eval": false
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 100,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": true
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed0/tasks/udsr_s0_g0005/iaaccn25/udsr/g0005_Keijzer-11/experiments",
+    "exp_name": "g0005_Keijzer-11_udsr_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'udsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

@@ -1,0 +1,224 @@
+{
+  "tool": "udsr",
+  "task_label": "g0003_feynman-ii.27.18",
+  "task_global_index": 3,
+  "dataset": "feynman-ii.27.18",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed0/tasks/udsr_s0_g0003/iaaccn27/udsr/g0003_feynman-ii.27.18/experiments/g0003_feynman-ii.27.18_udsr_seed0_20260502-065937",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3403.421,
+  "equation": "                    __________________________________________________\n                   ╱                               3.9999984235345636 \n1.64872127070013⋅╲╱  (2.317364092317108e-6⋅x₁ + x₂)                   ",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "udsr",
+    "raw_equation": "1.64872127070013*sqrt((2.317364092317108e-6*x1 + x2)**3.9999984235345636)",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 1.64872127070013*sqrt((2.317364092317108e-6*x0 + x1)**3.9999984235345636)\n",
+    "return_expression_source": "1.64872127070013*sqrt((2.317364092317108e-6*x0 + x1)**3.9999984235345636)",
+    "normalized_expression": "1.64872127070013*sqrt((2.317364092317108e-6*x0 + x1)**3.9999984235345636)",
+    "instantiated_expression": "1.64872127070013*sqrt((2.317364092317108e-6*x0 + x1)**3.9999984235345636)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 11,
+    "tree_depth": 6,
+    "normalization_mode": "udsr_dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.64872127070013*sqrt((2.317364092317108e-6*x0 + x1)**3.9999984235345636)",
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "Benchmark uDSR trunk variant: DSO controller + LINEAR/poly token + GP-meld, without AIF recursive decomposition or LSPT pretraining."
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 4.251931327072203e-17,
+    "r2": 0.9999999999999474,
+    "nmse": 4.114021516392695e-14,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 4.1979297312119596e-17,
+    "r2": 0.9999999999999424,
+    "nmse": 4.4976072123450624e-14,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 4.4168992500698507e-17,
+    "r2": 0.9999999999999486,
+    "nmse": 3.931707468402473e-14,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 3.293953215261595e-16,
+    "r2": 0.9999999999960015,
+    "nmse": 8.328874868841896e-14,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 07:56:20",
+  "params": {
+    "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+    "component_flags": {
+      "aif": false,
+      "dsr": true,
+      "lspt": false,
+      "gp_meld": true,
+      "linear_poly": true
+    },
+    "component_notes": "保持 tool_name=udsr 与 wrapper_dir=udsr_wrapper；当前算法口径固定为 DSO controller + LINEAR/poly token + GP-meld，不标称 full uDSR。",
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log",
+        "sqrt",
+        1.0,
+        "const",
+        "poly"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false,
+      "poly_optimizer_params": {
+        "degree": 3,
+        "coef_tol": 1e-06,
+        "regressor": "dso_least_squares",
+        "regressor_params": {
+          "cutoff_p_value": 1.0,
+          "n_max_terms": null,
+          "coef_tol": 1e-06
+        }
+      }
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "baseline": "R_e",
+      "n_cores_batch": 1
+    },
+    "policy_optimizer": {
+      "policy_optimizer_type": "pg",
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "gp_meld": {
+      "run_gp_meld": true,
+      "population_size": 100,
+      "generations": 20,
+      "crossover_operator": "cxOnePoint",
+      "p_crossover": 0.5,
+      "mutation_operator": "multi_mutate",
+      "p_mutate": 0.5,
+      "tournament_size": 5,
+      "train_n": 50,
+      "mutate_tree_max": 3,
+      "verbose": false,
+      "parallel_eval": false
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 100,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": true
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/udsr/seed0/tasks/udsr_s0_g0003/iaaccn27/udsr/g0003_feynman-ii.27.18/experiments",
+    "exp_name": "g0003_feynman-ii.27.18_udsr_seed0",
+    "n_features": 3,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

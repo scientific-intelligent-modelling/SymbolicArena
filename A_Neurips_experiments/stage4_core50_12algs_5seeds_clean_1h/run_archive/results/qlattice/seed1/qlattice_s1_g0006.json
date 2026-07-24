@@ -1,0 +1,111 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0006_Keijzer-2",
+  "task_global_index": 6,
+  "dataset": "Keijzer-2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0006/iaaccn23/QLattice/g0006_Keijzer-2/experiments/g0006_Keijzer-2_QLattice_seed1_20260502-075051",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1"
+  ],
+  "target_name": "target",
+  "train_rows": 37,
+  "valid_rows": 4,
+  "id_test_rows": 4001,
+  "ood_test_rows": 410,
+  "seconds": 119.583,
+  "equation": "-0.3352 + 0.7209*exp(-2.0*(1.652*x0 - 2.171)**2*(-0.8262*x0 + exp(-2.0*(0.2667 - 0.782*x0)**2 - 2.0*(-0.005271*x0 - 0.001054)**2) - 1.115)**2)",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "-0.3352 + 0.7209*exp(-2.0*(1.652*x0 - 2.171)**2*(-0.8262*x0 + exp(-2.0*(0.2667 - 0.782*x0)**2 - 2.0*(-0.005271*x0 - 0.001054)**2) - 1.115)**2)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return -0.3352 + 0.7209*exp(-2.0*(1.652*x0 - 2.171)**2*(-0.8262*x0 + exp(-2.0*(0.2667 - 0.782*x0)**2 - 2.0*(-0.005271*x0 - 0.001054)**2) - 1.115)**2)\n",
+    "return_expression_source": "-0.3352 + 0.7209*exp(-2.0*(1.652*x0 - 2.171)**2*(-0.8262*x0 + exp(-2.0*(0.2667 - 0.782*x0)**2 - 2.0*(-0.005271*x0 - 0.001054)**2) - 1.115)**2)",
+    "normalized_expression": "-0.3352 + 0.7209*exp(-2.0*(1.652*x0 - 2.171)**2*(-0.8262*x0 + exp(-2.0*(0.2667 - 0.782*x0)**2 - 2.0*(-0.005271*x0 - 0.001054)**2) - 1.115)**2)",
+    "instantiated_expression": "-0.3352 + 0.7209*exp(-2.0*(1.652*x0 - 2.171)**2*(-0.8262*x0 + exp(-2.0*(0.2667 - 0.782*x0)**2 - 2.0*(-0.005271*x0 - 0.001054)**2) - 1.115)**2)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 41,
+    "tree_depth": 13,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-0.3352 + 0.7209*exp(-2.0*(1.652*x0 - 2.171)**2*(-0.8262*x0 + exp(-2.0*(0.2667 - 0.782*x0)**2 - 2.0*(-0.005271*x0 - 0.001054)**2) - 1.115)**2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.11418985840284013,
+    "r2": 0.7800604571298858,
+    "nmse": 0.21029780475256454,
+    "acc_0_1": 0.7027027027027027
+  },
+  "valid": {
+    "rmse": 0.11126161700301579,
+    "r2": 0.38944395015880373,
+    "nmse": 0.5980346114156535,
+    "acc_0_1": 0.75
+  },
+  "id_test": {
+    "rmse": 0.09727486277558653,
+    "r2": 0.8343900071594598,
+    "nmse": 0.15925885316641755,
+    "acc_0_1": 0.7015746063484128
+  },
+  "ood_test": {
+    "rmse": 0.7207659400441463,
+    "r2": -13.845048259973249,
+    "nmse": 3.144320557385506,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 07:52:51",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0006/iaaccn23/QLattice/g0006_Keijzer-2/experiments",
+    "exp_name": "g0006_Keijzer-2_QLattice_seed1",
+    "n_features": 1,
+    "feature_names": [
+      "x1"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

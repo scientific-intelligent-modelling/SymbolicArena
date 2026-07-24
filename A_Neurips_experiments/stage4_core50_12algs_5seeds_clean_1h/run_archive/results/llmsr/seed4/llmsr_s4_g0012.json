@@ -1,0 +1,161 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0012_feynman_I_27_6",
+  "task_global_index": 12,
+  "dataset": "feynman_I_27_6",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0012/iaaccn26/llmsr/g0012_feynman_I_27_6/experiments/g0012_feynman_I_27_6_llmsr_seed4_20260502-105535",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "d1",
+    "d2",
+    "n"
+  ],
+  "target_name": "target",
+  "train_rows": 80000,
+  "valid_rows": 10000,
+  "id_test_rows": 10000,
+  "ood_test_rows": 10000,
+  "seconds": 3609.484,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the focal length given the object distance, image distance, and refractive index.\n\n    Variables:\n    - Independents:\n  - x0: Distance\n  - x1: Distance\n  - x2: Refractive index\n- Dependent:\n  - y: Focal length\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * x0 * x1 / (x0 + x1) + params[1] * x0 / x2 + params[2] * x1 / x2 + params[3] * x0**2 / (x0 + x1) + params[4] * x1**2 / (x0 + x1) + params[5] * x0 * x2 / (x0 + x1) + params[6] * x1 * x2 / (x0 + x1) + params[7] * np.log(x0) + params[8] * np.log(x1) + params[9] * np.log(x2)\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the focal length given the object distance, image distance, and refractive index.\n\n    Variables:\n    - Independents:\n  - x0: Distance\n  - x1: Distance\n  - x2: Refractive index\n- Dependent:\n  - y: Focal length\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * x0 * x1 / (x0 + x1) + params[1] * x0 / x2 + params[2] * x1 / x2 + params[3] * x0**2 / (x0 + x1) + params[4] * x1**2 / (x0 + x1) + params[5] * x0 * x2 / (x0 + x1) + params[6] * x1 * x2 / (x0 + x1) + params[7] * np.log(x0) + params[8] * np.log(x1) + params[9] * np.log(x2)\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the focal length given the object distance, image distance, and refractive index.\n\n    Variables:\n    - Independents:\n  - x0: Distance\n  - x1: Distance\n  - x2: Refractive index\n- Dependent:\n  - y: Focal length\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] * x0 * x1 / (x0 + x1) + params[1] * x0 / x2 + params[2] * x1 / x2 + params[3] * x0**2 / (x0 + x1) + params[4] * x1**2 / (x0 + x1) + params[5] * x0 * x2 / (x0 + x1) + params[6] * x1 * x2 / (x0 + x1) + params[7] * np.log(x0) + params[8] * np.log(x1) + params[9] * np.log(x2)\n\n",
+    "return_expression_source": "params[0] * x0 * x1 / (x0 + x1) + params[1] * x0 / x2 + params[2] * x1 / x2 + params[3] * x0 ** 2 / (x0 + x1) + params[4] * x1 ** 2 / (x0 + x1) + params[5] * x0 * x2 / (x0 + x1) + params[6] * x1 * x2 / (x0 + x1) + params[7] * np.log(x0) + params[8] * np.log(x1) + params[9] * np.log(x2)",
+    "normalized_expression": "c0*x0*x1/(x0 + x1) + c1*x0/x2 + c2*x1/x2 + c3*x0**2/(x0 + x1) + c4*x1**2/(x0 + x1) + c5*x0*x2/(x0 + x1) + c6*x1*x2/(x0 + x1) + c7*log(x0) + c8*log(x1) + c9*log(x2)",
+    "instantiated_expression": "0.3223754375421153*x0*x1/(x0 + x1) + 0.3122047436937438*x0/x2 + 0.14762667930500706*x1/x2 + -0.16146298536456394*x0**2/(x0 + x1) + 0.01850163733546283*x1**2/(x0 + x1) + -0.12019937648729864*x0*x2/(x0 + x1) + -0.1820124640791197*x1*x2/(x0 + x1) + -0.012144743793275925*log(x0) + 0.014880074715014917*log(x1) + 0.44548339054859043*log(x2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.3223754375421153,
+      0.3122047436937438,
+      0.14762667930500706,
+      -0.16146298536456394,
+      0.01850163733546283,
+      -0.12019937648729864,
+      -0.1820124640791197,
+      -0.012144743793275925,
+      0.014880074715014917,
+      0.44548339054859043
+    ],
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 72,
+    "tree_depth": 5,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0*x1/(x0 + x1) + c1*x0/x2 + c2*x1/x2 + c3*x0**2/(x0 + x1) + c4*x1**2/(x0 + x1) + c5*x0*x2/(x0 + x1) + c6*x1*x2/(x0 + x1) + c7*log(x0) + c8*log(x1) + c9*log(x2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.035085697696350227,
+    "r2": 0.9903866511006255,
+    "nmse": 0.001711571518040611,
+    "acc_0_1": 0.98245
+  },
+  "valid": {
+    "rmse": 0.034691095154458354,
+    "r2": 0.9906784243529292,
+    "nmse": 0.0016640798717749985,
+    "acc_0_1": 0.9826
+  },
+  "id_test": {
+    "rmse": 0.03482811284038861,
+    "r2": 0.9902576168936309,
+    "nmse": 0.0016995301318562704,
+    "acc_0_1": 0.9822
+  },
+  "ood_test": {
+    "rmse": 0.2731720663549709,
+    "r2": 0.8694247261674434,
+    "nmse": 0.061641233124951865,
+    "acc_0_1": 0.3496
+  },
+  "finished_at": "2026-05-02 11:55:45",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0012/iaaccn26/llmsr/g0012_feynman_I_27_6/experiments",
+    "exp_name": "g0012_feynman_I_27_6_llmsr_seed4",
+    "n_features": 3,
+    "feature_names": [
+      "d1",
+      "d2",
+      "n"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "d1",
+      "d2",
+      "n"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the focal length given the object distance, image distance, and refractive index.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6/metadata.yaml",
+    "feature_descriptions": [
+      "Distance",
+      "Distance",
+      "Refractive index"
+    ],
+    "target_description": "Focal length"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

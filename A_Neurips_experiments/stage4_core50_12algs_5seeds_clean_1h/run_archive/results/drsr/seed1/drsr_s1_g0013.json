@@ -1,0 +1,154 @@
+{
+  "tool": "drsr",
+  "task_label": "g0013_feynman-i.43.31",
+  "task_global_index": 13,
+  "dataset": "feynman-i.43.31",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0013/iaaccn27/drsr/g0013_feynman-i.43.31/experiments/g0013_feynman-i.43.31_drsr_seed1_20260502-075529",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x0",
+    "x1"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3610.245,
+  "equation": "def equation(col0, col1, params):\n    return params[0] * x0 * x1\n",
+  "equation_count": 209,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(col0, col1, params):\n    return params[0] * x0 * x1\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(col0, col1, params):\n    return params[0] * x0 * x1\n",
+    "return_expression_source": "params[0] * x0 * x1",
+    "normalized_expression": "c0*x0*x1",
+    "instantiated_expression": "-4.7093188631216064e-14*x0*x1",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -4.7093188631216064e-14,
+      -0.7514334470008721,
+      0.34124882938726064,
+      0.2943790231485002,
+      0.2307702229625077,
+      -0.23264489147623313,
+      0.994419871578422,
+      0.9616706775524602,
+      0.3710839689613894,
+      0.3009185525356326
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "mul"
+    ],
+    "ast_node_count": 4,
+    "tree_depth": 2,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [
+      "function_arg_map:col0->x0,col1->x1"
+    ],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0*x1"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 5029.229311925113,
+    "r2": -1.4213961160671865e+19,
+    "nmse": 1.1634551036480616e+19,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 4788.78277678179,
+    "r2": -1.4450498279607605e+19,
+    "nmse": 1.1634551036480623e+19,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 5345.341209649527,
+    "r2": -1.435529140219817e+19,
+    "nmse": 1.163455103648062e+19,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 60262.87527297384,
+    "r2": -5.916533861875674e+20,
+    "nmse": 1.163455103648062e+19,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:55:40",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0013/iaaccn27/drsr/g0013_feynman-i.43.31/experiments",
+    "exp_name": "g0013_feynman-i.43.31_drsr_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x0",
+      "x1"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Diffusion coefficient given Viscosity, Boltzmann constant",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.43.31/metadata.yaml",
+    "feature_descriptions": [
+      "mu, Viscosity",
+      "k, Boltzmann constant"
+    ],
+    "target_description": "D, Diffusion coefficient"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

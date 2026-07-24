@@ -1,0 +1,128 @@
+{
+  "tool": "tpsr",
+  "task_label": "g0050_BPG9",
+  "task_global_index": 50,
+  "dataset": "BPG9",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed1/tasks/tpsr_s1_g0050/iaaccn24/tpsr/g0050_BPG9/experiments/g0050_BPG9_tpsr_seed1_20260502-095122",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 2234.309,
+  "equation": "(((-0.2 + x_1) * (((-0.003 + x_1) - (-0.09000000000000001 + (0.1 * x_0))) * (0.003 + (0.030000000000000002 * 1/((-0.001 + (-0.9 * x_1))))))) * ((((0.009 + x_1) * ((0.9 + (-0.01 * x_0)) + ((0.1 + (0.01 * x_1)) * (0.060000000000000005 + (-0.1 * x_0))))) * ((0.9 + (0.003 * x_0)) + (0.02 + (-0.01 * x_0)))) * (-9.0 + (0.1 * x_0))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "tpsr",
+    "raw_equation": "(((-0.2 + x_1) * (((-0.003 + x_1) - (-0.09000000000000001 + (0.1 * x_0))) * (0.003 + (0.030000000000000002 * 1/((-0.001 + (-0.9 * x_1))))))) * ((((0.009 + x_1) * ((0.9 + (-0.01 * x_0)) + ((0.1 + (0.01 * x_1)) * (0.060000000000000005 + (-0.1 * x_0))))) * ((0.9 + (0.003 * x_0)) + (0.02 + (-0.01 * x_0)))) * (-9.0 + (0.1 * x_0))))",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (0.003 + 0.030000000000000002/(-0.9*x1 - 0.001))*(0.92 - 0.007*x0)*(0.1*x0 - 9.0)*(x1 - 0.2)*(x1 + 0.009)*(-0.1*x0 + x1 + 0.08700000000000001)*(-0.01*x0 + (0.060000000000000005 - 0.1*x0)*(0.01*x1 + 0.1) + 0.9)\n",
+    "return_expression_source": "(0.003 + 0.030000000000000002/(-0.9*x1 - 0.001))*(0.92 - 0.007*x0)*(0.1*x0 - 9.0)*(x1 - 0.2)*(x1 + 0.009)*(-0.1*x0 + x1 + 0.08700000000000001)*(-0.01*x0 + (0.060000000000000005 - 0.1*x0)*(0.01*x1 + 0.1) + 0.9)",
+    "normalized_expression": "(0.003 + 0.030000000000000002/(-0.9*x1 - 0.001))*(0.92 - 0.007*x0)*(0.1*x0 - 9.0)*(x1 - 0.2)*(x1 + 0.009)*(-0.1*x0 + x1 + 0.08700000000000001)*(-0.01*x0 + (0.060000000000000005 - 0.1*x0)*(0.01*x1 + 0.1) + 0.9)",
+    "instantiated_expression": "(0.003 + 0.030000000000000002/(-0.9*x1 - 0.001))*(0.92 - 0.007*x0)*(0.1*x0 - 9.0)*(x1 - 0.2)*(x1 + 0.009)*(-0.1*x0 + x1 + 0.08700000000000001)*(-0.01*x0 + (0.060000000000000005 - 0.1*x0)*(0.01*x1 + 0.1) + 0.9)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 50,
+    "tree_depth": 7,
+    "normalization_mode": "tpsr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(0.003 + 0.030000000000000002/(-0.9*x1 - 0.001))*(0.92 - 0.007*x0)*(0.1*x0 - 9.0)*(x1 - 0.2)*(x1 + 0.009)*(-0.1*x0 + x1 + 0.08700000000000001)*(-0.01*x0 + (0.060000000000000005 - 0.1*x0)*(0.01*x1 + 0.1) + 0.9)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.13075623507878972,
+    "r2": 0.945891902264103,
+    "nmse": 0.048814071668503205,
+    "acc_0_1": 0.7085714285714285
+  },
+  "valid": {
+    "rmse": 0.13457854928197946,
+    "r2": 0.9345939840502904,
+    "nmse": 0.06012717236716916,
+    "acc_0_1": 0.684
+  },
+  "id_test": {
+    "rmse": 0.13389190065899406,
+    "r2": 0.954152377900515,
+    "nmse": 0.04044035091032633,
+    "acc_0_1": 0.668
+  },
+  "ood_test": {
+    "rmse": 0.06616761468605495,
+    "r2": -51.65069043899956,
+    "nmse": 48.62616338286284,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:28:36",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "backbone_model": "e2e",
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "beam_size": 10,
+    "beam_type": "sampling",
+    "no_seq_cache": false,
+    "no_prefix_cache": true,
+    "width": 3,
+    "num_beams": 1,
+    "rollout": 3,
+    "horizon": 200,
+    "lam": 0.1,
+    "train_value": false,
+    "reward_sample_limit": 2048,
+    "cpu": true,
+    "cpu_num_threads": 4,
+    "cpu_interop_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed1/tasks/tpsr_s1_g0050/iaaccn24/tpsr/g0050_BPG9/experiments",
+    "exp_name": "g0050_BPG9_tpsr_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

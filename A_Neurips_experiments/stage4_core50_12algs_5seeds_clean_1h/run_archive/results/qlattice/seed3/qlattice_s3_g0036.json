@@ -1,0 +1,112 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0036_CRK10",
+  "task_global_index": 36,
+  "dataset": "CRK10",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK10",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK10"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed3/tasks/qlattice_s3_g0036/iaaccn24/QLattice/g0036_CRK10/experiments/g0036_CRK10_QLattice_seed3_20260502-101017",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 146.055,
+  "equation": "0.2984*tanh((5.693 - 3.252*x1)*tanh(tanh(0.0788*x1 + 0.4424))) - 0.03342",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "0.2984*tanh((5.693 - 3.252*x1)*tanh(tanh(0.0788*x1 + 0.4424))) - 0.03342",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return 0.2984*tanh((5.693 - 3.252*x0)*tanh(tanh(0.0788*x0 + 0.4424))) - 0.03342\n",
+    "return_expression_source": "0.2984*tanh((5.693 - 3.252*x0)*tanh(tanh(0.0788*x0 + 0.4424))) - 0.03342",
+    "normalized_expression": "0.2984*tanh((5.693 - 3.252*x0)*tanh(tanh(0.0788*x0 + 0.4424))) - 0.03342",
+    "instantiated_expression": "0.2984*tanh((5.693 - 3.252*x0)*tanh(tanh(0.0788*x0 + 0.4424))) - 0.03342",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "tanh"
+    ],
+    "ast_node_count": 18,
+    "tree_depth": 9,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.2984*tanh((5.693 - 3.252*x0)*tanh(tanh(0.0788*x0 + 0.4424))) - 0.03342"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.00017241959041321654,
+    "r2": 0.9999783225531179,
+    "nmse": 1.9375082245305608e-05,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.00017044512355772847,
+    "r2": 0.9999795943145083,
+    "nmse": 1.816134300146409e-05,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.00016029417820966893,
+    "r2": 0.9999791260415185,
+    "nmse": 1.9126558995384187e-05,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.00010580985764963157,
+    "r2": 0.051188518419461815,
+    "nmse": 0.21215165072160685,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:12:43",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed3/tasks/qlattice_s3_g0036/iaaccn24/QLattice/g0036_CRK10/experiments",
+    "exp_name": "g0036_CRK10_QLattice_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

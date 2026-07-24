@@ -1,0 +1,156 @@
+{
+  "tool": "drsr",
+  "task_label": "g0048_MatSci21",
+  "task_global_index": 48,
+  "dataset": "MatSci21",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0048/iaaccn24/drsr/g0048_MatSci21/experiments/g0048_MatSci21_drsr_seed0_20260502-074204",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "epsilon",
+    "T"
+  ],
+  "target_name": "sigma",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3901.097,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Stress given Strain and Temperature\n\n    Variables:\n    - Independents:\n  - x0: Strain\n  - x1: Temperature\n- Dependent:\n  - y: Stress\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * np.sin(x0) + params[2] * np.sin(x1) + params[3] * x0**2 + params[4] * x1**2 + params[5] * x0 * x1 + params[6] * x0 * np.sin(x1) + params[7] * x1 * np.sin(x0) + params[8] * np.cos(x0) + params[9] * np.cos(x1)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Stress given Strain and Temperature\n\n    Variables:\n    - Independents:\n  - x0: Strain\n  - x1: Temperature\n- Dependent:\n  - y: Stress\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * np.sin(x0) + params[2] * np.sin(x1) + params[3] * x0**2 + params[4] * x1**2 + params[5] * x0 * x1 + params[6] * x0 * np.sin(x1) + params[7] * x1 * np.sin(x0) + params[8] * np.cos(x0) + params[9] * np.cos(x1)",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Stress given Strain and Temperature\n\n    Variables:\n    - Independents:\n  - x0: Strain\n  - x1: Temperature\n- Dependent:\n  - y: Stress\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * np.sin(x0) + params[2] * np.sin(x1) + params[3] * x0**2 + params[4] * x1**2 + params[5] * x0 * x1 + params[6] * x0 * np.sin(x1) + params[7] * x1 * np.sin(x0) + params[8] * np.cos(x0) + params[9] * np.cos(x1)",
+    "return_expression_source": "params[0] + params[1] * np.sin(x0) + params[2] * np.sin(x1) + params[3] * x0 ** 2 + params[4] * x1 ** 2 + params[5] * x0 * x1 + params[6] * x0 * np.sin(x1) + params[7] * x1 * np.sin(x0) + params[8] * np.cos(x0) + params[9] * np.cos(x1)",
+    "normalized_expression": "c0 + c1*sin(x0) + c2*sin(x1) + c3*x0**2 + c4*x1**2 + c5*x0*x1 + c6*x0*sin(x1) + c7*x1*sin(x0) + c8*cos(x0) + c9*cos(x1)",
+    "instantiated_expression": "33.06905757385361 + 144.33456649470716*sin(x0) + -0.07624228425806479*sin(x1) + 18.710869341795995*x0**2 + -0.0007263399703201048*x1**2 + 17.340961488280602*x0*x1 + 0.24005978322316626*x0*sin(x1) + -17.52984975122458*x1*sin(x0) + 22.53038766373178*cos(x0) + -0.010661659728454391*cos(x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      33.06905757385361,
+      144.33456649470716,
+      -0.07624228425806479,
+      18.710869341795995,
+      -0.0007263399703201048,
+      17.340961488280602,
+      0.24005978322316626,
+      -17.52984975122458,
+      22.53038766373178,
+      -0.010661659728454391
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 42,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*sin(x0) + c2*sin(x1) + c3*x0**2 + c4*x1**2 + c5*x0*x1 + c6*x0*sin(x1) + c7*x1*sin(x0) + c8*cos(x0) + c9*cos(x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.33216905440268546,
+    "r2": 0.9998898220513176,
+    "nmse": 0.00010986746128617995,
+    "acc_0_1": 0.15942857142857142
+  },
+  "valid": {
+    "rmse": 0.3350269783268191,
+    "r2": 0.9998929525122128,
+    "nmse": 0.00010698273023944378,
+    "acc_0_1": 0.146
+  },
+  "id_test": {
+    "rmse": 0.32688837426482326,
+    "r2": 0.9998957451504102,
+    "nmse": 0.00010377771866501126,
+    "acc_0_1": 0.146
+  },
+  "ood_test": {
+    "rmse": 2.69946026175615,
+    "r2": 0.9883213759875623,
+    "nmse": 0.0003130905060491531,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:47:05",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0048/iaaccn24/drsr/g0048_MatSci21/experiments",
+    "exp_name": "g0048_MatSci21_drsr_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "epsilon",
+      "T"
+    ],
+    "target_name": "sigma",
+    "original_feature_names": [
+      "epsilon",
+      "T"
+    ],
+    "original_target_name": "sigma",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate Stress given Strain and Temperature",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21/metadata.yaml",
+    "feature_descriptions": [
+      "Strain",
+      "Temperature"
+    ],
+    "target_description": "Stress"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

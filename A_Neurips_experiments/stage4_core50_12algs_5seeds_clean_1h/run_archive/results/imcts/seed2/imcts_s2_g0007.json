@@ -1,0 +1,138 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0007_Korns-2",
+  "task_global_index": 7,
+  "dataset": "Korns-2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-2",
+  "expected_dataset_rel": "sim-datasets-data/korns/Korns-2",
+  "expected_dataset_dir": "sim-datasets-data/korns/Korns-2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/korns/Korns-2",
+    "expected_dataset_dir": "sim-datasets-data/korns/Korns-2",
+    "expected_normalized": "sim-datasets-data/korns/Korns-2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-2",
+    "actual_normalized": "sim-datasets-data/korns/Korns-2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed2/tasks/imcts_s2_g0007/iaaccn27/iMCTS/g0007_Korns-2/experiments/g0007_Korns-2_iMCTS_seed2_20260502-084032",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 90,
+  "valid_rows": 10,
+  "id_test_rows": 100,
+  "ood_test_rows": 1000,
+  "seconds": 33.207,
+  "equation": "4.7333369636592115*x1/x4 + 4.7333369636592115*x3/x4 + 0.23000755250500577 + 0.00021489316569230153/x4",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "4.7333369636592115*x1/x4 + 4.7333369636592115*x3/x4 + 0.23000755250500577 + 0.00021489316569230153/x4",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x2, x3, params):\n    return 4.7333369636592115*x0/x3 + 4.7333369636592115*x2/x3 + 0.23000755250500577 + 0.00021489316569230153/x3\n",
+    "return_expression_source": "4.7333369636592115*x0/x3 + 4.7333369636592115*x2/x3 + 0.23000755250500577 + 0.00021489316569230153/x3",
+    "normalized_expression": "4.7333369636592115*x0/x3 + 4.7333369636592115*x2/x3 + 0.23000755250500577 + 0.00021489316569230153/x3",
+    "instantiated_expression": "4.7333369636592115*x0/x3 + 4.7333369636592115*x2/x3 + 0.23000755250500577 + 0.00021489316569230153/x3",
+    "variables": [
+      "x0",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 19,
+    "tree_depth": 4,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "4.7333369636592115*x0/x3 + 4.7333369636592115*x2/x3 + 0.23000755250500577 + 0.00021489316569230153/x3"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 3.742032186078455e-05,
+    "r2": 0.9999999999996321,
+    "nmse": 3.626253959434909e-13,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 1.7541942703157453e-05,
+    "r2": 0.9999999999938288,
+    "nmse": 6.147738893322507e-12,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.00014896564364758663,
+    "r2": 0.999999999993352,
+    "nmse": 6.645002218164821e-12,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.000123183571402618,
+    "r2": 0.9999999999981588,
+    "nmse": 1.8409529773700577e-12,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:41:06",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed2/tasks/imcts_s2_g0007/iaaccn27/iMCTS/g0007_Korns-2/experiments",
+    "exp_name": "g0007_Korns-2_iMCTS_seed2",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,180 @@
+{
+  "tool": "pysr",
+  "task_label": "g0020_first_principles_leavitt",
+  "task_global_index": 20,
+  "dataset": "first_principles_leavitt",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+  "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+  "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "expected_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "actual_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pysr/seed1/tasks/pysr_s1_g0020/iaaccn25/pysr/g0020_first_principles_leavitt/experiments/g0020_first_principles_leavitt_pysr_seed1_20260502-080443",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "logP"
+  ],
+  "target_name": "target",
+  "train_rows": 19,
+  "valid_rows": 2,
+  "id_test_rows": 2,
+  "ood_test_rows": 3,
+  "seconds": 3610.897,
+  "equation": "((cos(cos(x0 + 1.870307) * 3.4614785) * square(sin(sin(x0)))) * square(x0 + 0.42219105)) + 14.763262",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pysr",
+    "raw_equation": "((cos(cos(x0 + 1.870307) * 3.4614785) * square(sin(sin(x0)))) * square(x0 + 0.42219105)) + 14.763262",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return (x0 + 0.42219105)**2*sin(sin(x0))**2*cos(3.4614785*cos(x0 + 1.870307)) + 14.763262\n",
+    "return_expression_source": "(x0 + 0.42219105)**2*sin(sin(x0))**2*cos(3.4614785*cos(x0 + 1.870307)) + 14.763262",
+    "normalized_expression": "(x0 + 0.42219105)**2*sin(sin(x0))**2*cos(3.4614785*cos(x0 + 1.870307)) + 14.763262",
+    "instantiated_expression": "(x0 + 0.42219105)**2*sin(sin(x0))**2*cos(3.4614785*cos(x0 + 1.870307)) + 14.763262",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 20,
+    "tree_depth": 7,
+    "normalization_mode": "pysr_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(x0 + 0.42219105)**2*sin(sin(x0))**2*cos(3.4614785*cos(x0 + 1.870307)) + 14.763262"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.11870379829254414,
+    "r2": 0.9821643911629875,
+    "nmse": 7.296616015801839e-05,
+    "acc_0_1": 0.6842105263157895
+  },
+  "valid": {
+    "rmse": 0.2693402519462626,
+    "r2": -6.998730268046044,
+    "nmse": 0.0003752633290169252,
+    "acc_0_1": 0.5
+  },
+  "id_test": {
+    "rmse": 0.253988942848728,
+    "r2": 0.7452441780555403,
+    "nmse": 0.00030212040134566196,
+    "acc_0_1": 0.5
+  },
+  "ood_test": {
+    "rmse": 0.5926006149439333,
+    "r2": 0.8766835058817792,
+    "nmse": 0.0018681367341491072,
+    "acc_0_1": 0.6666666666666666
+  },
+  "finished_at": "2026-05-02 09:04:54",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 10000000,
+    "population_size": 64,
+    "populations": 8,
+    "ncycles_per_iteration": 500,
+    "maxsize": 30,
+    "maxdepth": 10,
+    "parsimony": 0.001,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "square",
+      "cube",
+      "exp",
+      "log",
+      "sin",
+      "cos"
+    ],
+    "constraints": {
+      "/": [
+        -1,
+        9
+      ],
+      "square": 9,
+      "cube": 9,
+      "exp": 7,
+      "log": 7,
+      "sin": 9,
+      "cos": 9
+    },
+    "nested_constraints": {
+      "exp": {
+        "exp": 0,
+        "log": 1
+      },
+      "log": {
+        "exp": 0,
+        "log": 0
+      },
+      "square": {
+        "square": 1,
+        "cube": 1,
+        "exp": 0,
+        "log": 0
+      },
+      "cube": {
+        "square": 1,
+        "cube": 1,
+        "exp": 0,
+        "log": 0
+      }
+    },
+    "complexity_of_operators": {
+      "/": 2,
+      "square": 2,
+      "cube": 3,
+      "sin": 2,
+      "cos": 2,
+      "exp": 3,
+      "log": 3
+    },
+    "complexity_of_constants": 2,
+    "complexity_of_variables": 1,
+    "precision": 32,
+    "deterministic": true,
+    "parallelism": "serial",
+    "model_selection": "best",
+    "progress": true,
+    "verbosity": 1,
+    "procs": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pysr/seed1/tasks/pysr_s1_g0020/iaaccn25/pysr/g0020_first_principles_leavitt/experiments",
+    "exp_name": "g0020_first_principles_leavitt_pysr_seed1",
+    "n_features": 1,
+    "feature_names": [
+      "logP"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'pysr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

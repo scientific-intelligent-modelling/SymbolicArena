@@ -1,0 +1,149 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0022_feynman-i.11.19",
+  "task_global_index": 22,
+  "dataset": "feynman-i.11.19",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.11.19"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0022/iaaccn26/gplearn/g0022_feynman-i.11.19/experiments/g0022_feynman-i.11.19_gplearn_seed2_20260502-085147",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5",
+    "x6",
+    "x7"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3602.22,
+  "equation": "add(add(mul(X0, X1), mul(X5, X6)), mul(X3, X2))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "add(add(mul(X0, X1), mul(X5, X6)), mul(X3, X2))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x3, x5, x6, params):\n    return x0*x1 + x2*x3 + x5*x6\n",
+    "return_expression_source": "x0*x1 + x2*x3 + x5*x6",
+    "normalized_expression": "x0*x1 + x2*x3 + x5*x6",
+    "instantiated_expression": "x0*x1 + x2*x3 + x5*x6",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x5",
+      "x6"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 8,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 10,
+    "tree_depth": 3,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0*x1 + x2*x3 + x5*x6"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 8.434010196390037e-07,
+    "r2": 0.9999999999999979,
+    "nmse": 2.0742760960620274e-15,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 9.03552390754076e-07,
+    "r2": 0.9999999999999976,
+    "nmse": 2.409375165210216e-15,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 8.015435567060076e-07,
+    "r2": 0.9999999999999981,
+    "nmse": 1.9084315998125566e-15,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 3.602949156014736e-14,
+    "r2": 1.0,
+    "nmse": 2.6024104153446755e-32,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 09:51:50",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0022/iaaccn26/gplearn/g0022_feynman-i.11.19/experiments",
+    "exp_name": "g0022_feynman-i.11.19_gplearn_seed2",
+    "n_features": 8,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

@@ -1,0 +1,125 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0007_Korns-2",
+  "task_global_index": 7,
+  "dataset": "Korns-2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-2",
+  "expected_dataset_rel": "sim-datasets-data/korns/Korns-2",
+  "expected_dataset_dir": "sim-datasets-data/korns/Korns-2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/korns/Korns-2",
+    "expected_dataset_dir": "sim-datasets-data/korns/Korns-2",
+    "expected_normalized": "sim-datasets-data/korns/Korns-2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/korns/Korns-2",
+    "actual_normalized": "sim-datasets-data/korns/Korns-2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0007/iaaccn27/pyoperon/g0007_Korns-2/experiments/g0007_Korns-2_pyoperon_seed0_20260502-070217",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 90,
+  "valid_rows": 10,
+  "id_test_rows": 100,
+  "ood_test_rows": 1000,
+  "seconds": 6.147,
+  "equation": "(1.361 + ((-21.469) * (sqrt(((sqrt(0.417) / ((-0.206) * X5)) ^ 2)) ^ 2)))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(1.361 + ((-21.469) * (sqrt(((sqrt(0.417) / ((-0.206) * X5)) ^ 2)) ^ 2)))",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x3, params):\n    return 1.361 - 210.966467150533/x3**2\n",
+    "return_expression_source": "1.361 - 210.966467150533/x3**2",
+    "normalized_expression": "1.361 - 210.966467150533/x3**2",
+    "instantiated_expression": "1.361 - 210.966467150533/x3**2",
+    "variables": [
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 7,
+    "tree_depth": 4,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.361 - 210.966467150533/x3**2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 19.1871246093116,
+    "r2": 0.9032800999324382,
+    "nmse": 0.09533732689086842,
+    "acc_0_1": 0.022222222222222223
+  },
+  "valid": {
+    "rmse": 7.299662636671667,
+    "r2": -0.06859889548236553,
+    "nmse": 1.0645489006230358,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 392.5491770339546,
+    "r2": -45.164838289160194,
+    "nmse": 46.14355365355218,
+    "acc_0_1": 0.01
+  },
+  "ood_test": {
+    "rmse": 811.2922919392089,
+    "r2": -78.86188340039241,
+    "nmse": 79.85310589975342,
+    "acc_0_1": 0.009
+  },
+  "finished_at": "2026-05-02 07:02:23",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed0/tasks/pyoperon_s0_g0007/iaaccn27/pyoperon/g0007_Korns-2/experiments",
+    "exp_name": "g0007_Korns-2_pyoperon_seed0",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,128 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0011_Vladislavleva-4",
+  "task_global_index": 11,
+  "dataset": "Vladislavleva-4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-4",
+  "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+  "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "expected_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "actual_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed3/tasks/pyoperon_s3_g0011/iaaccn29/pyoperon/g0011_Vladislavleva-4/experiments/g0011_Vladislavleva-4_pyoperon_seed3_20260502-094504",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 820,
+  "valid_rows": 102,
+  "id_test_rows": 102,
+  "ood_test_rows": 5000,
+  "seconds": 8.359,
+  "equation": "(2.940 + ((-2.538) * cos((sqrt(sin((0.469 * X5))) * (sin(((-0.470) * X4)) / (sqrt(1 + 1.542 ^ 2)))))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(2.940 + ((-2.538) * cos((sqrt(sin((0.469 * X5))) * (sin(((-0.470) * X4)) / (sqrt(1 + 1.542 ^ 2)))))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x2, x3, params):\n    return 2.94 - 2.538*cos(0.544108297278194*sin(0.47*x2)*sqrt(sin(0.469*x3)))\n",
+    "return_expression_source": "2.94 - 2.538*cos(0.544108297278194*sin(0.47*x2)*sqrt(sin(0.469*x3)))",
+    "normalized_expression": "2.94 - 2.538*cos(0.544108297278194*sin(0.47*x2)*sqrt(sin(0.469*x3)))",
+    "instantiated_expression": "2.94 - 2.538*cos(0.544108297278194*sin(0.47*x2)*sqrt(sin(0.469*x3)))",
+    "variables": [
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 17,
+    "tree_depth": 8,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "2.94 - 2.538*cos(0.544108297278194*sin(0.47*x2)*sqrt(sin(0.469*x3)))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.1600884982476535,
+    "r2": 0.30677883154046803,
+    "nmse": 0.0769731941675562,
+    "acc_0_1": 0.5304878048780488
+  },
+  "valid": {
+    "rmse": 0.15474508686876334,
+    "r2": 0.294087633109577,
+    "nmse": 0.07174369363901408,
+    "acc_0_1": 0.5490196078431373
+  },
+  "id_test": {
+    "rmse": 0.1718210272671662,
+    "r2": 0.3421306733455626,
+    "nmse": 0.09005672240011048,
+    "acc_0_1": 0.5098039215686274
+  },
+  "ood_test": {
+    "rmse": null,
+    "r2": null,
+    "nmse": null,
+    "acc_0_1": 0.4566
+  },
+  "finished_at": "2026-05-02 09:45:12",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed3/tasks/pyoperon_s3_g0011/iaaccn29/pyoperon/g0011_Vladislavleva-4/experiments",
+    "exp_name": "g0011_Vladislavleva-4_pyoperon_seed3",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

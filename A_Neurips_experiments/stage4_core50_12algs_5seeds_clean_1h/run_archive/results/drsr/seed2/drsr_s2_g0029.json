@@ -1,0 +1,155 @@
+{
+  "tool": "drsr",
+  "task_label": "g0029_strogatz_vdp1",
+  "task_global_index": 29,
+  "dataset": "strogatz_vdp1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed2/tasks/drsr_s2_g0029/iaaccn26/drsr/g0029_strogatz_vdp1/experiments/g0029_strogatz_vdp1_drsr_seed2_20260502-091703",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3900.834,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n  - x0: Voltage\n  - x1: Current\n- Dependent:\n  - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n      - x0: Voltage\n      - x1: Current\n    - Dependent:\n      - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x0 * x1 + params[4] * x0**2 + params[5] * x1**2 + params[6] * x0 * x1**2 + params[7] * x0**2 * x1 + params[8] * np.sin(x0) + params[9] * np.sin(x1)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n  - x0: Voltage\n  - x1: Current\n- Dependent:\n  - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n      - x0: Voltage\n      - x1: Current\n    - Dependent:\n      - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x0 * x1 + params[4] * x0**2 + params[5] * x1**2 + params[6] * x0 * x1**2 + params[7] * x0**2 * x1 + params[8] * np.sin(x0) + params[9] * np.sin(x1)",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n  - x0: Voltage\n  - x1: Current\n- Dependent:\n  - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n      - x0: Voltage\n      - x1: Current\n    - Dependent:\n      - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n\n    \"\"\"\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x0 * x1 + params[4] * x0**2 + params[5] * x1**2 + params[6] * x0 * x1**2 + params[7] * x0**2 * x1 + params[8] * np.sin(x0) + params[9] * np.sin(x1)",
+    "return_expression_source": "params[0] + params[1] * x0 + params[2] * x1 + params[3] * x0 * x1 + params[4] * x0 ** 2 + params[5] * x1 ** 2 + params[6] * x0 * x1 ** 2 + params[7] * x0 ** 2 * x1 + params[8] * np.sin(x0) + params[9] * np.sin(x1)",
+    "normalized_expression": "c0 + c1*x0 + c2*x1 + c3*x0*x1 + c4*x0**2 + c5*x1**2 + c6*x0*x1**2 + c7*x0**2*x1 + c8*sin(x0) + c9*sin(x1)",
+    "instantiated_expression": "-0.006131653313642561 + -19.249771160506203*x0 + 1.9296087872900962*x1 + 0.22256685654008354*x0*x1 + -0.009045004177148085*x0**2 + 0.8740819991698336*x1**2 + -0.2819918744250693*x0*x1**2 + -0.4754566317285364*x0**2*x1 + 22.882803392216495*sin(x0) + 8.624153656988273*sin(x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -0.006131653313642561,
+      -19.249771160506203,
+      1.9296087872900962,
+      0.22256685654008354,
+      -0.009045004177148085,
+      0.8740819991698336,
+      -0.2819918744250693,
+      -0.4754566317285364,
+      22.882803392216495,
+      8.624153656988273
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 42,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0 + c2*x1 + c3*x0*x1 + c4*x0**2 + c5*x1**2 + c6*x0*x1**2 + c7*x0**2*x1 + c8*sin(x0) + c9*sin(x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.06481402056135806,
+    "r2": 0.9982714731050353,
+    "nmse": 0.0017271141717192134,
+    "acc_0_1": 0.90625
+  },
+  "valid": {
+    "rmse": 0.06093973233999261,
+    "r2": 0.9984199676172948,
+    "nmse": 0.0014875888366128616,
+    "acc_0_1": 0.90625
+  },
+  "id_test": {
+    "rmse": 0.12358889137927515,
+    "r2": 0.9969303127310359,
+    "nmse": 0.0030672893581654695,
+    "acc_0_1": 0.875
+  },
+  "ood_test": {
+    "rmse": 1.4443421030589736,
+    "r2": 0.9882010889087597,
+    "nmse": 0.010100253723008943,
+    "acc_0_1": 0.002
+  },
+  "finished_at": "2026-05-02 10:22:03",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed2/tasks/drsr_s2_g0029/iaaccn26/drsr/g0029_strogatz_vdp1/experiments",
+    "exp_name": "g0029_strogatz_vdp1_drsr_seed2",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "x",
+      "y"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1/metadata.yaml",
+    "feature_descriptions": [
+      "Voltage",
+      "Current"
+    ],
+    "target_description": "Rate of change of voltage (dx/dt)"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

@@ -1,0 +1,125 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0040_feynman-i.29.16",
+  "task_global_index": 40,
+  "dataset": "feynman-i.29.16",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-i.29.16"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed3/tasks/pyoperon_s3_g0040/iaaccn25/pyoperon/g0040_feynman-i.29.16/experiments/g0040_feynman-i.29.16_pyoperon_seed3_20260502-101640",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 133.571,
+  "equation": "(0.279 + ((-0.459) * ((tanh(((-0.990) * X4)) - (1.910 * X1)) + ((0.298 * X4) - (1.393 * X2)))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "(0.279 + ((-0.459) * ((tanh(((-0.990) * X4)) - (1.910 * X1)) + ((0.298 * X4) - (1.393 * X2)))))",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, x3, params):\n    return 0.87669*x0 + 0.639387*x1 - 0.136782*x3 + 0.459*tanh(0.99*x3) + 0.279\n",
+    "return_expression_source": "0.87669*x0 + 0.639387*x1 - 0.136782*x3 + 0.459*tanh(0.99*x3) + 0.279",
+    "normalized_expression": "0.87669*x0 + 0.639387*x1 - 0.136782*x3 + 0.459*tanh(0.99*x3) + 0.279",
+    "instantiated_expression": "0.87669*x0 + 0.639387*x1 - 0.136782*x3 + 0.459*tanh(0.99*x3) + 0.279",
+    "variables": [
+      "x0",
+      "x1",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "mul",
+      "tanh"
+    ],
+    "ast_node_count": 17,
+    "tree_depth": 5,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.87669*x0 + 0.639387*x1 - 0.136782*x3 + 0.459*tanh(0.99*x3) + 0.279"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.2968135386507496,
+    "r2": 0.8170028774948118,
+    "nmse": 0.07805697172245969,
+    "acc_0_1": 0.12575
+  },
+  "valid": {
+    "rmse": 1.4399852396091486,
+    "r2": 0.7510062027798375,
+    "nmse": 0.10323887864910186,
+    "acc_0_1": 0.13
+  },
+  "id_test": {
+    "rmse": 1.4161119538140723,
+    "r2": 0.7647535120642204,
+    "nmse": 0.10337129175589535,
+    "acc_0_1": 0.109
+  },
+  "ood_test": {
+    "rmse": 5.2286115290230555,
+    "r2": -8.147305728367908,
+    "nmse": 0.05496417560181186,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 10:18:54",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed3/tasks/pyoperon_s3_g0040/iaaccn25/pyoperon/g0040_feynman-i.29.16/experiments",
+    "exp_name": "g0040_feynman-i.29.16_pyoperon_seed3",
+    "n_features": 4,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

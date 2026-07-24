@@ -1,0 +1,130 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0049_BPG3",
+  "task_global_index": 49,
+  "dataset": "BPG3",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed0/tasks/imcts_s0_g0049/iaaccn29/iMCTS/g0049_BPG3/experiments/g0049_BPG3_iMCTS_seed0_20260502-074415",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3601.724,
+  "equation": "x1 + x1/(0.15832194264067653 + 4.75477772407428/x1) - 8.773049558476707/(0.15832194264067653 + 4.75477772407428/x1)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "x1 + x1/(0.15832194264067653 + 4.75477772407428/x1) - 8.773049558476707/(0.15832194264067653 + 4.75477772407428/x1)",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return x0 + x0/(0.15832194264067653 + 4.75477772407428/x0) - 8.773049558476707/(0.15832194264067653 + 4.75477772407428/x0)\n",
+    "return_expression_source": "x0 + x0/(0.15832194264067653 + 4.75477772407428/x0) - 8.773049558476707/(0.15832194264067653 + 4.75477772407428/x0)",
+    "normalized_expression": "x0 + x0/(0.15832194264067653 + 4.75477772407428/x0) - 8.773049558476707/(0.15832194264067653 + 4.75477772407428/x0)",
+    "instantiated_expression": "x0 + x0/(0.15832194264067653 + 4.75477772407428/x0) - 8.773049558476707/(0.15832194264067653 + 4.75477772407428/x0)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 24,
+    "tree_depth": 7,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0 + x0/(0.15832194264067653 + 4.75477772407428/x0) - 8.773049558476707/(0.15832194264067653 + 4.75477772407428/x0)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 120.29010868080583,
+    "r2": -2446856.141377211,
+    "nmse": 2311141.748986856,
+    "acc_0_1": 0.011142857142857144
+  },
+  "valid": {
+    "rmse": 117.38788803943808,
+    "r2": -1952515.3834341632,
+    "nmse": 1830311.513305116,
+    "acc_0_1": 0.01
+  },
+  "id_test": {
+    "rmse": 120.74004187336638,
+    "r2": -2757500.886609365,
+    "nmse": 2600440.282750154,
+    "acc_0_1": 0.01
+  },
+  "ood_test": {
+    "rmse": 257.1106219381282,
+    "r2": -3.824582833658163e+17,
+    "nmse": 3.332162728813321e+17,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:44:16",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed0/tasks/imcts_s0_g0049/iaaccn29/iMCTS/g0049_BPG3/experiments",
+    "exp_name": "g0049_BPG3_iMCTS_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'iMCTS' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

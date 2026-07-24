@@ -1,0 +1,176 @@
+{
+  "tool": "dso",
+  "task_label": "g0025_strogatz_barmag2",
+  "task_global_index": 25,
+  "dataset": "strogatz_barmag2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed3/tasks/dso_s3_g0025/iaaccn27/dso/g0025_strogatz_barmag2/experiments/g0025_strogatz_barmag2_dso_seed3_20260502-100433",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 2979.609,
+  "equation": "             ⎛        ⎛    2⎞⎞\n             ⎜     log⎝2⋅x₁ ⎠⎟\ncos(x₂) - cos⎜x₂ - ──────────⎟\n             ⎝         x₁    ⎠",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "cos(x2) - cos(x2 - log(2*x1**2)/x1)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return cos(x1) - cos(x1 - log(2*x0**2)/x0)\n",
+    "return_expression_source": "cos(x1) - cos(x1 - log(2*x0**2)/x0)",
+    "normalized_expression": "cos(x1) - cos(x1 - log(2*x0**2)/x0)",
+    "instantiated_expression": "cos(x1) - cos(x1 - log(2*x0**2)/x0)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 19,
+    "tree_depth": 9,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "cos(x1) - cos(x1 - log(2*x0**2)/x0)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.09460846503613768,
+    "r2": 0.882266518447984,
+    "nmse": 0.11596969665654899,
+    "acc_0_1": 0.88671875
+  },
+  "valid": {
+    "rmse": 0.13320013405633305,
+    "r2": 0.8937800560266738,
+    "nmse": 0.10508770246395248,
+    "acc_0_1": 0.84375
+  },
+  "id_test": {
+    "rmse": 0.07650993070194151,
+    "r2": 0.8597215410905099,
+    "nmse": 0.1390599720483667,
+    "acc_0_1": 0.71875
+  },
+  "ood_test": {
+    "rmse": 0.13766686969453118,
+    "r2": 0.7378472608378038,
+    "nmse": 0.26213292775914243,
+    "acc_0_1": 0.499
+  },
+  "finished_at": "2026-05-02 10:54:13",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed3/tasks/dso_s3_g0025/iaaccn27/dso/g0025_strogatz_barmag2/experiments",
+    "exp_name": "g0025_strogatz_barmag2_dso_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

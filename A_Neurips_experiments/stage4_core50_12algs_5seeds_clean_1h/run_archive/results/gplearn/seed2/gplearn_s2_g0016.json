@@ -1,0 +1,140 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0016_feynman_II_15_4",
+  "task_global_index": 16,
+  "dataset": "feynman_II_15_4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0016/iaaccn26/gplearn/g0016_feynman_II_15_4/experiments/g0016_feynman_II_15_4_gplearn_seed2_20260502-084525",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "mom",
+    "B",
+    "theta"
+  ],
+  "target_name": "target",
+  "train_rows": 64000,
+  "valid_rows": 8000,
+  "id_test_rows": 8000,
+  "ood_test_rows": 10000,
+  "seconds": 3603.217,
+  "equation": "div(add(sin(add(add(log(X0), X1), sqrt(sub(sqrt(sub(X0, add(0.491, X1))), X0)))), add(add(X1, X0), log(add(log(sin(sin(sqrt(sub(log(add(sin(add(add(log(X0), X1), cos(-0.582))), add(add(X1, X0), log(add(log(sin(sin(sqrt(sub(log(X0), X1))))), log(X0)))))), X1))))), log(X0))))), div(-0.582, cos(X2)))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "div(add(sin(add(add(log(X0), X1), sqrt(sub(sqrt(sub(X0, add(0.491, X1))), X0)))), add(add(X1, X0), log(add(log(sin(sin(sqrt(sub(log(add(sin(add(add(log(X0), X1), cos(-0.582))), add(add(X1, X0), log(add(log(sin(sin(sqrt(sub(log(X0), X1))))), log(X0)))))), X1))))), log(X0))))), div(-0.582, cos(X2)))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, params):\n    return -1.71821305841924*(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0)))))) + sin(x1 + log(x0) + 0.83536492984756))))))) + sin(x1 + sqrt(-x0 + sqrt(x0 - x1 - 0.491)) + log(x0)))*cos(x2)\n",
+    "return_expression_source": "-1.71821305841924*(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0)))))) + sin(x1 + log(x0) + 0.83536492984756))))))) + sin(x1 + sqrt(-x0 + sqrt(x0 - x1 - 0.491)) + log(x0)))*cos(x2)",
+    "normalized_expression": "-1.71821305841924*(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0)))))) + sin(x1 + log(x0) + 0.83536492984756))))))) + sin(x1 + sqrt(-x0 + sqrt(x0 - x1 - 0.491)) + log(x0)))*cos(x2)",
+    "instantiated_expression": "-1.71821305841924*(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0)))))) + sin(x1 + log(x0) + 0.83536492984756))))))) + sin(x1 + sqrt(-x0 + sqrt(x0 - x1 - 0.491)) + log(x0)))*cos(x2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "cos",
+      "log",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 64,
+    "tree_depth": 20,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-1.71821305841924*(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0 + x1 + log(log(x0) + log(sin(sin(sqrt(-x1 + log(x0)))))) + sin(x1 + log(x0) + 0.83536492984756))))))) + sin(x1 + sqrt(-x0 + sqrt(x0 - x1 - 0.491)) + log(x0)))*cos(x2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.7981779367467251,
+    "r2": 0.9765926766619177,
+    "nmse": 0.014664845714220645,
+    "acc_0_1": 0.461484375
+  },
+  "valid": {
+    "rmse": 0.7748780799760869,
+    "r2": 0.9781956076661791,
+    "nmse": 0.013686127279627395,
+    "acc_0_1": 0.4595
+  },
+  "id_test": {
+    "rmse": 0.8092859150499895,
+    "r2": 0.9756774212129936,
+    "nmse": 0.01542529404447472,
+    "acc_0_1": 0.468
+  },
+  "ood_test": {
+    "rmse": 2.4842084058016787,
+    "r2": 0.7754467894840447,
+    "nmse": 0.12973500117165435,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 09:45:28",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed2/tasks/gplearn_s2_g0016/iaaccn26/gplearn/g0016_feynman_II_15_4/experiments",
+    "exp_name": "g0016_feynman_II_15_4_gplearn_seed2",
+    "n_features": 3,
+    "feature_names": [
+      "mom",
+      "B",
+      "theta"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

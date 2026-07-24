@@ -1,0 +1,121 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0047_BPG5",
+  "task_global_index": 47,
+  "dataset": "BPG5",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "expected_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed1/tasks/pyoperon_s1_g0047/iaaccn24/pyoperon/g0047_BPG5/experiments/g0047_BPG5_pyoperon_seed1_20260502-082821",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 9.255,
+  "equation": "((-2.254) + (3.882 * exp((sin((-1.790)) + ((((0.971 * X1) + (0.537 * X2)) / (sqrt(1 + ((0.623 * X1) ^ 2) ^ 2))) * 0.973)))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "((-2.254) + (3.882 * exp((sin((-1.790)) + ((((0.971 * X1) + (0.537 * X2)) / (sqrt(1 + ((0.623 * X1) ^ 2) ^ 2))) * 0.973)))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 1.46269344690423*exp(0.973*(0.971*x0 + 0.537*x1)/sqrt(0.150644120641*x0**4 + 1)) - 2.254\n",
+    "return_expression_source": "1.46269344690423*exp(0.973*(0.971*x0 + 0.537*x1)/sqrt(0.150644120641*x0**4 + 1)) - 2.254",
+    "normalized_expression": "1.46269344690423*exp(0.973*(0.971*x0 + 0.537*x1)/sqrt(0.150644120641*x0**4 + 1)) - 2.254",
+    "instantiated_expression": "1.46269344690423*exp(0.973*(0.971*x0 + 0.537*x1)/sqrt(0.150644120641*x0**4 + 1)) - 2.254",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 23,
+    "tree_depth": 9,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.46269344690423*exp(0.973*(0.971*x0 + 0.537*x1)/sqrt(0.150644120641*x0**4 + 1)) - 2.254"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.959365531418472,
+    "r2": 0.8521136354024951,
+    "nmse": 0.1325656325957487,
+    "acc_0_1": 0.026285714285714287
+  },
+  "valid": {
+    "rmse": 1.9901381483272667,
+    "r2": 0.8534358063086963,
+    "nmse": 0.12837023208113685,
+    "acc_0_1": 0.02
+  },
+  "id_test": {
+    "rmse": 2.0963013590687805,
+    "r2": 0.8481571979017082,
+    "nmse": 0.1349098825832765,
+    "acc_0_1": 0.02
+  },
+  "ood_test": {
+    "rmse": 0.6841738724569691,
+    "r2": -255.62122740845996,
+    "nmse": 222.77104357996845,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:28:30",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed1/tasks/pyoperon_s1_g0047/iaaccn24/pyoperon/g0047_BPG5/experiments",
+    "exp_name": "g0047_BPG5_pyoperon_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,131 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0026_strogatz_barmag1",
+  "task_global_index": 26,
+  "dataset": "strogatz_barmag1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed1/tasks/imcts_s1_g0026/iaaccn25/iMCTS/g0026_strogatz_barmag1/experiments/g0026_strogatz_barmag1_iMCTS_seed1_20260502-080920",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 799.445,
+  "equation": "-1.0000003960581659*sin(x0) + 0.5000003906942825*sin(x0 - x1 + 6.283186053425624)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "-1.0000003960581659*sin(x0) + 0.5000003906942825*sin(x0 - x1 + 6.283186053425624)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return -1.0000003960581659*sin(x0) + 0.5000003906942825*sin(x0 - x1 + 6.283186053425624)\n",
+    "return_expression_source": "-1.0000003960581659*sin(x0) + 0.5000003906942825*sin(x0 - x1 + 6.283186053425624)",
+    "normalized_expression": "-1.0000003960581659*sin(x0) + 0.5000003906942825*sin(x0 - x1 + 6.283186053425624)",
+    "instantiated_expression": "-1.0000003960581659*sin(x0) + 0.5000003906942825*sin(x0 - x1 + 6.283186053425624)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 14,
+    "tree_depth": 6,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-1.0000003960581659*sin(x0) + 0.5000003906942825*sin(x0 - x1 + 6.283186053425624)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.581352994555978e-07,
+    "r2": 0.9999999999994829,
+    "nmse": 3.6170236332504664e-13,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 1.7515688420786343e-07,
+    "r2": 0.9999999999994512,
+    "nmse": 2.9836312630380405e-13,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 1.3912276162505952e-07,
+    "r2": 0.9999999999994706,
+    "nmse": 2.5791000290350387e-13,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 2.316530680423661e-07,
+    "r2": 0.999999999999293,
+    "nmse": 4.1439165269210763e-13,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:22:39",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed1/tasks/imcts_s1_g0026/iaaccn25/iMCTS/g0026_strogatz_barmag1/experiments",
+    "exp_name": "g0026_strogatz_barmag1_iMCTS_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

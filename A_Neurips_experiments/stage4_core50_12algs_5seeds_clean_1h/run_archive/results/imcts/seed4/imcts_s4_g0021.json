@@ -1,0 +1,137 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0021_feynman-i.39.22",
+  "task_global_index": 21,
+  "dataset": "feynman-i.39.22",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.39.22"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed4/tasks/imcts_s4_g0021/iaaccn29/iMCTS/g0021_feynman-i.39.22/experiments/g0021_feynman-i.39.22_iMCTS_seed4_20260502-104535",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3",
+    "x4"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 404.248,
+  "equation": "1.3806487368718915e-23*x1*x3/x4",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "1.3806487368718915e-23*x1*x3/x4",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x2, x3, params):\n    return 1.3806487368718915e-23*x0*x2/x3\n",
+    "return_expression_source": "1.3806487368718915e-23*x0*x2/x3",
+    "normalized_expression": "1.3806487368718915e-23*x0*x2/x3",
+    "instantiated_expression": "1.3806487368718915e-23*x0*x2/x3",
+    "variables": [
+      "x0",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 7,
+    "tree_depth": 3,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.3806487368718915e-23*x0*x2/x3"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 106.2846979593425,
+    "r2": 0.9999999999999585,
+    "nmse": 3.862830626293284e-14,
+    "acc_0_1": 0.084375
+  },
+  "valid": {
+    "rmse": 68.67557271317862,
+    "r2": 0.9999999999999568,
+    "nmse": 3.895523045681834e-14,
+    "acc_0_1": 0.104
+  },
+  "id_test": {
+    "rmse": 103.72570057422323,
+    "r2": 0.9999999999999563,
+    "nmse": 4.068977324145052e-14,
+    "acc_0_1": 0.1
+  },
+  "ood_test": {
+    "rmse": 261.83518130241487,
+    "r2": 0.9999999999999625,
+    "nmse": 3.632184656894472e-14,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 10:52:19",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed4/tasks/imcts_s4_g0021/iaaccn29/iMCTS/g0021_feynman-i.39.22/experiments",
+    "exp_name": "g0021_feynman-i.39.22_iMCTS_seed4",
+    "n_features": 5,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

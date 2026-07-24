@@ -1,0 +1,114 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0017_strogatz_shearflow1",
+  "task_global_index": 17,
+  "dataset": "strogatz_shearflow1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0017/iaaccn23/QLattice/g0017_strogatz_shearflow1/experiments/g0017_strogatz_shearflow1_QLattice_seed0_20260502-070702",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 121.232,
+  "equation": "-3.713*(0.812*x1 + 1.548)*(exp(-2.0*(-0.7719*x0 - 0.006125)**2 - 2.0*(-0.001779*x0 - 0.09449)**2) + exp(-2.0*(-0.006078*x0 - 0.8883)**2 - 2.0*(1.167*x1 - 0.4345)**2)) + 0.09978",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "-3.713*(0.812*x1 + 1.548)*(exp(-2.0*(-0.7719*x0 - 0.006125)**2 - 2.0*(-0.001779*x0 - 0.09449)**2) + exp(-2.0*(-0.006078*x0 - 0.8883)**2 - 2.0*(1.167*x1 - 0.4345)**2)) + 0.09978",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (-3.014956*x1 - 5.747724)*(exp(-2.0*(-0.7719*x0 - 0.006125)**2 - 2.0*(-0.001779*x0 - 0.09449)**2) + exp(-2.0*(-0.006078*x0 - 0.8883)**2 - 2.0*(1.167*x1 - 0.4345)**2)) + 0.09978\n",
+    "return_expression_source": "(-3.014956*x1 - 5.747724)*(exp(-2.0*(-0.7719*x0 - 0.006125)**2 - 2.0*(-0.001779*x0 - 0.09449)**2) + exp(-2.0*(-0.006078*x0 - 0.8883)**2 - 2.0*(1.167*x1 - 0.4345)**2)) + 0.09978",
+    "normalized_expression": "(-3.014956*x1 - 5.747724)*(exp(-2.0*(-0.7719*x0 - 0.006125)**2 - 2.0*(-0.001779*x0 - 0.09449)**2) + exp(-2.0*(-0.006078*x0 - 0.8883)**2 - 2.0*(1.167*x1 - 0.4345)**2)) + 0.09978",
+    "instantiated_expression": "(-3.014956*x1 - 5.747724)*(exp(-2.0*(-0.7719*x0 - 0.006125)**2 - 2.0*(-0.001779*x0 - 0.09449)**2) + exp(-2.0*(-0.006078*x0 - 0.8883)**2 - 2.0*(1.167*x1 - 0.4345)**2)) + 0.09978",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 49,
+    "tree_depth": 10,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(-3.014956*x1 - 5.747724)*(exp(-2.0*(-0.7719*x0 - 0.006125)**2 - 2.0*(-0.001779*x0 - 0.09449)**2) + exp(-2.0*(-0.006078*x0 - 0.8883)**2 - 2.0*(1.167*x1 - 0.4345)**2)) + 0.09978"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.08430352302086999,
+    "r2": 0.9779521372823377,
+    "nmse": 0.022013211937151368,
+    "acc_0_1": 0.83984375
+  },
+  "valid": {
+    "rmse": 0.08140657711271437,
+    "r2": 0.9825574726836572,
+    "nmse": 0.016630961616499577,
+    "acc_0_1": 0.90625
+  },
+  "id_test": {
+    "rmse": 0.08388789916360544,
+    "r2": 0.9924063581439878,
+    "nmse": 0.007473455409558582,
+    "acc_0_1": 0.875
+  },
+  "ood_test": {
+    "rmse": 1.7430485660812927,
+    "r2": -0.29997447354098905,
+    "nmse": 1.0545543150277112,
+    "acc_0_1": 0.188
+  },
+  "finished_at": "2026-05-02 07:09:04",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0017/iaaccn23/QLattice/g0017_strogatz_shearflow1/experiments",
+    "exp_name": "g0017_strogatz_shearflow1_QLattice_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

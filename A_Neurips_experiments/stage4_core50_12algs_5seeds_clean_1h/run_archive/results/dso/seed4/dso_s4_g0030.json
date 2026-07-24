@@ -1,0 +1,177 @@
+{
+  "tool": "dso",
+  "task_label": "g0030_feynman-iii.7.38",
+  "task_global_index": 30,
+  "dataset": "feynman-iii.7.38",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-iii.7.38"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed4/tasks/dso_s4_g0030/iaaccn23/dso/g0030_feynman-iii.7.38/experiments/g0030_feynman-iii.7.38_dso_seed4_20260502-105634",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x0",
+    "x1"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3531.548,
+  "equation": "                    log(cos(x₂))        \n      x₂ - ─────────────────────────────\n                   ⎛        ⎛       x₂⎞⎞\n                   ⎜        ⎜-x₂ + ℯ  ⎟⎟\n           x₂ + cos⎜x₂ + log⎜─────────⎟⎟\n                   ⎜        ⎜     2   ⎟⎟\n                   ⎝        ⎝   x₂    ⎠⎠\n     ℯ                                  \nx₂ + ───────────────────────────────────\n                    x₁⋅x₂               ",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "x2 + exp(x2 - log(cos(x2))/(x2 + cos(x2 + log((-x2 + exp(x2))/x2**2))))/(x1*x2)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return x1 + exp(x1 - log(cos(x1))/(x1 + cos(x1 + log((-x1 + exp(x1))/x1**2))))/(x0*x1)\n",
+    "return_expression_source": "x1 + exp(x1 - log(cos(x1))/(x1 + cos(x1 + log((-x1 + exp(x1))/x1**2))))/(x0*x1)",
+    "normalized_expression": "x1 + exp(x1 - log(cos(x1))/(x1 + cos(x1 + log((-x1 + exp(x1))/x1**2))))/(x0*x1)",
+    "instantiated_expression": "x1 + exp(x1 - log(cos(x1))/(x1 + cos(x1 + log((-x1 + exp(x1))/x1**2))))/(x0*x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "exp",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 35,
+    "tree_depth": 14,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x1 + exp(x1 - log(cos(x1))/(x1 + cos(x1 + log((-x1 + exp(x1))/x1**2))))/(x0*x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.0964969604148353e+23,
+    "r2": 0.0056396390995827606,
+    "nmse": 0.994356705965349,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 2.0314608980342727e+23,
+    "r2": -0.0011027641832817014,
+    "nmse": 0.9999999999990773,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 1.9245569681305096e+23,
+    "r2": -2.375213807415122e-06,
+    "nmse": 0.9999999999989745,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 1.0464185389414653e+25,
+    "r2": -0.00016312230129589267,
+    "nmse": 0.9999999999999997,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 11:55:25",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed4/tasks/dso_s4_g0030/iaaccn23/dso/g0030_feynman-iii.7.38/experiments",
+    "exp_name": "g0030_feynman-iii.7.38_dso_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x0",
+      "x1"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

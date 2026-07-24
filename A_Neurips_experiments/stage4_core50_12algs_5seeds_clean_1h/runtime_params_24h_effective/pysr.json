@@ -1,0 +1,77 @@
+{
+  "binary_operators": [
+    "+",
+    "-",
+    "*",
+    "/"
+  ],
+  "complexity_of_constants": 2,
+  "complexity_of_operators": {
+    "/": 2,
+    "cos": 2,
+    "cube": 3,
+    "exp": 3,
+    "log": 3,
+    "sin": 2,
+    "square": 2
+  },
+  "complexity_of_variables": 1,
+  "constraints": {
+    "/": [
+      -1,
+      9
+    ],
+    "cos": 9,
+    "cube": 9,
+    "exp": 7,
+    "log": 7,
+    "sin": 9,
+    "square": 9
+  },
+  "deterministic": true,
+  "maxdepth": 10,
+  "maxsize": 30,
+  "model_selection": "best",
+  "ncycles_per_iteration": 500,
+  "nested_constraints": {
+    "cube": {
+      "cube": 1,
+      "exp": 0,
+      "log": 0,
+      "square": 1
+    },
+    "exp": {
+      "exp": 0,
+      "log": 1
+    },
+    "log": {
+      "exp": 0,
+      "log": 0
+    },
+    "square": {
+      "cube": 1,
+      "exp": 0,
+      "log": 0,
+      "square": 1
+    }
+  },
+  "niterations": 100000000,
+  "parallelism": "serial",
+  "parsimony": 0.001,
+  "population_size": 64,
+  "populations": 8,
+  "precision": 32,
+  "procs": 1,
+  "progress": true,
+  "progress_snapshot_interval_seconds": 60,
+  "timeout_in_seconds": 86400,
+  "unary_operators": [
+    "square",
+    "cube",
+    "exp",
+    "log",
+    "sin",
+    "cos"
+  ],
+  "verbosity": 1
+}

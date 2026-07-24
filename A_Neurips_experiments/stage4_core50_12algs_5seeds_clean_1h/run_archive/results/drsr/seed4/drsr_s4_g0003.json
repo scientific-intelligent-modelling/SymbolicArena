@@ -1,0 +1,159 @@
+{
+  "tool": "drsr",
+  "task_label": "g0003_feynman-ii.27.18",
+  "task_global_index": 3,
+  "dataset": "feynman-ii.27.18",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed4/tasks/drsr_s4_g0003/iaaccn26/drsr/g0003_feynman-ii.27.18/experiments/g0003_feynman-ii.27.18_drsr_seed4_20260502-102802",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3901.206,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Energy density given Vacuum permittivity There are 3 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"epsilon, Vacuum permittivity\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n- Dependent:\n  - y: u, Energy density\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    return params[0] * x0**2 + params[1] * x1",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Energy density given Vacuum permittivity There are 3 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"epsilon, Vacuum permittivity\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n- Dependent:\n  - y: u, Energy density\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    return params[0] * x0**2 + params[1] * x1",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Energy density given Vacuum permittivity There are 3 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"epsilon, Vacuum permittivity\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n- Dependent:\n  - y: u, Energy density\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    return params[0] * x0**2 + params[1] * x1",
+    "return_expression_source": "params[0] * x0 ** 2 + params[1] * x1",
+    "normalized_expression": "c0*x0**2 + c1*x1",
+    "instantiated_expression": "8.840834754384688e-12*x0**2 + -0.690551051862687*x1",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      8.840834754384688e-12,
+      -0.690551051862687,
+      0.420304705848799,
+      -0.956524911681073,
+      -0.6105941944679485,
+      0.6338476809903799,
+      -0.6758007364349101,
+      -0.6463242199316173,
+      0.5930226232108871,
+      0.03800943103753274
+    ],
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 9,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0**2 + c1*x1"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 3.1170387799683683e-13,
+    "r2": 0.9999971732649291,
+    "nmse": 2.210947786639799e-06,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 2.9433033401958826e-13,
+    "r2": 0.9999971673170784,
+    "nmse": 2.2109618142559004e-06,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 3.312207728160798e-13,
+    "r2": 0.9999971091356855,
+    "nmse": 2.210962332097219e-06,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 1.697124511580755e-12,
+    "r2": 0.9998938589167874,
+    "nmse": 2.210949873729475e-06,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:33:04",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed4/tasks/drsr_s4_g0003/iaaccn26/drsr/g0003_feynman-ii.27.18/experiments",
+    "exp_name": "g0003_feynman-ii.27.18_drsr_seed4",
+    "n_features": 3,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Energy density given Vacuum permittivity There are 3 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"epsilon, Vacuum permittivity\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18/metadata.yaml",
+    "feature_descriptions": [
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden"
+    ],
+    "target_description": "u, Energy density"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

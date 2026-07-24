@@ -1,0 +1,71 @@
+{
+  "policy_optimizer": {
+    "entropy_gamma": 0.7,
+    "entropy_weight": 0.03,
+    "learning_rate": 0.0005
+  },
+  "prior": {
+    "const": {
+      "on": true
+    },
+    "domain_range": {
+      "on": false
+    },
+    "inverse": {
+      "on": true
+    },
+    "length": {
+      "max_": 64,
+      "min_": 4,
+      "on": true
+    },
+    "no_inputs": {
+      "on": true
+    },
+    "repeat": {
+      "max_": 3,
+      "min_": null,
+      "on": true,
+      "tokens": "const"
+    },
+    "soft_length": {
+      "loc": 10,
+      "on": true,
+      "scale": 5
+    },
+    "trig": {
+      "on": true
+    },
+    "uniform_arity": {
+      "on": true
+    }
+  },
+  "progress_snapshot_interval_seconds": 60,
+  "task": {
+    "function_set": [
+      "add",
+      "sub",
+      "mul",
+      "div",
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "metric": "inv_nrmse",
+    "metric_params": [
+      1.0
+    ],
+    "protected": false,
+    "task_type": "regression",
+    "threshold": 1e-12
+  },
+  "timeout_guard_seconds": 5,
+  "timeout_in_seconds": 86400,
+  "training": {
+    "batch_size": 1000,
+    "epsilon": 0.05,
+    "n_cores_batch": 4,
+    "n_samples": 200000000
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "tool": "drsr",
+  "task_label": "g0017_strogatz_shearflow1",
+  "task_global_index": 17,
+  "dataset": "strogatz_shearflow1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0017/iaaccn25/drsr/g0017_strogatz_shearflow1/experiments/g0017_strogatz_shearflow1_drsr_seed0_20260502-070648",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3901.221,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Polar orientation dynamics of a particle in shear flow. Calculate the Angular velocity of polar angle (dtheta/dt) given Polar angle of particle and Azimuthal angle of particle\n\n    Variables:\n    - Independents:\n  - x0: Polar angle of particle\n  - x1: Azimuthal angle of particle\n- Dependent:\n  - y: Angular velocity of polar angle (dtheta/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * np.sin(x0) + params[2] * np.cos(x1) + params[3] * x0 * np.cos(x0) + params[4] * x1 * np.sin(x0) + params[5] * x0 * np.sin(x1) + params[6] * x1 * np.cos(x0) + params[7] * np.sin(x0) * np.sin(x1) + params[8] * np.cos(x0) * np.cos(x1) + params[9] * np.sin(x0) * np.cos(x1)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Polar orientation dynamics of a particle in shear flow. Calculate the Angular velocity of polar angle (dtheta/dt) given Polar angle of particle and Azimuthal angle of particle\n\n    Variables:\n    - Independents:\n  - x0: Polar angle of particle\n  - x1: Azimuthal angle of particle\n- Dependent:\n  - y: Angular velocity of polar angle (dtheta/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * np.sin(x0) + params[2] * np.cos(x1) + params[3] * x0 * np.cos(x0) + params[4] * x1 * np.sin(x0) + params[5] * x0 * np.sin(x1) + params[6] * x1 * np.cos(x0) + params[7] * np.sin(x0) * np.sin(x1) + params[8] * np.cos(x0) * np.cos(x1) + params[9] * np.sin(x0) * np.cos(x1)",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Polar orientation dynamics of a particle in shear flow. Calculate the Angular velocity of polar angle (dtheta/dt) given Polar angle of particle and Azimuthal angle of particle\n\n    Variables:\n    - Independents:\n  - x0: Polar angle of particle\n  - x1: Azimuthal angle of particle\n- Dependent:\n  - y: Angular velocity of polar angle (dtheta/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * np.sin(x0) + params[2] * np.cos(x1) + params[3] * x0 * np.cos(x0) + params[4] * x1 * np.sin(x0) + params[5] * x0 * np.sin(x1) + params[6] * x1 * np.cos(x0) + params[7] * np.sin(x0) * np.sin(x1) + params[8] * np.cos(x0) * np.cos(x1) + params[9] * np.sin(x0) * np.cos(x1)",
+    "return_expression_source": "params[0] + params[1] * np.sin(x0) + params[2] * np.cos(x1) + params[3] * x0 * np.cos(x0) + params[4] * x1 * np.sin(x0) + params[5] * x0 * np.sin(x1) + params[6] * x1 * np.cos(x0) + params[7] * np.sin(x0) * np.sin(x1) + params[8] * np.cos(x0) * np.cos(x1) + params[9] * np.sin(x0) * np.cos(x1)",
+    "normalized_expression": "c0 + c1*sin(x0) + c2*cos(x1) + c3*x0*cos(x0) + c4*x1*sin(x0) + c5*x0*sin(x1) + c6*x1*cos(x0) + c7*sin(x0)*sin(x1) + c8*cos(x0)*cos(x1) + c9*sin(x0)*cos(x1)",
+    "instantiated_expression": "-0.22020581014031024 + 0.7097812127730447*sin(x0) + -0.543369508504066*cos(x1) + -0.2247198710099547*x0*cos(x0) + 0.561851327482701*x1*sin(x0) + 0.13886487375992623*x0*sin(x1) + -0.027663941783201532*x1*cos(x0) + -0.22337297033806466*sin(x0)*sin(x1) + -1.823321768578586*cos(x0)*cos(x1) + -1.064595852879484*sin(x0)*cos(x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -0.22020581014031024,
+      0.7097812127730447,
+      -0.543369508504066,
+      -0.2247198710099547,
+      0.561851327482701,
+      0.13886487375992623,
+      -0.027663941783201532,
+      -0.22337297033806466,
+      -1.823321768578586,
+      -1.064595852879484
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 48,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*sin(x0) + c2*cos(x1) + c3*x0*cos(x0) + c4*x1*sin(x0) + c5*x0*sin(x1) + c6*x1*cos(x0) + c7*sin(x0)*sin(x1) + c8*cos(x0)*cos(x1) + c9*sin(x0)*cos(x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.24928634996239907,
+    "r2": 0.8072155301765914,
+    "nmse": 0.19248148660751516,
+    "acc_0_1": 0.66015625
+  },
+  "valid": {
+    "rmse": 0.3227282048854057,
+    "r2": 0.7258651387376309,
+    "nmse": 0.26137991775579533,
+    "acc_0_1": 0.625
+  },
+  "id_test": {
+    "rmse": 0.560426217747834,
+    "r2": 0.6610868952385902,
+    "nmse": 0.33354904328864216,
+    "acc_0_1": 0.6875
+  },
+  "ood_test": {
+    "rmse": 1.8343122804642051,
+    "r2": -0.43966814717414127,
+    "nmse": 1.1678754373345552,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 08:11:50",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed0/tasks/drsr_s0_g0017/iaaccn25/drsr/g0017_strogatz_shearflow1/experiments",
+    "exp_name": "g0017_strogatz_shearflow1_drsr_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "x",
+      "y"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "This formula is about Polar orientation dynamics of a particle in shear flow. Calculate the Angular velocity of polar angle (dtheta/dt) given Polar angle of particle and Azimuthal angle of particle",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1/metadata.yaml",
+    "feature_descriptions": [
+      "Polar angle of particle",
+      "Azimuthal angle of particle"
+    ],
+    "target_description": "Angular velocity of polar angle (dtheta/dt)"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

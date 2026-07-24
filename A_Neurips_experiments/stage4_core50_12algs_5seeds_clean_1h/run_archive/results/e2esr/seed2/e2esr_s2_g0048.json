@@ -1,0 +1,114 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0048_MatSci21",
+  "task_global_index": 48,
+  "dataset": "MatSci21",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "expected_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci21",
+    "actual_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci21"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed2/tasks/e2esr_s2_g0048/iaaccn23/e2esr/g0048_MatSci21/experiments/g0048_MatSci21_e2esr_seed2_20260502-093241",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "epsilon",
+    "T"
+  ],
+  "target_name": "sigma",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 368.469,
+  "equation": "0.00015953793795066702*x_1 + (-2.18772954158121*x_0 - 0.7094284089488428)*(1.17702408085071*x_0 - 0.27713442325559332)*(-0.15352488014498831*x_1 - 29.46589750378847)*(0.012793740012082359*x_1 - 5.219508541350962) - 23.50508727151065",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "0.00015953793795066702*x_1 + (-2.18772954158121*x_0 - 0.7094284089488428)*(1.17702408085071*x_0 - 0.27713442325559332)*(-0.15352488014498831*x_1 - 29.46589750378847)*(0.012793740012082359*x_1 - 5.219508541350962) - 23.50508727151065",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.00015953793795066702*x1 + (-2.18772954158121*x0 - 0.7094284089488428)*(1.17702408085071*x0 - 0.27713442325559332)*(-0.15352488014498831*x1 - 29.46589750378847)*(0.012793740012082359*x1 - 5.219508541350962) - 23.50508727151065\n",
+    "return_expression_source": "0.00015953793795066702*x1 + (-2.18772954158121*x0 - 0.7094284089488428)*(1.17702408085071*x0 - 0.27713442325559332)*(-0.15352488014498831*x1 - 29.46589750378847)*(0.012793740012082359*x1 - 5.219508541350962) - 23.50508727151065",
+    "normalized_expression": "0.00015953793795066702*x1 + (-2.18772954158121*x0 - 0.7094284089488428)*(1.17702408085071*x0 - 0.27713442325559332)*(-0.15352488014498831*x1 - 29.46589750378847)*(0.012793740012082359*x1 - 5.219508541350962) - 23.50508727151065",
+    "instantiated_expression": "0.00015953793795066702*x1 + (-2.18772954158121*x0 - 0.7094284089488428)*(1.17702408085071*x0 - 0.27713442325559332)*(-0.15352488014498831*x1 - 29.46589750378847)*(0.012793740012082359*x1 - 5.219508541350962) - 23.50508727151065",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 26,
+    "tree_depth": 5,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.00015953793795066702*x1 + (-2.18772954158121*x0 - 0.7094284089488428)*(1.17702408085071*x0 - 0.27713442325559332)*(-0.15352488014498831*x1 - 29.46589750378847)*(0.012793740012082359*x1 - 5.219508541350962) - 23.50508727151065"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.4279813005823409,
+    "r2": 0.9998170948515223,
+    "nmse": 0.0001823897119136771,
+    "acc_0_1": 0.23142857142857143
+  },
+  "valid": {
+    "rmse": 0.4301345669872668,
+    "r2": 0.9998235483964852,
+    "nmse": 0.00017634486048527414,
+    "acc_0_1": 0.214
+  },
+  "id_test": {
+    "rmse": 0.4145046483526912,
+    "r2": 0.999832368309021,
+    "nmse": 0.0001668645107083337,
+    "acc_0_1": 0.23
+  },
+  "ood_test": {
+    "rmse": 2.6721075885847503,
+    "r2": 0.9885568476454156,
+    "nmse": 0.0003067777811563043,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 09:38:49",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed2/tasks/e2esr_s2_g0048/iaaccn23/e2esr/g0048_MatSci21/experiments",
+    "exp_name": "g0048_MatSci21_e2esr_seed2",
+    "n_features": 2,
+    "feature_names": [
+      "epsilon",
+      "T"
+    ],
+    "target_name": "sigma"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

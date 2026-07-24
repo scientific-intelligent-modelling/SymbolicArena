@@ -1,0 +1,116 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0026_strogatz_barmag1",
+  "task_global_index": 26,
+  "dataset": "strogatz_barmag1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed4/tasks/e2esr_s4_g0026/iaaccn25/e2esr/g0026_strogatz_barmag1/experiments/g0026_strogatz_barmag1_e2esr_seed4_20260502-105110",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 1905.841,
+  "equation": "(-0.017 - 0.07680000000000001/(31.8113471061175*x_1 - 63.04625171723492))*(22.46781459610628*x_0 - sin(3.338034079815782*x_1 - 63.5146479434484) - 136.56660769203213)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "(-0.017 - 0.07680000000000001/(31.8113471061175*x_1 - 63.04625171723492))*(22.46781459610628*x_0 - sin(3.338034079815782*x_1 - 63.5146479434484) - 136.56660769203213)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (-0.017 - 0.07680000000000001/(31.8113471061175*x1 - 63.04625171723492))*(22.46781459610628*x0 - sin(3.338034079815782*x1 - 63.5146479434484) - 136.56660769203213)\n",
+    "return_expression_source": "(-0.017 - 0.07680000000000001/(31.8113471061175*x1 - 63.04625171723492))*(22.46781459610628*x0 - sin(3.338034079815782*x1 - 63.5146479434484) - 136.56660769203213)",
+    "normalized_expression": "(-0.017 - 0.07680000000000001/(31.8113471061175*x1 - 63.04625171723492))*(22.46781459610628*x0 - sin(3.338034079815782*x1 - 63.5146479434484) - 136.56660769203213)",
+    "instantiated_expression": "(-0.017 - 0.07680000000000001/(31.8113471061175*x1 - 63.04625171723492))*(22.46781459610628*x0 - sin(3.338034079815782*x1 - 63.5146479434484) - 136.56660769203213)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 25,
+    "tree_depth": 7,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(-0.017 - 0.07680000000000001/(31.8113471061175*x1 - 63.04625171723492))*(22.46781459610628*x0 - sin(3.338034079815782*x1 - 63.5146479434484) - 136.56660769203213)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.09112372355360694,
+    "r2": 0.8282753548278623,
+    "nmse": 0.12010376212532255,
+    "acc_0_1": 0.9375
+  },
+  "valid": {
+    "rmse": 0.09395120173714631,
+    "r2": 0.8420998036817974,
+    "nmse": 0.08584112605805484,
+    "acc_0_1": 0.84375
+  },
+  "id_test": {
+    "rmse": 0.07571971134301606,
+    "r2": 0.8431955323301277,
+    "nmse": 0.07639935742106867,
+    "acc_0_1": 0.9375
+  },
+  "ood_test": {
+    "rmse": 0.1842068816858227,
+    "r2": 0.5529661694138415,
+    "nmse": 0.26202732741566054,
+    "acc_0_1": 0.246
+  },
+  "finished_at": "2026-05-02 11:22:56",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed4/tasks/e2esr_s4_g0026/iaaccn25/e2esr/g0026_strogatz_barmag1/experiments",
+    "exp_name": "g0026_strogatz_barmag1_e2esr_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

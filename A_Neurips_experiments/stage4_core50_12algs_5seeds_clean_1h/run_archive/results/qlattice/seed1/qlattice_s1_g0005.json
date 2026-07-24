@@ -1,0 +1,113 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0005_Keijzer-11",
+  "task_global_index": 5,
+  "dataset": "Keijzer-11",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-11",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-11",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-11",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-11"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0005/iaaccn29/QLattice/g0005_Keijzer-11/experiments/g0005_Keijzer-11_QLattice_seed1_20260502-075036",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 18,
+  "valid_rows": 2,
+  "id_test_rows": 361201,
+  "ood_test_rows": 200,
+  "seconds": 135.459,
+  "equation": "3.689 - 4.001*tanh(0.2558*x0 + (-0.8323*x0 - 0.03842)*(0.696*x1 + 0.2239) + 1.733)",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "3.689 - 4.001*tanh(0.2558*x0 + (-0.8323*x0 - 0.03842)*(0.696*x1 + 0.2239) + 1.733)",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 3.689 - 4.001*tanh(0.2558*x0 + (-0.8323*x0 - 0.03842)*(0.696*x1 + 0.2239) + 1.733)\n",
+    "return_expression_source": "3.689 - 4.001*tanh(0.2558*x0 + (-0.8323*x0 - 0.03842)*(0.696*x1 + 0.2239) + 1.733)",
+    "normalized_expression": "3.689 - 4.001*tanh(0.2558*x0 + (-0.8323*x0 - 0.03842)*(0.696*x1 + 0.2239) + 1.733)",
+    "instantiated_expression": "3.689 - 4.001*tanh(0.2558*x0 + (-0.8323*x0 - 0.03842)*(0.696*x1 + 0.2239) + 1.733)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "tanh"
+    ],
+    "ast_node_count": 21,
+    "tree_depth": 8,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "3.689 - 4.001*tanh(0.2558*x0 + (-0.8323*x0 - 0.03842)*(0.696*x1 + 0.2239) + 1.733)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.21839936869070395,
+    "r2": 0.9925072919743836,
+    "nmse": 0.004769987269267259,
+    "acc_0_1": 0.3888888888888889
+  },
+  "valid": {
+    "rmse": 1.3954347666583586,
+    "r2": 0.7363047926617119,
+    "nmse": 0.2544303860170907,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 2.10631560998751,
+    "r2": 0.5499674917775894,
+    "nmse": 0.45002678370988575,
+    "acc_0_1": 0.07424951758162353
+  },
+  "ood_test": {
+    "rmse": 3.891544805694016,
+    "r2": 0.5286529148068992,
+    "nmse": 0.47109344171245016,
+    "acc_0_1": 0.035
+  },
+  "finished_at": "2026-05-02 07:52:51",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed1/tasks/qlattice_s1_g0005/iaaccn29/QLattice/g0005_Keijzer-11/experiments",
+    "exp_name": "g0005_Keijzer-11_QLattice_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

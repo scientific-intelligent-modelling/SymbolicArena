@@ -1,0 +1,114 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0028_feynman-ii.4.23",
+  "task_global_index": 28,
+  "dataset": "feynman-ii.4.23",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.4.23"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0028/iaaccn24/QLattice/g0028_feynman-ii.4.23/experiments/g0028_feynman-ii.4.23_QLattice_seed0_20260502-071333",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x0",
+    "x1"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 124.886,
+  "equation": "57520000.0 + 7341000000.0*(0.01721 - 27.62*x0)*(0.2448*x1 + 1.207)*exp(0.008427*x0)/(0.0006363 - 26.84*x1)",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "57520000.0 + 7341000000.0*(0.01721 - 27.62*x0)*(0.2448*x1 + 1.207)*exp(0.008427*x0)/(0.0006363 - 26.84*x1)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 57520000.0 + (126338610.0 - 202758420000.0*x0)*(0.2448*x1 + 1.207)*exp(0.008427*x0)/(0.0006363 - 26.84*x1)\n",
+    "return_expression_source": "57520000.0 + (126338610.0 - 202758420000.0*x0)*(0.2448*x1 + 1.207)*exp(0.008427*x0)/(0.0006363 - 26.84*x1)",
+    "normalized_expression": "57520000.0 + (126338610.0 - 202758420000.0*x0)*(0.2448*x1 + 1.207)*exp(0.008427*x0)/(0.0006363 - 26.84*x1)",
+    "instantiated_expression": "57520000.0 + (126338610.0 - 202758420000.0*x0)*(0.2448*x1 + 1.207)*exp(0.008427*x0)/(0.0006363 - 26.84*x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 24,
+    "tree_depth": 6,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "57520000.0 + (126338610.0 - 202758420000.0*x0)*(0.2448*x1 + 1.207)*exp(0.008427*x0)/(0.0006363 - 26.84*x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 254833070.5697278,
+    "r2": 0.9993114089179174,
+    "nmse": 0.0006885103816688785,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 231306856.74611774,
+    "r2": 0.9993054840856825,
+    "nmse": 0.0006943379291832413,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 278144813.5488085,
+    "r2": 0.9993020954727403,
+    "nmse": 0.0006967441856081702,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 323153241.85100883,
+    "r2": 0.9992148058383988,
+    "nmse": 0.0007851387634772399,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 07:15:38",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0028/iaaccn24/QLattice/g0028_feynman-ii.4.23/experiments",
+    "exp_name": "g0028_feynman-ii.4.23_QLattice_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x0",
+      "x1"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

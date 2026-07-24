@@ -1,0 +1,176 @@
+{
+  "tool": "drsr",
+  "task_label": "g0033_feynman-iii.10.19",
+  "task_global_index": 33,
+  "dataset": "feynman-iii.10.19",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed3/tasks/drsr_s3_g0033/iaaccn25/drsr/g0033_feynman-iii.10.19/experiments/g0033_feynman-iii.10.19_drsr_seed3_20260502-101016",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3915.559,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, x5: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Energy given Magnetic moment, Element of magnetic field, Element of magnetic field, Element of magnetic field There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"B_x, Element of magnetic field\"; 1 variable with semantic role \"B_y, Element of magnetic field\"; 1 variable with semantic role \"B_z, Element of magnetic field\"; 1 variable with semantic role \"mu, Magnetic moment\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n  - x3: candidate variable; semantic role hidden\n  - x4: candidate variable; semantic role hidden\n  - x5: candidate variable; semantic role hidden\n- Dependent:\n  - y: E, Energy\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5\n    \"\"\"\n    return -params[0] * x0 * (x1**2 + x2**2 + x3**2)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, x5: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Energy given Magnetic moment, Element of magnetic field, Element of magnetic field, Element of magnetic field There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"B_x, Element of magnetic field\"; 1 variable with semantic role \"B_y, Element of magnetic field\"; 1 variable with semantic role \"B_z, Element of magnetic field\"; 1 variable with semantic role \"mu, Magnetic moment\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n  - x3: candidate variable; semantic role hidden\n  - x4: candidate variable; semantic role hidden\n  - x5: candidate variable; semantic role hidden\n- Dependent:\n  - y: E, Energy\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5\n    \"\"\"\n    return -params[0] * x0 * (x1**2 + x2**2 + x3**2)",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, x5: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Energy given Magnetic moment, Element of magnetic field, Element of magnetic field, Element of magnetic field There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"B_x, Element of magnetic field\"; 1 variable with semantic role \"B_y, Element of magnetic field\"; 1 variable with semantic role \"B_z, Element of magnetic field\"; 1 variable with semantic role \"mu, Magnetic moment\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n  - x3: candidate variable; semantic role hidden\n  - x4: candidate variable; semantic role hidden\n  - x5: candidate variable; semantic role hidden\n- Dependent:\n  - y: E, Energy\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5\n    \"\"\"\n    return -params[0] * x0 * (x1**2 + x2**2 + x3**2)",
+    "return_expression_source": "-params[0] * x0 * (x1 ** 2 + x2 ** 2 + x3 ** 2)",
+    "normalized_expression": "-c0*x0*(x1**2 + x2**2 + x3**2)",
+    "instantiated_expression": "--0.2837711556616791*x0*(x1**2 + x2**2 + x3**2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -0.2837711556616791,
+      -0.4944123138462404,
+      0.32187436623210575,
+      0.06986986956919572,
+      -0.20107052533308822,
+      0.04075854941386248,
+      -0.011929233616926993,
+      0.05723368214377045,
+      -0.11014064047935856,
+      -0.999635534738192
+    ],
+    "expected_n_features": 6,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 14,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-c0*x0*(x1**2 + x2**2 + x3**2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.0912805926891905e-17,
+    "r2": -1.2122079511447456e+16,
+    "nmse": 1.212144316223528e+16,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 2.1301085649641754e-17,
+    "r2": -1.1706655718641416e+16,
+    "nmse": 1.1664126410343928e+16,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 2.0801515678953965e-17,
+    "r2": -1.2533970353447424e+16,
+    "nmse": 1.251787665317826e+16,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 4.422855853317811e-15,
+    "r2": -376050298946883.25,
+    "nmse": 376041462865682.56,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:15:32",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed3/tasks/drsr_s3_g0033/iaaccn25/drsr/g0033_feynman-iii.10.19/experiments",
+    "exp_name": "g0033_feynman-iii.10.19_drsr_seed3",
+    "n_features": 6,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Energy given Magnetic moment, Element of magnetic field, Element of magnetic field, Element of magnetic field There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"B_x, Element of magnetic field\"; 1 variable with semantic role \"B_y, Element of magnetic field\"; 1 variable with semantic role \"B_z, Element of magnetic field\"; 1 variable with semantic role \"mu, Magnetic moment\"; 2 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19/metadata.yaml",
+    "feature_descriptions": [
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden"
+    ],
+    "target_description": "E, Energy"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

@@ -1,0 +1,133 @@
+{
+  "tool": "tpsr",
+  "task_label": "g0011_Vladislavleva-4",
+  "task_global_index": 11,
+  "dataset": "Vladislavleva-4",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-4",
+  "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+  "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "expected_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-4",
+    "actual_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-4"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed4/tasks/tpsr_s4_g0011/iaaccn24/tpsr/g0011_Vladislavleva-4/experiments/g0011_Vladislavleva-4_tpsr_seed4_20260502-112034",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "target",
+  "train_rows": 820,
+  "valid_rows": 102,
+  "id_test_rows": 102,
+  "ood_test_rows": 5000,
+  "seconds": 992.821,
+  "equation": "(0.5440417302506099 + (5.17093148046745e-11 * exp((-0.7204938248735122 + x_3))))",
+  "equation_count": 2,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "tpsr",
+    "raw_equation": "(0.5440417302506099 + (5.17093148046745e-11 * exp((-0.7204938248735122 + x_3))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x2, params):\n    return 2.515719931658913e-11*exp(x2) + 0.5440417302506099\n",
+    "return_expression_source": "2.515719931658913e-11*exp(x2) + 0.5440417302506099",
+    "normalized_expression": "2.515719931658913e-11*exp(x2) + 0.5440417302506099",
+    "instantiated_expression": "2.515719931658913e-11*exp(x2) + 0.5440417302506099",
+    "variables": [
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul"
+    ],
+    "ast_node_count": 6,
+    "tree_depth": 4,
+    "normalization_mode": "tpsr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "2.515719931658913e-11*exp(x2) + 0.5440417302506099"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.19227562144598764,
+    "r2": -4.969662015241738e-09,
+    "nmse": 0.11103699375068986,
+    "acc_0_1": 0.4426829268292683
+  },
+  "valid": {
+    "rmse": 0.18421366961730964,
+    "r2": -0.0003702322488756682,
+    "nmse": 0.10167020558685494,
+    "acc_0_1": 0.35294117647058826
+  },
+  "id_test": {
+    "rmse": 0.21218548514518773,
+    "r2": -0.003271232033627003,
+    "nmse": 0.13733930915239115,
+    "acc_0_1": 0.39215686274509803
+  },
+  "ood_test": {
+    "rmse": 0.19469553395061204,
+    "r2": -0.11881470425342022,
+    "nmse": 0.1431227754030155,
+    "acc_0_1": 0.3392
+  },
+  "finished_at": "2026-05-02 11:37:07",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "backbone_model": "e2e",
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "beam_size": 10,
+    "beam_type": "sampling",
+    "no_seq_cache": false,
+    "no_prefix_cache": true,
+    "width": 3,
+    "num_beams": 1,
+    "rollout": 3,
+    "horizon": 200,
+    "lam": 0.1,
+    "train_value": false,
+    "reward_sample_limit": 2048,
+    "cpu": true,
+    "cpu_num_threads": 4,
+    "cpu_interop_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed4/tasks/tpsr_s4_g0011/iaaccn24/tpsr/g0011_Vladislavleva-4/experiments",
+    "exp_name": "g0011_Vladislavleva-4_tpsr_seed4",
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

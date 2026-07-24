@@ -1,0 +1,168 @@
+{
+  "tool": "drsr",
+  "task_label": "g0046_II.6.15b_3_0",
+  "task_global_index": 46,
+  "dataset": "II.6.15b_3_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed3/tasks/drsr_s3_g0046/iaaccn29/drsr/g0046_II.6.15b_3_0/experiments/g0046_II.6.15b_3_0_drsr_seed3_20260502-102058",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "Ef",
+    "epsilon",
+    "p_d",
+    "theta"
+  ],
+  "target_name": "r",
+  "train_rows": 39348,
+  "valid_rows": 5000,
+  "id_test_rows": 11087,
+  "ood_test_rows": 11087,
+  "seconds": 3624.741,
+  "equation": "def equation(col0, col1, col2, col3, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * np.cos(x3) + params[5] * x1 * np.cos(x3) + params[6] * x2 * np.cos(x3) + params[7] * x0 * x1 + params[8] * x0 * x2 + params[9] * x1 * x2\n",
+  "equation_count": 148,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(col0, col1, col2, col3, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * np.cos(x3) + params[5] * x1 * np.cos(x3) + params[6] * x2 * np.cos(x3) + params[7] * x0 * x1 + params[8] * x0 * x2 + params[9] * x1 * x2\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(col0, col1, col2, col3, params):\n    return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * np.cos(x3) + params[5] * x1 * np.cos(x3) + params[6] * x2 * np.cos(x3) + params[7] * x0 * x1 + params[8] * x0 * x2 + params[9] * x1 * x2\n",
+    "return_expression_source": "params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * np.cos(x3) + params[5] * x1 * np.cos(x3) + params[6] * x2 * np.cos(x3) + params[7] * x0 * x1 + params[8] * x0 * x2 + params[9] * x1 * x2",
+    "normalized_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*cos(x3) + c5*x1*cos(x3) + c6*x2*cos(x3) + c7*x0*x1 + c8*x0*x2 + c9*x1*x2",
+    "instantiated_expression": "1.0593856523265033 + 4.610252583232347*x0 + -0.12451432710456385*x1 + 0.29097084207902735*x2 + -0.5144310534465137*cos(x3) + 0.09761982335328595*x1*cos(x3) + -0.09429829387425025*x2*cos(x3) + -0.7965288962579424*x0*x1 + 0.8647186230525012*x0*x2 + -0.04151728987038697*x1*x2",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      1.0593856523265033,
+      4.610252583232347,
+      -0.12451432710456385,
+      0.29097084207902735,
+      -0.5144310534465137,
+      0.09761982335328595,
+      -0.09429829387425025,
+      -0.7965288962579424,
+      0.8647186230525012,
+      -0.04151728987038697
+    ],
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul"
+    ],
+    "ast_node_count": 37,
+    "tree_depth": 4,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [
+      "function_arg_map:col0->x0,col1->x1,col2->x2,col3->x3"
+    ],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0 + c2*x1 + c3*x2 + c4*cos(x3) + c5*x1*cos(x3) + c6*x2*cos(x3) + c7*x0*x1 + c8*x0*x2 + c9*x1*x2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.6276498141270235,
+    "r2": 0.21458186659480738,
+    "nmse": 0.21633966625356799,
+    "acc_0_1": 0.3821795262783369
+  },
+  "valid": {
+    "rmse": 0.6806274032217265,
+    "r2": 0.2068652604343174,
+    "nmse": 0.24083694533672492,
+    "acc_0_1": 0.3634
+  },
+  "id_test": {
+    "rmse": 0.6223245497856192,
+    "r2": 0.2181976324838082,
+    "nmse": 0.21313955926092812,
+    "acc_0_1": 0.3789122395598449
+  },
+  "ood_test": {
+    "rmse": 0.39571403143777073,
+    "r2": -0.2294597417948454,
+    "nmse": 0.2148866136993811,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 11:21:23",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed3/tasks/drsr_s3_g0046/iaaccn29/drsr/g0046_II.6.15b_3_0/experiments",
+    "exp_name": "g0046_II.6.15b_3_0_drsr_seed3",
+    "n_features": 4,
+    "feature_names": [
+      "Ef",
+      "epsilon",
+      "p_d",
+      "theta"
+    ],
+    "target_name": "r",
+    "original_feature_names": [
+      "Ef",
+      "epsilon",
+      "p_d",
+      "theta"
+    ],
+    "original_target_name": "r",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the distance from the dipole to the point where the electric field is being measured given the electric field, the electric constant or permittivity of the medium, the dipole moment and the angle between the dipole axis and the position vector",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0/metadata.yaml",
+    "feature_descriptions": [
+      "the electric field",
+      "the electric constant or permittivity of the medium",
+      "the dipole moment",
+      "the angle between the dipole axis and the position vector"
+    ],
+    "target_description": "the distance from the dipole to the point where the electric field is being measured"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

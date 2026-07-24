@@ -1,0 +1,119 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0031_II.11.27_1_0",
+  "task_global_index": 31,
+  "dataset": "II.11.27_1_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_1_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed4/tasks/qlattice_s4_g0031/iaaccn24/QLattice/g0031_II.11.27_1_0/experiments/g0031_II.11.27_1_0_QLattice_seed4_20260502-105548",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "Pol",
+    "n",
+    "epsilon",
+    "Ef"
+  ],
+  "target_name": "alpha",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 479.045,
+  "equation": "1933.0 - 17940.0*exp(-2.0/tanh(763.8*x1 + 0.3834)**2 - 2.0/(3.132 - 0.01364*x0)**2)",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "1933.0 - 17940.0*exp(-2.0/tanh(763.8*x1 + 0.3834)**2 - 2.0/(3.132 - 0.01364*x0)**2)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 1933.0 - 17940.0*exp(-2.0/tanh(763.8*x1 + 0.3834)**2 - 2.0/(3.132 - 0.01364*x0)**2)\n",
+    "return_expression_source": "1933.0 - 17940.0*exp(-2.0/tanh(763.8*x1 + 0.3834)**2 - 2.0/(3.132 - 0.01364*x0)**2)",
+    "normalized_expression": "1933.0 - 17940.0*exp(-2.0/tanh(763.8*x1 + 0.3834)**2 - 2.0/(3.132 - 0.01364*x0)**2)",
+    "instantiated_expression": "1933.0 - 17940.0*exp(-2.0/tanh(763.8*x1 + 0.3834)**2 - 2.0/(3.132 - 0.01364*x0)**2)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "tanh"
+    ],
+    "ast_node_count": 25,
+    "tree_depth": 10,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1933.0 - 17940.0*exp(-2.0/tanh(763.8*x1 + 0.3834)**2 - 2.0/(3.132 - 0.01364*x0)**2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 214.65789683905606,
+    "r2": 0.15281339896126112,
+    "nmse": 0.8460193030549017,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 90.28401801269871,
+    "r2": 0.3898380357570844,
+    "nmse": 0.6068150125730389,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 183.85325918221093,
+    "r2": 0.177811088209188,
+    "nmse": 0.8206953653055112,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 1987.362334960564,
+    "r2": -0.04701356877688112,
+    "nmse": 1.0464343921559742,
+    "acc_0_1": 0.00115
+  },
+  "finished_at": "2026-05-02 11:03:47",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed4/tasks/qlattice_s4_g0031/iaaccn24/QLattice/g0031_II.11.27_1_0/experiments",
+    "exp_name": "g0031_II.11.27_1_0_QLattice_seed4",
+    "n_features": 4,
+    "feature_names": [
+      "Pol",
+      "n",
+      "epsilon",
+      "Ef"
+    ],
+    "target_name": "alpha"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

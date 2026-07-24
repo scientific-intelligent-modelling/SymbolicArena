@@ -1,0 +1,151 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0020_first_principles_leavitt",
+  "task_global_index": 20,
+  "dataset": "first_principles_leavitt",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+  "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+  "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "expected_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt",
+    "actual_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed2/tasks/llmsr_s2_g0020/iaaccn25/llmsr/g0020_first_principles_leavitt/experiments/g0020_first_principles_leavitt_llmsr_seed2_20260502-092257",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "logP"
+  ],
+  "target_name": "target",
+  "train_rows": 19,
+  "valid_rows": 2,
+  "id_test_rows": 2,
+  "ood_test_rows": 3,
+  "seconds": 3632.761,
+  "equation": "def equation(x0: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    The Leavitt dataset models the relationship between the luminosity of a star and its period. The dataset is based on the Leavitt Law.\n\nThe data was taken from 1912 paper by Leavitt. y-axis is magnitude at maxima and minima. x-axis is logarithm of period in days.\n\n    Variables:\n    - Independents:\n  - x0: Logarithm of period in days\n- Dependent:\n  - y: Magnitude\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * np.exp(params[2] * x0) + params[3] * np.sin(params[4] * x0) + params[5] * np.log(x0) + params[6] / (1 + np.exp(params[7] * (x0 - params[8])))\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    The Leavitt dataset models the relationship between the luminosity of a star and its period. The dataset is based on the Leavitt Law.\n\nThe data was taken from 1912 paper by Leavitt. y-axis is magnitude at maxima and minima. x-axis is logarithm of period in days.\n\n    Variables:\n    - Independents:\n  - x0: Logarithm of period in days\n- Dependent:\n  - y: Magnitude\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * np.exp(params[2] * x0) + params[3] * np.sin(params[4] * x0) + params[5] * np.log(x0) + params[6] / (1 + np.exp(params[7] * (x0 - params[8])))\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    The Leavitt dataset models the relationship between the luminosity of a star and its period. The dataset is based on the Leavitt Law.\n\nThe data was taken from 1912 paper by Leavitt. y-axis is magnitude at maxima and minima. x-axis is logarithm of period in days.\n\n    Variables:\n    - Independents:\n  - x0: Logarithm of period in days\n- Dependent:\n  - y: Magnitude\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * np.exp(params[2] * x0) + params[3] * np.sin(params[4] * x0) + params[5] * np.log(x0) + params[6] / (1 + np.exp(params[7] * (x0 - params[8])))\n\n",
+    "return_expression_source": "params[0] + params[1] * np.exp(params[2] * x0) + params[3] * np.sin(params[4] * x0) + params[5] * np.log(x0) + params[6] / (1 + np.exp(params[7] * (x0 - params[8])))",
+    "normalized_expression": "c0 + c1*exp(c2*x0) + c3*sin(c4*x0) + c5*log(x0) + c6/(exp(c7*(-c8 + x0)) + 1)",
+    "instantiated_expression": "-63.075905628770144 + 21.595835708110815*exp(0.5664499391061437*x0) + 1.0461306321494515*sin(4.520263551212902*x0) + -4.01162322977388*log(x0) + 47.59228474479896/(exp(2.8705236826104668*(-1.5620184120052183 + x0)) + 1)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -63.075905628770144,
+      21.595835708110815,
+      0.5664499391061437,
+      1.0461306321494515,
+      4.520263551212902,
+      -4.01162322977388,
+      47.59228474479896,
+      2.8705236826104668,
+      1.5620184120052183,
+      1.0
+    ],
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "exp",
+      "log",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 32,
+    "tree_depth": 9,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*exp(c2*x0) + c3*sin(c4*x0) + c5*log(x0) + c6/(exp(c7*(-c8 + x0)) + 1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.11581187498086497,
+    "r2": 0.9830228458035041,
+    "nmse": 6.94541892821859e-05,
+    "acc_0_1": 0.631578947368421
+  },
+  "valid": {
+    "rmse": 0.27653051755073815,
+    "r2": -7.431496434297733,
+    "nmse": 0.00039556671052764754,
+    "acc_0_1": 0.5
+  },
+  "id_test": {
+    "rmse": 0.25671650101876203,
+    "r2": 0.7397432114877738,
+    "nmse": 0.00030864411575798665,
+    "acc_0_1": 0.5
+  },
+  "ood_test": {
+    "rmse": 1.4459585796438474,
+    "r2": 0.2658096386813722,
+    "nmse": 0.011122340070117814,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 10:23:29",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed2/tasks/llmsr_s2_g0020/iaaccn25/llmsr/g0020_first_principles_leavitt/experiments",
+    "exp_name": "g0020_first_principles_leavitt_llmsr_seed2",
+    "n_features": 1,
+    "feature_names": [
+      "logP"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "logP"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0"
+    ],
+    "prompt_target_name": "y",
+    "background": "The Leavitt dataset models the relationship between the luminosity of a star and its period. The dataset is based on the Leavitt Law.\n\nThe data was taken from 1912 paper by Leavitt. y-axis is magnitude at maxima and minima. x-axis is logarithm of period in days.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_leavitt/metadata.yaml",
+    "feature_descriptions": [
+      "Logarithm of period in days"
+    ],
+    "target_description": "Magnitude"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

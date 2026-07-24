@@ -1,0 +1,175 @@
+{
+  "tool": "dso",
+  "task_label": "g0025_strogatz_barmag2",
+  "task_global_index": 25,
+  "dataset": "strogatz_barmag2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed1/tasks/dso_s1_g0025/iaaccn29/dso/g0025_strogatz_barmag2/experiments/g0025_strogatz_barmag2_dso_seed1_20260502-081013",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 2154.649,
+  "equation": "sin(x₁)⋅sin(x₂ - log(log(x₁)))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "dso",
+    "raw_equation": "sin(x1)*sin(x2 - log(log(x1)))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return sin(x0)*sin(x1 - log(log(x0)))\n",
+    "return_expression_source": "sin(x0)*sin(x1 - log(log(x0)))",
+    "normalized_expression": "sin(x0)*sin(x1 - log(log(x0)))",
+    "instantiated_expression": "sin(x0)*sin(x1 - log(log(x0)))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "log",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 11,
+    "tree_depth": 7,
+    "normalization_mode": "dso_sympy_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "sin(x0)*sin(x1 - log(log(x0)))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.09461697235858862,
+    "r2": 0.8822453439849394,
+    "nmse": 0.11599055390143616,
+    "acc_0_1": 0.8984375
+  },
+  "valid": {
+    "rmse": 0.09403005921463295,
+    "r2": 0.9470665545335067,
+    "nmse": 0.0523692063796567,
+    "acc_0_1": 0.78125
+  },
+  "id_test": {
+    "rmse": 0.07151266918118312,
+    "r2": 0.8774477341389242,
+    "nmse": 0.12148775227207936,
+    "acc_0_1": 0.96875
+  },
+  "ood_test": {
+    "rmse": 0.13380406737021747,
+    "r2": 0.7523523816759066,
+    "nmse": 0.24762890310182412,
+    "acc_0_1": 0.422
+  },
+  "finished_at": "2026-05-02 08:46:08",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "task": {
+      "task_type": "regression",
+      "function_set": [
+        "add",
+        "sub",
+        "mul",
+        "div",
+        "sin",
+        "cos",
+        "exp",
+        "log"
+      ],
+      "metric": "inv_nrmse",
+      "metric_params": [
+        1.0
+      ],
+      "threshold": 1e-12,
+      "protected": false
+    },
+    "training": {
+      "n_samples": 2000000,
+      "batch_size": 1000,
+      "epsilon": 0.05,
+      "n_cores_batch": 4
+    },
+    "policy_optimizer": {
+      "learning_rate": 0.0005,
+      "entropy_weight": 0.03,
+      "entropy_gamma": 0.7
+    },
+    "prior": {
+      "length": {
+        "min_": 4,
+        "max_": 64,
+        "on": true
+      },
+      "repeat": {
+        "tokens": "const",
+        "min_": null,
+        "max_": 3,
+        "on": true
+      },
+      "inverse": {
+        "on": true
+      },
+      "trig": {
+        "on": true
+      },
+      "const": {
+        "on": true
+      },
+      "no_inputs": {
+        "on": true
+      },
+      "uniform_arity": {
+        "on": true
+      },
+      "soft_length": {
+        "loc": 10,
+        "scale": 5,
+        "on": true
+      },
+      "domain_range": {
+        "on": false
+      }
+    },
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/dso/seed1/tasks/dso_s1_g0025/iaaccn29/dso/g0025_strogatz_barmag2/experiments",
+    "exp_name": "g0025_strogatz_barmag2_dso_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

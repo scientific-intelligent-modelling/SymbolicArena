@@ -1,0 +1,133 @@
+{
+  "tool": "gplearn",
+  "task_label": "g0025_strogatz_barmag2",
+  "task_global_index": 25,
+  "dataset": "strogatz_barmag2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed1/tasks/gplearn_s1_g0025/iaaccn26/gplearn/g0025_strogatz_barmag2/experiments/g0025_strogatz_barmag2_gplearn_seed1_20260502-080539",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3602.428,
+  "equation": "sub(0.361, sin(sin(X1)))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "gplearn",
+    "raw_equation": "sub(0.361, sin(sin(X1)))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return 0.361 - sin(sin(x1))\n",
+    "return_expression_source": "0.361 - sin(sin(x1))",
+    "normalized_expression": "0.361 - sin(sin(x1))",
+    "instantiated_expression": "0.361 - sin(sin(x1))",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 7,
+    "tree_depth": 5,
+    "normalization_mode": "gplearn_prefix_to_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.361 - sin(sin(x1))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.11004685411962178,
+    "r2": 0.8407075257216308,
+    "nmse": 0.15690608719128027,
+    "acc_0_1": 0.87890625
+  },
+  "valid": {
+    "rmse": 0.08211752145676833,
+    "r2": 0.9596291020378803,
+    "nmse": 0.0399405681696762,
+    "acc_0_1": 0.84375
+  },
+  "id_test": {
+    "rmse": 0.07700941269602972,
+    "r2": 0.8578839947085309,
+    "nmse": 0.14088155713350392,
+    "acc_0_1": 0.8125
+  },
+  "ood_test": {
+    "rmse": 0.16002110884029014,
+    "r2": 0.6457987610498706,
+    "nmse": 0.35417447125916646,
+    "acc_0_1": 0.475
+  },
+  "finished_at": "2026-05-02 09:05:41",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 1000,
+    "generations": 1000000,
+    "tournament_size": 20,
+    "stopping_criteria": 0.0,
+    "const_range": [
+      -1.0,
+      1.0
+    ],
+    "init_depth": [
+      2,
+      6
+    ],
+    "init_method": "half and half",
+    "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+    "metric": "mean absolute error",
+    "parsimony_coefficient": 0.001,
+    "p_crossover": 0.9,
+    "p_subtree_mutation": 0.01,
+    "p_hoist_mutation": 0.01,
+    "p_point_mutation": 0.01,
+    "p_point_replace": 0.05,
+    "max_samples": 1.0,
+    "n_jobs": 4,
+    "low_memory": false,
+    "warm_start": false,
+    "verbose": 0,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/gplearn/seed1/tasks/gplearn_s1_g0025/iaaccn26/gplearn/g0025_strogatz_barmag2/experiments",
+    "exp_name": "g0025_strogatz_barmag2_gplearn_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'gplearn' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

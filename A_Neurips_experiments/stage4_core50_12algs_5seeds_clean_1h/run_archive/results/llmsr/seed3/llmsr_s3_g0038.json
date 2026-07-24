@@ -1,0 +1,160 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0038_PO19",
+  "task_global_index": 38,
+  "dataset": "PO19",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "expected_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO19",
+    "actual_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO19"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0038/iaaccn25/llmsr/g0038_PO19/experiments/g0038_PO19_llmsr_seed3_20260502-103209",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "x",
+    "t",
+    "v"
+  ],
+  "target_name": "dv_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3612.974,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Acceleration in Non-linear Harmonic Oscillator given Position at time t, Time and Velocity at time t\n\n    Variables:\n    - Independents:\n  - x0: Position at time t\n  - x1: Time\n  - x2: Velocity at time t\n- Dependent:\n  - y: Acceleration in Non-linear Harmonic Oscillator\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate Acceleration in Non-linear Harmonic Oscillator given Position at time t, Time and Velocity at time t\n\n    Variables:\n    - Independents:\n      - x0: Position at time t\n      - x1: Time\n      - x2: Velocity at time t\n    - Dependent:\n      - y: Acceleration in Non-linear Harmonic Oscillator\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    return params[0] * x0 + params[1] * x0**2 + params[2] * x0**3 + params[3] * x0**4 + params[4] * x1 + params[5] * x1**2 + params[6] * x1**3 + params[7] * x2 + params[8] * x2**2\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Acceleration in Non-linear Harmonic Oscillator given Position at time t, Time and Velocity at time t\n\n    Variables:\n    - Independents:\n  - x0: Position at time t\n  - x1: Time\n  - x2: Velocity at time t\n- Dependent:\n  - y: Acceleration in Non-linear Harmonic Oscillator\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate Acceleration in Non-linear Harmonic Oscillator given Position at time t, Time and Velocity at time t\n\n    Variables:\n    - Independents:\n      - x0: Position at time t\n      - x1: Time\n      - x2: Velocity at time t\n    - Dependent:\n      - y: Acceleration in Non-linear Harmonic Oscillator\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    return params[0] * x0 + params[1] * x0**2 + params[2] * x0**3 + params[3] * x0**4 + params[4] * x1 + params[5] * x1**2 + params[6] * x1**3 + params[7] * x2 + params[8] * x2**2\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Acceleration in Non-linear Harmonic Oscillator given Position at time t, Time and Velocity at time t\n\n    Variables:\n    - Independents:\n  - x0: Position at time t\n  - x1: Time\n  - x2: Velocity at time t\n- Dependent:\n  - y: Acceleration in Non-linear Harmonic Oscillator\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\n\n    Background:\n    Calculate Acceleration in Non-linear Harmonic Oscillator given Position at time t, Time and Velocity at time t\n\n    Variables:\n    - Independents:\n      - x0: Position at time t\n      - x1: Time\n      - x2: Velocity at time t\n    - Dependent:\n      - y: Acceleration in Non-linear Harmonic Oscillator\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2\n    \"\"\"\n    return params[0] * x0 + params[1] * x0**2 + params[2] * x0**3 + params[3] * x0**4 + params[4] * x1 + params[5] * x1**2 + params[6] * x1**3 + params[7] * x2 + params[8] * x2**2\n\n",
+    "return_expression_source": "params[0] * x0 + params[1] * x0 ** 2 + params[2] * x0 ** 3 + params[3] * x0 ** 4 + params[4] * x1 + params[5] * x1 ** 2 + params[6] * x1 ** 3 + params[7] * x2 + params[8] * x2 ** 2",
+    "normalized_expression": "c0*x0 + c1*x0**2 + c2*x0**3 + c3*x0**4 + c4*x1 + c5*x1**2 + c6*x1**3 + c7*x2 + c8*x2**2",
+    "instantiated_expression": "-2.4433768751438008*x0 + 0.22312074734587112*x0**2 + 3.3540102811366292*x0**3 + -2.183905475903126*x0**4 + -0.0011535647014575957*x1 + 0.00010276558060060375*x1**2 + -2.092987344261802e-06*x1**3 + -0.599904698668084*x2 + 0.009850546637954666*x2**2",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      -2.4433768751438008,
+      0.22312074734587112,
+      3.3540102811366292,
+      -2.183905475903126,
+      -0.0011535647014575957,
+      0.00010276558060060375,
+      -2.092987344261802e-06,
+      -0.599904698668084,
+      0.009850546637954666,
+      1.0
+    ],
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 40,
+    "tree_depth": 4,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0 + c1*x0**2 + c2*x0**3 + c3*x0**4 + c4*x1 + c5*x1**2 + c6*x1**3 + c7*x2 + c8*x2**2"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.007058254474988275,
+    "r2": 0.9990929037471373,
+    "nmse": 0.0009070937276713449,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.007025915859395997,
+    "r2": 0.9990373158303198,
+    "nmse": 0.000962660650617305,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.00669049124075615,
+    "r2": 0.9991216041246417,
+    "nmse": 0.0008782897864988787,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.010844582858800477,
+    "r2": -315544.00682332896,
+    "nmse": 313568.69500673836,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 11:32:22",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed3/tasks/llmsr_s3_g0038/iaaccn25/llmsr/g0038_PO19/experiments",
+    "exp_name": "g0038_PO19_llmsr_seed3",
+    "n_features": 3,
+    "feature_names": [
+      "x",
+      "t",
+      "v"
+    ],
+    "target_name": "dv_dt",
+    "original_feature_names": [
+      "x",
+      "t",
+      "v"
+    ],
+    "original_target_name": "dv_dt",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate Acceleration in Non-linear Harmonic Oscillator given Position at time t, Time and Velocity at time t",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO19/metadata.yaml",
+    "feature_descriptions": [
+      "Position at time t",
+      "Time",
+      "Velocity at time t"
+    ],
+    "target_description": "Acceleration in Non-linear Harmonic Oscillator"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

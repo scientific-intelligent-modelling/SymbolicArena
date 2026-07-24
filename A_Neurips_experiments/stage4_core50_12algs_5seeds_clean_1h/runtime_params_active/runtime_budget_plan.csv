@@ -1,0 +1,9 @@
+algorithm,current_median_seconds,problem_type,planned_change,expected_behavior
+pyoperon,10.128,默认 generations=1 提前结束,max_time=3600；generations=1000000；max_evaluations=200000000；wrapper 缺省按时间多代运行,由 max_time/外层 timeout 主导，持续进化到约 1h
+qlattice,143.615,n_epochs=100 很快耗尽,n_epochs=100000；wrapper 逐 epoch 检查 timeout_guard,持续 auto_run(n_epochs=1) 到接近 1h
+e2esr,508.875,bag/refine pass 太少,max_number_bags=100000；n_trees_to_refine=500；stop_refinement_after=30；backend 支持 timeout_guard,持续更多 bag 前向和候选精修，接近预算时优雅收口
+tpsr,1462.834,固定 horizon/rollout 提前结束,horizon=2000；rollout=10；beam_size=64；num_beams=8；n_trees_to_refine=500；wrapper 搜索步数预算感知,显著延长 planning/refinement，接近预算时保留最优候选
+dso,2576.062,training.n_samples 部分任务不足,training.n_samples=10000000；wrapper train_one_step 循环检查 timeout_guard,持续采样训练并写 .dso_current_best.json
+udsr,3601.812,继承 DSO 路径，部分任务提前,training.n_samples=10000000；保留 uDSR GP-meld/poly 配置；沿用 DSO timeout 循环,保持 uDSR 特性同时延长有效搜索
+imcts,3601.622,K/max_expressions 对部分任务不足,K=5000；max_expressions=50000000；budget_chunks=1000000；wrapper 多 chunk seed offset 搜索,底层 fit 完成后继续新 chunk 探索，按训练 MSE 保留最优
+ragsr,3143.713,n_gen=100 可能先耗尽,n_gen=100000；n_pop=500；time_limit=3595；wrapper 有 timeout 时自动提升默认 n_gen,EvolutionaryForest 优先由 time_limit 控制结束

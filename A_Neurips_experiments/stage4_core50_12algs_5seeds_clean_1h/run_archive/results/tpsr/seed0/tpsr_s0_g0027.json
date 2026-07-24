@@ -1,0 +1,132 @@
+{
+  "tool": "tpsr",
+  "task_label": "g0027_feynman_I_12_11",
+  "task_global_index": 27,
+  "dataset": "feynman_I_12_11",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_12_11"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed0/tasks/tpsr_s0_g0027/iaaccn25/tpsr/g0027_feynman_I_12_11/experiments/g0027_feynman_I_12_11_tpsr_seed0_20260502-074549",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "q",
+    "Ef",
+    "B",
+    "v",
+    "theta"
+  ],
+  "target_name": "target",
+  "train_rows": 64000,
+  "valid_rows": 8000,
+  "id_test_rows": 8000,
+  "ood_test_rows": 10000,
+  "seconds": 3369.3,
+  "equation": "((0.02 + (-0.9 * x_4)) + (9.0 + (0 * ((0.01 + (-0.009 * x_0)) - ((0.001 + (0.9 * 1/((-2.0 + x_3)))) * ((-0.01 + (9.0 * x_1)) + (-0.01 + x_2)))))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "tpsr",
+    "raw_equation": "((0.02 + (-0.9 * x_4)) + (9.0 + (0 * ((0.01 + (-0.009 * x_0)) - ((0.001 + (0.9 * 1/((-2.0 + x_3)))) * ((-0.01 + (9.0 * x_1)) + (-0.01 + x_2)))))))",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x4, params):\n    return 9.02 - 0.9*x4\n",
+    "return_expression_source": "9.02 - 0.9*x4",
+    "normalized_expression": "9.02 - 0.9*x4",
+    "instantiated_expression": "9.02 - 0.9*x4",
+    "variables": [
+      "x4"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 5,
+    "tree_depth": 3,
+    "normalization_mode": "tpsr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "9.02 - 0.9*x4"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 25.616050354481192,
+    "r2": 0.03165264791244815,
+    "nmse": 0.8278095816252438,
+    "acc_0_1": 0.004703125
+  },
+  "valid": {
+    "rmse": 24.924389341927686,
+    "r2": 0.0327298084088401,
+    "nmse": 0.8220824335195756,
+    "acc_0_1": 0.00525
+  },
+  "id_test": {
+    "rmse": 25.82141911388505,
+    "r2": 0.025752904711039526,
+    "nmse": 0.823314723720112,
+    "acc_0_1": 0.004625
+  },
+  "ood_test": {
+    "rmse": 41.85420365478534,
+    "r2": 0.04488987533551214,
+    "nmse": 0.9272727743441481,
+    "acc_0_1": 0.0155
+  },
+  "finished_at": "2026-05-02 08:41:59",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "backbone_model": "e2e",
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "beam_size": 10,
+    "beam_type": "sampling",
+    "no_seq_cache": false,
+    "no_prefix_cache": true,
+    "width": 3,
+    "num_beams": 1,
+    "rollout": 3,
+    "horizon": 200,
+    "lam": 0.1,
+    "train_value": false,
+    "reward_sample_limit": 2048,
+    "cpu": true,
+    "cpu_num_threads": 4,
+    "cpu_interop_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/tpsr/seed0/tasks/tpsr_s0_g0027/iaaccn25/tpsr/g0027_feynman_I_12_11/experiments",
+    "exp_name": "g0027_feynman_I_12_11_tpsr_seed0",
+    "n_features": 5,
+    "feature_names": [
+      "q",
+      "Ef",
+      "B",
+      "v",
+      "theta"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

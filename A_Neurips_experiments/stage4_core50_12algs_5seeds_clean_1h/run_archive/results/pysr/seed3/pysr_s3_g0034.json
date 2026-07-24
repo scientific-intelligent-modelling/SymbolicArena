@@ -1,0 +1,181 @@
+{
+  "tool": "pysr",
+  "task_label": "g0034_CRK11",
+  "task_global_index": 34,
+  "dataset": "CRK11",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK11",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK11",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK11"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pysr/seed3/tasks/pysr_s3_g0034/iaaccn28/pysr/g0034_CRK11/experiments/g0034_CRK11_pysr_seed3_20260502-101029",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3602.622,
+  "equation": "(((((x1 - sin(x1)) * ((x1 + -4.0077004) - (1.1712986 / x1))) + 0.2899476) / 0.98522526) / x1) * x1",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pysr",
+    "raw_equation": "(((((x1 - sin(x1)) * ((x1 + -4.0077004) - (1.1712986 / x1))) + 0.2899476) / 0.98522526) / x1) * x1",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return 1.01499630652994*(x0 - sin(x0))*(x0 - 4.0077004 - 1.1712986/x0) + 0.294295743087221\n",
+    "return_expression_source": "1.01499630652994*(x0 - sin(x0))*(x0 - 4.0077004 - 1.1712986/x0) + 0.294295743087221",
+    "normalized_expression": "1.01499630652994*(x0 - sin(x0))*(x0 - 4.0077004 - 1.1712986/x0) + 0.294295743087221",
+    "instantiated_expression": "1.01499630652994*(x0 - sin(x0))*(x0 - 4.0077004 - 1.1712986/x0) + 0.294295743087221",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 18,
+    "tree_depth": 6,
+    "normalization_mode": "pysr_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "1.01499630652994*(x0 - sin(x0))*(x0 - 4.0077004 - 1.1712986/x0) + 0.294295743087221"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": null,
+    "r2": null,
+    "nmse": null,
+    "acc_0_1": 0.004285714285714286
+  },
+  "valid": {
+    "rmse": 1260.537572454226,
+    "r2": -3162336974.568301,
+    "nmse": 3076251716.606526,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 1075.3320485322768,
+    "r2": -1870825737.6417696,
+    "nmse": 1816733143.2933934,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 3071.1129231711493,
+    "r2": -139532467650322.19,
+    "nmse": 88137352534752.78,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-05-02 11:10:32",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 10000000,
+    "population_size": 64,
+    "populations": 8,
+    "ncycles_per_iteration": 500,
+    "maxsize": 30,
+    "maxdepth": 10,
+    "parsimony": 0.001,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "square",
+      "cube",
+      "exp",
+      "log",
+      "sin",
+      "cos"
+    ],
+    "constraints": {
+      "/": [
+        -1,
+        9
+      ],
+      "square": 9,
+      "cube": 9,
+      "exp": 7,
+      "log": 7,
+      "sin": 9,
+      "cos": 9
+    },
+    "nested_constraints": {
+      "exp": {
+        "exp": 0,
+        "log": 1
+      },
+      "log": {
+        "exp": 0,
+        "log": 0
+      },
+      "square": {
+        "square": 1,
+        "cube": 1,
+        "exp": 0,
+        "log": 0
+      },
+      "cube": {
+        "square": 1,
+        "cube": 1,
+        "exp": 0,
+        "log": 0
+      }
+    },
+    "complexity_of_operators": {
+      "/": 2,
+      "square": 2,
+      "cube": 3,
+      "sin": 2,
+      "cos": 2,
+      "exp": 3,
+      "log": 3
+    },
+    "complexity_of_constants": 2,
+    "complexity_of_variables": 1,
+    "precision": 32,
+    "deterministic": true,
+    "parallelism": "serial",
+    "model_selection": "best",
+    "progress": true,
+    "verbosity": 1,
+    "procs": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pysr/seed3/tasks/pysr_s3_g0034/iaaccn28/pysr/g0034_CRK11/experiments",
+    "exp_name": "g0034_CRK11_pysr_seed3",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'pysr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

@@ -1,0 +1,117 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0012_feynman_I_27_6",
+  "task_global_index": 12,
+  "dataset": "feynman_I_27_6",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed3/tasks/qlattice_s3_g0012/iaaccn25/QLattice/g0012_feynman_I_27_6/experiments/g0012_feynman_I_27_6_QLattice_seed3_20260502-094708",
+  "status": "ok",
+  "error": null,
+  "seed": 3,
+  "feature_names": [
+    "d1",
+    "d2",
+    "n"
+  ],
+  "target_name": "target",
+  "train_rows": 80000,
+  "valid_rows": 10000,
+  "id_test_rows": 10000,
+  "ood_test_rows": 10000,
+  "seconds": 560.552,
+  "equation": "-3.316*(-0.3402*x0 - 0.1696)*exp(-2.0*(0.6439 - 0.1731*x1)**2 - 2.0*(0.04856*x0 + 0.8293)**2*(0.07348*x1 - 1.299)**2*exp(-4.0*(0.5294 - 0.1023*x2)**2)) + 0.1158",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "-3.316*(-0.3402*x0 - 0.1696)*exp(-2.0*(0.6439 - 0.1731*x1)**2 - 2.0*(0.04856*x0 + 0.8293)**2*(0.07348*x1 - 1.299)**2*exp(-4.0*(0.5294 - 0.1023*x2)**2)) + 0.1158",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, params):\n    return (1.1281032*x0 + 0.5623936)*exp(-2.0*(0.6439 - 0.1731*x1)**2 - 2.0*(0.04856*x0 + 0.8293)**2*(0.07348*x1 - 1.299)**2*exp(-4.0*(0.5294 - 0.1023*x2)**2)) + 0.1158\n",
+    "return_expression_source": "(1.1281032*x0 + 0.5623936)*exp(-2.0*(0.6439 - 0.1731*x1)**2 - 2.0*(0.04856*x0 + 0.8293)**2*(0.07348*x1 - 1.299)**2*exp(-4.0*(0.5294 - 0.1023*x2)**2)) + 0.1158",
+    "normalized_expression": "(1.1281032*x0 + 0.5623936)*exp(-2.0*(0.6439 - 0.1731*x1)**2 - 2.0*(0.04856*x0 + 0.8293)**2*(0.07348*x1 - 1.299)**2*exp(-4.0*(0.5294 - 0.1023*x2)**2)) + 0.1158",
+    "instantiated_expression": "(1.1281032*x0 + 0.5623936)*exp(-2.0*(0.6439 - 0.1731*x1)**2 - 2.0*(0.04856*x0 + 0.8293)**2*(0.07348*x1 - 1.299)**2*exp(-4.0*(0.5294 - 0.1023*x2)**2)) + 0.1158",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 45,
+    "tree_depth": 11,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(1.1281032*x0 + 0.5623936)*exp(-2.0*(0.6439 - 0.1731*x1)**2 - 2.0*(0.04856*x0 + 0.8293)**2*(0.07348*x1 - 1.299)**2*exp(-4.0*(0.5294 - 0.1023*x2)**2)) + 0.1158"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.026354221654941598,
+    "r2": 0.9945760602220016,
+    "nmse": 0.0009656843766685227,
+    "acc_0_1": 0.9969125
+  },
+  "valid": {
+    "rmse": 0.026528224912635855,
+    "r2": 0.9945490814854645,
+    "nmse": 0.0009730934046085307,
+    "acc_0_1": 0.9964
+  },
+  "id_test": {
+    "rmse": 0.026053797326655317,
+    "r2": 0.9945481063088097,
+    "nmse": 0.0009510668491159473,
+    "acc_0_1": 0.9981
+  },
+  "ood_test": {
+    "rmse": 0.1307206947364677,
+    "r2": 0.9700995954511975,
+    "nmse": 0.014115213035559886,
+    "acc_0_1": 0.7934
+  },
+  "finished_at": "2026-05-02 09:56:29",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed3/tasks/qlattice_s3_g0012/iaaccn25/QLattice/g0012_feynman_I_27_6/experiments",
+    "exp_name": "g0012_feynman_I_27_6_QLattice_seed3",
+    "n_features": 3,
+    "feature_names": [
+      "d1",
+      "d2",
+      "n"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

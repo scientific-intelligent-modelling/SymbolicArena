@@ -1,0 +1,115 @@
+{
+  "tool": "e2esr",
+  "task_label": "g0039_CRK0",
+  "task_global_index": 39,
+  "dataset": "CRK0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed1/tasks/e2esr_s1_g0039/iaaccn29/e2esr/g0039_CRK0/experiments/g0039_CRK0_e2esr_seed1_20260502-082128",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 503.672,
+  "equation": "(42.79386311727989*x_1 - 50.270190625089182)*(0.0069*sin(0.06334740379767784*x_0 - 1.7159738231161367) - 0.00331)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "e2esr",
+    "raw_equation": "(42.79386311727989*x_1 - 50.270190625089182)*(0.0069*sin(0.06334740379767784*x_0 - 1.7159738231161367) - 0.00331)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (42.79386311727989*x1 - 50.270190625089182)*(0.0069*sin(0.06334740379767784*x0 - 1.7159738231161367) - 0.00331)\n",
+    "return_expression_source": "(42.79386311727989*x1 - 50.270190625089182)*(0.0069*sin(0.06334740379767784*x0 - 1.7159738231161367) - 0.00331)",
+    "normalized_expression": "(42.79386311727989*x1 - 50.270190625089182)*(0.0069*sin(0.06334740379767784*x0 - 1.7159738231161367) - 0.00331)",
+    "instantiated_expression": "(42.79386311727989*x1 - 50.270190625089182)*(0.0069*sin(0.06334740379767784*x0 - 1.7159738231161367) - 0.00331)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 16,
+    "tree_depth": 7,
+    "normalization_mode": "e2esr_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(42.79386311727989*x1 - 50.270190625089182)*(0.0069*sin(0.06334740379767784*x0 - 1.7159738231161367) - 0.00331)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.0006646090190213353,
+    "r2": 0.9961234943000093,
+    "nmse": 0.0035678968425756265,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.0006662351142049877,
+    "r2": 0.9958939349817169,
+    "nmse": 0.0037956184293814867,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.0007147108960366777,
+    "r2": 0.996527208076326,
+    "nmse": 0.003141199996469099,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.0006191632054383957,
+    "r2": -11.513822022897447,
+    "nmse": 3.295845496262581,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 08:29:52",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_input_points": 200,
+    "max_number_bags": 10,
+    "stop_refinement_after": 1,
+    "n_trees_to_refine": 10,
+    "rescale": true,
+    "force_cpu": true,
+    "torch_num_threads": 1,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/e2esr/seed1/tasks/e2esr_s1_g0039/iaaccn29/e2esr/g0039_CRK0/experiments",
+    "exp_name": "g0039_CRK0_e2esr_seed1",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

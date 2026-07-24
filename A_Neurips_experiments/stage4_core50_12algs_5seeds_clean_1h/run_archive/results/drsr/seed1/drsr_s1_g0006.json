@@ -1,0 +1,150 @@
+{
+  "tool": "drsr",
+  "task_label": "g0006_Keijzer-2",
+  "task_global_index": 6,
+  "dataset": "Keijzer-2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0006/iaaccn26/drsr/g0006_Keijzer-2/experiments/g0006_Keijzer-2_drsr_seed1_20260502-075057",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x1"
+  ],
+  "target_name": "target",
+  "train_rows": 37,
+  "valid_rows": 4,
+  "id_test_rows": 4001,
+  "ood_test_rows": 410,
+  "seconds": 3901.219,
+  "equation": "def equation(x0: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This is an abstract symbolic regression problem.\n\n    Variables:\n    - Independents:\n  - x0: Independent variables (anonymized)\n- Dependent:\n  - y: Dependent variable (target)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * x0**4 + params[2] * x0**2 + params[3] * np.sin(params[4] * x0) + params[5] * np.cos(params[6] * x0**2)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "drsr",
+    "raw_equation": "def equation(x0: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This is an abstract symbolic regression problem.\n\n    Variables:\n    - Independents:\n  - x0: Independent variables (anonymized)\n- Dependent:\n  - y: Dependent variable (target)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * x0**4 + params[2] * x0**2 + params[3] * np.sin(params[4] * x0) + params[5] * np.cos(params[6] * x0**2)",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This is an abstract symbolic regression problem.\n\n    Variables:\n    - Independents:\n  - x0: Independent variables (anonymized)\n- Dependent:\n  - y: Dependent variable (target)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0\n    \"\"\"\n    \"\"\"Improved version of `equation_v2`.\"\"\"\n    return params[0] + params[1] * x0**4 + params[2] * x0**2 + params[3] * np.sin(params[4] * x0) + params[5] * np.cos(params[6] * x0**2)",
+    "return_expression_source": "params[0] + params[1] * x0 ** 4 + params[2] * x0 ** 2 + params[3] * np.sin(params[4] * x0) + params[5] * np.cos(params[6] * x0 ** 2)",
+    "normalized_expression": "c0 + c1*x0**4 + c2*x0**2 + c3*sin(c4*x0) + c5*cos(c6*x0**2)",
+    "instantiated_expression": "0.7281878157323822 + 0.2521623128365104*x0**4 + -1.0573462555676074*x0**2 + 0.011758537450444662*sin(1.961851899849512*x0) + -0.6294804343953283*cos(1.7614090387260886*x0**2)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      0.7281878157323822,
+      0.2521623128365104,
+      -1.0573462555676074,
+      0.011758537450444662,
+      1.961851899849512,
+      -0.6294804343953283,
+      1.7614090387260886,
+      0.7609664887701442,
+      0.5318125910902352,
+      -0.6794817168572849
+    ],
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 26,
+    "tree_depth": 6,
+    "normalization_mode": "drsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0 + c1*x0**4 + c2*x0**2 + c3*sin(c4*x0) + c5*cos(c6*x0**2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.07434385475993545,
+    "r2": 0.9067737101998927,
+    "nmse": 0.0891394236541035,
+    "acc_0_1": 0.8378378378378378
+  },
+  "valid": {
+    "rmse": 0.08237082975879112,
+    "r2": 0.6653570455630884,
+    "nmse": 0.3277800117969797,
+    "acc_0_1": 0.75
+  },
+  "id_test": {
+    "rmse": 0.07397712044954183,
+    "r2": 0.9042188317974228,
+    "nmse": 0.0921079624559232,
+    "acc_0_1": 0.8367908022994252
+  },
+  "ood_test": {
+    "rmse": 0.7046973322935994,
+    "r2": -13.190521535474721,
+    "nmse": 3.0056856537356462,
+    "acc_0_1": 0.02926829268292683
+  },
+  "finished_at": "2026-05-02 08:55:58",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/drsr/seed1/tasks/drsr_s1_g0006/iaaccn26/drsr/g0006_Keijzer-2/experiments",
+    "exp_name": "g0006_Keijzer-2_drsr_seed1",
+    "n_features": 1,
+    "feature_names": [
+      "x1"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "x1"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0"
+    ],
+    "prompt_target_name": "y",
+    "background": "This is an abstract symbolic regression problem.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2/metadata.yaml",
+    "feature_descriptions": [
+      "Independent variables (anonymized)"
+    ],
+    "target_description": "Dependent variable (target)"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'drsr' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "no_valid_output_reason": null,
+  "termination_reason": "budget_exhausted_with_output"
+}

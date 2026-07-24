@@ -1,0 +1,158 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0029_strogatz_vdp1",
+  "task_global_index": 29,
+  "dataset": "strogatz_vdp1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0029/iaaccn23/llmsr/g0029_strogatz_vdp1/experiments/g0029_strogatz_vdp1_llmsr_seed4_20260502-111114",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3606.545,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n  - x0: Voltage\n  - x1: Current\n- Dependent:\n  - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Alternative function structure for voltage dynamics in a self-oscillating circuit.\"\"\"\n    return params[0] * x0 + params[1] * x1 + params[2] * x0**3 + params[3] * x1**3 + params[4] * x0**2 * x1 + params[5] * np.sin(x0) * np.cos(x1) + params[6] * np.exp(x0) * np.exp(x1) + params[7] * np.tanh(x0) * np.tanh(x1)\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n  - x0: Voltage\n  - x1: Current\n- Dependent:\n  - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Alternative function structure for voltage dynamics in a self-oscillating circuit.\"\"\"\n    return params[0] * x0 + params[1] * x1 + params[2] * x0**3 + params[3] * x1**3 + params[4] * x0**2 * x1 + params[5] * np.sin(x0) * np.cos(x1) + params[6] * np.exp(x0) * np.exp(x1) + params[7] * np.tanh(x0) * np.tanh(x1)\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current\n\n    Variables:\n    - Independents:\n  - x0: Voltage\n  - x1: Current\n- Dependent:\n  - y: Rate of change of voltage (dx/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    \"\"\"Alternative function structure for voltage dynamics in a self-oscillating circuit.\"\"\"\n    return params[0] * x0 + params[1] * x1 + params[2] * x0**3 + params[3] * x1**3 + params[4] * x0**2 * x1 + params[5] * np.sin(x0) * np.cos(x1) + params[6] * np.exp(x0) * np.exp(x1) + params[7] * np.tanh(x0) * np.tanh(x1)\n\n",
+    "return_expression_source": "params[0] * x0 + params[1] * x1 + params[2] * x0 ** 3 + params[3] * x1 ** 3 + params[4] * x0 ** 2 * x1 + params[5] * np.sin(x0) * np.cos(x1) + params[6] * np.exp(x0) * np.exp(x1) + params[7] * np.tanh(x0) * np.tanh(x1)",
+    "normalized_expression": "c0*x0 + c1*x1 + c2*x0**3 + c3*x1**3 + c4*x0**2*x1 + c5*sin(x0)*cos(x1) + c6*exp(x0)*exp(x1) + c7*tanh(x0)*tanh(x1)",
+    "instantiated_expression": "3.3514374993166633*x0 + 9.999617549886263*x1 + -3.3350518317552984*x0**3 + -0.0024028119677914853*x1**3 + -0.0029571603355247646*x0**2*x1 + -0.019521193255048835*sin(x0)*cos(x1) + 1.2195228189918581e-05*exp(x0)*exp(x1) + -0.0009526130891805186*tanh(x0)*tanh(x1)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      3.3514374993166633,
+      9.999617549886263,
+      -3.3350518317552984,
+      -0.0024028119677914853,
+      -0.0029571603355247646,
+      -0.019521193255048835,
+      1.2195228189918581e-05,
+      -0.0009526130891805186,
+      1.0,
+      1.0
+    ],
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "exp",
+      "mul",
+      "pow",
+      "sin",
+      "tanh"
+    ],
+    "ast_node_count": 41,
+    "tree_depth": 4,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0 + c1*x1 + c2*x0**3 + c3*x1**3 + c4*x0**2*x1 + c5*sin(x0)*cos(x1) + c6*exp(x0)*exp(x1) + c7*tanh(x0)*tanh(x1)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.00018190676189470386,
+    "r2": 0.9999999863844277,
+    "nmse": 1.3604444360926517e-08,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.00021059969893573116,
+    "r2": 0.9999999811296308,
+    "nmse": 1.776631335893588e-08,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.0002634663498248357,
+    "r2": 0.999999986049635,
+    "nmse": 1.3939467509798e-08,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.008832970632060247,
+    "r2": 0.9999995587188675,
+    "nmse": 3.7775107946536816e-07,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 12:11:20",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed4/tasks/llmsr_s4_g0029/iaaccn23/llmsr/g0029_strogatz_vdp1/experiments",
+    "exp_name": "g0029_strogatz_vdp1_llmsr_seed4",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target",
+    "original_feature_names": [
+      "x",
+      "y"
+    ],
+    "original_target_name": "target",
+    "prompt_feature_names": [
+      "x0",
+      "x1"
+    ],
+    "prompt_target_name": "y",
+    "background": "This formula is about Voltage dynamics in a self-oscillating circuit. Calculate the Rate of change of voltage (dx/dt) given Voltage and Current",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1/metadata.yaml",
+    "feature_descriptions": [
+      "Voltage",
+      "Current"
+    ],
+    "target_description": "Rate of change of voltage (dx/dt)"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

@@ -1,0 +1,175 @@
+{
+  "tool": "llmsr",
+  "task_label": "g0045_feynman-bonus.20",
+  "task_global_index": 45,
+  "dataset": "feynman-bonus.20",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed1/tasks/llmsr_s1_g0045/iaaccn26/llmsr/g0045_feynman-bonus.20/experiments/g0045_feynman-bonus.20_llmsr_seed1_20260502-084122",
+  "status": "ok",
+  "error": null,
+  "seed": 1,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3607.993,
+  "equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, x5: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Differential cross section given Fine structure constant, Planck constant, Electron mass There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"alpha, Fine structure constant\"; 1 variable with semantic role \"h, Planck constant\"; 1 variable with semantic role \"m, Electron mass\"; 3 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n  - x3: candidate variable; semantic role hidden\n  - x4: candidate variable; semantic role hidden\n  - x5: candidate variable; semantic role hidden\n- Dependent:\n  - y: A, Differential cross section\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return (params[0] * x0**2 / (4 * np.pi * params[1]**2)) * (1 / (params[2] * x1 * x2))\n\n",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "llmsr",
+    "raw_equation": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, x5: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Differential cross section given Fine structure constant, Planck constant, Electron mass There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"alpha, Fine structure constant\"; 1 variable with semantic role \"h, Planck constant\"; 1 variable with semantic role \"m, Electron mass\"; 3 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n  - x3: candidate variable; semantic role hidden\n  - x4: candidate variable; semantic role hidden\n  - x5: candidate variable; semantic role hidden\n- Dependent:\n  - y: A, Differential cross section\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return (params[0] * x0**2 / (4 * np.pi * params[1]**2)) * (1 / (params[2] * x1 * x2))\n\n",
+    "raw_equation_kind": "python_function",
+    "python_function_source": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray, x5: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Differential cross section given Fine structure constant, Planck constant, Electron mass There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"alpha, Fine structure constant\"; 1 variable with semantic role \"h, Planck constant\"; 1 variable with semantic role \"m, Electron mass\"; 3 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.\n\n    Variables:\n    - Independents:\n  - x0: candidate variable; semantic role hidden\n  - x1: candidate variable; semantic role hidden\n  - x2: candidate variable; semantic role hidden\n  - x3: candidate variable; semantic role hidden\n  - x4: candidate variable; semantic role hidden\n  - x5: candidate variable; semantic role hidden\n- Dependent:\n  - y: A, Differential cross section\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3 + params[5] * x4 + params[6] * x5\n    \"\"\"\n    \"\"\"Improved version of `equation_v1`.\"\"\"\n    return (params[0] * x0**2 / (4 * np.pi * params[1]**2)) * (1 / (params[2] * x1 * x2))\n\n",
+    "return_expression_source": "params[0] * x0 ** 2 / (4 * np.pi * params[1] ** 2) * (1 / (params[2] * x1 * x2))",
+    "normalized_expression": "c0*x0**2/(4*pi*c1**2*c2*x1*x2)",
+    "instantiated_expression": "1.0*x0**2/(4*pi*1.0**2*1.0*x1*x2)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "parameter_symbols": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "parameter_values": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "expected_n_features": 6,
+    "operator_set": [
+      "mul",
+      "pi",
+      "pow"
+    ],
+    "ast_node_count": 21,
+    "tree_depth": 3,
+    "normalization_mode": "llmsr_python_return",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "c0*x0**2/(4*pi*c1**2*c2*x1*x2)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 9.191040028718274e-25,
+    "r2": -0.022543692550690997,
+    "nmse": 1.000430983196873,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 8.571730850009574e-25,
+    "r2": -0.02522210005055725,
+    "nmse": 1.0004091323852093,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 1.1690741351160397e-24,
+    "r2": -0.021251806926273487,
+    "nmse": 1.0002297549409285,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 3.6071700796244606e-24,
+    "r2": -0.0038558334136091776,
+    "nmse": 0.9999998488753319,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 09:41:30",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 100000,
+    "samples_per_iteration": 4,
+    "max_params": 10,
+    "inject_prompt_semantics": true,
+    "canonical_prompt_variables": true,
+    "persist_all_samples": false,
+    "llm_config_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/exp-planning/02.E1选择验证/llm_configs/benchmark_llm.config",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/llmsr/seed1/tasks/llmsr_s1_g0045/iaaccn26/llmsr/g0045_feynman-bonus.20/experiments",
+    "exp_name": "g0045_feynman-bonus.20_llmsr_seed1",
+    "n_features": 6,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "y",
+    "original_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "original_target_name": "y",
+    "prompt_feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "prompt_target_name": "y",
+    "background": "Calculate the Differential cross section given Fine structure constant, Planck constant, Electron mass There are 6 candidate variables in an unknown order. The unordered semantic-role multiset is: 1 variable with semantic role \"alpha, Fine structure constant\"; 1 variable with semantic role \"h, Planck constant\"; 1 variable with semantic role \"m, Electron mass\"; 3 distractor/meaningless variables. The mapping from semantic roles to variable names is intentionally hidden; do not assume which x_i corresponds to which semantic role.",
+    "metadata_path": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20/metadata.yaml",
+    "feature_descriptions": [
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden",
+      "candidate variable; semantic role hidden"
+    ],
+    "target_description": "A, Differential cross section"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

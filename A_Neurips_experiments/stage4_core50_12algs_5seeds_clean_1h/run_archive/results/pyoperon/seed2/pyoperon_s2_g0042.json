@@ -1,0 +1,123 @@
+{
+  "tool": "pyoperon",
+  "task_label": "g0042_feynman_test_15",
+  "task_global_index": 42,
+  "dataset": "feynman_test_15",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_test_15",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_test_15"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed2/tasks/pyoperon_s2_g0042/iaaccn24/pyoperon/g0042_feynman_test_15/experiments/g0042_feynman_test_15_pyoperon_seed2_20260502-092652",
+  "status": "ok",
+  "error": null,
+  "seed": 2,
+  "feature_names": [
+    "c",
+    "v",
+    "omega",
+    "theta"
+  ],
+  "target_name": "target",
+  "train_rows": 80000,
+  "valid_rows": 10000,
+  "id_test_rows": 10000,
+  "ood_test_rows": 10000,
+  "seconds": 11.382,
+  "equation": "((-0.028) + (0.112 * (((0.134 * X2) + ((-0.636) * X3)) + (((-0.693) * X3) / (-0.072)))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "pyoperon",
+    "raw_equation": "((-0.028) + (0.112 * (((0.134 * X2) + ((-0.636) * X3)) + (((-0.693) * X3) / (-0.072)))))",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.015008*x0 + 1.006768*x1 - 0.028\n",
+    "return_expression_source": "0.015008*x0 + 1.006768*x1 - 0.028",
+    "normalized_expression": "0.015008*x0 + 1.006768*x1 - 0.028",
+    "instantiated_expression": "0.015008*x0 + 1.006768*x1 - 0.028",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 8,
+    "tree_depth": 3,
+    "normalization_mode": "operon_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.015008*x0 + 1.006768*x1 - 0.028"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.488460942954939,
+    "r2": 0.8504793373227666,
+    "nmse": 0.02221066738144005,
+    "acc_0_1": 0.187675
+  },
+  "valid": {
+    "rmse": 0.4850744847365485,
+    "r2": 0.8515222645618866,
+    "nmse": 0.022013639821024864,
+    "acc_0_1": 0.1854
+  },
+  "id_test": {
+    "rmse": 0.4849663978799502,
+    "r2": 0.8515947184762332,
+    "nmse": 0.021892519891665945,
+    "acc_0_1": 0.1935
+  },
+  "ood_test": {
+    "rmse": 1.114103114201212,
+    "r2": 0.6004499227137174,
+    "nmse": 0.14711577036433693,
+    "acc_0_1": 0.1305
+  },
+  "finished_at": "2026-05-02 09:27:04",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "population_size": 500,
+    "pool_size": 500,
+    "max_length": 50,
+    "max_depth": 10,
+    "tournament_size": 5,
+    "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+    "offspring_generator": "basic",
+    "reinserter": "keep-best",
+    "optimizer": "lm",
+    "local_search_probability": 1.0,
+    "max_evaluations": 500000,
+    "n_threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/pyoperon/seed2/tasks/pyoperon_s2_g0042/iaaccn24/pyoperon/g0042_feynman_test_15/experiments",
+    "exp_name": "g0042_feynman_test_15_pyoperon_seed2",
+    "n_features": 4,
+    "feature_names": [
+      "c",
+      "v",
+      "omega",
+      "theta"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

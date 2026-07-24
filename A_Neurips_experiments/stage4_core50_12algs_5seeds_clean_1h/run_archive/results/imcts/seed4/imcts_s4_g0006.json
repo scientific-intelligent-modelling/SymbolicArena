@@ -1,0 +1,128 @@
+{
+  "tool": "iMCTS",
+  "task_label": "g0006_Keijzer-2",
+  "task_global_index": 6,
+  "dataset": "Keijzer-2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+  "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_dataset_dir": "sim-datasets-data/keijzer/Keijzer-2",
+    "expected_normalized": "sim-datasets-data/keijzer/Keijzer-2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/keijzer/Keijzer-2",
+    "actual_normalized": "sim-datasets-data/keijzer/Keijzer-2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed4/tasks/imcts_s4_g0006/iaaccn23/iMCTS/g0006_Keijzer-2/experiments/g0006_Keijzer-2_iMCTS_seed4_20260502-103222",
+  "status": "ok",
+  "error": null,
+  "seed": 4,
+  "feature_names": [
+    "x1"
+  ],
+  "target_name": "target",
+  "train_rows": 37,
+  "valid_rows": 4,
+  "id_test_rows": 4001,
+  "ood_test_rows": 410,
+  "seconds": 72.219,
+  "equation": "0.2999992541657232*x0*sin(6.2831865443691015*x0) - 3.0501126232548002e-7*sin(6.2831865443691015*x0)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "iMCTS",
+    "raw_equation": "0.2999992541657232*x0*sin(6.2831865443691015*x0) - 3.0501126232548002e-7*sin(6.2831865443691015*x0)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return 0.2999992541657232*x0*sin(6.2831865443691015*x0) - 3.0501126232548002e-7*sin(6.2831865443691015*x0)\n",
+    "return_expression_source": "0.2999992541657232*x0*sin(6.2831865443691015*x0) - 3.0501126232548002e-7*sin(6.2831865443691015*x0)",
+    "normalized_expression": "0.2999992541657232*x0*sin(6.2831865443691015*x0) - 3.0501126232548002e-7*sin(6.2831865443691015*x0)",
+    "instantiated_expression": "0.2999992541657232*x0*sin(6.2831865443691015*x0) - 3.0501126232548002e-7*sin(6.2831865443691015*x0)",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 14,
+    "tree_depth": 5,
+    "normalization_mode": "imcts_simplified_expr",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.2999992541657232*x0*sin(6.2831865443691015*x0) - 3.0501126232548002e-7*sin(6.2831865443691015*x0)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 9.057334832273678e-07,
+    "r2": 0.9999999999861627,
+    "nmse": 1.3230629760175772e-11,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 3.8325890063872784e-07,
+    "r2": 0.9999999999927554,
+    "nmse": 7.096105829805163e-12,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 8.53702971079176e-07,
+    "r2": 0.9999999999872444,
+    "nmse": 1.2266365921465948e-11,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 8.214227305068309e-07,
+    "r2": 0.9999999999807191,
+    "nmse": 4.083868379687529e-12,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 10:33:34",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "ops": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "sin",
+      "cos",
+      "exp",
+      "log",
+      "R"
+    ],
+    "max_depth": 6,
+    "K": 500,
+    "c": 4.0,
+    "gamma": 0.5,
+    "gp_rate": 0.2,
+    "mutation_rate": 0.1,
+    "exploration_rate": 0.2,
+    "max_single_arity_ops": 999,
+    "max_constants": 10,
+    "max_expressions": 2000000,
+    "verbose": false,
+    "optimization_method": "LN_NELDERMEAD",
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/imcts/seed4/tasks/imcts_s4_g0006/iaaccn23/iMCTS/g0006_Keijzer-2/experiments",
+    "exp_name": "g0006_Keijzer-2_iMCTS_seed4",
+    "n_features": 1,
+    "feature_names": [
+      "x1"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}

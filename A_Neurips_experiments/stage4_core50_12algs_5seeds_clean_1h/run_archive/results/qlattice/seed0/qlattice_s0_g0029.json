@@ -1,0 +1,113 @@
+{
+  "tool": "QLattice",
+  "task_label": "g0029_strogatz_vdp1",
+  "task_global_index": 29,
+  "dataset": "strogatz_vdp1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0029/iaaccn25/QLattice/g0029_strogatz_vdp1/experiments/g0029_strogatz_vdp1_QLattice_seed0_20260502-071425",
+  "status": "ok",
+  "error": null,
+  "seed": 0,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 154.921,
+  "equation": "10.0*x1 + 5.172*(-0.6914*x0 - 0.3908)*(0.7457*x0 + 0.4396)*(1.25*x0 - 1.443)*tanh(1.223*x1 + 4.951) - 1.282",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "QLattice",
+    "raw_equation": "10.0*x1 + 5.172*(-0.6914*x0 - 0.3908)*(0.7457*x0 + 0.4396)*(1.25*x0 - 1.443)*tanh(1.223*x1 + 4.951) - 1.282",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 10.0*x1 + (-3.5759208*x0 - 2.0212176)*(0.7457*x0 + 0.4396)*(1.25*x0 - 1.443)*tanh(1.223*x1 + 4.951) - 1.282\n",
+    "return_expression_source": "10.0*x1 + (-3.5759208*x0 - 2.0212176)*(0.7457*x0 + 0.4396)*(1.25*x0 - 1.443)*tanh(1.223*x1 + 4.951) - 1.282",
+    "normalized_expression": "10.0*x1 + (-3.5759208*x0 - 2.0212176)*(0.7457*x0 + 0.4396)*(1.25*x0 - 1.443)*tanh(1.223*x1 + 4.951) - 1.282",
+    "instantiated_expression": "10.0*x1 + (-3.5759208*x0 - 2.0212176)*(0.7457*x0 + 0.4396)*(1.25*x0 - 1.443)*tanh(1.223*x1 + 4.951) - 1.282",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "tanh"
+    ],
+    "ast_node_count": 27,
+    "tree_depth": 6,
+    "normalization_mode": "qlattice_direct",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "10.0*x1 + (-3.5759208*x0 - 2.0212176)*(0.7457*x0 + 0.4396)*(1.25*x0 - 1.443)*tanh(1.223*x1 + 4.951) - 1.282"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.0017317216632533623,
+    "r2": 0.9999987660589966,
+    "nmse": 1.2329325046943608e-06,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.0019915660535027675,
+    "r2": 0.9999983124589995,
+    "nmse": 1.5888074074958321e-06,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.0019050383623640248,
+    "r2": 0.9999992706387077,
+    "nmse": 7.287915457823638e-07,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.002638227188148156,
+    "r2": 0.9999999606335576,
+    "nmse": 3.3698962035221884e-08,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-05-02 07:17:00",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "n_epochs": 100,
+    "kind": "regression",
+    "criterion": "bic",
+    "signif": 4,
+    "threads": 4,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/core50_12alg_5seed_all_20260502-065700/qlattice/seed0/tasks/qlattice_s0_g0029/iaaccn25/QLattice/g0029_strogatz_vdp1/experiments",
+    "exp_name": "g0029_strogatz_vdp1_QLattice_seed0",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "termination_reason": "completed"
+}
