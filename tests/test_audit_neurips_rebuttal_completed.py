@@ -7,6 +7,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "check" / "audit_neurips_rebuttal_completed.py"
+DEPLOY_SCRIPT = (
+    ROOT
+    / "A_Neurips_experiments"
+    / "rebuttal"
+    / "01_new3algs_full664_3seeds_clean_1h"
+    / "deploy"
+    / "06_audit_completed_from_iaaccn22.sh"
+)
 
 
 def _load_module():
@@ -141,3 +149,14 @@ def test_audit_completed_reports_budget_and_missing_result_failures(
         if issue["issue"] == "contract_failed"
     )
     assert contract["failed_checks"] == ["runtime_compliant"]
+
+
+def test_completed_audit_deploy_uses_one_immutable_state_snapshot() -> None:
+    content = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'STATE_SNAPSHOT="$REPORT_DIR/state.snapshot.json"' in content
+    assert 'cp "$STATE" "$STATE_SNAPSHOT"' in content
+    assert 'state_basename="$(basename "$STATE_SNAPSHOT")"' in content
+    assert '--state "$STATE_SNAPSHOT"' in content
+    assert '"$STATE_SNAPSHOT" \\' in content
+    assert "' \"$STATE_SNAPSHOT\"" in content

@@ -13,12 +13,27 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 REPORT_DIR="$BATCH_DIR/monitoring/completed_audit/$STAMP"
 mkdir -p "$REPORT_DIR"
 
-state_basename="$(basename "$STATE")"
+STATE_SNAPSHOT="$REPORT_DIR/state.snapshot.json"
+snapshot_ok=0
+for _ in 1 2 3 4 5; do
+  if cp "$STATE" "$STATE_SNAPSHOT" \
+    && jq -e '.tasks | type == "object"' "$STATE_SNAPSHOT" >/dev/null; then
+    snapshot_ok=1
+    break
+  fi
+  sleep 1
+done
+if [[ "$snapshot_ok" -ne 1 ]]; then
+  echo "无法冻结有效 state 快照: $STATE" >&2
+  exit 1
+fi
+
+state_basename="$(basename "$STATE_SNAPSHOT")"
 auditor_basename="$(basename "$AUDITOR")"
 failed=0
 
 python "$AUDITOR" \
-  --state "$STATE" \
+  --state "$STATE_SNAPSHOT" \
   --experiment-root "$EXPERIMENT_ROOT" \
   --host iaaccn22 \
   --min-runtime 3300 \
@@ -33,7 +48,7 @@ for suffix in 23 24 25 26 27 28 29; do
     -o BatchMode=yes \
     -o ConnectTimeout=10 \
     "$AUDITOR" \
-    "$STATE" \
+    "$STATE_SNAPSHOT" \
     "$ip:/tmp/" || {
       jq -n \
         --arg host "$host" \
@@ -60,14 +75,19 @@ for suffix in 23 24 25 26 27 28 29; do
 done
 
 expected_done="$(
-  jq '[.tasks[] | select(.state == "done")] | length' "$STATE"
+  jq '[.tasks[] | select(.state == "done")] | length' "$STATE_SNAPSHOT"
 )"
+state_sha256="$(sha256sum "$STATE_SNAPSHOT" | awk '{print $1}')"
 
 jq -s \
   --arg created_at "$(date --iso-8601=seconds)" \
+  --arg state_snapshot "$STATE_SNAPSHOT" \
+  --arg state_sha256 "$state_sha256" \
   --argjson expected_done "$expected_done" \
   '{
     created_at: $created_at,
+    state_snapshot: $state_snapshot,
+    state_sha256: $state_sha256,
     expected_done_tasks: $expected_done,
     audited_done_tasks: (map(.done_tasks) | add),
     validated_results: (map(.validated_results) | add),
