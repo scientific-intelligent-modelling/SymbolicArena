@@ -88,6 +88,14 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 `monitoring/controller_incident/20260725-045816/`。事件处理没有删除或
 移动结果；harvest 仍按最终 state 的 `assigned_host` 选择规范结果。
 
+完成波峰期间，控制器已将远端残留进程回收和精确 session 确认改成
+无残留立即返回、每台主机一次 SSH 批量确认。`20260725-072427` 的
+受控重启把新调度器加载到 tmux 单控制器中，未停止任何算法 worker。
+恢复后盘点为一个控制器、零重复任务；`20260725-073556` 固定快照审计
+对 `551/551` 个 done 任务全部验证通过，`issue_count=0`。恢复与时延
+证据分别保存在 `monitoring/controller_recovery/20260725-072427/` 和
+`monitoring/completed_audit/20260725-073556/`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
