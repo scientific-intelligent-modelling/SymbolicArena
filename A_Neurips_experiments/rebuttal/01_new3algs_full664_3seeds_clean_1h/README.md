@@ -96,6 +96,12 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 证据分别保存在 `monitoring/controller_recovery/20260725-072427/` 和
 `monitoring/completed_audit/20260725-073556/`。
 
+正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
+`fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
+任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
+JSON 可解析并包含数据身份、方程、ID/OOD 评估字段。证据保存在
+`monitoring/progress_snapshot_audit/20260725-074327/summary.json`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
