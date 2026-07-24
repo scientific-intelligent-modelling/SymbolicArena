@@ -27,6 +27,13 @@ AAAI 后续的 SSR-50 十五算法实验。
   - 目标是生成 clean 排行榜、正式符号保真指标和 noisy-training 鲁棒性分析
   - 包内保存 `3000/3000` 个 clean `result.json` 和 `9000` 条 noisy run-level 记录
 
+- `rebuttal/`
+  - NeurIPS rebuttal 期间新增实验，不改写原四阶段归档
+  - 当前第 1 项为新增三算法在 Stage 3 同一 full-664 数据集、同一三种子和
+    同一 1h 预算下的 clean 评测
+  - 实验目录：
+    `rebuttal/01_new3algs_full664_3seeds_clean_1h/`
+
 ## 阶段关系
 
 ```text
@@ -37,6 +44,8 @@ Stage 2: Candidate-200 十二算法校准
 Stage 3: Probe-4 Full-664 三种子验证
   -> Core-50
 Stage 4: Core-50 十二算法五种子 clean 主榜 + 三档 noisy-training 鲁棒性评测
+Rebuttal 1: Full-664 新增三算法三种子 clean 1h
+  -> 与 Stage 3 四探针形成同口径 7 算法对比
 ```
 
 NeurIPS Stage 4 与 AAAI Stage 4 不是同一批实验：

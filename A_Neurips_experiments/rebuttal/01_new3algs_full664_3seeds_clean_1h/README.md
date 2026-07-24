@@ -1,0 +1,81 @@
+# Rebuttal：新增算法全量 clean 复现实验（664 × 3 seeds × 3算法）
+
+目录名称约定：`01_new3algs_full664_3seeds_clean_1h`
+
+- **数据集**：full-664（`full664_unified.csv`）
+- **算法**：`fepysr`、`jaxsr`、`symbolfit`
+- **种子**：`520, 521, 522`
+- **噪声**：`clean`（`noise_sigma=0.0`）
+- **预算**：`3600s`（1h）
+- **最小运行时**：`3300s`
+- **任务量**：`664 × 3 × 3 = 5976`
+
+## 数据与稳定身份
+
+数据集清单来自：
+
+`exp-planning/02.E1选择验证/generated/probe4_full664_v1/full664_unified.csv`
+
+清单必须恰好有 664 行，`global_index` 唯一并连续覆盖 `1..664`，
+`dataset_dir` 与 `dataset_rel` 各自唯一。稳定数据集身份使用
+`g0001..g0664` 和 `dataset_rel`，不能使用会重名的 `dataset_name` 或
+`basename`。
+
+## 参数来源
+
+权威来源是 AAAI Stage 4 实际批次：
+
+`benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658/params/`
+
+`provenance/aaai_params_3h/` 保存来源参数副本，`params/` 保存正式 1h 参数，
+`smoke/params/` 保存 600 秒 smoke 参数。正式参数相对来源只允许修改
+`timeout_in_seconds: 10800 -> 3600`；smoke 只允许修改为 `600`。
+
+`min_runtime_seconds=3300` 是合规审计阈值，写在 manifest 中，不作为第三方
+算法参数透传。算法自己的搜索超参数保持 AAAI 实际配置。
+
+## 目录说明
+
+- `manifest/`：5976 条正式任务及预算、数据集、算法和来源指纹。
+- `params/`：正式 1h 参数。
+- `provenance/`：AAAI 3h 参数来源快照。
+- `queues/full664_source.csv`：正式调度数据源和正式队列状态。
+- `smoke/`：18 条 smoke 任务、参数、队列和审计产物。
+- `deploy/`：同步、preflight、smoke、正式调度和收集审计脚本。
+- `BATCH_NAME.txt`：冻结的正式 batch ID。
+- `SOURCE_MAP.tsv`：关键材料来源映射。
+
+## 执行门禁
+
+```text
+prepare + tests + dry-run
+  -> remote preflight: 8/8 hosts pass
+  -> smoke dispatch: 18 tasks
+  -> smoke collect + harvest + audit: 18/18 pass
+  -> full dispatch: 5976 tasks
+  -> collect + harvest + audit + rerun until complete
+  -> metric aggregation and Stage 3 four-probe comparison
+```
+
+本地入口：
+
+```bash
+bash A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/deploy/00_validate_and_sync_to_iaaccn22.sh
+```
+
+后续脚本必须从 `iaaccn22` 的仓库根目录运行，顺序是
+`01_preflight_from_iaaccn22.sh`、`02_smoke_dispatch_from_iaaccn22.sh`、
+`03_full_dispatch_from_iaaccn22.sh`。正式任务完成后再运行
+`04_collect_audit_from_iaaccn22.sh`。
+
+## 最终产物
+
+正式审计闭环后至少输出：
+
+- 每算法 `Valid`、`Metric`、ID/OOD log NMSE。
+- 运行时间和表达式复杂度。
+- 可计算时输出 SYM-F、Exact 和 TreeSim。
+- 与 Stage 3 的 `dso`、`imcts`、`pyoperon`、`udsr` 按相同
+  full-664、seeds 520--522、clean、1h 口径合并成 7 算法比较表。
+
+在 5976 条任务完成并通过审计之前，不得把该目录描述成最终结果。
