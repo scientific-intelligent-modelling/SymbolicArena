@@ -49,3 +49,5 @@ python check/analyze_neurips_rebuttal_full664.py \
   --stage3-run-level \
   "A_Neurips_experiments/stage3_664dats_4probes_3seeds_1h/probe4_postprocess_run_level.csv" \
   --output-dir "$BATCH_DIR/analysis"
+
+bash "$BATCH_DIR/deploy/05_generate_symf_from_iaaccn22.sh"

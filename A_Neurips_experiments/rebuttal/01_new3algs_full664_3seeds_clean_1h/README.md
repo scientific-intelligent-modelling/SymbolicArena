@@ -67,7 +67,8 @@ bash A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/deploy/0
 后续脚本必须从 `iaaccn22` 的仓库根目录运行，顺序是
 `01_preflight_from_iaaccn22.sh`、`02_smoke_dispatch_from_iaaccn22.sh`、
 `03_full_dispatch_from_iaaccn22.sh`。正式任务完成后再运行
-`04_collect_audit_from_iaaccn22.sh`。
+`04_collect_audit_from_iaaccn22.sh`。该脚本审计通过后会继续调用
+`05_generate_symf_from_iaaccn22.sh`。
 
 ## 指标汇总
 
@@ -87,6 +88,15 @@ python check/analyze_neurips_rebuttal_full664.py \
 `INCOMPLETE_PREVIEW`，不得用于论文结论。正式模式会要求结果完整、
 数据身份无冲突且 audit gate 通过，否则直接拒绝生成最终榜单。
 
+formal symbolic judge 使用 `formula.py` 作为 ground truth，按稳定 `gid`
+关联 664 个数据集，并使用 Stage 3 raw digest 中的 normalized/instantiated
+表达式。唯一保留的参数审计告警是 `g0217/PO27`：历史公式参数名 `F0`
+与数据列名 `x` 不一致；两边各只有一个未匹配变量，因此采用
+`F0 -> x` 的唯一剩余位置映射，并在参数审计中保留该记录。
+
+`05_generate_symf_from_iaaccn22.sh` 会对 7 算法共 `13944` 条 run 计算
+SYM-F、Exact、TreeSim，并严格按 `Algorithm key` 合入最终榜单。
+
 ## 最终产物
 
 正式审计闭环后至少输出：
@@ -99,5 +109,7 @@ python check/analyze_neurips_rebuttal_full664.py \
 - `analysis/new3_run_level.csv` 与 `new3_algorithm_summary.csv`。
 - `analysis/full664_7alg_run_level.csv` 与
   `full664_7alg_leaderboard.csv`。
+- `symf/full664_7alg/symbolic_metrics_formal*.csv`。
+- `analysis/full664_7alg_leaderboard_with_symf.csv`。
 
 在 5976 条任务完成并通过审计之前，不得把该目录描述成最终结果。
