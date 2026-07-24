@@ -10,7 +10,8 @@ STATE_SUMMARY="$BATCH_DIR/queues/load_queue_full/state/$BATCH_ID.latest.json"
 export SIM_QUEUE_CONTROLLER_IS_LOCAL=1
 
 jq -e '
-  ((.task_states.pending // 0) == 0)
+  ((.task_states.done // 0) == 5976)
+  and ((.task_states.pending // 0) == 0)
   and ((.task_states.running // 0) == 0)
   and ([.task_states[]] | add == 5976)
 ' "$STATE_SUMMARY" >/dev/null
