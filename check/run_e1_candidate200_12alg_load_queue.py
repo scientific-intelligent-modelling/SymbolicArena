@@ -1207,15 +1207,32 @@ print(json.dumps(out, ensure_ascii=False))
         }
 
 
-def _session_running(host: str, session: str, *, controller_host: str, use_internal_ips: bool) -> bool:
+def _sessions_running_bulk(
+    host: str,
+    sessions: set[str],
+    *,
+    controller_host: str,
+    use_internal_ips: bool,
+) -> set[str] | None:
+    if not sessions:
+        return set()
+    quoted_sessions = " ".join(shlex.quote(session) for session in sorted(sessions))
+    command = (
+        f"for session in {quoted_sessions}; do "
+        'tmux has-session -t "$session" >/dev/null 2>&1 '
+        '&& printf \'%s\\n\' "$session"; '
+        "done; true"
+    )
     result = _ssh(
         host,
-        f"tmux has-session -t {shlex.quote(session)} >/dev/null 2>&1",
+        command,
         controller_host=controller_host,
         use_internal_ips=use_internal_ips,
-        timeout=15,
+        timeout=max(30, min(120, len(sessions) + 15)),
     )
-    return result.returncode == 0
+    if result.returncode != 0:
+        return None
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
 
 def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: bool, session_prefix: str) -> set[str] | None:
@@ -1550,8 +1567,25 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                 session_prefix=args.session_prefix,
             )
 
+    precise_sessions_by_host: dict[str, set[str] | None] = {}
+    omitted_sessions_by_host: dict[str, set[str]] = defaultdict(set)
+    for _, task in running_items:
+        host = str(task["assigned_host"])
+        host_sessions = sessions_by_host.get(host)
+        session = str(task["session"])
+        if host_sessions is not None and session not in host_sessions:
+            omitted_sessions_by_host[host].add(session)
+    for host, sessions in omitted_sessions_by_host.items():
+        precise_sessions_by_host[host] = _sessions_running_bulk(
+            host,
+            sessions,
+            controller_host=args.controller_host,
+            use_internal_ips=args.use_internal_ips,
+        )
+
     finished_items: list[tuple[str, dict[str, Any]]] = []
     unverified_hosts_reported: set[str] = set()
+    precise_check_failed_hosts_reported: set[str] = set()
     for task_id, task in running_items:
         host = str(task["assigned_host"])
         session = str(task["session"])
@@ -1564,7 +1598,17 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                 task.pop("last_status_read_error_at", None)
                 continue
             # tmux ls 在高负载机器上可能返回缺失的瞬时快照；缺席时再做一次精确确认。
-            if _session_running(host, session, controller_host=args.controller_host, use_internal_ips=args.use_internal_ips):
+            precise_sessions = precise_sessions_by_host.get(host)
+            if precise_sessions is None:
+                if host not in precise_check_failed_hosts_reported:
+                    _append_event(
+                        args.batch_name,
+                        {"event": "host_session_precise_check_unavailable_keep_running", "host": host},
+                        args.queue_root_path,
+                    )
+                    precise_check_failed_hosts_reported.add(host)
+                continue
+            if session in precise_sessions:
                 _append_event(
                     args.batch_name,
                     {"event": "task_session_list_missed_live_session", "task_id": task_id, "host": host, "session": session},

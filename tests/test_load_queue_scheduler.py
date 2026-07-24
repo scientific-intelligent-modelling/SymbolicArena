@@ -397,6 +397,37 @@ def test_list_queue_sessions_treats_empty_tmux_server_as_no_sessions(monkeypatch
     assert sessions == set()
 
 
+def test_sessions_running_bulk_checks_all_sessions_in_one_ssh(monkeypatch):
+    calls = []
+
+    def fake_ssh(host, command, **kwargs):
+        calls.append((host, command, kwargs))
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            "formal24h_full_gplearn_s520_clean_g0004\n",
+            "",
+        )
+
+    monkeypatch.setattr(scheduler, "_ssh", fake_ssh)
+
+    sessions = scheduler._sessions_running_bulk(
+        "iaaccn25",
+        {
+            "formal24h_full_gplearn_s520_clean_g0004",
+            "formal24h_full_gplearn_s520_clean_g0005",
+        },
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+    )
+
+    assert sessions == {"formal24h_full_gplearn_s520_clean_g0004"}
+    assert len(calls) == 1
+    assert calls[0][0] == "iaaccn25"
+    assert "formal24h_full_gplearn_s520_clean_g0004" in calls[0][1]
+    assert "formal24h_full_gplearn_s520_clean_g0005" in calls[0][1]
+
+
 def test_update_running_tasks_keeps_running_when_tmux_ls_unavailable(tmp_path, monkeypatch):
     state = {
         "tasks": {
@@ -422,9 +453,9 @@ def test_update_running_tasks_keeps_running_when_tmux_ls_unavailable(tmp_path, m
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: None)
 
     def fail_if_session_running_called(*_args, **_kwargs):
-        raise AssertionError("host-level tmux ls failure should not trigger per-task SSH fallback")
+        raise AssertionError("host-level tmux ls failure should not trigger precise SSH fallback")
 
-    monkeypatch.setattr(scheduler, "_session_running", fail_if_session_running_called)
+    monkeypatch.setattr(scheduler, "_sessions_running_bulk", fail_if_session_running_called)
 
     def fail_if_status_read(*_args, **_kwargs):
         raise AssertionError("running tmux session should not be treated as finished")
@@ -516,7 +547,11 @@ def test_update_running_tasks_rechecks_session_when_tmux_ls_omits_live_session(t
     )
 
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
-    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        scheduler,
+        "_sessions_running_bulk",
+        lambda *args, **kwargs: {"formal24h_full_gplearn_s520_clean_g0004"},
+    )
 
     def fail_if_status_read(*_args, **_kwargs):
         raise AssertionError("live tmux session omitted from tmux ls should not be treated as finished")
@@ -526,6 +561,59 @@ def test_update_running_tasks_rechecks_session_when_tmux_ls_omits_live_session(t
     scheduler._update_running_tasks(state, args)
 
     assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "running"
+
+
+def test_update_running_tasks_keeps_running_when_bulk_precise_check_fails(tmp_path, monkeypatch):
+    state = {
+        "tasks": {
+            "gplearn_s520_clean_g0004": {
+                "state": "running",
+                "assigned_host": "iaaccn25",
+                "session": "formal24h_full_gplearn_s520_clean_g0004",
+                "expected": 1,
+            },
+            "gplearn_s520_clean_g0005": {
+                "state": "running",
+                "assigned_host": "iaaccn25",
+                "session": "formal24h_full_gplearn_s520_clean_g0005",
+                "expected": 1,
+            },
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+    events = []
+
+    monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
+    monkeypatch.setattr(scheduler, "_sessions_running_bulk", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        scheduler,
+        "_append_event",
+        lambda _batch_name, event, _queue_root: events.append(event),
+    )
+
+    def fail_if_status_read(*_args, **_kwargs):
+        raise AssertionError("failed precise check must not mark tasks as finished")
+
+    monkeypatch.setattr(scheduler, "_read_task_statuses_bulk", fail_if_status_read)
+
+    scheduler._update_running_tasks(state, args)
+
+    assert {task["state"] for task in state["tasks"].values()} == {"running"}
+    assert events == [
+        {
+            "event": "host_session_precise_check_unavailable_keep_running",
+            "host": "iaaccn25",
+        }
+    ]
 
 
 def test_update_running_tasks_marks_done_when_session_absent_after_precise_recheck(tmp_path, monkeypatch):
@@ -551,7 +639,7 @@ def test_update_running_tasks_marks_done_when_session_absent_after_precise_reche
     )
 
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
-    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: False)
+    monkeypatch.setattr(scheduler, "_sessions_running_bulk", lambda *args, **kwargs: set())
     monkeypatch.setattr(scheduler, "_reap_remote_task_processes", lambda *args, **kwargs: True)
     monkeypatch.setattr(
         scheduler,
@@ -598,7 +686,7 @@ def test_update_running_tasks_keeps_running_when_finished_status_read_fails(tmp_
 
     monkeypatch.setattr(scheduler, "_now", lambda: "2026-06-01T01:00:00")
     monkeypatch.setattr(scheduler, "_list_queue_sessions", lambda *args, **kwargs: set())
-    monkeypatch.setattr(scheduler, "_session_running", lambda *args, **kwargs: False)
+    monkeypatch.setattr(scheduler, "_sessions_running_bulk", lambda *args, **kwargs: set())
     monkeypatch.setattr(
         scheduler,
         "_read_task_statuses_bulk",
