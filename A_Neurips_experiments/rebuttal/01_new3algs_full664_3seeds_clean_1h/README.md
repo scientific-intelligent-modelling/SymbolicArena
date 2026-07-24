@@ -70,6 +70,17 @@ bash A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/deploy/0
 `04_collect_audit_from_iaaccn22.sh`。该脚本审计通过后会继续调用
 `05_generate_symf_from_iaaccn22.sh`。
 
+正式队列运行期间可重复执行：
+
+```bash
+bash A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/deploy/06_audit_completed_from_iaaccn22.sh
+```
+
+该脚本冻结一次 state 快照，按 assigned host 到 8 台机器逐条核对已经
+标记为 `done` 的结果，要求运行时不少于 `3300s`，并检查状态、数据身份、
+ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
+`monitoring/completed_audit/<timestamp>/`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
