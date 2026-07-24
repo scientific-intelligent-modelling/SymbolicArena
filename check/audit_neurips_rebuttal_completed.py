@@ -11,6 +11,20 @@ from pathlib import Path
 from typing import Any
 
 
+CONSUMED_CONTROL_PARAMS = {
+    "progress_snapshot_interval_seconds",
+    "train_label_noise_enabled",
+    "train_label_noise_sigma",
+}
+DYNAMIC_DATASET_PARAMS = {
+    "exp_name",
+    "exp_path",
+    "feature_names",
+    "n_features",
+    "target_name",
+}
+
+
 def _finite_nonnegative(value: Any) -> bool:
     try:
         number = float(value)
@@ -25,6 +39,27 @@ def _finite_zero(value: Any) -> bool:
     except (TypeError, ValueError):
         return False
     return math.isfinite(number) and number == 0
+
+
+def _algorithm_params_match(
+    actual: Any,
+    expected: dict[str, Any] | None,
+) -> bool:
+    if expected is None:
+        return True
+    if not isinstance(actual, dict):
+        return False
+    expected_static = {
+        key: value
+        for key, value in expected.items()
+        if key not in CONSUMED_CONTROL_PARAMS
+    }
+    actual_static = {
+        key: value
+        for key, value in actual.items()
+        if key not in DYNAMIC_DATASET_PARAMS
+    }
+    return actual_static == expected_static
 
 
 def _outer_result_paths(
@@ -52,6 +87,7 @@ def _result_checks(
     payload: dict[str, Any],
     *,
     min_runtime: float,
+    expected_params: dict[str, Any] | None = None,
 ) -> tuple[dict[str, bool], float | None]:
     runtime = payload.get(
         "runtime_seconds",
@@ -95,6 +131,10 @@ def _result_checks(
             and _finite_zero(train_label_noise.get("sigma"))
             and _finite_zero(train_label_noise.get("scale"))
         ),
+        "algorithm_params_match": _algorithm_params_match(
+            payload.get("params"),
+            expected_params,
+        ),
     }
     return checks, runtime_number
 
@@ -105,6 +145,7 @@ def audit_completed(
     experiment_root: Path,
     host: str,
     min_runtime: float,
+    expected_params_by_tool: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """返回单主机已完成任务的可聚合审计报告。"""
     tasks_block = state.get("tasks")
@@ -181,6 +222,11 @@ def audit_completed(
         checks, runtime = _result_checks(
             payload,
             min_runtime=min_runtime,
+            expected_params=(
+                None
+                if expected_params_by_tool is None
+                else expected_params_by_tool.get(tool, {})
+            ),
         )
         if runtime is not None:
             runtime_values.append(runtime)
@@ -224,14 +270,33 @@ def main() -> int:
     )
     parser.add_argument("--host", required=True)
     parser.add_argument("--min-runtime", type=float, default=3300)
+    parser.add_argument("--params-root", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     state = json.loads(args.state.read_text(encoding="utf-8"))
+    tasks_block = state.get("tasks")
+    if not isinstance(tasks_block, dict):
+        raise ValueError("state 缺少 tasks 对象")
+    tools = sorted(
+        {
+            str(task.get("tool") or "")
+            for task in tasks_block.values()
+            if isinstance(task, dict) and task.get("tool")
+        }
+    )
+    expected_params_by_tool: dict[str, dict[str, Any]] = {}
+    for tool in tools:
+        params_path = args.params_root / f"{tool}__clean.json"
+        params = json.loads(params_path.read_text(encoding="utf-8"))
+        if not isinstance(params, dict):
+            raise ValueError(f"参数文件不是 JSON 对象: {params_path}")
+        expected_params_by_tool[tool] = params
     report = audit_completed(
         state=state,
         experiment_root=args.experiment_root,
         host=args.host,
         min_runtime=args.min_runtime,
+        expected_params_by_tool=expected_params_by_tool,
     )
     text = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.output:

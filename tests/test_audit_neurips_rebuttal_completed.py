@@ -60,6 +60,7 @@ def _write_result(
     noise_requested: bool = False,
     noise_sigma: float = 0.0,
     noise_scale: float = 0.0,
+    params: dict | None = None,
 ) -> Path:
     base = (
         experiment_root
@@ -91,6 +92,7 @@ def _write_result(
                     "sigma": noise_sigma,
                     "scale": noise_scale,
                 },
+                "params": params or {},
             }
         ),
         encoding="utf-8",
@@ -189,6 +191,58 @@ def test_audit_completed_rejects_non_clean_training_labels(
     ]
 
 
+def test_result_checks_require_expected_static_algorithm_params() -> None:
+    module = _load_module()
+    expected = {
+        "timeout_in_seconds": 3600,
+        "progress_snapshot_interval_seconds": 60,
+        "max_terms": 5,
+        "strategy": "greedy_forward",
+        "train_label_noise_sigma": 0,
+        "train_label_noise_enabled": False,
+    }
+    payload = {
+        "status": "ok",
+        "runtime_seconds": 3601,
+        "equation": "x0",
+        "dataset_identity_check": {"match": True},
+        "id_test": {"nmse": 0.1},
+        "ood_test": {"nmse": 0.2},
+        "canonical_artifact": {"artifact_valid": True},
+        "train_label_noise": {
+            "enabled": False,
+            "requested": False,
+            "sigma": 0,
+            "scale": 0,
+        },
+        "params": {
+            "timeout_in_seconds": 3600,
+            "max_terms": 5,
+            "strategy": "greedy_forward",
+            "exp_path": "/tmp/experiment",
+            "exp_name": "demo",
+            "n_features": 2,
+            "feature_names": ["x0", "x1"],
+            "target_name": "y",
+        },
+    }
+
+    checks, _ = module._result_checks(
+        payload,
+        min_runtime=3300,
+        expected_params=expected,
+    )
+    assert checks["algorithm_params_match"] is True
+
+    payload["params"]["max_terms"] = 6
+    checks, _ = module._result_checks(
+        payload,
+        min_runtime=3300,
+        expected_params=expected,
+    )
+    assert checks["algorithm_params_match"] is False
+
+
 def test_completed_audit_deploy_uses_one_immutable_state_snapshot() -> None:
     content = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 
@@ -201,3 +255,5 @@ def test_completed_audit_deploy_uses_one_immutable_state_snapshot() -> None:
     assert "for sync_attempt in 1 2 3; do" in content
     assert "timeout 90 scp" in content
     assert 'if [[ "$sync_ok" -ne 1 ]]; then' in content
+    assert '--params-root "$REMOTE_ROOT/$BATCH_DIR/params"' in content
+    assert "--params-root $REMOTE_ROOT/$BATCH_DIR/params" in content

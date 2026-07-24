@@ -37,6 +37,7 @@ python "$AUDITOR" \
   --experiment-root "$EXPERIMENT_ROOT" \
   --host iaaccn22 \
   --min-runtime 3300 \
+  --params-root "$REMOTE_ROOT/$BATCH_DIR/params" \
   --output "$REPORT_DIR/iaaccn22.json" >/dev/null || failed=1
 
 for suffix in 23 24 25 26 27 28 29; do
@@ -80,7 +81,8 @@ for suffix in 23 24 25 26 27 28 29; do
       --state /tmp/$state_basename \
       --experiment-root $EXPERIMENT_ROOT \
       --host $host \
-      --min-runtime 3300" > "$report" || failed=1
+      --min-runtime 3300 \
+      --params-root $REMOTE_ROOT/$BATCH_DIR/params" > "$report" || failed=1
 done
 
 expected_done="$(
