@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import fcntl
 import hashlib
 import json
 import os
@@ -29,10 +30,11 @@ import socket
 import subprocess
 import time
 from collections import Counter, defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -672,6 +674,42 @@ def _summary_path(batch_name: str, queue_root: Path) -> Path:
 
 def _log_path(batch_name: str, queue_root: Path) -> Path:
     return queue_root / "state" / f"{batch_name}.events.jsonl"
+
+
+def _controller_lock_path(batch_name: str, queue_root: Path) -> Path:
+    return queue_root / "state" / f"{batch_name}.controller.lock"
+
+
+@contextmanager
+def _controller_lock(batch_name: str, queue_root: Path) -> Iterator[Path]:
+    path = _controller_lock_path(batch_name, queue_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            handle.seek(0)
+            holder = handle.read().strip() or "unknown"
+            raise SystemExit(f"已有控制器持有批次锁: {path}; holder={holder}") from None
+
+        payload = {
+            "batch_name": batch_name,
+            "pid": os.getpid(),
+            "host": socket.gethostname(),
+            "acquired_at": _now(),
+        }
+        handle.seek(0)
+        handle.truncate()
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+        yield path
+    finally:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            handle.close()
 
 
 def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
@@ -2591,6 +2629,9 @@ def main() -> None:
     if not args.dry_run:
         _materialize_slices(tasks)
         _write_remote_support_script(args.queue_root_path)
+        with _controller_lock(args.batch_name, args.queue_root_path):
+            _run_scheduler(tasks, args)
+        return
     _run_scheduler(tasks, args)
 
 

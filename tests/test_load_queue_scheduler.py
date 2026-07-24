@@ -8,6 +8,22 @@ import pytest
 from check import run_e1_candidate200_12alg_load_queue as scheduler
 
 
+def test_controller_lock_rejects_second_scheduler_for_same_batch(tmp_path: Path) -> None:
+    queue_root = tmp_path / "queue"
+
+    with scheduler._controller_lock("batch-a", queue_root):
+        with pytest.raises(SystemExit, match="已有控制器持有批次锁"):
+            with scheduler._controller_lock("batch-a", queue_root):
+                pass
+
+    with scheduler._controller_lock("batch-a", queue_root):
+        lock_payload = json.loads(
+            scheduler._controller_lock_path("batch-a", queue_root).read_text(encoding="utf-8")
+        )
+        assert lock_payload["batch_name"] == "batch-a"
+        assert lock_payload["pid"] > 0
+
+
 def test_tool_config_supports_current_15_toolbox_algorithms():
     expected_tools = {
         "qlattice",
