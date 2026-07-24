@@ -19,6 +19,14 @@ def _finite_nonnegative(value: Any) -> bool:
     return math.isfinite(number) and number >= 0
 
 
+def _finite_zero(value: Any) -> bool:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(number) and number == 0
+
+
 def _outer_result_paths(
     experiment_root: Path,
     *,
@@ -56,6 +64,7 @@ def _result_checks(
     identity = payload.get("dataset_identity_check")
     id_test = payload.get("id_test")
     ood_test = payload.get("ood_test")
+    train_label_noise = payload.get("train_label_noise")
     checks = {
         "status_ok": str(payload.get("status") or "") == "ok",
         "runtime_compliant": (
@@ -79,6 +88,13 @@ def _result_checks(
             and artifact.get("artifact_valid") is True
         ),
         "has_equation": bool(payload.get("equation")),
+        "train_label_noise_clean": (
+            isinstance(train_label_noise, dict)
+            and train_label_noise.get("enabled") is False
+            and train_label_noise.get("requested") is False
+            and _finite_zero(train_label_noise.get("sigma"))
+            and _finite_zero(train_label_noise.get("scale"))
+        ),
     }
     return checks, runtime_number
 

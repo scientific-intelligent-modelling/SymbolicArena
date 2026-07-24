@@ -56,6 +56,10 @@ def _write_result(
     *,
     runtime: float = 3601,
     nested: bool = False,
+    noise_enabled: bool = False,
+    noise_requested: bool = False,
+    noise_sigma: float = 0.0,
+    noise_scale: float = 0.0,
 ) -> Path:
     base = (
         experiment_root
@@ -81,6 +85,12 @@ def _write_result(
                 "id_test": {"nmse": 0.1},
                 "ood_test": {"nmse": 0.2},
                 "canonical_artifact": {"artifact_valid": True},
+                "train_label_noise": {
+                    "enabled": noise_enabled,
+                    "requested": noise_requested,
+                    "sigma": noise_sigma,
+                    "scale": noise_scale,
+                },
             }
         ),
         encoding="utf-8",
@@ -149,6 +159,34 @@ def test_audit_completed_reports_budget_and_missing_result_failures(
         if issue["issue"] == "contract_failed"
     )
     assert contract["failed_checks"] == ["runtime_compliant"]
+
+
+def test_audit_completed_rejects_non_clean_training_labels(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    task_id = "fepysr_s520_clean_g0001"
+    root = tmp_path / "experiments"
+    _write_result(
+        root,
+        task_id,
+        noise_enabled=True,
+        noise_requested=True,
+        noise_sigma=0.01,
+        noise_scale=0.02,
+    )
+
+    report = module.audit_completed(
+        state=_state(task_id),
+        experiment_root=root,
+        host="iaaccn22",
+        min_runtime=3300,
+    )
+
+    assert report["passed"] is False
+    assert report["issues"][0]["failed_checks"] == [
+        "train_label_noise_clean"
+    ]
 
 
 def test_completed_audit_deploy_uses_one_immutable_state_snapshot() -> None:
