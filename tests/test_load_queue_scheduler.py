@@ -237,6 +237,8 @@ def test_reap_remote_task_processes_matches_owned_subprocesses(monkeypatch):
     assert "gplearn_s520_clean_g0001" in command
     assert "formal24h_full_gplearn_s520_clean_g0001" in command
     assert "os.killpg" in command
+    assert "if not matches:" in command
+    assert "if not remaining:" in command
 
 
 def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):

@@ -1468,6 +1468,10 @@ for entry in pathlib.Path("/proc").iterdir():
     if item:
         matches.append(item)
 
+if not matches:
+    print(json.dumps({{"matched": 0, "remaining": 0, "target": TARGET}}, sort_keys=True))
+    raise SystemExit(0)
+
 for item in matches:
     try:
         os.killpg(item["pgrp"], signal.SIGTERM)
@@ -1478,6 +1482,10 @@ for item in matches:
 
 time.sleep(3)
 remaining = [item for item in matches if _still_running(item)]
+if not remaining:
+    print(json.dumps({{"matched": len(matches), "remaining": 0, "target": TARGET}}, sort_keys=True))
+    raise SystemExit(0)
+
 for item in remaining:
     try:
         os.killpg(item["pgrp"], signal.SIGKILL)
