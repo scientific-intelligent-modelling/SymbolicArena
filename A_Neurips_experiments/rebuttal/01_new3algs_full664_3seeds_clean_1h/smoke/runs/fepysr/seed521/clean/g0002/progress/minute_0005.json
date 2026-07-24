@@ -1,0 +1,135 @@
+{
+  "tool": "fepysr",
+  "task_label": null,
+  "task_global_index": null,
+  "dataset": "BPG1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG1",
+  "expected_dataset_rel": null,
+  "expected_dataset_dir": null,
+  "dataset_identity_check": {
+    "status": "not_provided",
+    "match": null,
+    "expected_dataset_rel": null,
+    "expected_dataset_dir": null,
+    "expected_normalized": null,
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG1",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed521/tasks/fepysr_s521_clean_g0002/iaaccn27/fepysr/g0002_BPG1/experiments/g0002_BPG1_fepysr_seed521_20260725-030337",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 300.021,
+  "equation": "X0 - log(X0) - log(X0 - 0.724286) - 2.37342991",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "X0 - log(X0) - log(X0 - 0.724286) - 2.37342991",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return x0 - log(x0) - log(x0 - 0.724286) - 2.37342991\n",
+    "return_expression_source": "x0 - log(x0) - log(x0 - 0.724286) - 2.37342991",
+    "normalized_expression": "x0 - log(x0) - log(x0 - 0.724286) - 2.37342991",
+    "instantiated_expression": "x0 - log(x0) - log(x0 - 0.724286) - 2.37342991",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "log",
+      "mul"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 5,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0 - log(x0) - log(x0 - 0.724286) - 2.37342991"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.134571171213419,
+    "r2": 0.9793409756121695,
+    "nmse": 0.008104070713726208,
+    "acc_0_1": 0.024
+  },
+  "valid": {
+    "rmse": 2.2050066349597364,
+    "r2": 0.9782557185636886,
+    "nmse": 0.007612931437277359,
+    "acc_0_1": 0.026
+  },
+  "id_test": {
+    "rmse": 2.1591436471072076,
+    "r2": 0.9790588466622047,
+    "nmse": 0.007985487353015576,
+    "acc_0_1": 0.022
+  },
+  "ood_test": {
+    "rmse": 6.79097861824586,
+    "r2": -5.373297334201854,
+    "nmse": 0.016181734237570387,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 03:08:37",
+  "params": {
+    "timeout_in_seconds": 600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed521/tasks/fepysr_s521_clean_g0002/iaaccn27/fepysr/g0002_BPG1/experiments",
+    "exp_name": "g0002_BPG1_fepysr_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "record_type": "periodic_best",
+  "checkpoint_index": 5,
+  "elapsed_seconds": 300.021,
+  "elapsed_minutes": 5,
+  "source_iteration": null,
+  "source_sample_order": null,
+  "source_score": 4.556394084975428,
+  "source_loss": null,
+  "source_complexity": null
+}

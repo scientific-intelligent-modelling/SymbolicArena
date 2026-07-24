@@ -1,0 +1,137 @@
+{
+  "tool": "fepysr",
+  "task_label": null,
+  "task_global_index": null,
+  "dataset": "BPG0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+  "expected_dataset_rel": null,
+  "expected_dataset_dir": null,
+  "dataset_identity_check": {
+    "status": "not_provided",
+    "match": null,
+    "expected_dataset_rel": null,
+    "expected_dataset_dir": null,
+    "expected_normalized": null,
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed521/tasks/fepysr_s521_clean_g0001/iaaccn22/fepysr/g0001_BPG0/experiments/g0001_BPG0_fepysr_seed521_20260725-030137",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 540.016,
+  "equation": "2.51601012488867*exp(X1/X0^2) - 3.17995817411841",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "2.51601012488867*exp(X1/X0^2) - 3.17995817411841",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 2.51601012488867*exp(x1/x0**2) - 3.17995817411841\n",
+    "return_expression_source": "2.51601012488867*exp(x1/x0**2) - 3.17995817411841",
+    "normalized_expression": "2.51601012488867*exp(x1/x0**2) - 3.17995817411841",
+    "instantiated_expression": "2.51601012488867*exp(x1/x0**2) - 3.17995817411841",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 10,
+    "tree_depth": 6,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "2.51601012488867*exp(x1/x0**2) - 3.17995817411841"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.9896224439004604,
+    "r2": 0.8703639591453575,
+    "nmse": 0.11639507390480161,
+    "acc_0_1": 0.048
+  },
+  "valid": {
+    "rmse": 1.8549524830426438,
+    "r2": 0.878666915673167,
+    "nmse": 0.1082296770485865,
+    "acc_0_1": 0.04
+  },
+  "id_test": {
+    "rmse": 2.155616501850253,
+    "r2": 0.8629598389413214,
+    "nmse": 0.1206551440622233,
+    "acc_0_1": 0.048
+  },
+  "ood_test": {
+    "rmse": 0.6000376587161558,
+    "r2": -110.4444448572766,
+    "nmse": 105.93724157711705,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 03:10:37",
+  "params": {
+    "timeout_in_seconds": 600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed521/tasks/fepysr_s521_clean_g0001/iaaccn22/fepysr/g0001_BPG0/experiments",
+    "exp_name": "g0001_BPG0_fepysr_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "record_type": "periodic_best",
+  "checkpoint_index": 9,
+  "elapsed_seconds": 540.016,
+  "elapsed_minutes": 9,
+  "source_iteration": null,
+  "source_sample_order": null,
+  "source_score": 3.9585974692724406,
+  "source_loss": null,
+  "source_complexity": null
+}

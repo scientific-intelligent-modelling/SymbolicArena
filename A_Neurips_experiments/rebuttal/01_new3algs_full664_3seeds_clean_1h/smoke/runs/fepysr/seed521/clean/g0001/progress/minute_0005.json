@@ -1,0 +1,138 @@
+{
+  "tool": "fepysr",
+  "task_label": null,
+  "task_global_index": null,
+  "dataset": "BPG0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+  "expected_dataset_rel": null,
+  "expected_dataset_dir": null,
+  "dataset_identity_check": {
+    "status": "not_provided",
+    "match": null,
+    "expected_dataset_rel": null,
+    "expected_dataset_dir": null,
+    "expected_normalized": null,
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed521/tasks/fepysr_s521_clean_g0001/iaaccn22/fepysr/g0001_BPG0/experiments/g0001_BPG0_fepysr_seed521_20260725-030137",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 300.017,
+  "equation": "exp(-(log(X0) + log(X0^2))*(sin(X0) - 1.66449254)/(X0 - 0.91949326))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "exp(-(log(X0) + log(X0^2))*(sin(X0) - 1.66449254)/(X0 - 0.91949326))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return exp((-log(x0) - log(x0**2))*(sin(x0) - 1.66449254)/(x0 - 0.91949326))\n",
+    "return_expression_source": "exp((-log(x0) - log(x0**2))*(sin(x0) - 1.66449254)/(x0 - 0.91949326))",
+    "normalized_expression": "exp((-log(x0) - log(x0**2))*(sin(x0) - 1.66449254)/(x0 - 0.91949326))",
+    "instantiated_expression": "exp((-log(x0) - log(x0**2))*(sin(x0) - 1.66449254)/(x0 - 0.91949326))",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "exp",
+      "log",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 22,
+    "tree_depth": 7,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "exp((-log(x0) - log(x0**2))*(sin(x0) - 1.66449254)/(x0 - 0.91949326))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.7035883210833975,
+    "r2": 0.7606323038970997,
+    "nmse": 0.21491878720331495,
+    "acc_0_1": 0.0037142857142857142
+  },
+  "valid": {
+    "rmse": 2.789469706871884,
+    "r2": 0.7256171528350785,
+    "nmse": 0.24475077923790753,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 2.875565152184457,
+    "r2": 0.7561339830257465,
+    "nmse": 0.21470851451575837,
+    "acc_0_1": 0.006
+  },
+  "ood_test": {
+    "rmse": 1.4553125271235834,
+    "r2": -654.5622618276365,
+    "nmse": 623.1666171339097,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 03:06:37",
+  "params": {
+    "timeout_in_seconds": 600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed521/tasks/fepysr_s521_clean_g0001/iaaccn22/fepysr/g0001_BPG0/experiments",
+    "exp_name": "g0001_BPG0_fepysr_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "record_type": "periodic_best",
+  "checkpoint_index": 5,
+  "elapsed_seconds": 300.017,
+  "elapsed_minutes": 5,
+  "source_iteration": null,
+  "source_sample_order": null,
+  "source_score": 7.309389809898543,
+  "source_loss": null,
+  "source_complexity": null
+}

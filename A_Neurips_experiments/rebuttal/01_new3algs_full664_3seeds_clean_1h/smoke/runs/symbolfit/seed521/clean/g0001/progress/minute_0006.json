@@ -1,0 +1,135 @@
+{
+  "tool": "symbolfit",
+  "task_label": null,
+  "task_global_index": null,
+  "dataset": "BPG0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+  "expected_dataset_rel": null,
+  "expected_dataset_dir": null,
+  "dataset_identity_check": {
+    "status": "not_provided",
+    "match": null,
+    "expected_dataset_rel": null,
+    "expected_dataset_dir": null,
+    "expected_normalized": null,
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/symbolfit/seed521/tasks/symbolfit_s521_clean_g0001/iaaccn22/symbolfit/g0001_BPG0/experiments/g0001_BPG0_symbolfit_seed521_20260725-030137",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 360.027,
+  "equation": "(((cos((x1 + x1) + (x1 + ((x1 + (x1 * -1.1089255)) + -1.3985786))) + -0.07927065) / 0.28163236) / 0.22190055) * cos(x0)",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "(((cos((x1 + x1) + (x1 + ((x1 + (x1 * -1.1089255)) + -1.3985786))) + -0.07927065) / 0.28163236) / 0.22190055) * cos(x0)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return (16.0014399806446*cos(2.8910745*x1 - 1.3985786) - 1.26844454820168)*cos(x0)\n",
+    "return_expression_source": "(16.0014399806446*cos(2.8910745*x1 - 1.3985786) - 1.26844454820168)*cos(x0)",
+    "normalized_expression": "(16.0014399806446*cos(2.8910745*x1 - 1.3985786) - 1.26844454820168)*cos(x0)",
+    "instantiated_expression": "(16.0014399806446*cos(2.8910745*x1 - 1.3985786) - 1.26844454820168)*cos(x0)",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 7,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(16.0014399806446*cos(2.8910745*x1 - 1.3985786) - 1.26844454820168)*cos(x0)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 11.747531644441253,
+    "r2": -3.5193675550289303,
+    "nmse": 4.05776138412296,
+    "acc_0_1": 0.004285714285714286
+  },
+  "valid": {
+    "rmse": 11.594254251670764,
+    "r2": -3.7402287404720234,
+    "nmse": 4.228306142253543,
+    "acc_0_1": 0.002
+  },
+  "id_test": {
+    "rmse": 11.700959757923103,
+    "r2": -3.0378281613051055,
+    "nmse": 3.555050831355668,
+    "acc_0_1": 0.008
+  },
+  "ood_test": {
+    "rmse": 9.65760292722017,
+    "r2": -28868.555711249526,
+    "nmse": 27442.921013455874,
+    "acc_0_1": 0.004
+  },
+  "finished_at": "2026-07-25 03:07:37",
+  "params": {
+    "timeout_in_seconds": 600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/symbolfit/seed521/tasks/symbolfit_s521_clean_g0001/iaaccn22/symbolfit/g0001_BPG0/experiments",
+    "exp_name": "g0001_BPG0_symbolfit_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "record_type": "periodic_best",
+  "checkpoint_index": 6,
+  "elapsed_seconds": 360.027,
+  "elapsed_minutes": 6,
+  "source_iteration": null,
+  "source_sample_order": null,
+  "source_score": null,
+  "source_loss": 0.0145758735,
+  "source_complexity": 23
+}

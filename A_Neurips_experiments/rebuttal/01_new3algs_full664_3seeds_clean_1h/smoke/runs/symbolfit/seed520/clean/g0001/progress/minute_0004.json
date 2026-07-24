@@ -1,0 +1,134 @@
+{
+  "tool": "symbolfit",
+  "task_label": null,
+  "task_global_index": null,
+  "dataset": "BPG0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+  "expected_dataset_rel": null,
+  "expected_dataset_dir": null,
+  "dataset_identity_check": {
+    "status": "not_provided",
+    "match": null,
+    "expected_dataset_rel": null,
+    "expected_dataset_dir": null,
+    "expected_normalized": null,
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/symbolfit/seed520/tasks/symbolfit_s520_clean_g0001/iaaccn27/symbolfit/g0001_BPG0/experiments/g0001_BPG0_symbolfit_seed520_20260725-025124",
+  "status": "ok",
+  "error": null,
+  "seed": 520,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 240.017,
+  "equation": "sin(sin((x1 - -0.0094738) * 3.1216226)) * 17.139282",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "sin(sin((x1 - -0.0094738) * 3.1216226)) * 17.139282",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return 17.139282*sin(sin(3.1216226*x1 + 0.02957362818788))\n",
+    "return_expression_source": "17.139282*sin(sin(3.1216226*x1 + 0.02957362818788))",
+    "normalized_expression": "17.139282*sin(sin(3.1216226*x1 + 0.02957362818788))",
+    "instantiated_expression": "17.139282*sin(sin(3.1216226*x1 + 0.02957362818788))",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 9,
+    "tree_depth": 6,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "17.139282*sin(sin(3.1216226*x1 + 0.02957362818788))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 13.036732962607848,
+    "r2": -4.5657277120513715,
+    "nmse": 4.997246784978638,
+    "acc_0_1": 0.0008571428571428571
+  },
+  "valid": {
+    "rmse": 13.069848178923046,
+    "r2": -5.023580865490599,
+    "nmse": 5.373062222600381,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 13.386892161322756,
+    "r2": -4.285236079832677,
+    "nmse": 4.65331415030972,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 11.856892964289612,
+    "r2": -43514.42287910462,
+    "nmse": 41365.039520613806,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 02:55:24",
+  "params": {
+    "timeout_in_seconds": 600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/symbolfit/seed520/tasks/symbolfit_s520_clean_g0001/iaaccn27/symbolfit/g0001_BPG0/experiments",
+    "exp_name": "g0001_BPG0_symbolfit_seed520",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "record_type": "periodic_best",
+  "checkpoint_index": 4,
+  "elapsed_seconds": 240.017,
+  "elapsed_minutes": 4,
+  "source_iteration": null,
+  "source_sample_order": null,
+  "source_score": null,
+  "source_loss": 0.033910703,
+  "source_complexity": 9
+}

@@ -1,0 +1,135 @@
+{
+  "tool": "fepysr",
+  "task_label": null,
+  "task_global_index": null,
+  "dataset": "BPG1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG1",
+  "expected_dataset_rel": null,
+  "expected_dataset_dir": null,
+  "dataset_identity_check": {
+    "status": "not_provided",
+    "match": null,
+    "expected_dataset_rel": null,
+    "expected_dataset_dir": null,
+    "expected_normalized": null,
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/bio_pop_growth/BPG1",
+    "actual_normalized": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed522/tasks/fepysr_s522_clean_g0002/iaaccn23/fepysr/g0002_BPG1/experiments/g0002_BPG1_fepysr_seed522_20260725-030941",
+  "status": "ok",
+  "error": null,
+  "seed": 522,
+  "feature_names": [
+    "t",
+    "P"
+  ],
+  "target_name": "dP_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 540.021,
+  "equation": "X0*(0.000134694328284658*X0^2 + 0.5925878) - 2.9988866",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "X0*(0.000134694328284658*X0^2 + 0.5925878) - 2.9988866",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return x0*(0.000134694328284658*x0**2 + 0.5925878) - 2.9988866\n",
+    "return_expression_source": "x0*(0.000134694328284658*x0**2 + 0.5925878) - 2.9988866",
+    "normalized_expression": "x0*(0.000134694328284658*x0**2 + 0.5925878) - 2.9988866",
+    "instantiated_expression": "x0*(0.000134694328284658*x0**2 + 0.5925878) - 2.9988866",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 11,
+    "tree_depth": 6,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "x0*(0.000134694328284658*x0**2 + 0.5925878) - 2.9988866"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.9618034996087419,
+    "r2": 0.9958056831528208,
+    "nmse": 0.001645336182735536,
+    "acc_0_1": 0.053142857142857144
+  },
+  "valid": {
+    "rmse": 0.9362801503706659,
+    "r2": 0.9960795412228902,
+    "nmse": 0.0013725992261564596,
+    "acc_0_1": 0.062
+  },
+  "id_test": {
+    "rmse": 0.9681547481653174,
+    "r2": 0.9957895638792181,
+    "nmse": 0.0016055650732713098,
+    "acc_0_1": 0.044
+  },
+  "ood_test": {
+    "rmse": 2.6387371477254797,
+    "r2": 0.0377415886054161,
+    "nmse": 0.002443163885904569,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 03:18:41",
+  "params": {
+    "timeout_in_seconds": 600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911_smoke/fepysr/seed522/tasks/fepysr_s522_clean_g0002/iaaccn23/fepysr/g0002_BPG1/experiments",
+    "exp_name": "g0002_BPG1_fepysr_seed522",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "P"
+    ],
+    "target_name": "dP_dt"
+  },
+  "record_type": "periodic_best",
+  "checkpoint_index": 9,
+  "elapsed_seconds": 540.021,
+  "elapsed_minutes": 9,
+  "source_iteration": null,
+  "source_sample_order": null,
+  "source_score": 0.9250659718596232,
+  "source_loss": null,
+  "source_complexity": null
+}
