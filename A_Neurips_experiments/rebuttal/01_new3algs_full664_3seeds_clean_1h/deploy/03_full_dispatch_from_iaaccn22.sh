@@ -27,6 +27,7 @@ python check/run_e1_candidate200_12alg_load_queue.py \
   --use-internal-ips \
   --max-jobs-per-host 70 \
   --max-new-jobs-per-host-per-poll 5 \
+  --retry-limit 2 \
   --session-prefix neurips_rebuttal_new3_1h_ \
   --host-session-count-prefix neurips_rebuttal_new3_1h_ \
   --poll-seconds 60 \

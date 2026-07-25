@@ -56,6 +56,14 @@ def test_collect_gate_requires_every_task_to_be_done() -> None:
     assert failed.returncode != 0
 
 
+def test_full_dispatch_allows_one_post_hotfix_retry() -> None:
+    script = (
+        BATCH_DIR / "deploy/03_full_dispatch_from_iaaccn22.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "--retry-limit 2" in script
+
+
 def test_symf_gate_requires_complete_new3_and_stage3_grids() -> None:
     script = (
         BATCH_DIR / "deploy/05_generate_symf_from_iaaccn22.sh"
