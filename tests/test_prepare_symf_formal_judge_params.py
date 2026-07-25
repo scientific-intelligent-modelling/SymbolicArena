@@ -96,6 +96,32 @@ def test_prepare_parameters_accepts_full664_manifest_schema(tmp_path: Path) -> N
     assert params.loc[0, "probe_random_seed"] == 123
 
 
+def test_resolve_repo_path_prefers_home_dataset_tree(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    repo_root = tmp_path / "repo"
+    home_root = tmp_path / "home"
+    relative = Path(
+        "sim-datasets-data/synthetic/unit/shared_name/metadata.yaml"
+    )
+    repo_candidate = repo_root / relative
+    home_candidate = home_root / relative
+    repo_candidate.parent.mkdir(parents=True)
+    home_candidate.parent.mkdir(parents=True)
+    repo_candidate.write_text("repo-partial\n", encoding="utf-8")
+    home_candidate.write_text("home-complete\n", encoding="utf-8")
+
+    monkeypatch.setattr(module, "REPO_ROOT", repo_root)
+    monkeypatch.setenv("HOME", str(home_root))
+
+    assert module._resolve_repo_path(relative) == home_candidate
+    assert module._resolve_repo_path("assets/example.csv") == (
+        repo_root / "assets/example.csv"
+    )
+
+
 def test_prepare_parameters_rejects_duplicate_stable_gid(tmp_path: Path) -> None:
     module = _load_module()
     dataset_dir = tmp_path / "dataset"

@@ -457,7 +457,13 @@ def _catalog_value(item: pd.Series, *keys: str) -> Any:
 
 def _resolve_repo_path(value: Any) -> Path:
     path = Path(str(value))
-    return path if path.is_absolute() else REPO_ROOT / path
+    if path.is_absolute():
+        return path
+    if path.parts and path.parts[0] == "sim-datasets-data":
+        home_candidate = Path.home() / path
+        if home_candidate.exists():
+            return home_candidate
+    return REPO_ROOT / path
 
 
 def prepare_parameters(
