@@ -141,6 +141,12 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 身份、artifact 和指标联合审计；8 台主机全部通过，`issue_count=0`，
 证据保存在 `monitoring/completed_audit/20260725-101556/`。
 
+`20260725-110024` 在最终 SYM-F 分片链路同步并通过远端 smoke 后再次
+冻结正式 state。`1134/1134` 个 assigned-host 规范结果通过完整联合
+审计，8 台主机全部通过且 `issue_count=0`；运行时范围为
+`3602.706--3795.947s`，证据保存在
+`monitoring/completed_audit/20260725-110024/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
