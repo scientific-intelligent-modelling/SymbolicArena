@@ -67,3 +67,12 @@ def test_symf_gate_requires_complete_new3_and_stage3_grids() -> None:
     assert "(.stage3.rows == 7968)" in script
     assert "--expected-runs 13944" in script
     assert "--expected-algorithms 7" in script
+    assert "(.runs == 13944)" in script
+    assert "(.datasets == 664)" in script
+    assert "(.algorithms == 7)" in script
+    assert "symbolic_metrics_formal_summary.json" in script
+    assert (
+        '["dso", "fepysr", "imcts", "jaxsr", '
+        '"pyoperon", "symbolfit", "udsr"]'
+    ) in script
+    assert "full664_7alg_leaderboard_with_symf.summary.json" in script

@@ -44,6 +44,13 @@ python check/generate_symf_formal_metrics.py \
   --expected-runs 13944 \
   --outdir "$SYMF_DIR"
 
+jq -e '
+  (.runs == 13944)
+  and (.datasets == 664)
+  and (.algorithms == 7)
+  and (.params_datasets == 664)
+' "$SYMF_DIR/symbolic_metrics_formal_summary.json" >/dev/null
+
 python check/merge_neurips_rebuttal_metrics.py \
   --performance-csv "$BATCH_DIR/analysis/full664_7alg_leaderboard.csv" \
   --symbolic-csv \
@@ -51,3 +58,12 @@ python check/merge_neurips_rebuttal_metrics.py \
   --output-csv \
   "$BATCH_DIR/analysis/full664_7alg_leaderboard_with_symf.csv" \
   --expected-algorithms 7
+
+jq -e '
+  (.algorithms == 7)
+  and (
+    (.algorithm_keys | sort)
+    == ["dso", "fepysr", "imcts", "jaxsr", "pyoperon", "symbolfit", "udsr"]
+  )
+' "$BATCH_DIR/analysis/full664_7alg_leaderboard_with_symf.summary.json" \
+  >/dev/null
