@@ -113,6 +113,17 @@ def stable_gid(row: Any) -> str:
     return str(dataset or "").strip()
 
 
+def resolve_dataset_path(value: Any) -> Path:
+    path = Path(str(value))
+    if path.is_absolute():
+        return path
+    if path.parts and path.parts[0] == "sim-datasets-data":
+        home_candidate = Path.home() / path
+        if home_candidate.exists():
+            return home_candidate
+    return REPO_ROOT / path
+
+
 def bool_value(value: Any) -> bool:
     if isinstance(value, (bool, np.bool_)):
         return bool(value)
@@ -458,7 +469,7 @@ def load_gt_probe_cache(params_df: pd.DataFrame) -> dict[str, dict[str, Any]]:
     cache: dict[str, dict[str, Any]] = {}
     for _, row in params_df.iterrows():
         dataset_key = stable_gid(row)
-        dataset_dir = REPO_ROOT / str(row["dataset_dir"])
+        dataset_dir = resolve_dataset_path(row["dataset_dir"])
         feature_names = json_loads(row.get("metadata_feature_names"), [])
         feature_count = int(row["feature_count"])
         func = load_formula_function(dataset_dir, row.get("formula_target_function"), row.get("target_name"))
@@ -808,7 +819,7 @@ def write_outputs(outdir: Path, metrics: pd.DataFrame, params_df: pd.DataFrame) 
     summary = {
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "runs": int(len(metrics)),
-        "datasets": int(metrics["dataset"].nunique()),
+        "datasets": int(metrics["gid"].nunique()),
         "algorithms": int(metrics["algorithm"].nunique()),
         "params_datasets": int(len(params_df)),
         "numeric_eq_nmse_threshold": NUMERIC_EQ_NMSE_THRESHOLD,

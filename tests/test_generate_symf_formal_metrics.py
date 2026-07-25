@@ -120,6 +120,67 @@ def test_load_run_level_parses_booleans_and_rejects_duplicate_keys(
         module.load_expected_runs_from_run_level(path)
 
 
+def test_output_summary_counts_datasets_by_stable_gid(tmp_path: Path) -> None:
+    module = _load_module()
+    metrics = pd.DataFrame(
+        [
+            {
+                "algorithm": "fepysr",
+                "gid": gid,
+                "dataset": "shared_display_name",
+                "seed": 520,
+                "valid_for_symbolic": True,
+                "pred_parse_ok": True,
+                "cas_equiv": False,
+                "numeric_equiv": False,
+                "numeric_equiv_reason": "not_equivalent",
+                "equiv_final": False,
+                "tree_similarity": 0.5,
+                "var_f1": 1.0,
+                "op_f1": 1.0,
+                "sym_f_formal": 0.35,
+            }
+            for gid in ("g0001", "g0002")
+        ]
+    )
+
+    module.write_outputs(
+        tmp_path,
+        metrics,
+        pd.DataFrame([{"gid": "g0001"}, {"gid": "g0002"}]),
+    )
+
+    summary = json.loads(
+        (tmp_path / "symbolic_metrics_formal_summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert summary["datasets"] == 2
+    assert summary["algorithm_summary"][0]["datasets"] == 2
+
+
+def test_resolve_dataset_path_prefers_home_dataset_tree(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    repo_root = tmp_path / "repo"
+    home_root = tmp_path / "home"
+    relative = Path("sim-datasets-data/synthetic/unit/shared_name")
+    repo_candidate = repo_root / relative
+    home_candidate = home_root / relative
+    repo_candidate.mkdir(parents=True)
+    home_candidate.mkdir(parents=True)
+
+    monkeypatch.setattr(module, "REPO_ROOT", repo_root)
+    monkeypatch.setenv("HOME", str(home_root))
+
+    assert module.resolve_dataset_path(relative) == home_candidate
+    assert module.resolve_dataset_path("assets/example") == (
+        repo_root / "assets/example"
+    )
+
+
 def test_ground_truth_probe_calls_formula_in_declared_argument_order(
     tmp_path: Path,
 ) -> None:
