@@ -1837,6 +1837,8 @@ def run_benchmark_task(
     budget_exhausted = False
     timeout_type = "not_timeout"
     raw_timeout_error = None
+    raw_execution_error = None
+    recovered_from_error = False
     no_valid_output_reason = None
 
     reg = SymbolicRegressor(
@@ -1929,8 +1931,43 @@ def run_benchmark_task(
         timeout_type = "no_valid_output"
         no_valid_output_reason = str(exc)
     except Exception as exc:
-        status = "error"
-        error = repr(exc)
+        raw_execution_error = repr(exc)
+        experiment_dir = getattr(reg, "experiment_dir", experiment_dir)
+        recovered_payload = None
+        if _is_snapshot_capable_tool(tool_name):
+            recovered_payload = _recover_timeout_payload_from_candidate(
+                tool_name=tool_name,
+                dataset=dataset,
+                experiment_dir=experiment_dir,
+            )
+        if recovered_payload is not None:
+            equation = recovered_payload["equation"]
+            equation_count = recovered_payload["equation_count"]
+            canonical_artifact = recovered_payload["canonical_artifact"]
+            canonical_artifact_error = recovered_payload[
+                "canonical_artifact_error"
+            ]
+            train_metrics = recovered_payload["train_metrics"]
+            valid_metrics = recovered_payload["valid_metrics"]
+            id_metrics = recovered_payload["id_metrics"]
+            ood_metrics = recovered_payload["ood_metrics"]
+            recovered_from_error = (
+                _timeout_type_for_payload(
+                    dataset=dataset,
+                    equation=equation,
+                    canonical_artifact=canonical_artifact,
+                    valid_metrics=valid_metrics,
+                    id_metrics=id_metrics,
+                    ood_metrics=ood_metrics,
+                )
+                == "budget_exhausted_with_output"
+            )
+        if recovered_from_error:
+            status = "ok"
+            error = None
+        else:
+            status = "error"
+            error = raw_execution_error
     finally:
         if snapshot_stop_event is not None:
             snapshot_stop_event.set()
@@ -1963,10 +2000,14 @@ def run_benchmark_task(
     result["timeout_type"] = timeout_type
     result["raw_timeout_error"] = raw_timeout_error
     result["recovered_from_timeout"] = timeout_type == "budget_exhausted_with_output"
+    result["raw_execution_error"] = raw_execution_error
+    result["recovered_from_error"] = recovered_from_error
     result["no_valid_output_reason"] = no_valid_output_reason
     result["train_label_noise"] = train_label_noise
     if budget_exhausted:
         result["termination_reason"] = timeout_type
+    elif recovered_from_error:
+        result["termination_reason"] = "recovered_after_error"
     elif status == "no_valid_output":
         result["termination_reason"] = "no_valid_output"
     else:

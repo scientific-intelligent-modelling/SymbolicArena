@@ -82,6 +82,11 @@ class _TimeoutRecoverableFakeRegressor(_FakeRegressor):
         raise TimeoutError("fit timeout")
 
 
+class _RecoverableErrorFakeRegressor(_FakeRegressor):
+    def fit(self, X, y):
+        raise TypeError("Cannot convert complex to int")
+
+
 class _NoValidOutputFakeRegressor(_FakeRegressor):
     def fit(self, X, y):
         raise NoValidOutputError("fake algorithm produced no model")
@@ -424,6 +429,100 @@ dataset:
             self.assertIsNotNone(result["ood_test"])
             self.assertEqual(result["train"]["nmse"], 0.0)
             self.assertEqual(result["equation_count"], 1)
+
+    def test_run_benchmark_task_recovers_snapshot_capable_tool_after_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            dataset_dir.mkdir()
+            (dataset_dir / "metadata.yaml").write_text(
+                """
+dataset:
+  target:
+    name: y
+  features:
+    - name: x0
+""".strip(),
+                encoding="utf-8",
+            )
+            for name, rows in {
+                "train.csv": "x0,y\n1,1\n2,2\n",
+                "valid.csv": "x0,y\n3,3\n",
+                "id_test.csv": "x0,y\n4,4\n",
+                "ood_test.csv": "x0,y\n5,5\n",
+            }.items():
+                (dataset_dir / name).write_text(rows, encoding="utf-8")
+
+            artifact, artifact_error = runner.safe_build_canonical_artifact(
+                tool_name="symbolfit",
+                equation="x0",
+                expected_n_features=1,
+            )
+            self.assertIsNone(artifact_error)
+            recovered = {
+                "equation": "x0",
+                "equation_count": 1,
+                "canonical_artifact": artifact,
+                "canonical_artifact_error": None,
+                "train_metrics": {
+                    "rmse": 0.0,
+                    "r2": 1.0,
+                    "nmse": 0.0,
+                    "acc_0_1": 1.0,
+                },
+                "valid_metrics": {
+                    "rmse": 0.0,
+                    "r2": 1.0,
+                    "nmse": 0.0,
+                    "acc_0_1": 1.0,
+                },
+                "id_metrics": {
+                    "rmse": 0.0,
+                    "r2": 1.0,
+                    "nmse": 0.0,
+                    "acc_0_1": 1.0,
+                },
+                "ood_metrics": {
+                    "rmse": 0.0,
+                    "r2": 1.0,
+                    "nmse": 0.0,
+                    "acc_0_1": 1.0,
+                },
+            }
+
+            original_cls = runner.SymbolicRegressor
+            original_recover = runner._recover_timeout_payload_from_candidate
+            runner.SymbolicRegressor = _RecoverableErrorFakeRegressor
+            runner._recover_timeout_payload_from_candidate = (
+                lambda **kwargs: recovered
+            )
+            try:
+                result_path = runner.run_benchmark_task(
+                    tool_name="symbolfit",
+                    dataset_dir=dataset_dir,
+                    output_root=root / "bench_results",
+                    seed=520,
+                )
+            finally:
+                runner.SymbolicRegressor = original_cls
+                runner._recover_timeout_payload_from_candidate = (
+                    original_recover
+                )
+
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "ok")
+            self.assertIsNone(result["error"])
+            self.assertFalse(result["budget_exhausted"])
+            self.assertFalse(result["recovered_from_timeout"])
+            self.assertTrue(result["recovered_from_error"])
+            self.assertIn("TypeError", result["raw_execution_error"])
+            self.assertEqual(
+                result["termination_reason"],
+                "recovered_after_error",
+            )
+            self.assertEqual(result["equation"], "x0")
+            self.assertEqual(result["id_test"]["nmse"], 0.0)
+            self.assertEqual(result["ood_test"]["nmse"], 0.0)
 
     def test_recover_timeout_falls_back_to_latest_finite_progress_snapshot(self):
         with tempfile.TemporaryDirectory() as tmp:
