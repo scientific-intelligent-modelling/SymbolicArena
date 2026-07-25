@@ -109,6 +109,13 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 该参数审计，证据保存在
 `monitoring/completed_audit/20260725-075703/`。
 
+结果身份还会直接比较调度 state 的 `tool`、`seed`、`task_index` 与
+`result.json` 的 `tool`、`seed`、`task_global_index`，避免目录落位正确但
+结果内容串任务。`20260725-080212` 对当前 `551/551` 个 done 任务通过
+身份、预算、clean、参数和指标的联合审计，8 台主机均通过且
+`issue_count=0`；证据保存在
+`monitoring/completed_audit/20260725-080212/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
