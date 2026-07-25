@@ -125,6 +125,11 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 `issue_count=0`；证据保存在
 `monitoring/completed_audit/20260725-080212/`。
 
+`20260725-090921` 冻结了更新后的正式 state，并对 `763/763` 个 done
+任务再次执行上述完整审计。8 台主机全部通过，验证结果数为 `763`，
+`issue_count=0`；state 快照哈希和逐主机报告保存在
+`monitoring/completed_audit/20260725-090921/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
