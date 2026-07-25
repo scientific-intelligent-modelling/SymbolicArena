@@ -136,6 +136,11 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 `result.json`，证据保存在
 `monitoring/completed_audit/20260725-094400/`。
 
+`20260725-101556` 在队列跨过一千条完成项后再次冻结正式 state。
+`1007/1007` 个 assigned-host 规范结果通过运行时、预算、clean、参数、
+身份、artifact 和指标联合审计；8 台主机全部通过，`issue_count=0`，
+证据保存在 `monitoring/completed_audit/20260725-101556/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
@@ -180,6 +185,12 @@ error、异常恢复、无效 artifact 或非有限 split NMSE；其中 `79` 条
 split NMSE 和五项任务身份均通过；没有异常恢复或失败信号，其中 `18`
 条为健康的 timeout 恢复。两个 state 的精确哈希、排除边界和逐主机
 计数保存在 `monitoring/result_health/20260725-095730_increment/`。
+
+`20260725-101108_increment` 继续比较 `09:57:30` 与 `10:11:08`
+两个冻结 state，对新增完成的 `60/60` 条结果执行相同健康检查。三种
+算法各 `20` 条，全部状态、artifact、三个 split 指标和任务身份通过，
+没有异常恢复或失败信号，其中 `23` 条为健康的 timeout 恢复。证据
+保存在 `monitoring/result_health/20260725-101108_increment/`。
 
 ## 指标汇总
 
