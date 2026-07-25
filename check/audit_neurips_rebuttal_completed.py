@@ -41,6 +41,22 @@ def _finite_zero(value: Any) -> bool:
     return math.isfinite(number) and number == 0
 
 
+def _integer_value(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if math.isfinite(value) and value.is_integer():
+            return int(value)
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped and stripped.lstrip("+-").isdigit():
+            return int(stripped)
+    return None
+
+
 def _algorithm_params_match(
     actual: Any,
     expected: dict[str, Any] | None,
@@ -88,6 +104,9 @@ def _result_checks(
     *,
     min_runtime: float,
     expected_params: dict[str, Any] | None = None,
+    expected_tool: str | None = None,
+    expected_seed: int | None = None,
+    expected_task_index: int | None = None,
 ) -> tuple[dict[str, bool], float | None]:
     runtime = payload.get(
         "runtime_seconds",
@@ -110,6 +129,19 @@ def _result_checks(
         "identity_match": (
             isinstance(identity, dict)
             and identity.get("match") is True
+        ),
+        "tool_match": (
+            expected_tool is None
+            or payload.get("tool") == expected_tool
+        ),
+        "seed_match": (
+            expected_seed is None
+            or _integer_value(payload.get("seed")) == expected_seed
+        ),
+        "task_global_index_match": (
+            expected_task_index is None
+            or _integer_value(payload.get("task_global_index"))
+            == expected_task_index
         ),
         "id_nmse_valid": (
             isinstance(id_test, dict)
@@ -177,6 +209,15 @@ def audit_completed(
                 }
             )
             continue
+        task_index = _integer_value(task.get("task_index"))
+        if not tool or task_index is None:
+            issues.append(
+                {
+                    "task_id": task_id,
+                    "issue": "invalid_task_identity",
+                }
+            )
+            continue
         candidates = _outer_result_paths(
             experiment_root,
             tool=tool,
@@ -227,6 +268,9 @@ def audit_completed(
                 if expected_params_by_tool is None
                 else expected_params_by_tool.get(tool, {})
             ),
+            expected_tool=tool,
+            expected_seed=seed,
+            expected_task_index=task_index,
         )
         if runtime is not None:
             runtime_values.append(runtime)

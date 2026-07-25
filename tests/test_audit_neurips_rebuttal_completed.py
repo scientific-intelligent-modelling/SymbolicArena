@@ -36,6 +36,7 @@ def _state(task_id: str, host: str = "iaaccn22") -> dict:
                 "task_id": task_id,
                 "tool": "fepysr",
                 "seed": 520,
+                "task_index": 1,
                 "state": "done",
                 "assigned_host": host,
             },
@@ -61,6 +62,9 @@ def _write_result(
     noise_sigma: float = 0.0,
     noise_scale: float = 0.0,
     params: dict | None = None,
+    tool: str = "fepysr",
+    seed: int = 520,
+    task_global_index: int = 1,
 ) -> Path:
     base = (
         experiment_root
@@ -80,6 +84,9 @@ def _write_result(
         json.dumps(
             {
                 "status": "ok",
+                "tool": tool,
+                "seed": seed,
+                "task_global_index": task_global_index,
                 "runtime_seconds": runtime,
                 "equation": "x0",
                 "dataset_identity_check": {"match": True},
@@ -137,6 +144,7 @@ def test_audit_completed_reports_budget_and_missing_result_failures(
         "task_id": missing_task,
         "tool": "fepysr",
         "seed": 520,
+        "task_index": 2,
         "state": "done",
         "assigned_host": "iaaccn22",
     }
@@ -188,6 +196,35 @@ def test_audit_completed_rejects_non_clean_training_labels(
     assert report["passed"] is False
     assert report["issues"][0]["failed_checks"] == [
         "train_label_noise_clean"
+    ]
+
+
+def test_audit_completed_rejects_result_dispatch_identity_mismatch(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    task_id = "fepysr_s520_clean_g0001"
+    root = tmp_path / "experiments"
+    _write_result(
+        root,
+        task_id,
+        tool="jaxsr",
+        seed=521,
+        task_global_index=2,
+    )
+
+    report = module.audit_completed(
+        state=_state(task_id),
+        experiment_root=root,
+        host="iaaccn22",
+        min_runtime=3300,
+    )
+
+    assert report["passed"] is False
+    assert report["issues"][0]["failed_checks"] == [
+        "tool_match",
+        "seed_match",
+        "task_global_index_match",
     ]
 
 
