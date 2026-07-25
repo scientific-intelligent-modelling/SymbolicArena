@@ -101,6 +101,14 @@ def test_merge_preserves_performance_rank_and_adds_symbolic_metrics(
     assert rows[0]["Exact equiv %"] == "25.0"
     assert rows[0]["TreeSim"] == "0.4"
     assert rows[1]["Rank"] == "2"
+    assert summary["performance_sha256"] == module._file_sha256(
+        performance
+    )
+    assert summary["symbolic_sha256"] == module._file_sha256(symbolic)
+    assert summary["output_sha256"] == module._file_sha256(output)
+    assert summary["performance_csv"] == performance.name
+    assert summary["symbolic_csv"] == symbolic.name
+    assert summary["output_csv"] == output.name
 
 
 def test_merge_rejects_algorithm_set_mismatch(tmp_path: Path) -> None:

@@ -117,6 +117,25 @@ def test_symf_gate_requires_complete_new3_and_stage3_grids() -> None:
     assert 'merge_symf_formal_shards.py' in script
     assert '--expected-runs-per-algorithm 1992' in script
     assert '--validate-only' in script
+    assert '--prefer-run-level-expression' in script
+    assert '--require-frozen-formula-source' in script
+    assert '--source-run-level-csv' in script
+    assert (
+        '--expected-expression-source '
+        'run_level.expression_canonical'
+    ) in script
+    assert '--verify-output-dir "$SYMF_DIR"' in script
+    assert 'flock -n 9' in script
+    assert 'source_snapshots' in script
+    assert 'GENERATOR_SCRIPT="$snapshot_dir/' in script
+    assert 'MERGER_SCRIPT="$snapshot_dir/' in script
+    assert script.count("run_snapshot_python() {") == 1
+    assert 'by_source/$snapshot_id' in script
+    assert 'SOURCE_PERFORMANCE_CSV=' in script
+    assert 'PERFORMANCE_CSV="$snapshot_dir/performance.csv"' in script
+    assert 'LEADERBOARD_DIR="$SOURCE_OUTPUT_ROOT/leaderboard"' in script
+    assert 'COMBINED_CSV="$LEADERBOARD_DIR/' in script
+    assert 'COMBINED_SUMMARY="$LEADERBOARD_DIR/' in script
     assert (
         '["dso", "fepysr", "imcts", "jaxsr", '
         '"pyoperon", "symbolfit", "udsr"]'

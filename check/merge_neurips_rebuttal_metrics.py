@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 from datetime import datetime
@@ -50,6 +51,14 @@ def _read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         return list(reader.fieldnames or []), list(reader)
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _float(value: Any, field: str) -> float:
@@ -176,9 +185,12 @@ def merge_metrics(
         "created_at": datetime.now().astimezone().isoformat(
             timespec="seconds"
         ),
-        "performance_csv": str(performance_csv.resolve()),
-        "symbolic_csv": str(symbolic_csv.resolve()),
-        "output_csv": str(output_csv.resolve()),
+        "performance_csv": performance_csv.name,
+        "performance_sha256": _file_sha256(performance_csv),
+        "symbolic_csv": symbolic_csv.name,
+        "symbolic_sha256": _file_sha256(symbolic_csv),
+        "output_csv": output_csv.name,
+        "output_sha256": _file_sha256(output_csv),
         "algorithms": len(output_rows),
         "algorithm_keys": [
             str(row["Algorithm key"]).strip().lower()

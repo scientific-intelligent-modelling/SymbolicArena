@@ -14,6 +14,18 @@
 `algorithm × gid × seed` 网格校验后原子落盘，最终再严格合并并校验
 13944 个唯一运行键。
 
+后续代码复审继续补齐了 source provenance、完整评分公式和派生文件
+哈希门禁。params、run-level、performance、generator、SYM-F merger
+和 leaderboard merger 均按内容寻址冻结；params 还嵌入 664 个
+`formula.py` 的 source 与 SHA-256。分片、正式 SYM-F 和合并榜单都按
+`snapshot_id` 分版本，避免输入或代码变化后误复用旧产物。
+
+`2026-07-25T11:36:42+08:00` 在 `iaaccn22` 再次执行冻结来源 smoke：
+one-row 正式生成、分片合并、输出哈希复验和榜单合并全部通过；
+`664/664` 份内嵌公式均通过 base64、SHA-256 和 probe cache 验证，
+错误数为 `0`。正式生成器现要求 `--require-frozen-formula-source`，
+不再允许本批次回退到 live `formula.py`。
+
 原始测量文件：
 
 - `local_summary.json`
@@ -21,3 +33,4 @@
 - `iaaccn22_summary.json`
 - `iaaccn22_sample_timings.csv`
 - `remote_shard_merge_smoke.json`
+- `remote_frozen_provenance_smoke.json`

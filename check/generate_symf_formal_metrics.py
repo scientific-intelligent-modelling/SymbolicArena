@@ -15,9 +15,12 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import importlib.util
 import json
 import math
+import os
 import signal
 import sys
 from dataclasses import dataclass
@@ -31,7 +34,10 @@ import numpy as np
 import pandas as pd
 import sympy as sp
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(
+    os.environ.get("SIM_REPO_ROOT")
+    or Path(__file__).resolve().parents[1]
+).resolve()
 sys.path.insert(0, str(REPO_ROOT))
 
 CORE50_ROOT = REPO_ROOT / "exp-planning/04.Core50正式全量评测"
@@ -53,6 +59,9 @@ CAS_MAX_OPS = 45
 NUMERIC_MAX_CHARS = 1600
 NUMERIC_MAX_OPS = 220
 TREE_MAX_NODES = 450
+PROVENANCE_SCHEMA_VERSION = 1
+RUN_LEVEL_EXPRESSION_SOURCE = "run_level.expression_canonical"
+RESULT_PATH_EXPRESSION_SOURCE = "result_path_then_run_level"
 
 
 class TimeoutError(RuntimeError):
@@ -130,6 +139,77 @@ def bool_value(value: Any) -> bool:
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return False
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def build_source_fingerprint(
+    *,
+    params_csv: Path,
+    run_level_csv: Path,
+    generator_script: Path,
+    expression_source: str,
+) -> dict[str, str]:
+    fingerprint = {
+        "params_sha256": file_sha256(params_csv),
+        "run_level_sha256": file_sha256(run_level_csv),
+        "generator_sha256": file_sha256(generator_script),
+        "expression_source": str(expression_source),
+    }
+    params_header = pd.read_csv(params_csv, nrows=0)
+    formula_columns = {"gid", "formula_source_sha256"}
+    if formula_columns.issubset(params_header.columns):
+        formula_sources = pd.read_csv(
+            params_csv,
+            usecols=sorted(formula_columns),
+        )
+        if formula_sources.isna().any(axis=None):
+            raise ValueError(
+                "params 中存在未冻结的 formula.py source"
+            )
+        records = sorted(
+            (
+                str(row["gid"]).strip(),
+                str(row["formula_source_sha256"]).strip(),
+            )
+            for _, row in formula_sources.iterrows()
+        )
+        fingerprint["formula_sources_sha256"] = hashlib.sha256(
+            json.dumps(
+                records,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        fingerprint["formula_source_count"] = str(len(records))
+    return fingerprint
+
+
+def assert_source_fingerprint_unchanged(
+    expected: dict[str, str],
+    *,
+    params_csv: Path,
+    run_level_csv: Path,
+    generator_script: Path,
+    expression_source: str,
+) -> None:
+    actual = build_source_fingerprint(
+        params_csv=params_csv,
+        run_level_csv=run_level_csv,
+        generator_script=generator_script,
+        expression_source=expression_source,
+    )
+    if actual != expected:
+        raise RuntimeError(
+            "SYM-F source files 在运行期间发生变化: "
+            f"before={expected}, after={actual}"
+        )
 
 
 def load_expected_runs_from_run_level(
@@ -386,6 +466,39 @@ def load_formula_function(dataset_dir: Path, target_function: str | None, target
     return None
 
 
+def load_formula_function_from_frozen_source(
+    source_b64: Any,
+    source_sha256: Any,
+    target_function: str | None,
+    target_name: str | None,
+) -> Callable[..., Any] | None:
+    encoded = str(source_b64 or "").strip()
+    expected_sha256 = str(source_sha256 or "").strip()
+    if not encoded or not expected_sha256:
+        return None
+    source = base64.b64decode(encoded, validate=True)
+    actual_sha256 = hashlib.sha256(source).hexdigest()
+    if actual_sha256 != expected_sha256:
+        raise ValueError(
+            "frozen formula.py source sha256 mismatch"
+        )
+    namespace: dict[str, Any] = {
+        "__name__": "_symf_frozen_formula",
+        "np": np,
+        "numpy": np,
+        "math": math,
+    }
+    exec(  # noqa: S102 - 执行的是参数准备阶段冻结并哈希校验的本地公式。
+        compile(source, "<frozen-formula.py>", "exec"),
+        namespace,
+    )
+    for name in [target_function, target_name, "target", "y"]:
+        value = namespace.get(name) if name else None
+        if callable(value):
+            return value
+    return None
+
+
 def generate_probe_samples(params: pd.Series) -> np.ndarray:
     ranges = json_loads(params.get("probe_ranges"), [])
     seed = int(params.get("probe_random_seed") or 20260504) + int(params.get("core50_index") or 0)
@@ -465,18 +578,77 @@ def nmse_and_errors(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float | Non
     return nmse, max_abs, max_rel
 
 
-def load_gt_probe_cache(params_df: pd.DataFrame) -> dict[str, dict[str, Any]]:
+def validate_frozen_formula_sources(params_df: pd.DataFrame) -> None:
+    required_columns = {
+        "formula_source_b64",
+        "formula_source_sha256",
+    }
+    missing_columns = sorted(required_columns - set(params_df.columns))
+    if missing_columns:
+        raise ValueError(
+            "正式 SYM-F 缺少冻结公式列: "
+            + ", ".join(missing_columns)
+        )
+    for _, row in params_df.iterrows():
+        gid = stable_gid(row)
+        encoded = row.get("formula_source_b64")
+        expected_sha256 = row.get("formula_source_sha256")
+        if (
+            encoded is None
+            or pd.isna(encoded)
+            or not str(encoded).strip()
+        ):
+            raise ValueError(f"{gid}: formula_source_b64 缺失")
+        if (
+            expected_sha256 is None
+            or pd.isna(expected_sha256)
+            or not str(expected_sha256).strip()
+        ):
+            raise ValueError(f"{gid}: formula_source_sha256 缺失")
+        try:
+            source = base64.b64decode(
+                str(encoded).strip(),
+                validate=True,
+            )
+        except Exception as exc:
+            raise ValueError(
+                f"{gid}: formula_source_b64 无法解码"
+            ) from exc
+        actual_sha256 = hashlib.sha256(source).hexdigest()
+        if actual_sha256 != str(expected_sha256).strip():
+            raise ValueError(f"{gid}: formula_source_sha256 不匹配")
+
+
+def load_gt_probe_cache(
+    params_df: pd.DataFrame,
+    *,
+    require_frozen_formula_source: bool = False,
+) -> dict[str, dict[str, Any]]:
+    if require_frozen_formula_source:
+        validate_frozen_formula_sources(params_df)
     cache: dict[str, dict[str, Any]] = {}
     for _, row in params_df.iterrows():
         dataset_key = stable_gid(row)
         dataset_dir = resolve_dataset_path(row["dataset_dir"])
         feature_names = json_loads(row.get("metadata_feature_names"), [])
         feature_count = int(row["feature_count"])
-        func = load_formula_function(dataset_dir, row.get("formula_target_function"), row.get("target_name"))
-        if func is None:
-            cache[dataset_key] = {"error": "formula_function_missing"}
-            continue
         try:
+            frozen_source = row.get("formula_source_b64")
+            if frozen_source is not None and not pd.isna(frozen_source):
+                func = load_formula_function_from_frozen_source(
+                    frozen_source,
+                    row.get("formula_source_sha256"),
+                    row.get("formula_target_function"),
+                    row.get("target_name"),
+                )
+            else:
+                func = load_formula_function(
+                    dataset_dir,
+                    row.get("formula_target_function"),
+                    row.get("target_name"),
+                )
+            if func is None:
+                raise ValueError("formula_function_missing")
             samples = generate_probe_samples(row)
             arg_feature_indices = json_loads(
                 row.get("formula_arg_feature_indices"),
@@ -647,12 +819,21 @@ def build_expected_runs(clean_df: pd.DataFrame, expr_df: pd.DataFrame) -> pd.Dat
     return clean.merge(expr[keep_cols], on=["algorithm", "gid", "dataset", "seed"], how="left")
 
 
-def run_formal_metrics(params_df: pd.DataFrame, expected_runs: pd.DataFrame) -> pd.DataFrame:
+def run_formal_metrics(
+    params_df: pd.DataFrame,
+    expected_runs: pd.DataFrame,
+    *,
+    prefer_run_level_expression: bool = False,
+    require_frozen_formula_source: bool = False,
+) -> pd.DataFrame:
     params_by_gid = {
         stable_gid(row): row
         for _, row in params_df.iterrows()
     }
-    probe_cache = load_gt_probe_cache(params_df)
+    probe_cache = load_gt_probe_cache(
+        params_df,
+        require_frozen_formula_source=require_frozen_formula_source,
+    )
     rows: list[dict[str, Any]] = []
 
     total = len(expected_runs)
@@ -675,8 +856,18 @@ def run_formal_metrics(params_df: pd.DataFrame, expected_runs: pd.DataFrame) -> 
             feature_to_x_map=None,
         )
 
-        result_expr, expr_source, result_expr_error = expression_from_result_path(run.get("result_path"))
-        pred_source_expr = result_expr or run.get("expression_canonical")
+        if prefer_run_level_expression:
+            result_expr = None
+            result_expr_error = None
+            expr_source = RUN_LEVEL_EXPRESSION_SOURCE
+            pred_source_expr = run.get("expression_canonical")
+        else:
+            result_expr, expr_source, result_expr_error = (
+                expression_from_result_path(run.get("result_path"))
+            )
+            pred_source_expr = result_expr or run.get(
+                "expression_canonical"
+            )
         pred_expr, pred_parse_error, pred_cleaned = parse_sympy(
             pred_source_expr,
             feature_count=feature_count,
@@ -776,9 +967,31 @@ def run_formal_metrics(params_df: pd.DataFrame, expected_runs: pd.DataFrame) -> 
     return pd.DataFrame(rows)
 
 
-def write_outputs(outdir: Path, metrics: pd.DataFrame, params_df: pd.DataFrame) -> None:
+def write_outputs(
+    outdir: Path,
+    metrics: pd.DataFrame,
+    params_df: pd.DataFrame,
+    *,
+    provenance: dict[str, Any] | None = None,
+) -> None:
     outdir.mkdir(parents=True, exist_ok=True)
-    metrics.to_csv(outdir / "symbolic_metrics_formal.csv", index=False)
+    metrics_path = outdir / "symbolic_metrics_formal.csv"
+    metrics.to_csv(metrics_path, index=False)
+    if provenance is not None:
+        provenance_payload = {
+            **provenance,
+            "metrics_sha256": file_sha256(metrics_path),
+        }
+        (
+            outdir / "symbolic_metrics_formal_provenance.json"
+        ).write_text(
+            json.dumps(
+                provenance_payload,
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
     dataset_summary = (
         metrics.groupby(["algorithm", "gid", "dataset"], dropna=False)
@@ -881,11 +1094,46 @@ def main() -> None:
         "--algorithms",
         help="仅保留逗号分隔的算法集合，例如 fepysr,jaxsr,symbolfit",
     )
+    parser.add_argument(
+        "--prefer-run-level-expression",
+        action="store_true",
+        help="只使用已冻结 run-level CSV 中的 expression_canonical",
+    )
+    parser.add_argument(
+        "--require-frozen-formula-source",
+        action="store_true",
+        help="要求 params 内所有 formula.py source 已内嵌且哈希正确",
+    )
     parser.add_argument("--expected-runs", type=int)
     parser.add_argument("--outdir", default=str(DEFAULT_OUTDIR))
     args = parser.parse_args()
 
-    params_df = pd.read_csv(args.params_csv)
+    params_path = Path(args.params_csv)
+    generator_path = Path(__file__).resolve()
+    expression_source = (
+        RUN_LEVEL_EXPRESSION_SOURCE
+        if args.prefer_run_level_expression
+        else RESULT_PATH_EXPRESSION_SOURCE
+    )
+    if args.prefer_run_level_expression and not args.run_level_csv:
+        parser.error(
+            "--prefer-run-level-expression requires --run-level-csv"
+        )
+    run_level_path = (
+        Path(args.run_level_csv) if args.run_level_csv else None
+    )
+    source_fingerprint = (
+        build_source_fingerprint(
+            params_csv=params_path,
+            run_level_csv=run_level_path,
+            generator_script=generator_path,
+            expression_source=expression_source,
+        )
+        if run_level_path is not None
+        else None
+    )
+
+    params_df = pd.read_csv(params_path)
     if args.run_level_csv:
         algorithms = (
             {
@@ -897,7 +1145,7 @@ def main() -> None:
             else None
         )
         expected_runs = load_expected_runs_from_run_level(
-            Path(args.run_level_csv),
+            run_level_path,
             algorithms=algorithms,
             expected_runs=args.expected_runs,
         )
@@ -905,8 +1153,43 @@ def main() -> None:
         clean_df = pd.read_csv(args.clean_runs_csv)
         expr_df = pd.read_csv(args.expressions_csv)
         expected_runs = build_expected_runs(clean_df, expr_df)
-    metrics = run_formal_metrics(params_df, expected_runs)
-    write_outputs(Path(args.outdir), metrics, params_df)
+    metrics = run_formal_metrics(
+        params_df,
+        expected_runs,
+        prefer_run_level_expression=args.prefer_run_level_expression,
+        require_frozen_formula_source=(
+            args.require_frozen_formula_source
+        ),
+    )
+    if source_fingerprint is not None:
+        assert_source_fingerprint_unchanged(
+            source_fingerprint,
+            params_csv=params_path,
+            run_level_csv=run_level_path,
+            generator_script=generator_path,
+            expression_source=expression_source,
+        )
+    provenance: dict[str, Any] = {
+        "schema_version": PROVENANCE_SCHEMA_VERSION,
+        "kind": "formal_metrics",
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "algorithm_keys": sorted(
+            metrics["algorithm"].map(normalize_algorithm).unique().tolist()
+        ),
+        "runs": int(len(metrics)),
+        "source_fingerprint": source_fingerprint
+        or {
+            "params_sha256": file_sha256(params_path),
+            "generator_sha256": file_sha256(generator_path),
+            "expression_source": expression_source,
+        },
+    }
+    write_outputs(
+        Path(args.outdir),
+        metrics,
+        params_df,
+        provenance=provenance,
+    )
     print(
         json.dumps(
             {

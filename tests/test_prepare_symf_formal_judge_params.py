@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import csv
+import hashlib
 import importlib.util
 import json
 import sys
@@ -94,6 +96,13 @@ def test_prepare_parameters_accepts_full664_manifest_schema(tmp_path: Path) -> N
     assert params.loc[0, "gt_expression_sympy"] == "x0 + 1"
     assert params.loc[0, "probe_samples"] == 128
     assert params.loc[0, "probe_random_seed"] == 123
+    formula_source = (dataset_dir / "formula.py").read_bytes()
+    assert params.loc[0, "formula_source_sha256"] == hashlib.sha256(
+        formula_source
+    ).hexdigest()
+    assert base64.b64decode(
+        params.loc[0, "formula_source_b64"]
+    ) == formula_source
 
 
 def test_resolve_repo_path_prefers_home_dataset_tree(

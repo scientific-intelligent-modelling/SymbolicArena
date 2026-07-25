@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import importlib.util
 import json
 import sys
@@ -82,6 +84,157 @@ def test_formal_metrics_join_ground_truth_by_stable_gid(tmp_path: Path) -> None:
     assert metrics.loc[0, "failure_reason"] == "missing_result_json"
     assert bool(metrics.loc[0, "equiv_final"]) is True
     assert metrics.loc[0, "sym_f_formal"] == pytest.approx(1.0)
+
+
+def test_formal_metrics_can_freeze_run_level_expression(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    dataset_dir = tmp_path / "dataset"
+    _write_formula(dataset_dir)
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "canonical_artifact": {
+                    "normalized_expression": "x0 + 999"
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs = pd.DataFrame(
+        [
+            {
+                "algorithm": "fepysr",
+                "gid": "g0007",
+                "dataset": "catalog_display_name",
+                "seed": 520,
+                "status": "ok",
+                "valid_output": True,
+                "metric_complete": True,
+                "result_path": str(result_path),
+                "expression_canonical": "x0 + 1",
+            }
+        ]
+    )
+
+    metrics = module.run_formal_metrics(
+        _params(dataset_dir),
+        runs,
+        prefer_run_level_expression=True,
+    )
+
+    assert metrics.loc[0, "pred_expression_raw"] == "x0 + 1"
+    assert metrics.loc[0, "expr_source"] == (
+        "run_level.expression_canonical"
+    )
+    assert bool(metrics.loc[0, "equiv_final"]) is True
+
+
+def test_ground_truth_probe_uses_formula_source_frozen_in_params(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    dataset_dir = tmp_path / "dataset"
+    _write_formula(dataset_dir)
+    frozen_source = (dataset_dir / "formula.py").read_bytes()
+    params = _params(dataset_dir)
+    params["formula_source_sha256"] = hashlib.sha256(
+        frozen_source
+    ).hexdigest()
+    params["formula_source_b64"] = base64.b64encode(
+        frozen_source
+    ).decode("ascii")
+    (dataset_dir / "formula.py").write_text(
+        "def y(x):\n    return x + 999\n",
+        encoding="utf-8",
+    )
+    runs = pd.DataFrame(
+        [
+            {
+                "algorithm": "fepysr",
+                "gid": "g0007",
+                "dataset": "catalog_display_name",
+                "seed": 520,
+                "status": "ok",
+                "valid_output": True,
+                "metric_complete": True,
+                "result_path": "",
+                "expression_canonical": "x0 + 1",
+            }
+        ]
+    )
+
+    metrics = module.run_formal_metrics(
+        params,
+        runs,
+        prefer_run_level_expression=True,
+    )
+
+    assert bool(metrics.loc[0, "numeric_equiv"]) is True
+    assert bool(metrics.loc[0, "equiv_final"]) is True
+
+
+def test_formal_metrics_can_require_frozen_formula_source(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    dataset_dir = tmp_path / "dataset"
+    _write_formula(dataset_dir)
+    runs = pd.DataFrame(
+        [
+            {
+                "algorithm": "fepysr",
+                "gid": "g0007",
+                "dataset": "catalog_display_name",
+                "seed": 520,
+                "status": "ok",
+                "valid_output": True,
+                "metric_complete": True,
+                "result_path": "",
+                "expression_canonical": "x0 + 1",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="formula_source_b64"):
+        module.run_formal_metrics(
+            _params(dataset_dir),
+            runs,
+            prefer_run_level_expression=True,
+            require_frozen_formula_source=True,
+        )
+
+
+def test_source_fingerprint_detects_input_change(tmp_path: Path) -> None:
+    module = _load_module()
+    params_csv = tmp_path / "params.csv"
+    run_level_csv = tmp_path / "runs.csv"
+    params_csv.write_text("gid\ng0001\n", encoding="utf-8")
+    run_level_csv.write_text(
+        "algorithm,gid,seed\nfepysr,g0001,520\n",
+        encoding="utf-8",
+    )
+    initial = module.build_source_fingerprint(
+        params_csv=params_csv,
+        run_level_csv=run_level_csv,
+        generator_script=SCRIPT,
+        expression_source="run_level.expression_canonical",
+    )
+
+    run_level_csv.write_text(
+        "algorithm,gid,seed\nfepysr,g0001,521\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="运行期间发生变化"):
+        module.assert_source_fingerprint_unchanged(
+            initial,
+            params_csv=params_csv,
+            run_level_csv=run_level_csv,
+            generator_script=SCRIPT,
+            expression_source="run_level.expression_canonical",
+        )
 
 
 def test_load_run_level_parses_booleans_and_rejects_duplicate_keys(

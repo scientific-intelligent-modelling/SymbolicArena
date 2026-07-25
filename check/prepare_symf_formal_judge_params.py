@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
 import copy
 import hashlib
 import json
@@ -540,6 +541,21 @@ def prepare_parameters(
             if formula_value is not None
             else dataset_dir / "formula.py"
         )
+        formula_source = (
+            formula_path.read_bytes()
+            if formula_path.is_file()
+            else None
+        )
+        formula_source_sha256 = (
+            hashlib.sha256(formula_source).hexdigest()
+            if formula_source is not None
+            else None
+        )
+        formula_source_b64 = (
+            base64.b64encode(formula_source).decode("ascii")
+            if formula_source is not None
+            else None
+        )
         meta = _load_yaml(metadata_path)
         meta_features = _feature_names(meta)
         meta_target = _target_name(meta)
@@ -608,7 +624,7 @@ def prepare_parameters(
         }
         reverse_map = {v: k for k, v in var_map.items()}
         judge_policy = {
-            "ground_truth_source": "formula.py",
+            "ground_truth_source": "formula.py source frozen in params",
             "target_function": formula.target_function,
             "variable_order": features,
             "formula_arg_feature_indices": formula_arg_indices,
@@ -639,6 +655,8 @@ def prepare_parameters(
             "subgroup": str(_catalog_value(item, "subgroup") or ""),
             "metadata_yaml": str(metadata_path),
             "formula_py": str(formula_path),
+            "formula_source_sha256": formula_source_sha256,
+            "formula_source_b64": formula_source_b64,
             "target_name": target_name,
             "metadata_target_name": meta_target,
             "feature_count": feature_count,

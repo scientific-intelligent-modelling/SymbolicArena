@@ -115,6 +115,101 @@ def test_validate_metrics_grid_rejects_duplicate_or_incomplete_keys() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("column", "value", "message"),
+    [
+        ("seed", 520.5, "整数"),
+        ("sym_f_formal", 999.0, "范围"),
+        ("sym_f_formal", 0.9, "评分公式"),
+        ("tree_similarity", float("inf"), "有限"),
+        ("dataset", "wrong_dataset", "映射"),
+        ("cas_equiv", True, "equiv_final"),
+        ("valid_for_symbolic", False, "sym_f_formal"),
+    ],
+)
+def test_validate_metrics_grid_rejects_semantic_corruption(
+    column: str,
+    value,
+    message: str,
+) -> None:
+    module = _load_module()
+    metrics, params = _grid()
+    corrupted = metrics.copy()
+    if column == "seed":
+        corrupted["seed"] = corrupted["seed"].astype(float)
+    if column == "valid_for_symbolic":
+        corrupted.loc[0, "pred_parse_ok"] = False
+    corrupted.loc[0, column] = value
+
+    with pytest.raises(ValueError, match=message):
+        module.validate_metrics_grid(
+            corrupted,
+            params,
+            expected_algorithm_keys=("fepysr", "jaxsr"),
+            expected_runs=12,
+            expected_datasets=2,
+            expected_seeds=(520, 521, 522),
+            expected_runs_per_algorithm=6,
+        )
+
+
+def test_shard_provenance_binds_current_inputs(tmp_path: Path) -> None:
+    module = _load_module()
+    params_csv = tmp_path / "params.csv"
+    run_level_csv = tmp_path / "run_level.csv"
+    generator_script = tmp_path / "generator.py"
+    params_csv.write_text("gid,dataset\ng0001,d1\n", encoding="utf-8")
+    run_level_csv.write_text(
+        "algorithm,gid,seed\nfepysr,g0001,520\n",
+        encoding="utf-8",
+    )
+    generator_script.write_text("SCHEMA = 1\n", encoding="utf-8")
+    shard_dir = tmp_path / "fepysr"
+    shard_dir.mkdir()
+    shard_csv = shard_dir / "symbolic_metrics_formal.csv"
+    shard_csv.write_text("placeholder\n", encoding="utf-8")
+
+    expected = module.build_source_fingerprint(
+        params_csv=params_csv,
+        run_level_csv=run_level_csv,
+        generator_script=generator_script,
+        expression_source="run_level.expression_canonical",
+    )
+    provenance = {
+        "schema_version": 1,
+        "source_fingerprint": expected,
+        "algorithm_keys": ["fepysr"],
+        "runs": 1,
+        "metrics_sha256": module.generator.file_sha256(shard_csv),
+    }
+    (shard_dir / "symbolic_metrics_formal_provenance.json").write_text(
+        json.dumps(provenance),
+        encoding="utf-8",
+    )
+
+    validated = module.validate_shard_provenance(
+        [shard_csv],
+        expected_source_fingerprint=expected,
+    )
+    assert validated[0]["algorithm_keys"] == ["fepysr"]
+
+    params_csv.write_text(
+        "gid,dataset\ng0001,changed\n",
+        encoding="utf-8",
+    )
+    changed = module.build_source_fingerprint(
+        params_csv=params_csv,
+        run_level_csv=run_level_csv,
+        generator_script=generator_script,
+        expression_source="run_level.expression_canonical",
+    )
+    with pytest.raises(ValueError, match="provenance"):
+        module.validate_shard_provenance(
+            [shard_csv],
+            expected_source_fingerprint=changed,
+        )
+
+
 def test_cli_merges_validated_shards_and_writes_formal_outputs(
     tmp_path: Path,
 ) -> None:
@@ -168,6 +263,12 @@ def test_cli_merges_validated_shards_and_writes_formal_outputs(
     )
     assert summary["runs"] == 12
     assert summary["algorithm_keys"] == ["fepysr", "jaxsr"]
+    assert summary["params_csv"] == "params.csv"
+    assert summary["shard_csvs"] == [
+        "fepysr/fepysr.csv",
+        "jaxsr/jaxsr.csv",
+    ]
+    assert not Path(summary["params_csv"]).is_absolute()
     formal_summary = json.loads(
         (
             outdir / "symbolic_metrics_formal_summary.json"
@@ -176,3 +277,33 @@ def test_cli_merges_validated_shards_and_writes_formal_outputs(
     assert formal_summary["runs"] == 12
     assert formal_summary["datasets"] == 2
     assert formal_summary["algorithms"] == 2
+
+    verified = subprocess.run(
+        [
+            *command[:-2],
+            "--validate-only",
+            "--verify-output-dir",
+            str(outdir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert verified.returncode == 0, verified.stderr
+
+    (
+        outdir / "symbolic_metrics_formal_algorithm_summary.csv"
+    ).write_text("tampered\n", encoding="utf-8")
+    rejected = subprocess.run(
+        [
+            *command[:-2],
+            "--validate-only",
+            "--verify-output-dir",
+            str(outdir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert rejected.returncode != 0
+    assert "输出哈希" in rejected.stderr
