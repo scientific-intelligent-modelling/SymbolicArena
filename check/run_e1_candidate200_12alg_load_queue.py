@@ -1388,29 +1388,33 @@ def _start_tasks_on_host(
     return events
 
 
-def _reap_remote_task_processes(
+def _reap_remote_task_processes_bulk(
     host: str,
-    task: dict[str, Any],
+    tasks: list[dict[str, Any]],
     *,
     controller_host: str,
     use_internal_ips: bool,
     reason: str,
-) -> bool:
-    task_id = str(task.get("task_id") or "")
-    session = str(task.get("session") or "")
-    tool = str(task.get("tool") or "")
-    if not task_id and not session:
-        return False
-
-    target_json = json.dumps(
+) -> dict[str, bool]:
+    targets = [
         {
-            "task_id": task_id,
-            "session": session,
-            "tool": tool,
+            "task_id": str(task.get("task_id") or ""),
+            "session": str(task.get("session") or ""),
+            "tool": str(task.get("tool") or ""),
             "reason": reason,
-        },
-        ensure_ascii=True,
-    )
+        }
+        for task in tasks
+        if task.get("task_id")
+    ]
+    results = {
+        str(task.get("task_id") or ""): False
+        for task in tasks
+        if task.get("task_id")
+    }
+    if not targets:
+        return results
+
+    targets_json = json.dumps(targets, ensure_ascii=True)
     command = f"""python3 - <<'PY'
 import json
 import os
@@ -1419,7 +1423,7 @@ import re
 import signal
 import time
 
-TARGET = {target_json}
+TARGETS = {targets_json}
 
 def _decode(path):
     try:
@@ -1427,7 +1431,7 @@ def _decode(path):
     except Exception:
         return ""
 
-def _matches_process(proc):
+def _process_info(proc):
     try:
         cmd = _decode(proc / "cmdline").replace("\\n", " ")
         if "subprocess_runner.py" not in cmd:
@@ -1435,37 +1439,49 @@ def _matches_process(proc):
         stat = (proc / "stat").read_text().split()
         pid = int(proc.name)
         pgrp = int(stat[4])
-        marker_matched = False
         env_text = _decode(proc / "environ")
-        task_id = TARGET.get("task_id") or ""
-        session = TARGET.get("session") or ""
-        if task_id and f"SIM_QUEUE_TASK_ID={{task_id}}" in env_text:
-            marker_matched = True
-        if session and f"SIM_QUEUE_SESSION={{session}}" in env_text:
-            marker_matched = True
 
         parsed_tool = None
+        exp_path = ""
         match = re.search(r"(/tmp/tmp[^ ]+\\.json)", cmd)
         if match:
             try:
                 payload = json.loads(pathlib.Path(match.group(1)).read_text())
                 parsed_tool = payload.get("tool_name") or (payload.get("params") or {{}}).get("tool_name")
                 exp_path = str((payload.get("params") or {{}}).get("exp_path") or "")
-                if task_id and f"/tasks/{{task_id}}/" in exp_path:
-                    marker_matched = True
             except Exception:
                 pass
 
-        expected_tool = TARGET.get("tool") or ""
-        if expected_tool and parsed_tool and parsed_tool != expected_tool:
-            return None
-        if not marker_matched:
-            return None
         if pgrp <= 1:
             return None
-        return {{"pid": pid, "pgrp": pgrp, "tool": parsed_tool}}
+        return {{
+            "pid": pid,
+            "pgrp": pgrp,
+            "tool": parsed_tool,
+            "env_text": env_text,
+            "exp_path": exp_path,
+        }}
     except Exception:
         return None
+
+def _target_for_process(info):
+    for target in TARGETS:
+        task_id = target.get("task_id") or ""
+        session = target.get("session") or ""
+        marker_matched = False
+        if task_id and f"SIM_QUEUE_TASK_ID={{task_id}}" in info["env_text"]:
+            marker_matched = True
+        if session and f"SIM_QUEUE_SESSION={{session}}" in info["env_text"]:
+            marker_matched = True
+        if task_id and f"/tasks/{{task_id}}/" in info["exp_path"]:
+            marker_matched = True
+        if not marker_matched:
+            continue
+        expected_tool = target.get("tool") or ""
+        if expected_tool and info["tool"] and info["tool"] != expected_tool:
+            continue
+        return target
+    return None
 
 def _still_running(item):
     proc = pathlib.Path("/proc") / str(item["pid"])
@@ -1477,44 +1493,71 @@ def _still_running(item):
     except Exception:
         return False
 
-matches = []
+matches_by_task = {{target["task_id"]: [] for target in TARGETS}}
 for entry in pathlib.Path("/proc").iterdir():
     if not entry.name.isdigit():
         continue
-    item = _matches_process(entry)
-    if item:
-        matches.append(item)
+    info = _process_info(entry)
+    if not info:
+        continue
+    target = _target_for_process(info)
+    if target:
+        matches_by_task[target["task_id"]].append(info)
+
+matches = [
+    item
+    for task_matches in matches_by_task.values()
+    for item in task_matches
+]
 
 if not matches:
-    print(json.dumps({{"matched": 0, "remaining": 0, "target": TARGET}}, sort_keys=True))
+    print(json.dumps({{
+        "results": {{
+            target["task_id"]: {{"matched": 0, "remaining": 0}}
+            for target in TARGETS
+        }}
+    }}, sort_keys=True))
     raise SystemExit(0)
 
-for item in matches:
+for pgrp in {{item["pgrp"] for item in matches}}:
     try:
-        os.killpg(item["pgrp"], signal.SIGTERM)
+        os.killpg(pgrp, signal.SIGTERM)
     except ProcessLookupError:
         pass
     except Exception as exc:
-        print(f"TERM_ERROR pid={{item['pid']}} pgrp={{item['pgrp']}} {{type(exc).__name__}}: {{exc}}")
+        print(f"TERM_ERROR pgrp={{pgrp}} {{type(exc).__name__}}: {{exc}}")
 
 time.sleep(3)
 remaining = [item for item in matches if _still_running(item)]
 if not remaining:
-    print(json.dumps({{"matched": len(matches), "remaining": 0, "target": TARGET}}, sort_keys=True))
+    print(json.dumps({{
+        "results": {{
+            task_id: {{"matched": len(task_matches), "remaining": 0}}
+            for task_id, task_matches in matches_by_task.items()
+        }}
+    }}, sort_keys=True))
     raise SystemExit(0)
 
-for item in remaining:
+for pgrp in {{item["pgrp"] for item in remaining}}:
     try:
-        os.killpg(item["pgrp"], signal.SIGKILL)
+        os.killpg(pgrp, signal.SIGKILL)
     except ProcessLookupError:
         pass
     except Exception as exc:
-        print(f"KILL_ERROR pid={{item['pid']}} pgrp={{item['pgrp']}} {{type(exc).__name__}}: {{exc}}")
+        print(f"KILL_ERROR pgrp={{pgrp}} {{type(exc).__name__}}: {{exc}}")
 
 time.sleep(1)
-still = [item for item in matches if _still_running(item)]
-print(json.dumps({{"matched": len(matches), "remaining": len(still), "target": TARGET}}, sort_keys=True))
-raise SystemExit(0 if not still else 1)
+results = {{}}
+any_remaining = False
+for task_id, task_matches in matches_by_task.items():
+    still = [item for item in task_matches if _still_running(item)]
+    results[task_id] = {{
+        "matched": len(task_matches),
+        "remaining": len(still),
+    }}
+    any_remaining = any_remaining or bool(still)
+print(json.dumps({{"results": results}}, sort_keys=True))
+raise SystemExit(1 if any_remaining else 0)
 PY"""
     result = _ssh(
         host,
@@ -1523,7 +1566,72 @@ PY"""
         use_internal_ips=use_internal_ips,
         timeout=45,
     )
-    return result.returncode == 0
+    parsed_results = False
+    for line in reversed(result.stdout.splitlines()):
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        remote_results = payload.get("results")
+        if not isinstance(remote_results, dict):
+            continue
+        parsed_results = True
+        for task_id in results:
+            item = remote_results.get(task_id)
+            if isinstance(item, dict):
+                results[task_id] = int(item.get("remaining") or 0) == 0
+        break
+    if not parsed_results and result.returncode == 0:
+        return {task_id: True for task_id in results}
+    return results
+
+
+def _reap_remote_task_processes(
+    host: str,
+    task: dict[str, Any],
+    *,
+    controller_host: str,
+    use_internal_ips: bool,
+    reason: str,
+) -> bool:
+    task_id = str(task.get("task_id") or "")
+    session = str(task.get("session") or "")
+    if not task_id or not session:
+        return False
+    results = _reap_remote_task_processes_bulk(
+        host,
+        [task],
+        controller_host=controller_host,
+        use_internal_ips=use_internal_ips,
+        reason=reason,
+    )
+    return results.get(task_id, False)
+
+
+def _record_remote_task_process_reap(
+    batch_name: str,
+    task_id: str,
+    host: str,
+    task: dict[str, Any],
+    args: argparse.Namespace,
+    *,
+    reason: str,
+    ok: bool,
+) -> None:
+    task["last_reap_attempt_at"] = _now()
+    task["last_reap_reason"] = reason
+    task["last_reap_ok"] = ok
+    _append_event(
+        batch_name,
+        {
+            "event": "task_process_reap",
+            "task_id": task_id,
+            "host": host,
+            "reason": reason,
+            "ok": ok,
+        },
+        args.queue_root_path,
+    )
 
 
 def _reap_remote_task_processes_for_state(
@@ -1542,13 +1650,14 @@ def _reap_remote_task_processes_for_state(
         use_internal_ips=args.use_internal_ips,
         reason=reason,
     )
-    task["last_reap_attempt_at"] = _now()
-    task["last_reap_reason"] = reason
-    task["last_reap_ok"] = ok
-    _append_event(
+    _record_remote_task_process_reap(
         batch_name,
-        {"event": "task_process_reap", "task_id": task_id, "host": host, "reason": reason, "ok": ok},
-        args.queue_root_path,
+        task_id,
+        host,
+        task,
+        args,
+        reason=reason,
+        ok=ok,
     )
     return ok
 
@@ -1680,6 +1789,28 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         )
         statuses.update(host_statuses)
 
+    done_reap_results: dict[str, bool] = {}
+    done_reap_reason = "task_done_session_closed"
+    for host, items in finished_by_host.items():
+        done_tasks = [
+            {**task, "task_id": task_id}
+            for task_id, task in items
+            if not (statuses.get(task_id) or {}).get("read_error")
+            and int((statuses.get(task_id) or {}).get("done") or 0)
+            == int(task["expected"])
+            and int((statuses.get(task_id) or {}).get("errors") or 0) == 0
+        ]
+        if len(done_tasks) > 1:
+            done_reap_results.update(
+                _reap_remote_task_processes_bulk(
+                    host,
+                    done_tasks,
+                    controller_host=args.controller_host,
+                    use_internal_ips=args.use_internal_ips,
+                    reason=done_reap_reason,
+                )
+            )
+
     for task_id, task in finished_items:
         host = str(task["assigned_host"])
         status = statuses.get(task_id) or {}
@@ -1705,14 +1836,25 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
                 args.queue_root_path,
             )
         elif int(status.get("done") or 0) == expected and errors == 0:
-            _reap_remote_task_processes_for_state(
-                args.batch_name,
-                task_id,
-                host,
-                task,
-                args,
-                reason="task_done_session_closed",
-            )
+            if task_id in done_reap_results:
+                _record_remote_task_process_reap(
+                    args.batch_name,
+                    task_id,
+                    host,
+                    task,
+                    args,
+                    reason=done_reap_reason,
+                    ok=done_reap_results[task_id],
+                )
+            else:
+                _reap_remote_task_processes_for_state(
+                    args.batch_name,
+                    task_id,
+                    host,
+                    task,
+                    args,
+                    reason=done_reap_reason,
+                )
             task.update({"state": "done", "ended_at": _now(), "error": None})
             task.pop("status_read_error_since", None)
             task.pop("last_status_read_error", None)

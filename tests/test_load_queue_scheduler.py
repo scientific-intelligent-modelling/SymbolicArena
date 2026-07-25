@@ -241,6 +241,59 @@ def test_reap_remote_task_processes_matches_owned_subprocesses(monkeypatch):
     assert "if not remaining:" in command
 
 
+def test_reap_remote_task_processes_bulk_uses_one_ssh_and_parses_each_task(
+    monkeypatch,
+):
+    commands = []
+    task_ids = [
+        "gplearn_s520_clean_g0001",
+        "gplearn_s520_clean_g0002",
+    ]
+
+    def fake_ssh(host, command, **kwargs):
+        commands.append((host, command, kwargs))
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            json.dumps(
+                {
+                    "results": {
+                        task_ids[0]: {"matched": 0, "remaining": 0},
+                        task_ids[1]: {"matched": 1, "remaining": 1},
+                    }
+                }
+            ),
+            "",
+        )
+
+    monkeypatch.setattr(scheduler, "_ssh", fake_ssh)
+    tasks = [
+        {
+            "task_id": task_id,
+            "session": f"formal24h_full_{task_id}",
+            "tool": "gplearn",
+        }
+        for task_id in task_ids
+    ]
+
+    results = scheduler._reap_remote_task_processes_bulk(
+        "iaaccn23",
+        tasks,
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        reason="unit-test",
+    )
+
+    assert results == {
+        task_ids[0]: True,
+        task_ids[1]: False,
+    }
+    assert len(commands) == 1
+    assert commands[0][0] == "iaaccn23"
+    assert all(task_id in commands[0][1] for task_id in task_ids)
+    assert 'matches_by_task = {' in commands[0][1]
+
+
 def test_preflight_uses_requested_source_csv(tmp_path, monkeypatch):
     source_csv = tmp_path / "smoke.csv"
     source_csv.write_text(
@@ -658,6 +711,110 @@ def test_update_running_tasks_marks_done_when_session_absent_after_precise_reche
     scheduler._update_running_tasks(state, args)
 
     assert state["tasks"]["gplearn_s520_clean_g0004"]["state"] == "done"
+
+
+def test_update_running_tasks_batches_done_process_reaping_by_host(
+    tmp_path,
+    monkeypatch,
+):
+    task_ids = [
+        "gplearn_s520_clean_g0004",
+        "gplearn_s520_clean_g0005",
+    ]
+    state = {
+        "tasks": {
+            task_id: {
+                "task_id": task_id,
+                "tool": "gplearn",
+                "state": "running",
+                "assigned_host": "iaaccn25",
+                "session": f"formal24h_full_{task_id}",
+                "expected": 1,
+            }
+            for task_id in task_ids
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+    bulk_calls = []
+    events = []
+
+    monkeypatch.setattr(
+        scheduler,
+        "_list_queue_sessions",
+        lambda *args, **kwargs: set(),
+    )
+    monkeypatch.setattr(
+        scheduler,
+        "_sessions_running_bulk",
+        lambda *args, **kwargs: set(),
+    )
+    monkeypatch.setattr(
+        scheduler,
+        "_read_task_statuses_bulk",
+        lambda *args, **kwargs: {
+            task_id: {
+                "read_error": None,
+                "seen": 1,
+                "done": 1,
+                "errors": 0,
+                "counts": {"ok": 1},
+            }
+            for task_id in task_ids
+        },
+    )
+
+    def fake_bulk_reap(host, tasks, **kwargs):
+        bulk_calls.append((host, tasks, kwargs))
+        return {task["task_id"]: True for task in tasks}
+
+    def fail_single_reap(*args, **kwargs):
+        raise AssertionError("同主机多个完成任务不应逐任务 SSH 回收")
+
+    monkeypatch.setattr(
+        scheduler,
+        "_reap_remote_task_processes_bulk",
+        fake_bulk_reap,
+    )
+    monkeypatch.setattr(
+        scheduler,
+        "_reap_remote_task_processes",
+        fail_single_reap,
+    )
+    monkeypatch.setattr(
+        scheduler,
+        "_append_event",
+        lambda _batch_name, event, _queue_root: events.append(event),
+    )
+
+    scheduler._update_running_tasks(state, args)
+
+    assert len(bulk_calls) == 1
+    assert bulk_calls[0][0] == "iaaccn25"
+    assert [task["task_id"] for task in bulk_calls[0][1]] == task_ids
+    assert {
+        task["state"] for task in state["tasks"].values()
+    } == {"done"}
+    assert all(
+        task["last_reap_ok"] is True
+        for task in state["tasks"].values()
+    )
+    assert [
+        event["event"] for event in events
+    ] == [
+        "task_process_reap",
+        "task_done",
+        "task_process_reap",
+        "task_done",
+    ]
 
 
 def test_update_running_tasks_keeps_running_when_finished_status_read_fails(tmp_path, monkeypatch):
