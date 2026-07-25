@@ -167,6 +167,13 @@ OOD NMSE 均为有限值。控制器于 `09:39:14` 将任务记为 `done`，
 及最终 queue state 的对照证据保存在
 `monitoring/symbolfit_recovery/20260725-093448/`。
 
+`20260725-094933` 进一步按 assigned host 扫描了修复部署时点之后启动
+或完成的 `194/194` 条规范结果。所有结果均为 `status=ok`，没有非空
+error、异常恢复、无效 artifact 或非有限 split NMSE；其中 `79` 条
+`recovered_from_timeout` 均在 `3604.885--3631.254s` 正常收口并通过
+上述检查。扫描口径、state 哈希和完整任务路径保存在
+`monitoring/result_health/20260725-094933/`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
