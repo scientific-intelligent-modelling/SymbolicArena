@@ -82,6 +82,16 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _repo_relative(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError as exc:
+        raise ValueError(
+            f"审计来源路径位于仓库根目录之外: {resolved}"
+        ) from exc
+
+
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -200,9 +210,9 @@ def _prepare_params(
         _write_json(output_dir / "smoke/params" / source_path.name, smoke_payload)
 
         fingerprints[tool] = {
-            "path": str(source_path),
+            "path": _repo_relative(source_path),
             "sha256": _sha256(source_path),
-            "archived_path": str(provenance_path),
+            "archived_path": _repo_relative(provenance_path),
         }
     return fingerprints
 
@@ -318,8 +328,13 @@ def prepare_batch(
         output_dir=output_dir,
     )
     source_fingerprints = {
+        "schema_version": 1,
+        "path_base": "repository_root",
         "git_revision": git_revision,
-        "source_csv": {"path": str(source_csv), "sha256": _sha256(source_csv)},
+        "source_csv": {
+            "path": _repo_relative(source_csv),
+            "sha256": _sha256(source_csv),
+        },
         "aaai_params": aaai_fingerprints,
     }
 

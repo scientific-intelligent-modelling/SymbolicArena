@@ -71,8 +71,12 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def test_prepare_batch_builds_clean_full_and_smoke_assets(tmp_path: Path) -> None:
+def test_prepare_batch_builds_clean_full_and_smoke_assets(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     source_csv = tmp_path / "full664.csv"
     aaai_params_root = tmp_path / "aaai_params"
     output_dir = tmp_path / "batch"
@@ -151,8 +155,52 @@ def test_prepare_batch_builds_clean_full_and_smoke_assets(tmp_path: Path) -> Non
         (output_dir / "manifest" / "source_fingerprints.json").read_text(encoding="utf-8")
     )
     assert fingerprints["git_revision"] == "deadbeef"
+    assert fingerprints["schema_version"] == 1
+    assert fingerprints["path_base"] == "repository_root"
+    assert fingerprints["source_csv"]["path"] == "full664.csv"
     assert fingerprints["source_csv"]["sha256"]
-    assert fingerprints["aaai_params"]["fepysr"]["sha256"]
+    assert fingerprints["aaai_params"]["fepysr"] == {
+        "path": "aaai_params/fepysr__clean.json",
+        "sha256": module._sha256(
+            aaai_params_root / "fepysr__clean.json"
+        ),
+        "archived_path": (
+            "batch/provenance/aaai_params_3h/fepysr__clean.json"
+        ),
+    }
+    assert fingerprints == json.loads(
+        (
+            output_dir
+            / "smoke/manifest/source_fingerprints.json"
+        ).read_text(encoding="utf-8")
+    )
+    path_values = [fingerprints["source_csv"]["path"]]
+    for record in fingerprints["aaai_params"].values():
+        path_values.extend([record["path"], record["archived_path"]])
+    assert all(not Path(value).is_absolute() for value in path_values)
+
+
+def test_prepare_batch_rejects_provenance_path_outside_repo(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    monkeypatch.setattr(module, "REPO_ROOT", repo_root)
+    source_csv = tmp_path / "outside.csv"
+    aaai_params_root = repo_root / "aaai_params"
+    _write_source_csv(source_csv)
+    _write_aaai_params(aaai_params_root)
+
+    with pytest.raises(ValueError, match="仓库根目录之外"):
+        module.prepare_batch(
+            source_csv=source_csv,
+            aaai_params_root=aaai_params_root,
+            output_dir=repo_root / "batch",
+            expected_datasets=3,
+            git_revision="deadbeef",
+        )
 
 
 def test_prepare_batch_rejects_duplicate_dataset_rel(tmp_path: Path) -> None:
