@@ -240,6 +240,14 @@ SHA-256 为
 `b8947196c9d1058a7f4876fde306ce7fd43e866f0290436da09cbf8003fc1004`，
 证据保存在 `monitoring/completed_audit/20260725-233120/`。
 
+`20260726-004014` 在 seed 521 接近全部派发时冻结正式 state。
+`3861/3861` 个 assigned-host 规范结果通过完整联合审计，8 台主机
+全部通过且 `issue_count=0`；快照中 seed 520 保持 `1992/1992`
+完整，seed 521 已完成 `1869` 个、仅余 `3` 个 pending。运行时范围为
+`3358.965--3795.947s`，state 快照 SHA-256 为
+`82b3f349601b845a80fc61edda59955ba312a4ceac8b8b0bfbb0fb0c19925859`，
+证据保存在 `monitoring/completed_audit/20260726-004014/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
