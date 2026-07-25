@@ -176,6 +176,13 @@ state，并已同步到 `iaaccn22`。为避免干扰当前正常 worker，本轮
 `0a11933ee4e840cee4fe23e6292e2fcab4c02968a36b8dc2093a5e548bf6e13f`，
 证据保存在 `monitoring/completed_audit/20260725-131044/`。
 
+`20260725-140054` 在完成数达到 `1805` 后再次冻结正式 state。
+`1805/1805` 个 assigned-host 规范结果通过完整联合审计，8 台主机
+全部通过且 `issue_count=0`；运行时范围为
+`3358.965--3795.947s`，state 快照 SHA-256 为
+`4ea5999887a7e21de6685c0f1769e0443181ce2abf2f4081f6deecc5ed12c873`，
+证据保存在 `monitoring/completed_audit/20260725-140054/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
