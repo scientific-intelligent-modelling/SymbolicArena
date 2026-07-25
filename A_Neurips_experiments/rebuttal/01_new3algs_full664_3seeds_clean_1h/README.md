@@ -96,6 +96,15 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 证据分别保存在 `monitoring/controller_recovery/20260725-072427/` 和
 `monitoring/completed_audit/20260725-073556/`。
 
+`20260725-084449` 的第二次受控重启进一步加载了按主机批量回收完成
+任务进程的实现，仍未停止任何算法 worker。8 台主机均重新同步成功，
+恢复后连续完成三轮主机探测；事件窗口内 `26/26` 个完成任务回收成功，
+同一主机单次最多批量回收 `4` 个任务。跨主机盘点为一个控制器、
+`200` 个 session、`200` 个唯一任务和零重复任务；`08:55:06` 队列为
+`741 done / 210 running / 5025 pending`，且没有 failed/error 任务。
+重启、事件和盘点证据保存在
+`monitoring/controller_recovery/20260725-084449/`。
+
 随后审计器增加了正式结果的 clean 契约检查，要求
 `train_label_noise.enabled=false`、`requested=false`、`sigma=0`、
 `scale=0`。增强后的 `20260725-075212` 固定快照再次对 `551/551`
@@ -121,6 +130,15 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
 JSON 可解析并包含数据身份、方程、ID/OOD 评估字段。证据保存在
 `monitoring/progress_snapshot_audit/20260725-074327/summary.json`。
+
+对 `SymbolFit` 的一次真实结束异常复核表明，算法已经运行约 57 分钟
+并持续写出可评估快照，但上游最终表达式数字格式化在处理复数时抛出
+异常。runner 现在会在支持快照的算法异常退出后尝试恢复，但只有快照
+能够重新生成 canonical artifact，并通过完整 split 的有限预测与指标
+检查时才写为 `ok`；同时保留 `recovered_from_error`、
+`raw_execution_error` 和 `recovered_after_error` 作为追溯字段。
+不满足这些条件的异常仍按原路径报错并进入队列重试，不会用空壳快照
+掩盖算法失败或指标质量。
 
 ## 指标汇总
 
@@ -148,6 +166,9 @@ formal symbolic judge 使用 `formula.py` 作为 ground truth，按稳定 `gid`
 
 `05_generate_symf_from_iaaccn22.sh` 会对 7 算法共 `13944` 条 run 计算
 SYM-F、Exact、TreeSim，并严格按 `Algorithm key` 合入最终榜单。
+生成后还会再次检查 formal summary 必须包含 `13944` 条 run、`664`
+个数据集、`7` 个算法和 `664` 份公式参数，并要求最终榜单算法集合精确
+等于 `dso/fepysr/imcts/jaxsr/pyoperon/symbolfit/udsr`。
 
 ## 最终产物
 
