@@ -1,0 +1,93 @@
+{
+  "tool": "symbolfit",
+  "task_label": "g0205_PO16",
+  "task_global_index": 205,
+  "dataset": "PO16",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO16",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO16",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO16",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO16",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/phys_osc/PO16",
+    "expected_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO16",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/phys_osc/PO16",
+    "actual_normalized": "sim-datasets-data/llm-srbench/phys_osc/PO16"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed520/tasks/symbolfit_s520_clean_g0205/iaaccn25/symbolfit/g0205_PO16/experiments/g0205_PO16_symbolfit_seed520_20260725-072806",
+  "status": "error",
+  "error": "RuntimeError('子进程执行失败: Command \\'[\\'/home/zhangziwen/anaconda3/envs/sim_symbolfit/bin/python\\', \\'-u\\', \\'/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\\', \\'--input\\', \\'/tmp/tmpv71cmj5j.json\\', \\'--output\\', \\'/tmp/tmpv71cmj5j.json.result\\']\\' returned non-zero exit status 1.\\nTraceback (most recent call last):\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 52, in main\\n    result = execute_command(wrapper_module, command)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 87, in execute_command\\n    return handle_fit(regressor_class, command)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 309, in handle_fit\\n    regressor.fit(X, y)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py\", line 388, in fit\\n    model.fit()\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/symbolfit.py\", line 209, in fit\\n    func_candidates = parse_pysr_equ(pysr_dir=run_directory, x=X)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/utils.py\", line 76, in parse_pysr_equ\\n    equ = round_numbers_in_sympy_expr(equ)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/utils.py\", line 39, in round_numbers_in_sympy_expr\\n    rounded_expr = sympy_expr.replace(lambda x: x.is_Number, lambda x: rounding(x, sig_fig))\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sympy/core/basic.py\", line 1797, in replace\\n    rv = walk(self, rec_replace)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sympy/core/basic.py\", line 1772, in walk\\n    newargs = tuple([walk(a, F) for a in args])\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sympy/core/basic.py\", line 1772, in <listcomp>\\n    newargs = tuple([walk(a, F) for a in args])\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sympy/core/basic.py\", line 1782, in walk\\n    rv = F(rv)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sympy/core/basic.py\", line 1790, in rec_replace\\n    v = _value(expr, result)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sympy/core/basic.py\", line 1756, in <lambda>\\n    _value = lambda expr, result: value(expr)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/utils.py\", line 39, in <lambda>\\n    rounded_expr = sympy_expr.replace(lambda x: x.is_Number, lambda x: rounding(x, sig_fig))\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/utils.py\", line 34, in rounding\\n    return x.round(sig - 1 - int(sympy.floor(sympy.log(abs(x), 10))))\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sympy/core/expr.py\", line 345, in __int__\\n    raise TypeError(\"Cannot convert complex to int\")\\nTypeError: Cannot convert complex to int\\n')",
+  "seed": 520,
+  "feature_names": [
+    "x",
+    "t",
+    "v"
+  ],
+  "target_name": "dv_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3444.563,
+  "equation": null,
+  "equation_count": null,
+  "canonical_artifact": null,
+  "canonical_artifact_error": null,
+  "train": null,
+  "valid": null,
+  "id_test": null,
+  "ood_test": null,
+  "finished_at": "2026-07-25 08:25:30",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed520/tasks/symbolfit_s520_clean_g0205/iaaccn25/symbolfit/g0205_PO16/experiments",
+    "exp_name": "g0205_PO16_symbolfit_seed520",
+    "n_features": 3,
+    "feature_names": [
+      "x",
+      "t",
+      "v"
+    ],
+    "target_name": "dv_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 1.5884753307828423,
+    "scale": 0.0,
+    "rng_seed": 2890752123,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "error"
+}
