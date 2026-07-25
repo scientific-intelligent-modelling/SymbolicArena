@@ -174,6 +174,13 @@ error、异常恢复、无效 artifact 或非有限 split NMSE；其中 `79` 条
 上述检查。扫描口径、state 哈希和完整任务路径保存在
 `monitoring/result_health/20260725-094933/`。
 
+`20260725-095730_increment` 固定比较了 `09:49:33` 与 `09:57:30`
+两个 queue state，对期间新增完成的 `44/44` 条 assigned-host 规范结果
+做了增量健康检查。结果全部为 `status=ok`，canonical artifact、三个
+split NMSE 和五项任务身份均通过；没有异常恢复或失败信号，其中 `18`
+条为健康的 timeout 恢复。两个 state 的精确哈希、排除边界和逐主机
+计数保存在 `monitoring/result_health/20260725-095730_increment/`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
