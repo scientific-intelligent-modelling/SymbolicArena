@@ -192,6 +192,15 @@ split NMSE 和五项任务身份均通过；没有异常恢复或失败信号，
 没有异常恢复或失败信号，其中 `23` 条为健康的 timeout 恢复。证据
 保存在 `monitoring/result_health/20260725-101108_increment/`。
 
+`20260725-103600` 提前执行了最终收口链路预检，并修复四类确定性问题：
+controller 缺失 Stage 3 输入、SYM-F 脚本未映射远端 home 数据根、
+formal summary 错按非唯一显示名计数，以及初始同步清单未覆盖最终输入。
+`04_collect...` 还增加了收集前 8 机严格 completed audit 门禁。修复后
+远端真实预检得到 `664` 份可解析参数、`13944` 个唯一 7 算法运行键，
+formal summary 占位检查为 `runs=13944`、`datasets=664`、
+`algorithms=7`；完整证据保存在
+`monitoring/finalization_preflight/20260725-103600/`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
