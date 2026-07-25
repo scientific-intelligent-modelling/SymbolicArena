@@ -56,12 +56,44 @@ def test_collect_gate_requires_every_task_to_be_done() -> None:
     assert failed.returncode != 0
 
 
+def test_collect_runs_strict_completed_audit_before_remote_collection() -> None:
+    script = (
+        BATCH_DIR / "deploy/04_collect_audit_from_iaaccn22.sh"
+    ).read_text(encoding="utf-8")
+
+    strict_audit = (
+        'bash "$BATCH_DIR/deploy/06_audit_completed_from_iaaccn22.sh"'
+    )
+    assert strict_audit in script
+    assert script.index(strict_audit) < script.index(
+        "collect_remote_batch.py"
+    )
+
+
 def test_full_dispatch_allows_one_post_hotfix_retry() -> None:
     script = (
         BATCH_DIR / "deploy/03_full_dispatch_from_iaaccn22.sh"
     ).read_text(encoding="utf-8")
 
     assert "--retry-limit 2" in script
+
+
+def test_controller_sync_includes_finalization_inputs() -> None:
+    script = (
+        BATCH_DIR / "deploy/00_validate_and_sync_to_iaaccn22.sh"
+    ).read_text(encoding="utf-8")
+
+    required = (
+        "check/analyze_neurips_rebuttal_full664.py",
+        "check/audit_neurips_rebuttal_completed.py",
+        "check/prepare_symf_formal_judge_params.py",
+        "check/generate_symf_formal_metrics.py",
+        "check/merge_neurips_rebuttal_metrics.py",
+        "probe4_postprocess_run_level.csv",
+        "probe4_current_run_level_raw_digest_7968.csv",
+    )
+    for path in required:
+        assert path in script
 
 
 def test_symf_gate_requires_complete_new3_and_stage3_grids() -> None:

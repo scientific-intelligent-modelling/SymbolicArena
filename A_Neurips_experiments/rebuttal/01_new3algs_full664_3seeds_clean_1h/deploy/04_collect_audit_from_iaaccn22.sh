@@ -16,6 +16,8 @@ jq -e '
   and ([.task_states[]] | add == 5976)
 ' "$STATE_SUMMARY" >/dev/null
 
+bash "$BATCH_DIR/deploy/06_audit_completed_from_iaaccn22.sh"
+
 python benchmark-control/compliance/launchers/collect_remote_batch.py \
   --batch-dir "$BATCH_DIR" \
   --batch-id "$BATCH_ID" \

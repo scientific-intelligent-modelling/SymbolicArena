@@ -68,8 +68,19 @@ SYNC_ITEMS=(
   "A_Neurips_experiments/rebuttal/"
 )
 
+CONTROLLER_ONLY_SYNC_ITEMS=(
+  "check/analyze_neurips_rebuttal_full664.py"
+  "check/audit_neurips_rebuttal_completed.py"
+  "check/prepare_symf_formal_judge_params.py"
+  "check/generate_symf_formal_metrics.py"
+  "check/merge_neurips_rebuttal_metrics.py"
+  "A_Neurips_experiments/stage3_664dats_4probes_3seeds_1h/probe4_postprocess_run_level.csv"
+  "A_Neurips_experiments/stage3_664dats_4probes_3seeds_1h/probe4_current_run_level_raw_digest_7968.csv"
+)
+
 echo "[sync] local -> iaaccn22"
-timeout 900 rsync -aR "${RSYNC_FILTERS[@]}" "${SYNC_ITEMS[@]}" \
+timeout 900 rsync -aR "${RSYNC_FILTERS[@]}" \
+  "${SYNC_ITEMS[@]}" "${CONTROLLER_ONLY_SYNC_ITEMS[@]}" \
   iaaccn22:/home/zhangziwen/workplace/scientific-intelligent-modelling/
 
 echo "[sync] iaaccn22 -> iaaccn23~29"
