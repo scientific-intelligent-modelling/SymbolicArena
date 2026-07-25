@@ -88,6 +88,7 @@ def test_controller_sync_includes_finalization_inputs() -> None:
         "check/audit_neurips_rebuttal_completed.py",
         "check/prepare_symf_formal_judge_params.py",
         "check/generate_symf_formal_metrics.py",
+        "check/merge_symf_formal_shards.py",
         "check/merge_neurips_rebuttal_metrics.py",
         "probe4_postprocess_run_level.csv",
         "probe4_current_run_level_raw_digest_7968.csv",
@@ -111,6 +112,11 @@ def test_symf_gate_requires_complete_new3_and_stage3_grids() -> None:
     assert "(.datasets == 664)" in script
     assert "(.algorithms == 7)" in script
     assert "symbolic_metrics_formal_summary.json" in script
+    assert 'SHARD_ALGORITHMS=(' in script
+    assert '--expected-runs 1992' in script
+    assert 'merge_symf_formal_shards.py' in script
+    assert '--expected-runs-per-algorithm 1992' in script
+    assert '--validate-only' in script
     assert (
         '["dso", "fepysr", "imcts", "jaxsr", '
         '"pyoperon", "symbolfit", "udsr"]'

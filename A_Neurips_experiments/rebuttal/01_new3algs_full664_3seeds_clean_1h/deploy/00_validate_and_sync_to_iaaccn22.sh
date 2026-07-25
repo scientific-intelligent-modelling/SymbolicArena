@@ -73,6 +73,7 @@ CONTROLLER_ONLY_SYNC_ITEMS=(
   "check/audit_neurips_rebuttal_completed.py"
   "check/prepare_symf_formal_judge_params.py"
   "check/generate_symf_formal_metrics.py"
+  "check/merge_symf_formal_shards.py"
   "check/merge_neurips_rebuttal_metrics.py"
   "A_Neurips_experiments/stage3_664dats_4probes_3seeds_1h/probe4_postprocess_run_level.csv"
   "A_Neurips_experiments/stage3_664dats_4probes_3seeds_1h/probe4_current_run_level_raw_digest_7968.csv"

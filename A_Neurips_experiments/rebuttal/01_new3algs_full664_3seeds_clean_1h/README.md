@@ -201,6 +201,12 @@ formal summary 占位检查为 `runs=13944`、`datasets=664`、
 `algorithms=7`；完整证据保存在
 `monitoring/finalization_preflight/20260725-103600/`。
 
+`20260725-104501` 又对正式 SYM-F 收口做了本地与 `iaaccn22` 容量预检。
+远端 13944 条经验投影均值约 `4593s`、p90 约 `11076s`；原实现没有
+中间落盘，任意中断都要全量重算。正式链路因此改为 7 个算法分片、
+逐片网格校验和原子提交，证据保存在
+`monitoring/symf_capacity/20260725-104501/`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
@@ -226,10 +232,14 @@ formal symbolic judge 使用 `formula.py` 作为 ground truth，按稳定 `gid`
 `F0 -> x` 的唯一剩余位置映射，并在参数审计中保留该记录。
 
 `05_generate_symf_from_iaaccn22.sh` 会对 7 算法共 `13944` 条 run 计算
-SYM-F、Exact、TreeSim，并严格按 `Algorithm key` 合入最终榜单。
-生成后还会再次检查 formal summary 必须包含 `13944` 条 run、`664`
-个数据集、`7` 个算法和 `664` 份公式参数，并要求最终榜单算法集合精确
-等于 `dso/fepysr/imcts/jaxsr/pyoperon/symbolfit/udsr`。
+SYM-F、Exact、TreeSim。计算按算法拆成 7 个独立的 `1992` 行分片，
+每个分片通过完整 `algorithm × gid × seed` 网格校验后才原子落盘；
+中断后只重算尚未完成的算法。全部分片完成后，合并器再次要求
+`13944` 个运行键唯一且完整，再原子提交正式汇总目录，并严格按
+`Algorithm key` 合入最终榜单。生成后还会检查 formal summary 必须包含
+`13944` 条 run、`664` 个数据集、`7` 个算法和 `664` 份公式参数，
+并要求最终榜单算法集合精确等于
+`dso/fepysr/imcts/jaxsr/pyoperon/symbolfit/udsr`。
 
 ## 最终产物
 
@@ -243,7 +253,8 @@ SYM-F、Exact、TreeSim，并严格按 `Algorithm key` 合入最终榜单。
 - `analysis/new3_run_level.csv` 与 `new3_algorithm_summary.csv`。
 - `analysis/full664_7alg_run_level.csv` 与
   `full664_7alg_leaderboard.csv`。
-- `symf/full664_7alg/symbolic_metrics_formal*.csv`。
+- `symf/full664_7alg/shards/<algorithm>/symbolic_metrics_formal.csv`。
+- `symf/full664_7alg/final/symbolic_metrics_formal*.csv`。
 - `analysis/full664_7alg_leaderboard_with_symf.csv`。
 
 在 5976 条任务完成并通过审计之前，不得把该目录描述成最终结果。
