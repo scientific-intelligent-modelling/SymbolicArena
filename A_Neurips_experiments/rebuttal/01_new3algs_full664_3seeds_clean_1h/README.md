@@ -183,6 +183,15 @@ state，并已同步到 `iaaccn22`。为避免干扰当前正常 worker，本轮
 `4ea5999887a7e21de6685c0f1769e0443181ce2abf2f4081f6deecc5ed12c873`，
 证据保存在 `monitoring/completed_audit/20260725-140054/`。
 
+`20260725-154218` 冻结了 seed 520 完整收口后的正式 state。该快照中
+seed 520 的 `1992/1992` 个任务全部为 `done`，三个算法各 `664`
+个；同时已完成的 9 个 seed 521 任务也纳入审计。总计 `2001/2001`
+个 assigned-host 规范结果通过完整联合审计，8 台主机全部通过且
+`issue_count=0`；运行时范围为 `3358.965--3795.947s`，state 快照
+SHA-256 为
+`a31c8be2d3bbbb1ad54df9f20472f49cd8e2e39c632127bd033577d2389f5b12`，
+证据保存在 `monitoring/completed_audit/20260725-154218/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
