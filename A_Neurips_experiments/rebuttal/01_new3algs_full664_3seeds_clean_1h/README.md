@@ -147,6 +147,13 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 `3602.706--3795.947s`，证据保存在
 `monitoring/completed_audit/20260725-110024/`。
 
+`20260725-120714` 在完成数跨过下一审计阈值后重新冻结正式 state。
+`1349/1349` 个 assigned-host 规范结果通过完整联合审计，8 台主机
+全部通过且 `issue_count=0`；运行时范围为
+`3358.965--3795.947s`，state 快照 SHA-256 为
+`c8c24dd142f2dbc5566fafb98a1e6ed2f70b9807acebd8d84b64f1d41424dacb`，
+证据保存在 `monitoring/completed_audit/20260725-120714/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
