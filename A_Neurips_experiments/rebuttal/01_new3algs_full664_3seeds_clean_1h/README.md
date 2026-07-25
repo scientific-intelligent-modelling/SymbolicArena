@@ -88,6 +88,14 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 `monitoring/controller_incident/20260725-045816/`。事件处理没有删除或
 移动结果；harvest 仍按最终 state 的 `assigned_host` 选择规范结果。
 
+`20260725-121632` 的只读巡检捕获到一次 state 覆盖写入期间的短暂
+半截 JSON。调度器现改为同目录临时文件加 `fsync` 后原子替换正式
+state，并已同步到 `iaaccn22`。为避免干扰当前正常 worker，本轮没有
+重启控制器；修复会在下次必要恢复或自然启动时加载。现有
+`06_audit_completed_from_iaaccn22.sh` 继续通过有效 JSON 重试冻结
+审计快照。根因、测试、同步哈希和无任务影响证据保存在
+`monitoring/state_atomicity/20260725-121632/`。
+
 完成波峰期间，控制器已将远端残留进程回收和精确 session 确认改成
 无残留立即返回、每台主机一次 SSH 批量确认。`20260725-072427` 的
 受控重启把新调度器加载到 tmux 单控制器中，未停止任何算法 worker。
