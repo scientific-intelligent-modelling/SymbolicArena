@@ -31,6 +31,13 @@
 `smoke/params/` 保存 600 秒 smoke 参数。正式参数相对来源只允许修改
 `timeout_in_seconds: 10800 -> 3600`；smoke 只允许修改为 `600`。
 
+`manifest/source_fingerprints.json` 使用
+`path_base=repository_root` 的仓库相对路径；准备时的
+`git_revision=70c4da7...`、数据源 SHA-256 和三份 AAAI 参数 SHA-256
+保持不变。最终 `analysis_summary.json` 也使用相同路径基准，避免归档
+绑定本地或远端 home。run-level 内的 `result_path` 仍保留为原始结果
+来源指针，不参与正式 SYM-F 解引用。
+
 `min_runtime_seconds=3300` 是合规审计阈值，写在 manifest 中，不作为第三方
 算法参数透传。算法自己的搜索超参数保持 AAAI 实际配置。
 
