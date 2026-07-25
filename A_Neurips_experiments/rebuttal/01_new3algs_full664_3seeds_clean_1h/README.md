@@ -130,6 +130,12 @@ ID/OOD NMSE、canonical artifact 和方程。每次报告保存在
 `issue_count=0`；state 快照哈希和逐主机报告保存在
 `monitoring/completed_audit/20260725-090921/`。
 
+`20260725-094400` 在 `symbolfit_s520_clean_g0205` 成功恢复并进入
+`done` 后再次冻结 state；`835/835` 个结果全部通过，8 台主机均通过且
+`issue_count=0`。逐主机报告明确包含该任务在 `iaaccn23` 的规范
+`result.json`，证据保存在
+`monitoring/completed_audit/20260725-094400/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
