@@ -141,3 +141,47 @@ def test_symf_gate_requires_complete_new3_and_stage3_grids() -> None:
         '"pyoperon", "symbolfit", "udsr"]'
     ) in script
     assert "full664_7alg_leaderboard_with_symf.summary.json" in script
+
+
+def test_symf_gate_accepts_repository_relative_analysis_paths() -> None:
+    script = (
+        BATCH_DIR / "deploy/05_generate_symf_from_iaaccn22.sh"
+    ).read_text(encoding="utf-8")
+    match = re.search(
+        (
+            r"jq -e '\n(?P<filter>.*?)\n' "
+            r'"\$BATCH_DIR/analysis/analysis_summary.json"'
+        ),
+        script,
+        flags=re.DOTALL,
+    )
+    assert match is not None
+    completed = subprocess.run(
+        ["jq", "-e", match.group("filter")],
+        input=json.dumps(
+            {
+                "schema_version": 1,
+                "path_base": "repository_root",
+                "batch_dir": (
+                    "A_Neurips_experiments/rebuttal/"
+                    "01_new3algs_full664_3seeds_clean_1h"
+                ),
+                "final_ready": True,
+                "new3": {
+                    "expected_tasks": 5976,
+                    "present_results": 5976,
+                    "identity_mismatches": 0,
+                },
+                "audit_gate": {"valid": True},
+                "stage3": {
+                    "rows": 7968,
+                    "raw_digest_rows": 7968,
+                },
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr

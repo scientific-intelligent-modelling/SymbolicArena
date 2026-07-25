@@ -238,6 +238,7 @@ def test_incomplete_batch_cannot_be_published_as_final(tmp_path: Path) -> None:
             stage3_run_level=None,
             output_dir=batch_dir / "analysis",
             allow_incomplete=False,
+            repo_root=tmp_path,
         )
 
     summary = module.analyze_batch(
@@ -245,6 +246,7 @@ def test_incomplete_batch_cannot_be_published_as_final(tmp_path: Path) -> None:
         stage3_run_level=None,
         output_dir=batch_dir / "analysis",
         allow_incomplete=True,
+        repo_root=tmp_path,
     )
     assert summary["final_ready"] is False
     assert summary["new3"]["missing_results"] == 9
@@ -271,11 +273,40 @@ def test_full_merge_requires_exact_stage3_keyspace_and_writes_seven_algorithms(
         output_dir=batch_dir / "analysis",
         allow_incomplete=False,
         stage3_raw_digest=stage3_raw_path,
+        repo_root=tmp_path,
     )
 
     assert summary["final_ready"] is True
+    assert summary["schema_version"] == 1
+    assert summary["path_base"] == "repository_root"
+    assert summary["batch_dir"] == "batch"
     assert summary["new3"]["expected_tasks"] == 18
+    assert summary["audit_gate"]["path"] == (
+        "batch/audit/audit_gate_summary.json"
+    )
     assert summary["stage3"]["rows"] == 24
+    assert summary["stage3"]["path"] == "stage3.csv"
+    assert summary["stage3"]["raw_digest_path"] == "stage3_raw.csv"
+    assert summary["outputs"] == {
+        "new3_run_level": "batch/analysis/new3_run_level.csv",
+        "new3_algorithm_summary": (
+            "batch/analysis/new3_algorithm_summary.csv"
+        ),
+        "full664_7alg_run_level": (
+            "batch/analysis/full664_7alg_run_level.csv"
+        ),
+        "full664_7alg_leaderboard": (
+            "batch/analysis/full664_7alg_leaderboard.csv"
+        ),
+    }
+    audit_paths = [
+        summary["batch_dir"],
+        summary["audit_gate"]["path"],
+        summary["stage3"]["path"],
+        summary["stage3"]["raw_digest_path"],
+        *summary["outputs"].values(),
+    ]
+    assert all(not Path(value).is_absolute() for value in audit_paths)
     run_rows = _read_csv(batch_dir / "analysis" / "full664_7alg_run_level.csv")
     leaderboard = _read_csv(batch_dir / "analysis" / "full664_7alg_leaderboard.csv")
     assert len(run_rows) == 42
@@ -303,4 +334,16 @@ def test_stage3_keyspace_mismatch_is_rejected(tmp_path: Path) -> None:
             stage3_run_level=stage3_path,
             output_dir=batch_dir / "analysis",
             allow_incomplete=False,
+            repo_root=tmp_path,
         )
+
+
+def test_analysis_paths_must_stay_inside_repository_root(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    with pytest.raises(ValueError, match="仓库根目录之外"):
+        module._repo_relative(tmp_path / "outside.csv", repo_root)

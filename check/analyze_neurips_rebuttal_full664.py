@@ -95,6 +95,16 @@ RUN_LEVEL_FIELDS = [
 ]
 
 
+def _repo_relative(path: Path, repo_root: Path = REPO_ROOT) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(repo_root.resolve()).as_posix()
+    except ValueError as exc:
+        raise ValueError(
+            f"分析审计路径位于仓库根目录之外: {resolved}"
+        ) from exc
+
+
 def _read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
@@ -451,6 +461,7 @@ def _load_stage3_rows(
     expected_dataset_seeds: set[tuple[str, int]],
     dataset_metadata: dict[str, dict[str, Any]],
     raw_digest_path: Path | None = None,
+    repo_root: Path = REPO_ROOT,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     source_rows = _read_csv(path)
     actual_keys: list[tuple[str, str, int | None]] = []
@@ -591,13 +602,13 @@ def _load_stage3_rows(
         )
 
     diagnostics = {
-        "path": str(path.resolve()),
+        "path": _repo_relative(path, repo_root),
         "rows": len(out),
         "algorithms": len(STAGE3_ALGORITHMS),
         "expected_rows": len(expected_keys),
         "keyspace_valid": True,
         "raw_digest_path": (
-            str(raw_digest_path.resolve())
+            _repo_relative(raw_digest_path, repo_root)
             if raw_digest_path is not None
             else None
         ),
@@ -674,11 +685,16 @@ def summarize_algorithms(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{key: row.get(key) for key in fields} for row in summaries]
 
 
-def _load_audit_gate(batch_dir: Path, expected_tasks: int) -> dict[str, Any]:
+def _load_audit_gate(
+    batch_dir: Path,
+    expected_tasks: int,
+    repo_root: Path = REPO_ROOT,
+) -> dict[str, Any]:
     path = batch_dir / "audit" / "audit_gate_summary.json"
+    logical_path = _repo_relative(path, repo_root)
     if not path.is_file():
         return {
-            "path": str(path),
+            "path": logical_path,
             "valid": False,
             "reason": "missing_audit_gate",
         }
@@ -686,7 +702,7 @@ def _load_audit_gate(batch_dir: Path, expected_tasks: int) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {
-            "path": str(path),
+            "path": logical_path,
             "valid": False,
             "reason": "unreadable_audit_gate",
         }
@@ -697,7 +713,7 @@ def _load_audit_gate(batch_dir: Path, expected_tasks: int) -> dict[str, Any]:
         and _int(payload.get("failure_rows")) == 0
     )
     return {
-        "path": str(path.resolve()),
+        "path": logical_path,
         "valid": valid,
         "reason": "ok" if valid else "audit_gate_failed_or_count_mismatch",
         "payload": payload,
@@ -738,8 +754,10 @@ def analyze_batch(
     output_dir: Path,
     allow_incomplete: bool,
     stage3_raw_digest: Path | None = None,
+    repo_root: Path | None = None,
 ) -> dict[str, Any]:
     """生成新三算法汇总，并可选严格合并 Stage3 四算法。"""
+    repository_root = (repo_root or REPO_ROOT).resolve()
     tasks_path = batch_dir / "manifest" / "tasks.csv"
     new3_rows, new3_diagnostics = build_new3_run_rows(
         tasks_path,
@@ -774,11 +792,13 @@ def analyze_batch(
             expected_dataset_seeds,
             dataset_metadata,
             stage3_raw_digest,
+            repository_root,
         )
 
     audit_gate = _load_audit_gate(
         batch_dir,
         new3_diagnostics["expected_tasks"],
+        repository_root,
     )
     final_ready = (
         new3_diagnostics["missing_results"] == 0
@@ -828,27 +848,37 @@ def analyze_batch(
         )
 
     summary: dict[str, Any] = {
+        "schema_version": 1,
+        "path_base": "repository_root",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        "batch_dir": str(batch_dir.resolve()),
+        "batch_dir": _repo_relative(batch_dir, repository_root),
         "allow_incomplete": allow_incomplete,
         "final_ready": final_ready,
         "new3": new3_diagnostics,
         "audit_gate": audit_gate,
         "stage3": stage3_diagnostics,
         "outputs": {
-            "new3_run_level": str(
-                (output_dir / "new3_run_level.csv").resolve()
+            "new3_run_level": _repo_relative(
+                output_dir / "new3_run_level.csv",
+                repository_root,
             ),
-            "new3_algorithm_summary": str(
-                (output_dir / "new3_algorithm_summary.csv").resolve()
+            "new3_algorithm_summary": _repo_relative(
+                output_dir / "new3_algorithm_summary.csv",
+                repository_root,
             ),
             "full664_7alg_run_level": (
-                str((output_dir / "full664_7alg_run_level.csv").resolve())
+                _repo_relative(
+                    output_dir / "full664_7alg_run_level.csv",
+                    repository_root,
+                )
                 if stage3_rows
                 else None
             ),
             "full664_7alg_leaderboard": (
-                str((output_dir / "full664_7alg_leaderboard.csv").resolve())
+                _repo_relative(
+                    output_dir / "full664_7alg_leaderboard.csv",
+                    repository_root,
+                )
                 if stage3_rows
                 else None
             ),
