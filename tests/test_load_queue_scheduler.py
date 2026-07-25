@@ -24,6 +24,50 @@ def test_controller_lock_rejects_second_scheduler_for_same_batch(tmp_path: Path)
         assert lock_payload["pid"] > 0
 
 
+def test_save_state_atomically_replaces_existing_json(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    queue_root = tmp_path / "queue"
+    state_path = scheduler._state_path("batch-a", queue_root)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text(
+        json.dumps({"batch_name": "batch-a", "marker": "old"}),
+        encoding="utf-8",
+    )
+    replace_calls = []
+    original_replace = scheduler.os.replace
+
+    def checked_replace(source, destination):
+        source_path = Path(source)
+        destination_path = Path(destination)
+        replace_calls.append((source_path, destination_path))
+        assert destination_path == state_path
+        assert json.loads(
+            state_path.read_text(encoding="utf-8")
+        )["marker"] == "old"
+        assert json.loads(
+            source_path.read_text(encoding="utf-8")
+        )["marker"] == "new"
+        original_replace(source_path, destination_path)
+
+    monkeypatch.setattr(scheduler.os, "replace", checked_replace)
+    scheduler._save_state(
+        {
+            "batch_name": "batch-a",
+            "marker": "new",
+            "tasks": {},
+        },
+        queue_root,
+    )
+
+    assert len(replace_calls) == 1
+    assert json.loads(
+        state_path.read_text(encoding="utf-8")
+    )["marker"] == "new"
+    assert list(state_path.parent.glob(f".{state_path.name}.tmp.*")) == []
+
+
 def test_tool_config_supports_current_15_toolbox_algorithms():
     expected_tools = {
         "qlattice",

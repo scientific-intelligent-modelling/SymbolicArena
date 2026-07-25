@@ -814,7 +814,22 @@ def _save_state(state: dict[str, Any], queue_root: Path) -> None:
     state["updated_at"] = _now()
     path = _state_path(state["batch_name"], queue_root)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    content = json.dumps(
+        state,
+        ensure_ascii=False,
+        indent=2,
+    ) + "\n"
+    tmp_path = path.with_name(
+        f".{path.name}.tmp.{os.getpid()}.{time.time_ns()}"
+    )
+    try:
+        with tmp_path.open("w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _append_event(batch_name: str, payload: dict[str, Any], queue_root: Path) -> None:
