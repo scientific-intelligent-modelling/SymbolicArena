@@ -153,6 +153,14 @@ JSON 可解析并包含数据身份、方程、ID/OOD 评估字段。证据保�
 首轮轮询正常推进且跨主机 session 盘点无重复；证据保存在
 `monitoring/controller_recovery/20260725-091637/`。
 
+该任务的第二次尝试最终没有再次触发格式化异常，而是在 `3604.961s`
+耗尽预算后由原有 timeout 快照恢复路径成功收口：`status=ok`、
+`recovered_from_timeout=true`、canonical artifact 有效，Valid、ID 和
+OOD NMSE 均为有限值。控制器于 `09:39:14` 将任务记为 `done`，
+`attempts=2`、`status_counts.ok=1`；第一次错误、分钟快照、第二次结果
+及最终 queue state 的对照证据保存在
+`monitoring/symbolfit_recovery/20260725-093448/`。
+
 ## 指标汇总
 
 `04_collect_audit_from_iaaccn22.sh` 在 `5976/5976` 收集并通过 audit gate
