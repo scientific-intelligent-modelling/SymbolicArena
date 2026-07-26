@@ -1,78 +1,152 @@
-Long draft, not paste-ready. Character limit and final wording still need author compression.
+# Response to Reviewer p5tG
 
-# Draft response to Reviewer p5tG
+> Long draft, not paste-ready.
 
-Thank you for the positive assessment and for the concrete requests on interpretability, statistical meaning, and scope. We agree that the paper should make the benchmark’s representativeness and usage boundaries easier to read directly from the main text.
+Thank you for the constructive review and for recognizing the value of a unified
+SR evaluation substrate. We agree that the original submission did not make the
+Core-50/full-664 relationship, the leaderboard reading rule, and the intended
+scope under noise as explicit as they should have been. Below we answer each of
+your concerns directly and narrow the claims where the current evidence does not
+support a stronger statement.
 
-## Concern summary
+## 1. Core-50 representativeness and correlation to Full-664
 
-Your main questions are: (1) whether Core-50 is truly representative of the full 664-task reservoir, ideally via correlation analysis; (2) how to interpret a multi-metric leaderboard and select a “best” method; (3) whether small score differences are statistically meaningful; (4) whether a one-hour budget is fair across method types; (5) how to interpret mismatches between numerical accuracy and symbolic recovery; and (6) how far conclusions should generalize to noisy scientific data.
+You are right that aggregate-score MAE alone is not the clearest way to argue
+that Core-50 preserves full-reservoir conclusions. The original paper showed
+that Core-50 has much lower aggregate-score error than random, stratified, or
+other deterministic 50-task subsets, but that still leaves open the more direct
+question: does the ranking observed on Core-50 track the ranking observed on the
+full 664-task reservoir?
 
-## 1. Core-50 vs Full-664 correlation
+We now have a stronger post-submission test based on three algorithms that were
+integrated only after the benchmark had already been frozen: **FePySR, JAXSR,
+and SymbolFit**. These three methods did **not** participate in the initial
+PySR+LLM-SR dual-probe mining, the 12-method Candidate-200 calibration, the
+Probe-4 selection, or the Core-50 construction. We evaluated them on all 664
+tasks with seeds 520/521/522 under the same clean 1-hour contract, yielding all
+`3 x 664 x 3 = 5976` expected runs.
 
-We agree that aggregate-score MAE alone is not the most intuitive way to express representativeness. To address this directly, after submission we ran three additional algorithms that were not part of the original construction pipeline (FePySR, JAXSR, SymbolFit) on the Full-664 clean protocol and merged them with four existing Stage-3 algorithms into a 7-algorithm comparison.
+Using the resulting same-seed comparison between the **Core-50 slice** and the
+**full 664-task reservoir**:
 
-This gives a direct Core-50 vs Full-664 correlation check:
+- across the combined **7 algorithms** (the original 4 Probe-4 methods plus
+  the 3 newly added held-out methods), penalized OOD log-NMSE has **Pearson
+  0.989456061** and **Spearman 0.892857143**;
+- for the **3 genuinely held-out methods alone**, the OOD order is preserved
+  exactly (**FePySR > JAXSR > SymbolFit** under lower-is-better OOD log-NMSE),
+  with **Pearson 0.815541684** and **Spearman 1.0**.
 
-- for mean OOD performance across the 7 algorithms, Pearson correlation is `0.989456061` and Spearman correlation is `0.892857143`;
-- for the three held-out algorithms alone, the OOD ordering is preserved exactly (Spearman `1.0`, Pearson `0.815541684`);
-- for SYM-F across the 7 algorithms, Pearson is `0.971269484` and Spearman is `0.857142857`.
+We therefore agree that correlation should be reported explicitly, and this new
+held-out result is the strongest evidence we currently have that Core-50
+preserves broad **numerical** ordering beyond the algorithms used during
+construction.
 
-At the same time, the three held-out algorithms do **not** show stable fine-grained SYM-F ordering by themselves (Spearman `-0.5`), and their Full-664 symbolic-fidelity scores are close. So we think the strongest supported claim is that Core-50 is a strong low-cost proxy for the reservoir-level numerical conclusions, with good group-level preservation of symbolic-fidelity trends. We would avoid claiming that every fine-grained symbolic ordering is preserved, especially when score gaps are small.
+For symbolic fidelity, the evidence is more nuanced. Across the 7 algorithms,
+Core-50 and Full-664 SYM-F still correlate strongly (**Pearson 0.971269484**,
+**Spearman 0.857142857**), but the 3 held-out methods have unstable symbolic
+ordering (**held-out Spearman = -0.5**). So the right conclusion is narrower:
+Core-50 preserves broad symbolic trends across the panel, but it should **not**
+be used to over-interpret fine symbolic differences among nearly tied methods.
 
-## 2. How to read the leaderboard and choose a “best” algorithm
+## 2. How to read the leaderboard and identify the best algorithm
 
-This is a very helpful point. Our intended design is:
+We agree that the table becomes hard to read if the reader does not know which
+column defines rank. In our protocol, the ranking key is **penalized mean OOD
+log-NMSE** (lower is better). The remaining columns are intentionally *not*
+collapsed into that rank, because they are meant to expose dimensions that do
+not always align with numerical extrapolation quality.
 
-- **OOD log NMSE** is the primary ranking key in the clean leaderboard, because OOD generalization is the main numerical criterion;
-- **SYM-F / Exact / TreeSim** are not secondary decorations, but explicit diagnostics showing whether strong numerical performance also reflects faithful recovery of the underlying formula;
-- the six-axis protocol is meant to show that there is not always one universally best method across all dimensions.
+Concretely, the clean Core-50 leaderboard in the submission already shows that:
 
-So if a reader wants a single default answer, the clean leaderboard rank is determined by penalized OOD log NMSE. But if the reader wants a method that is also strong in symbolic recovery, efficiency, or stability, the rank alone is intentionally insufficient. We agree that the paper should explain this more directly and visually highlight the ranking key.
+- **uDSR** ranks first numerically by OOD log-NMSE;
+- **PySR** is stronger on symbolic recovery, with the highest SYM-F and exact
+  equivalence rate among the 12 methods;
+- these are therefore not the same notion of “best.”
 
-## 3. Are small differences meaningful?
+This is not a bug in the table; it is one of the paper’s main findings. A
+symbolic regressor can achieve very low numerical error while still failing to
+recover the ground-truth formula exactly. One concrete example from our
+diagnostic appendix is the repeated **Nguyen-9** shortcut case: the target is
+`sin(x0) + sin(x1^2)`, while several low-NMSE predictions collapse to
+`sin(x0) + sin(x0^2)`. Numerically the error can remain extremely small, but
+symbolically the expression is wrong. That is precisely why the protocol keeps
+numerical quality and symbolic fidelity separate.
 
-We agree that the current draft should be more cautious here. The paper already reports dataset-bootstrap 95% confidence intervals for the formal hexagon scores, and these intervals help indicate when fine-grained score gaps should not be over-interpreted. But we agree that the current paper does not provide a full significance story for every pairwise method comparison.
+So if a reader wants a **single numerical winner**, the paper should tell them
+explicitly to look at penalized OOD log-NMSE. If they want a **symbolic-recovery
+winner**, they should look at SYM-F / exact equivalence. The present version
+did not make that reading rule prominent enough, and we agree this should be
+clarified in the main text and caption.
 
-So the rebuttal-safe position is:
+## 3. Whether small score differences are meaningful
 
-- broad separations and repeated diagnostic patterns are meaningful;
-- very small score differences should not be treated as decisive without additional statistical support;
-- we should revise the prose so that the paper emphasizes robust trends rather than implying that every nearby ranking swap is important.
+We agree that not every small difference should be interpreted as meaningful.
+The current submission does provide **dataset-bootstrap 95% confidence
+intervals** for the hexagon scores, and the Core-50 validation also reports
+aggregate preservation rather than just point estimates. However, it does **not**
+present a complete pairwise significance analysis for every close leaderboard
+gap, and it should not imply more certainty than the statistics support.
 
-## 4. One-hour budget and fairness
+Our revised interpretation is therefore:
 
-We agree that different SR paradigms have very different search dynamics, and a one-hour wall-clock budget is not a perfect notion of compute fairness. Our intention was to define a shared execution contract under which all methods receive the same wall-clock budget, the same dataset contract, the same result schema, and the same minute-level logging.
+- large and repeated separations, especially when they remain visible across
+  both Core-50 and Full-664, are more trustworthy;
+- small gaps between near-tied methods should be treated cautiously;
+- the new held-out experiment supports the stability of the **broad numerical
+  ordering**, but not every fine symbolic ordering.
 
-So the strongest defensible claim is not “one hour is the uniquely fair budget,” but rather:
+This is also why the rebuttal evidence above is useful: it strengthens the
+claim that Core-50 preserves reservoir-level conclusions at the level of
+overall **ranking structure**, without claiming that every adjacent gap is
+individually significant.
 
-- one hour is a standardized and auditable benchmark contract;
-- the minute-level traces preserve the information needed for future anytime or budget-sweep analyses;
-- conclusions should be read under this fixed-budget protocol, not as an absolute statement about all possible budget settings.
+## 4. Why a 1-hour budget, and whether it is fair across paradigms
 
-## 5. Numerical accuracy vs symbolic fidelity mismatch
+The 1-hour budget is a **reproducible wall-clock contract**, not a claim of
+equal FLOPs, equal API cost, or equal optimization opportunity across GP, tree
+search, neural, and LLM-assisted paradigms. The reason we chose it is practical:
+it asks what a fixed, versioned method configuration returns within the same
+user-facing evaluation horizon.
 
-We agree that this deserves a concrete example. A representative case already exposed by the formal symbolic-fidelity audit is **Nguyen-9**. The ground-truth expression is `sin(x0) + sin(x1^2)`, while several low-error predictions simplify to `sin(x0) + sin(x0^2)`. These expressions can achieve near-machine-precision numerical error on the sampled splits, but they are not symbolically equivalent to the true formula and therefore receive much lower symbolic-fidelity credit.
+To reduce the risk that the leaderboard becomes a pure final-time snapshot, the
+benchmark also records **minute-level best-so-far traces** and derives an
+explicit **EFF** axis from time-to-threshold / anytime behavior. That means a
+method is not judged only by its final 60-minute point; methods that find useful
+expressions earlier receive separate credit.
 
-This is exactly why we report symbolic fidelity separately from numerical error: a method can interpolate and even extrapolate well on the benchmark splits without recovering the correct underlying structure.
+We agree that a budget sweep would be informative, and the current
+infrastructure is designed so that such a view is possible. But the present
+paper’s fairness claim should be stated more narrowly: it is fair only in the
+sense of a **shared wall-clock evaluation contract**, not in the sense of
+compute-equivalent resource normalization.
 
-## 6. Scope with respect to noisy scientific data
+## 5. Scope under noisy scientific data
 
-We agree that the scope should be stated more narrowly. The main benchmark is a clean ground-truth symbolic-regression benchmark. Noisy training is treated separately through the ROBU extension, which uses standardized synthetic label noise. This does **not** mean that the current paper fully characterizes real noisy scientific discovery settings.
+We also agree that the scope under noise should be stated more carefully. The
+benchmark is built from **formula-backed symbolic-regression tasks** with
+standardized clean train/validation/ID/OOD splits, and the main clean
+leaderboard is therefore best interpreted as a controlled evaluation of
+symbolic-regression behavior under that contract.
 
-So the correct scope statement is:
+The paper does include a **noisy-train / clean-test robustness extension** on
+Core-50, but that is still a controlled protocol rather than a claim that the
+benchmark directly captures all properties of real noisy scientific data. In
+particular, we do **not** claim that SymbolicArena fully represents arbitrary
+measurement noise, unobserved confounding, domain shift beyond the released
+families, or black-box scientific pipelines.
 
-- SymbolicArena supports clean ground-truth evaluation plus a standardized noisy-training extension;
-- it provides a controlled benchmark substrate for studying robustness;
-- but conclusions from the clean leaderboard should not be overstated as direct claims about all real noisy scientific data.
+So the proper claim is:
+
+- **yes**, SymbolicArena can evaluate robustness under controlled noise within a
+  standardized formula-backed benchmark;
+- **no**, this does not by itself validate generalization to all real noisy
+  scientific datasets.
 
 ## Closing
 
-We appreciate these questions because they point to places where the paper can become much easier to use. The new held-out Full-664 evidence gives us a clearer and more intuitive representativeness argument; the leaderboard explanation should make the primary ranking key and the purpose of the additional axes more explicit; and the paper should more clearly separate what is established under the current protocol from what remains a scope boundary.
-
-## Author confirmation needed before posting
-
-- Confirm whether we want to include the exact Pearson / Spearman numbers in the rebuttal.
-- Confirm whether we want to explicitly mention Nguyen-9 by name as the symbolic-mismatch example.
-- Confirm whether we want to say “OOD rank is the default ranking key” or the slightly stronger “OOD rank defines the leaderboard order.”
-- Confirm whether we want to promise an expanded limitations paragraph, or more conservatively say that we will clarify scope and statistical interpretation in the revision.
+Your questions point to the right clarifications: we should make the ranking
+rule explicit, report direct Core-50/Full-664 correlation rather than relying
+mostly on MAE, and state more carefully what the 1-hour and noise conclusions
+do and do not mean. The new held-out-algorithm experiment substantially
+strengthens the representativeness case for **numerical** ranking preservation,
+while also making us narrow the symbolic claim where the evidence is weaker.
