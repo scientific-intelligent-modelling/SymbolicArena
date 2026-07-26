@@ -86,6 +86,10 @@ intervals** for the hexagon scores, and the Core-50 validation also reports
 aggregate preservation rather than just point estimates. However, it does **not**
 present a complete pairwise significance analysis for every close leaderboard
 gap, and it should not imply more certainty than the statistics support.
+For example, the reported HexaScore intervals for iMCTS
+(`48.7 [40.5, 56.1]`) and uDSR (`47.1 [40.2, 53.8]`) overlap substantially.
+We therefore do not treat their 1.6-point difference as a resolved pairwise
+ordering without a paired difference analysis.
 
 Our revised interpretation is therefore:
 
@@ -110,9 +114,9 @@ user-facing evaluation horizon.
 
 To reduce the risk that the leaderboard becomes a pure final-time snapshot, the
 benchmark also records **minute-level best-so-far traces** and derives an
-explicit **EFF** axis from time-to-threshold / anytime behavior. That means a
-method is not judged only by its final 60-minute point; methods that find useful
-expressions earlier receive separate credit.
+explicit **EFF** axis from the quality-time AUC. That means a method is not
+judged only by its final 60-minute point; methods that find useful expressions
+earlier receive separate credit.
 
 We agree that a budget sweep would be informative, and the current
 infrastructure is designed so that such a view is possible. But the present
@@ -129,11 +133,12 @@ leaderboard is therefore best interpreted as a controlled evaluation of
 symbolic-regression behavior under that contract.
 
 The paper does include a **noisy-train / clean-test robustness extension** on
-Core-50, but that is still a controlled protocol rather than a claim that the
-benchmark directly captures all properties of real noisy scientific data. In
-particular, we do **not** claim that SymbolicArena fully represents arbitrary
-measurement noise, unobserved confounding, domain shift beyond the released
-families, or black-box scientific pipelines.
+Core-50 at standardized noise levels `0.01`, `0.05`, and `0.10`, but that is
+still a controlled protocol rather than a claim that the benchmark directly
+captures all properties of real noisy scientific data. In particular, we do
+**not** claim that SymbolicArena fully represents arbitrary measurement noise,
+unobserved confounding, domain shift beyond the released families, or black-box
+scientific pipelines.
 
 So the proper claim is:
 
