@@ -51,6 +51,7 @@ ARCHIVE_ROOT_DIRS = (
     "symf",
 )
 ARCHIVE_FILENAMES = {"MANIFEST.tsv", "CHECKSUMS.sha256"}
+EXCLUDED_NAMES = {"remote-experiments", "runtime_queue"}
 MANIFEST_HEADER = "relative_path\tsize_bytes"
 
 
@@ -85,6 +86,7 @@ def _is_volatile(relative: str) -> bool:
     name = Path(relative).name
     return (
         name in ARCHIVE_FILENAMES
+        or name in EXCLUDED_NAMES
         or name.endswith(".lock")
         or name.endswith(".pid")
         or ".tmp." in name

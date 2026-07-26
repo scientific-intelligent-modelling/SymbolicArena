@@ -42,6 +42,11 @@ def _make_archive_fixture(batch_dir: Path) -> None:
     _write(batch_dir / "analysis" / ".summary.tmp.123", "partial\n")
     _write(batch_dir / "remote-experiments" / "duplicate.json", "{}\n")
     _write(batch_dir / "runtime_queue" / "request.json", "{}\n")
+    _write(
+        batch_dir / "smoke" / "remote-experiments" / "duplicate.json",
+        "{}\n",
+    )
+    _write(batch_dir / "smoke" / "runtime_queue" / "request.json", "{}\n")
 
 
 def test_archive_scope_is_sorted_and_excludes_staging_and_volatile_files(
@@ -64,6 +69,8 @@ def test_archive_scope_is_sorted_and_excludes_staging_and_volatile_files(
     assert "analysis/.summary.tmp.123" not in paths
     assert not any(path.startswith("remote-experiments/") for path in paths)
     assert not any(path.startswith("runtime_queue/") for path in paths)
+    assert not any("/remote-experiments/" in path for path in paths)
+    assert not any("/runtime_queue/" in path for path in paths)
 
 
 def test_write_and_verify_detects_tampering_and_unexpected_scope_file(
