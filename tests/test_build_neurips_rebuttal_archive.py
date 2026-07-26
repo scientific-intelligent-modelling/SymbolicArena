@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -40,6 +42,7 @@ def _make_archive_fixture(batch_dir: Path) -> None:
         "{}\n",
     )
     _write(batch_dir / "runs" / ".worker.lock", "")
+    _write(batch_dir / "runs" / "partial.tmp", "partial\n")
     _write(batch_dir / "analysis" / ".summary.tmp.123", "partial\n")
     _write(batch_dir / "remote-experiments" / "duplicate.json", "{}\n")
     _write(batch_dir / "runtime_queue" / "request.json", "{}\n")
@@ -67,6 +70,7 @@ def test_archive_scope_is_sorted_and_excludes_staging_and_volatile_files(
     assert "analysis/summary.json" in paths
     assert "runs/fepysr/seed520/g0001/result.json" in paths
     assert "runs/.worker.lock" not in paths
+    assert "runs/partial.tmp" not in paths
     assert "analysis/.summary.tmp.123" not in paths
     assert not any(path.startswith("remote-experiments/") for path in paths)
     assert not any(path.startswith("runtime_queue/") for path in paths)
@@ -182,3 +186,47 @@ def test_final_gate_rejects_nonfinal_analysis(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="final_ready"):
         module.validate_final_artifacts(batch_dir)
+
+
+def test_result_gate_requires_exact_manifest_path_mapping(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "EXPECTED_TASKS", 1)
+    monkeypatch.setattr(module, "EXPECTED_DATASETS", 1)
+    monkeypatch.setattr(module, "EXPECTED_NEW_ALGORITHMS", {"fepysr"})
+    monkeypatch.setattr(module, "EXPECTED_SEEDS", {520})
+    batch_dir = tmp_path / "batch"
+    _write(
+        batch_dir / "manifest" / "tasks.csv",
+        (
+            "task_id,algorithm,dataset_id,seed,noise_tag\n"
+            "fepysr__seed520__clean__g0001,fepysr,g0001,520,clean\n"
+        ),
+    )
+    _write(
+        batch_dir / "runs" / "fepysr" / "seed520" / "clean" / "g9999" / "result.json",
+        "{}\n",
+    )
+
+    with pytest.raises(RuntimeError, match="一一对应"):
+        module._validate_task_and_result_counts(batch_dir)
+
+
+def test_verify_cli_requires_exact_scope_flag(tmp_path: Path) -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--batch-dir",
+            str(tmp_path),
+            "--verify",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "--require-exact-scope" in completed.stderr

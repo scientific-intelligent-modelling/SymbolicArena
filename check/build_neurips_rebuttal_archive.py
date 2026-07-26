@@ -17,6 +17,8 @@ from typing import Any
 EXPECTED_TASKS = 5976
 EXPECTED_RUNS = 13944
 EXPECTED_DATASETS = 664
+EXPECTED_NEW_ALGORITHMS = {"fepysr", "jaxsr", "symbolfit"}
+EXPECTED_SEEDS = {520, 521, 522}
 EXPECTED_ALGORITHMS = {
     "dso",
     "fepysr",
@@ -89,6 +91,7 @@ def _is_volatile(relative: str) -> bool:
         or name in EXCLUDED_NAMES
         or name.endswith(".lock")
         or name.endswith(".pid")
+        or name.endswith(".tmp")
         or ".tmp." in name
         or name == "__pycache__"
         or name.endswith(".pyc")
@@ -263,10 +266,65 @@ def _validate_task_and_result_counts(batch_dir: Path) -> None:
         "正式任务 manifest 的 task_id 不完整或重复",
     )
 
-    result_paths = list((batch_dir / "runs").rglob("result.json"))
+    expected_keys: set[tuple[str, int, str]] = set()
+    expected_result_paths: set[str] = set()
+    for row in tasks:
+        algorithm = row.get("algorithm", "")
+        dataset_id = row.get("dataset_id", "")
+        noise_tag = row.get("noise_tag", "")
+        try:
+            seed = int(row.get("seed", ""))
+        except ValueError as exc:
+            raise RuntimeError("正式任务 manifest 包含非法 seed") from exc
+        _require(
+            algorithm in EXPECTED_NEW_ALGORITHMS,
+            f"正式任务 manifest 包含非目标算法：{algorithm}",
+        )
+        _require(seed in EXPECTED_SEEDS, f"正式任务 manifest 包含非法 seed：{seed}")
+        _require(noise_tag == "clean", "正式任务 manifest 包含非 clean 任务")
+        _require(bool(dataset_id), "正式任务 manifest 缺少 dataset_id")
+        expected_task_id = f"{algorithm}__seed{seed}__clean__{dataset_id}"
+        _require(
+            row.get("task_id") == expected_task_id,
+            f"正式任务 task_id 与身份字段不一致：{row.get('task_id')}",
+        )
+        key = (algorithm, seed, dataset_id)
+        _require(key not in expected_keys, f"正式任务身份重复：{key}")
+        expected_keys.add(key)
+        expected_result_paths.add(
+            (
+                Path("runs")
+                / algorithm
+                / f"seed{seed}"
+                / "clean"
+                / dataset_id
+                / "result.json"
+            ).as_posix()
+        )
+
+    expected_grid_size = (
+        len(EXPECTED_NEW_ALGORITHMS) * len(EXPECTED_SEEDS) * EXPECTED_DATASETS
+    )
+    _require(
+        len(expected_keys) == expected_grid_size == EXPECTED_TASKS,
+        "正式任务 manifest 不是完整 algorithm × seed × dataset 网格",
+    )
+    result_paths = {
+        path.relative_to(batch_dir).as_posix()
+        for path in (batch_dir / "runs").rglob("result.json")
+    }
     _require(
         len(result_paths) == EXPECTED_TASKS,
         f"本地规范 result.json 数量不是 5976：{len(result_paths)}",
+    )
+    missing = expected_result_paths - result_paths
+    extra = result_paths - expected_result_paths
+    _require(
+        not missing and not extra,
+        (
+            "本地规范 result.json 未与任务 manifest 一一对应："
+            f"missing={len(missing)}, extra={len(extra)}"
+        ),
     )
 
 
@@ -533,6 +591,8 @@ def main() -> int:
     args = parse_args()
     if args.require_exact_scope and not args.verify:
         raise SystemExit("--require-exact-scope 只能与 --verify 一起使用")
+    if args.verify and not args.require_exact_scope:
+        raise SystemExit("--verify 必须同时指定 --require-exact-scope")
     if args.write:
         summary = write_archive(args.batch_dir)
     else:
