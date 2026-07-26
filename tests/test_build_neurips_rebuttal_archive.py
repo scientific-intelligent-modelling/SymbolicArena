@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -141,3 +142,43 @@ def test_manifest_and_checksums_have_stable_standard_format(
     assert len(checksum_lines) == len(manifest_lines)
     assert checksum_lines[0].endswith("  ./MANIFEST.tsv")
     assert all(len(line.split("  ./", maxsplit=1)[0]) == 64 for line in checksum_lines)
+
+
+def test_final_gate_rejects_running_finalization(tmp_path: Path) -> None:
+    module = _load_module()
+    batch_dir = tmp_path / "batch"
+    _write(
+        batch_dir / "deploy" / "finalization_status.json",
+        json.dumps(
+            {
+                "state": "running",
+                "exit_code": None,
+                "ended_at": None,
+            }
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="finalization"):
+        module.validate_final_artifacts(batch_dir)
+
+
+def test_final_gate_rejects_nonfinal_analysis(tmp_path: Path) -> None:
+    module = _load_module()
+    batch_dir = tmp_path / "batch"
+    _write(
+        batch_dir / "deploy" / "finalization_status.json",
+        json.dumps(
+            {
+                "state": "finished",
+                "exit_code": 0,
+                "ended_at": "2026-07-26T13:00:00+08:00",
+            }
+        ),
+    )
+    _write(
+        batch_dir / "analysis" / "analysis_summary.json",
+        json.dumps({"final_ready": False}),
+    )
+
+    with pytest.raises(RuntimeError, match="final_ready"):
+        module.validate_final_artifacts(batch_dir)
