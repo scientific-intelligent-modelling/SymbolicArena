@@ -45,8 +45,8 @@
   queues/load_queue_full/state/
   /home/zhangziwen/workplace/scientific-intelligent-modelling/
     experiments/<BATCH_NAME>/  # 各远端机器上的规范结果
-  remote-experiments/        # collect 后
-  runs/                       # harvest 后
+  remote-experiments/        # collect 暂存副本，不属于最终完整性范围
+  runs/                       # harvest 后的权威结果与进度证据
   audit/                      # audit 后
 
 运行期审计:
@@ -71,12 +71,30 @@
 
 来源与最终归档:
   provenance/
-  MANIFEST.tsv             # 5976 完成并拉回正式产物后生成
-  CHECKSUMS.sha256         # 由最终 MANIFEST.tsv 覆盖范围生成并校验
+  MANIFEST.tsv             # batch-root 相对路径、字节数，按路径字节序
+  CHECKSUMS.sha256         # 覆盖 MANIFEST.tsv 与其声明的全部普通文件
 
 Smoke 运行状态:
   smoke/queues/load_queue_full/state/
   smoke/remote-experiments/
   smoke/runs/
   smoke/audit/
+```
+
+最终完整性范围包括根级说明文件，以及 `manifest/`、`params/`、
+`params_smoke/`、`provenance/`、`deploy/`、`preflight/`、`queues/`、
+`collect/`、`harvest/`、`runs/`、`audit/`、`analysis/`、`symf/`、
+`monitoring/` 和 `smoke/`。`remote-experiments/`、`runtime_queue/`、
+锁、PID、临时文件、Python 缓存和 `CHECKSUMS.sha256` 自身不进入
+manifest。归档范围内不允许软链接或特殊文件。
+
+生成与验证入口：
+
+```bash
+python check/build_neurips_rebuttal_archive.py \
+  --batch-dir A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h \
+  --write
+python check/build_neurips_rebuttal_archive.py \
+  --batch-dir A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h \
+  --verify --require-exact-scope
 ```

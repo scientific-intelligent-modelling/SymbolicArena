@@ -321,6 +321,16 @@ SHA-256 为
 `021b939e37fcaedc305fd09078c77a3579608fa723f85298a111df21ccef11bf`，
 证据保存在 `monitoring/completed_audit/20260726-095213/`。
 
+`20260726-120437` 冻结了正式队列自然收口后的最终 state。
+`5976/5976` 个任务全部为 `done`，三个算法各 `1992` 个、三个 seed
+各 `1992` 个，全部是 clean 条件；其中 `5975` 个任务一次完成，
+`1` 个任务经过一次受控重试。8 台主机的 assigned-host 规范结果全部
+通过运行时、预算、clean、参数、身份、artifact 和指标联合审计，
+`validated_results=5976`、`issue_count=0`。运行时范围为
+`3358.965--3809.110s`，state 快照 SHA-256 为
+`ad86e073a31d09bfcd2a625e1e7b2f6e706a4c589bc57f9a094d791f6afb20b5`，
+证据保存在 `monitoring/completed_audit/20260726-120437/`。
+
 正式运行中的 60 秒快照另做了独立抽样：`20260725-074327` 对
 `fepysr`、`jaxsr`、`symbolfit` 各抽两个任务，共 `6/6` 通过。抽样时
 任务已运行约 21 分钟，三算法均持续写到 `minute_0021.json`，且快照
@@ -450,3 +460,32 @@ fingerprint、生成器版本和冻结表达式策略；任一输入或代码变
 - `analysis/full664_7alg_leaderboard_with_symf.csv`。
 
 在 5976 条任务完成并通过审计之前，不得把该目录描述成最终结果。
+
+## 最终归档完整性
+
+最终归档的内容范围由 `check/build_neurips_rebuttal_archive.py` 固定。
+它覆盖输入清单、参数与来源、部署材料、preflight、队列状态、完整
+`runs/`、audit、analysis、SYM-F、运行期监控和 smoke 闭环。下列内容
+不属于权威归档范围：
+
+- `remote-experiments/`：controller 收集时的主机暂存副本，权威 harvest
+  结果在 `runs/`。
+- `runtime_queue/`：部署期复制和 preflight 请求缓存。
+- `.lock`、`.pid`、`.tmp.*`、`__pycache__` 和 `.pyc`：运行期易变文件。
+- 软链接或其它特殊文件：生成器直接拒绝，不跟随。
+
+`MANIFEST.tsv` 以实验根为路径基准，按 UTF-8 路径字节序记录
+`relative_path` 和 `size_bytes`。`CHECKSUMS.sha256` 使用 coreutils
+标准格式，覆盖 `MANIFEST.tsv` 本身及 manifest 中的所有文件，但不
+递归覆盖自身。归档必须在远端 finalization 成功、最终产物全部拉回
+并且文档冻结后生成：
+
+```bash
+BATCH=A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h
+
+python check/build_neurips_rebuttal_archive.py \
+  --batch-dir "$BATCH" --write
+python check/build_neurips_rebuttal_archive.py \
+  --batch-dir "$BATCH" --verify --require-exact-scope
+(cd "$BATCH" && sha256sum -c CHECKSUMS.sha256)
+```
