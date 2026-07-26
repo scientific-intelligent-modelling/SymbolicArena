@@ -1,0 +1,147 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0664_Vladislavleva-8",
+  "task_global_index": 664,
+  "dataset": "Vladislavleva-8",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-8",
+  "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+  "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "expected_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "actual_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-8"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0664/iaaccn22/fepysr/g0664_Vladislavleva-8/experiments/g0664_Vladislavleva-8_fepysr_seed521_20260726-003836",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 40,
+  "valid_rows": 5,
+  "id_test_rows": 5,
+  "ood_test_rows": 1089,
+  "seconds": 3611.324,
+  "equation": "0.0252009544099184*exp(3.8054352*X1^2*exp(-X1) + 3.8054352*cos(X0))",
+  "equation_count": 20,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "0.0252009544099184*exp(3.8054352*X1^2*exp(-X1) + 3.8054352*cos(X0))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.0252009544099184*exp(3.8054352*x1**2*exp(-x1) + 3.8054352*cos(x0))\n",
+    "return_expression_source": "0.0252009544099184*exp(3.8054352*x1**2*exp(-x1) + 3.8054352*cos(x0))",
+    "normalized_expression": "0.0252009544099184*exp(3.8054352*x1**2*exp(-x1) + 3.8054352*cos(x0))",
+    "instantiated_expression": "0.0252009544099184*exp(3.8054352*x1**2*exp(-x1) + 3.8054352*cos(x0))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "exp",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 17,
+    "tree_depth": 7,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.0252009544099184*exp(3.8054352*x1**2*exp(-x1) + 3.8054352*cos(x0))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.49943659633127546,
+    "r2": 0.9258893413993915,
+    "nmse": 0.056399533776046507,
+    "acc_0_1": 0.4
+  },
+  "valid": {
+    "rmse": 0.48809244440554483,
+    "r2": 0.46604038222533384,
+    "nmse": 0.5321172217714188,
+    "acc_0_1": 0.2
+  },
+  "id_test": {
+    "rmse": 0.7496531621659701,
+    "r2": 0.21927195597339577,
+    "nmse": 0.3107115950085807,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 1.1055010549533686,
+    "r2": 0.811646638573543,
+    "nmse": 0.15048667483553416,
+    "acc_0_1": 0.3581267217630854
+  },
+  "finished_at": "2026-07-26 01:38:47",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0664/iaaccn22/fepysr/g0664_Vladislavleva-8/experiments",
+    "exp_name": "g0664_Vladislavleva-8_fepysr_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 1.8345942408595335,
+    "scale": 0.0,
+    "rng_seed": 3742436162,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3611.324
+}

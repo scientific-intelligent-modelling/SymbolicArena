@@ -1,0 +1,143 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0177_MatSci13",
+  "task_global_index": 177,
+  "dataset": "MatSci13",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci13",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci13",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci13",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci13",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/matsci/MatSci13",
+    "expected_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci13",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/matsci/MatSci13",
+    "actual_normalized": "sim-datasets-data/llm-srbench/matsci/MatSci13"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed522/tasks/fepysr_s522_clean_g0177/iaaccn23/fepysr/g0177_MatSci13/experiments/g0177_MatSci13_fepysr_seed522_20260726-031201",
+  "status": "ok",
+  "error": null,
+  "seed": 522,
+  "feature_names": [
+    "epsilon",
+    "T"
+  ],
+  "target_name": "sigma",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3612.059,
+  "equation": "15.146491 - 302.84918*X0",
+  "equation_count": 2,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "15.146491 - 302.84918*X0",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return 15.146491 - 302.84918*x0\n",
+    "return_expression_source": "15.146491 - 302.84918*x0",
+    "normalized_expression": "15.146491 - 302.84918*x0",
+    "instantiated_expression": "15.146491 - 302.84918*x0",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 5,
+    "tree_depth": 3,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "15.146491 - 302.84918*x0"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.010421523263536481,
+    "r2": 0.9999999514800841,
+    "nmse": 1.6278190663799014e-08,
+    "acc_0_1": 0.9954285714285714
+  },
+  "valid": {
+    "rmse": 0.010386145170233738,
+    "r2": 0.9999999490779742,
+    "nmse": 1.6393903271294614e-08,
+    "acc_0_1": 0.996
+  },
+  "id_test": {
+    "rmse": 0.011752267510315152,
+    "r2": 0.9999999394044055,
+    "nmse": 2.0529034830283704e-08,
+    "acc_0_1": 0.994
+  },
+  "ood_test": {
+    "rmse": 0.001739786471290877,
+    "r2": 0.9999998900305243,
+    "nmse": 1.2189680441065987e-10,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-07-26 04:12:13",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed522/tasks/fepysr_s522_clean_g0177/iaaccn23/fepysr/g0177_MatSci13/experiments",
+    "exp_name": "g0177_MatSci13_fepysr_seed522",
+    "n_features": 2,
+    "feature_names": [
+      "epsilon",
+      "T"
+    ],
+    "target_name": "sigma"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 47.3119864669961,
+    "scale": 0.0,
+    "rng_seed": 1004045370,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3612.059
+}

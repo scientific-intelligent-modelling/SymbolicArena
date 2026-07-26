@@ -1,0 +1,150 @@
+{
+  "tool": "symbolfit",
+  "task_label": "g0417_feynman-ii.11.3",
+  "task_global_index": 417,
+  "dataset": "feynman-ii.11.3",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3",
+  "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3",
+  "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3",
+    "expected_dataset_dir": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3",
+    "expected_normalized": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3",
+    "actual_normalized": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-ii.11.3"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed520/tasks/symbolfit_s520_clean_g0417/iaaccn27/symbolfit/g0417_feynman-ii.11.3/experiments/g0417_feynman-ii.11.3_symbolfit_seed520_20260725-103129",
+  "status": "ok",
+  "error": null,
+  "seed": 520,
+  "feature_names": [
+    "x0",
+    "x1",
+    "x2",
+    "x3",
+    "x4"
+  ],
+  "target_name": "y",
+  "train_rows": 8000,
+  "valid_rows": 1000,
+  "id_test_rows": 1000,
+  "ood_test_rows": 1000,
+  "seconds": 3358.965,
+  "equation": "exp(exp(x1 * (exp(sin(x1 / sin(-0.039641958 - sin(-0.039641958)))) * sin(sin((x1 / -0.039641958) / -0.039641958))))) + -0.248236",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "exp(exp(x1 * (exp(sin(x1 / sin(-0.039641958 - sin(-0.039641958)))) * sin(sin((x1 / -0.039641958) / -0.039641958))))) + -0.248236",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return exp(exp(x1*exp(-sin(96320.8005823865*x1))*sin(sin(636.340853132956*x1)))) - 0.248236\n",
+    "return_expression_source": "exp(exp(x1*exp(-sin(96320.8005823865*x1))*sin(sin(636.340853132956*x1)))) - 0.248236",
+    "normalized_expression": "exp(exp(x1*exp(-sin(96320.8005823865*x1))*sin(sin(636.340853132956*x1)))) - 0.248236",
+    "instantiated_expression": "exp(exp(x1*exp(-sin(96320.8005823865*x1))*sin(sin(636.340853132956*x1)))) - 0.248236",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 5,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 18,
+    "tree_depth": 9,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "exp(exp(x1*exp(-sin(96320.8005823865*x1))*sin(sin(636.340853132956*x1)))) - 0.248236"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 2.470045823270925,
+    "r2": -57138592757577.555,
+    "nmse": 57124182111879.86,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 2.4700458264842244,
+    "r2": -2569830521587470.5,
+    "nmse": 2565608139946691.0,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 2.4700458285493387,
+    "r2": -1.0760070073497261e+18,
+    "nmse": 1.0745250056092867e+18,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 2.470045828480945,
+    "r2": -5.200410533437379e+23,
+    "nmse": 5.19676475555377e+23,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 11:27:28",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed520/tasks/symbolfit_s520_clean_g0417/iaaccn27/symbolfit/g0417_feynman-ii.11.3/experiments",
+    "exp_name": "g0417_feynman-ii.11.3_symbolfit_seed520",
+    "n_features": 5,
+    "feature_names": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "target_name": "y"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": "RuntimeError('子进程执行失败: Command \\'[\\'/home/zhangziwen/anaconda3/envs/sim_symbolfit/bin/python\\', \\'-u\\', \\'/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\\', \\'--input\\', \\'/tmp/tmpgjymfk1j.json\\', \\'--output\\', \\'/tmp/tmpgjymfk1j.json.result\\']\\' returned non-zero exit status 1.\\nTraceback (most recent call last):\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 52, in main\\n    result = execute_command(wrapper_module, command)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 87, in execute_command\\n    return handle_fit(regressor_class, command)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 309, in handle_fit\\n    regressor.fit(X, y)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py\", line 388, in fit\\n    model.fit()\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/symbolfit.py\", line 818, in fit\\n    func_candidates = add_gof(func_candidates=func_candidates, x=x, y=y, y_up=y_up, y_down=y_down, dim=dim)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/evaluate.py\", line 260, in add_gof\\n    y_pred = func_evaluate(func_candidate, x, dim)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/evaluate.py\", line 89, in func_evaluate\\n    return eval(func)\\n  File \"<string>\", line 1, in <module>\\nNameError: name \\'zoo\\' is not defined\\n')",
+  "recovered_from_error": true,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 3.267685418288134e-07,
+    "scale": 0.0,
+    "rng_seed": 917685318,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "recovered_after_error",
+  "runtime_seconds": 3358.965
+}

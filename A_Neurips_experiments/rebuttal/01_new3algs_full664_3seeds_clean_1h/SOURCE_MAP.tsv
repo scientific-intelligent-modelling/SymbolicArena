@@ -7,4 +7,12 @@ provenance/aaai_params_3h/	benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-
 queues/full664_source.csv	exp-planning/02.E1选择验证/generated/probe4_full664_v1/full664_unified.csv	Stage 3 同源 full-664 清单并增加稳定 dataset_id
 smoke/	check/prepare_neurips_rebuttal_full664.py	2 数据集、3 算法、3 种子的 18 任务门禁批次
 deploy/	manual_curation_20260725	本地同步和 iaaccn22 远端执行脚本
+queues/load_queue_full/state/	iaaccn22:queues/load_queue_full/state/	5976 条正式任务自然收口后的最终队列状态与控制器日志
+runs/	iaaccn22:runs/	8 台机器 collect 后按 assigned host harvest 的 5976 个规范结果及分钟快照
+audit/	benchmark-control/compliance/launchers/audit_batch.py	5976 条任务的正式预算、身份、artifact 和指标审计
+monitoring/completed_audit/20260726-120437/	check/audit_neurips_rebuttal_completed.py	最终 5976/5976 assigned-host 严格审计与冻结 state
+analysis/	check/analyze_neurips_rebuttal_full664.py	新三算法 5976 条结果与 Stage 3 四算法 7968 条结果的同口径合并
+symf/	check/{prepare_symf_formal_judge_params.py,generate_symf_formal_metrics.py,merge_symf_formal_shards.py,merge_neurips_rebuttal_metrics.py}	13944 条 formal SYM-F、Exact、TreeSim 与 7 算法最终榜单
+MANIFEST.tsv	check/build_neurips_rebuttal_archive.py	最终 batch-root 相对路径与字节数清单
+CHECKSUMS.sha256	check/build_neurips_rebuttal_archive.py	MANIFEST.tsv 及其声明文件的 SHA-256 完整性校验
 SOURCE_MAP.tsv	manual_curation_20260725	来源映射

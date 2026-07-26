@@ -1,0 +1,144 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0616_first_principles_supernovae_zr",
+  "task_global_index": 616,
+  "dataset": "first_principles_supernovae_zr",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr",
+  "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr",
+  "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr",
+    "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr",
+    "expected_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr",
+    "actual_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_supernovae_zr"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0616/iaaccn26/fepysr/g0616_first_principles_supernovae_zr/experiments/g0616_first_principles_supernovae_zr_fepysr_seed521_20260725-232908",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "Xaxis0"
+  ],
+  "target_name": "target",
+  "train_rows": 169,
+  "valid_rows": 21,
+  "id_test_rows": 21,
+  "ood_test_rows": 25,
+  "seconds": 3611.002,
+  "equation": "cos((X0 - 0.97326624)*sin(1.6990193/(X0 + 7.81256105)))",
+  "equation_count": 10,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "cos((X0 - 0.97326624)*sin(1.6990193/(X0 + 7.81256105)))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, params):\n    return cos((x0 - 0.97326624)*sin(1.6990193/(x0 + 7.81256105)))\n",
+    "return_expression_source": "cos((x0 - 0.97326624)*sin(1.6990193/(x0 + 7.81256105)))",
+    "normalized_expression": "cos((x0 - 0.97326624)*sin(1.6990193/(x0 + 7.81256105)))",
+    "instantiated_expression": "cos((x0 - 0.97326624)*sin(1.6990193/(x0 + 7.81256105)))",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 7,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "cos((x0 - 0.97326624)*sin(1.6990193/(x0 + 7.81256105)))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.04005443917705979,
+    "r2": 0.965497723645234,
+    "nmse": 0.014766929155233904,
+    "acc_0_1": 0.9940828402366864
+  },
+  "valid": {
+    "rmse": 0.030727734546426348,
+    "r2": 0.9838589080006577,
+    "nmse": 0.008924951233060488,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.03148784334478645,
+    "r2": 0.9842953335853547,
+    "nmse": 0.008138495471311492,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.5733201821817024,
+    "r2": -73.53365330672307,
+    "nmse": 52.948638845444385,
+    "acc_0_1": 0.6
+  },
+  "finished_at": "2026-07-26 00:29:20",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0616/iaaccn26/fepysr/g0616_first_principles_supernovae_zr/experiments",
+    "exp_name": "g0616_first_principles_supernovae_zr_fepysr_seed521",
+    "n_features": 1,
+    "feature_names": [
+      "Xaxis0"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 0.21563873755567584,
+    "scale": 0.0,
+    "rng_seed": 131690319,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3611.002
+}

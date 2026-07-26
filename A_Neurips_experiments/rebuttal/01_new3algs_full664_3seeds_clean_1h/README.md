@@ -441,6 +441,25 @@ fingerprint、生成器版本和冻结表达式策略；任一输入或代码变
 保存在对应版本的 `by_source/<snapshot_id>/leaderboard/`；`analysis/`
 中的同名文件仅是验证通过后原子更新的 latest 镜像。
 
+最终 finalization 从 `2026-07-26T12:04:36+08:00` 运行至
+`2026-07-26T13:11:36+08:00`，以 `exit_code=0` 正常结束。内容寻址快照
+ID 为：
+
+```text
+e65efef94635729c9b28-7260f49f2f4af600aff7-40ee887bbfa03280f70b-0d39bd0c174ff4ed1b72-0aac4b3da8f362be34b1-fccf19ac603f1f1b365f
+```
+
+7 个算法分片各有 `1992` 条唯一运行键；本地使用冻结 merger 对全部
+分片和 final 目录执行 `--validate-only --verify-output-dir`，再次确认
+`13944` 条运行、`664` 个数据集、seeds `520/521/522` 和 7 个算法的
+完整网格。最终榜单内容 SHA-256 为
+`642357f376709ebb2bc0d829f14c3535ff3ff9945650c427de4867d7e413392a`。
+
+正式 harvest 的 `runs/` 已完整拉回本地，共 `376661` 个文件、逻辑大小
+`1596278259` 字节，其中规范 `result.json` 恰好 `5976` 个，并与
+`manifest/tasks.csv` 逐项一一对应。`remote-experiments/` 只保留在
+controller 作为 collect 暂存副本，不重复进入最终完整性范围。
+
 ## 最终产物
 
 正式审计闭环后至少输出：
@@ -487,5 +506,5 @@ python check/build_neurips_rebuttal_archive.py \
   --batch-dir "$BATCH" --write
 python check/build_neurips_rebuttal_archive.py \
   --batch-dir "$BATCH" --verify --require-exact-scope
-(cd "$BATCH" && sha256sum -c CHECKSUMS.sha256)
+(cd "$BATCH" && sha256sum --quiet -c CHECKSUMS.sha256)
 ```

@@ -1,0 +1,129 @@
+{
+  "tool": "jaxsr",
+  "task_label": "g0615_first_principles_schechter",
+  "task_global_index": 615,
+  "dataset": "first_principles_schechter",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter",
+  "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter",
+  "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter",
+    "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter",
+    "expected_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter",
+    "actual_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_schechter"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/jaxsr/seed520/tasks/jaxsr_s520_clean_g0615/iaaccn26/jaxsr/g0615_first_principles_schechter/experiments/g0615_first_principles_schechter_jaxsr_seed520_20260725-132108",
+  "status": "ok",
+  "error": null,
+  "seed": 520,
+  "feature_names": [
+    "L"
+  ],
+  "target_name": "target",
+  "train_rows": 20,
+  "valid_rows": 2,
+  "id_test_rows": 2,
+  "ood_test_rows": 3,
+  "seconds": 3615.23,
+  "equation": "-1.83090929084528e-8*x0 - 21.5994663238525",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "jaxsr",
+    "raw_equation": "-1.83090929084528e-8*x0 - 21.5994663238525",
+    "raw_equation_kind": "plain_expression",
+    "python_function_source": "def equation(x0, params):\n    return -1.83090929084528e-8*x0 - 21.5994663238525\n",
+    "return_expression_source": "-1.83090929084528e-8*x0 - 21.5994663238525",
+    "normalized_expression": "-1.83090929084528e-8*x0 - 21.5994663238525",
+    "instantiated_expression": "-1.83090929084528e-8*x0 - 21.5994663238525",
+    "variables": [
+      "x0"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 1,
+    "operator_set": [
+      "add",
+      "mul"
+    ],
+    "ast_node_count": 5,
+    "tree_depth": 3,
+    "normalization_mode": "jaxsr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "-1.83090929084528e-8*x0 - 21.5994663238525"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 1.069112933224844,
+    "r2": 0.927035607146868,
+    "nmse": 0.0017785218617809495,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 1.3539368716643259,
+    "r2": -1.6847572665690578,
+    "nmse": 0.004323219714708807,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 1.0797105678454428,
+    "r2": 0.5091871773110613,
+    "nmse": 0.002337560842213794,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 15.39670914674427,
+    "r2": -1.3973762787289061,
+    "nmse": 0.3055015551690909,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 14:21:23",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "max_terms": 5,
+    "strategy": "greedy_forward",
+    "information_criterion": "bic",
+    "cv_folds": 5,
+    "regularization": null,
+    "max_polynomial_degree": 3,
+    "max_interaction_order": 2,
+    "include_constant": true,
+    "include_linear": true,
+    "include_polynomials": true,
+    "include_interactions": true,
+    "include_transcendental": false,
+    "include_ratios": false,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/jaxsr/seed520/tasks/jaxsr_s520_clean_g0615/iaaccn26/jaxsr/g0615_first_principles_schechter/experiments",
+    "exp_name": "g0615_first_principles_schechter_jaxsr_seed520",
+    "n_features": 1,
+    "feature_names": [
+      "L"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 3.9579298888804373,
+    "scale": 0.0,
+    "rng_seed": 3895588611,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3615.23
+}

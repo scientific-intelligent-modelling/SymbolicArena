@@ -1,0 +1,148 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0664_Vladislavleva-8",
+  "task_global_index": 664,
+  "dataset": "Vladislavleva-8",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-8",
+  "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+  "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "expected_dataset_dir": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "expected_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/vladislavleva/Vladislavleva-8",
+    "actual_normalized": "sim-datasets-data/vladislavleva/Vladislavleva-8"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed520/tasks/fepysr_s520_clean_g0664/iaaccn23/fepysr/g0664_Vladislavleva-8/experiments/g0664_Vladislavleva-8_fepysr_seed520_20260725-143425",
+  "status": "ok",
+  "error": null,
+  "seed": 520,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 40,
+  "valid_rows": 5,
+  "id_test_rows": 5,
+  "ood_test_rows": 1089,
+  "seconds": 3555.002,
+  "equation": "0.0391984586506013*exp(2.1211421*sin(X0 - cos(X1^2) + 1.044382) + 3.1612742*cos(X0))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "0.0391984586506013*exp(2.1211421*sin(X0 - cos(X1^2) + 1.044382) + 3.1612742*cos(X0))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.0391984586506013*exp(2.1211421*sin(x0 - cos(x1**2) + 1.044382) + 3.1612742*cos(x0))\n",
+    "return_expression_source": "0.0391984586506013*exp(2.1211421*sin(x0 - cos(x1**2) + 1.044382) + 3.1612742*cos(x0))",
+    "normalized_expression": "0.0391984586506013*exp(2.1211421*sin(x0 - cos(x1**2) + 1.044382) + 3.1612742*cos(x0))",
+    "instantiated_expression": "0.0391984586506013*exp(2.1211421*sin(x0 - cos(x1**2) + 1.044382) + 3.1612742*cos(x0))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "exp",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 20,
+    "tree_depth": 10,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.0391984586506013*exp(2.1211421*sin(x0 - cos(x1**2) + 1.044382) + 3.1612742*cos(x0))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.5808643362762301,
+    "r2": 0.8997534642375162,
+    "nmse": 0.0762894027178627,
+    "acc_0_1": 0.375
+  },
+  "valid": {
+    "rmse": 0.6712511961042252,
+    "r2": -0.009890737278230421,
+    "nmse": 1.0064061691645738,
+    "acc_0_1": 0.2
+  },
+  "id_test": {
+    "rmse": 2.2484680896163987,
+    "r2": -6.023482133092973,
+    "nmse": 2.795182461785916,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 2.0857983320191122,
+    "r2": 0.32949860749274495,
+    "nmse": 0.5357033411395177,
+    "acc_0_1": 0.3039485766758494
+  },
+  "finished_at": "2026-07-25 15:33:40",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed520/tasks/fepysr_s520_clean_g0664/iaaccn23/fepysr/g0664_Vladislavleva-8/experiments",
+    "exp_name": "g0664_Vladislavleva-8_fepysr_seed520",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": "RuntimeError('子进程执行失败: Command \\'[\\'/home/zhangziwen/anaconda3/envs/sim_fepysr/bin/python\\', \\'-u\\', \\'/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\\', \\'--input\\', \\'/tmp/tmp4yppgnz2.json\\', \\'--output\\', \\'/tmp/tmp4yppgnz2.json.result\\']\\' returned non-zero exit status 1.\\nTraceback (most recent call last):\\n  File \"/home/zhangziwen/anaconda3/envs/sim_fepysr/lib/python3.10/site-packages/pysr/sr.py\", line 2615, in _read_equation_file\\n    with open(filename, \"r\", encoding=\"utf-8\") as f:\\nFileNotFoundError: [Errno 2] No such file or directory: \\'outputs/20260725_153337_rjHUQq/hall_of_fame.csv\\'\\n\\nDuring handling of the above exception, another exception occurred:\\n\\nTraceback (most recent call last):\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 52, in main\\n    result = execute_command(wrapper_module, command)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 87, in execute_command\\n    return handle_fit(regressor_class, command)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/srkit/subprocess_runner.py\", line 309, in handle_fit\\n    regressor.fit(X, y)\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/algorithms/fepysr_wrapper/wrapper.py\", line 480, in fit\\n    model.fit(X_tensor, y_tensor)\\n  File \"/tmp/sim_fepysr_src/fepysr/fepysr.py\", line 75, in fit\\n    self._core_train(X, y)\\n  File \"/tmp/sim_fepysr_src/fepysr/fepysr.py\", line 105, in _core_train\\n    best_model, run_time, reward , pysr_model = pysr_train(\\n  File \"/home/zhangziwen/workplace/scientific-intelligent-modelling/scientific_intelligent_modelling/algorithms/fepysr_wrapper/wrapper.py\", line 354, in safe_pysr_train\\n    return original_train(data_analyzer, *args, **kwargs)\\n  File \"/tmp/sim_fepysr_src/fepysr/pysr_train.py\", line 120, in pysr_train\\n    model.fit(X_train, y_train)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_fepysr/lib/python3.10/site-packages/pysr/sr.py\", line 2318, in fit\\n    self._run(X, y, runtime_params, weights=weights, seed=seed, category=category)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_fepysr/lib/python3.10/site-packages/pysr/sr.py\", line 2148, in _run\\n    self.equations_ = self.get_hof(out)\\n  File \"/home/zhangziwen/anaconda3/envs/sim_fepysr/lib/python3.10/site-packages/pysr/sr.py\", line 2659, in get_hof\\n    self.equation_file_contents_ = self._read_equation_file()\\n  File \"/home/zhangziwen/anaconda3/envs/sim_fepysr/lib/python3.10/site-packages/pysr/sr.py\", line 2621, in _read_equation_file\\n    raise RuntimeError(\\nRuntimeError: Couldn\\'t find equation file! The equation search likely exited before a single iteration completed.\\n')",
+  "recovered_from_error": true,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 1.8345942408595335,
+    "scale": 0.0,
+    "rng_seed": 2463373674,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "recovered_after_error",
+  "runtime_seconds": 3555.002
+}

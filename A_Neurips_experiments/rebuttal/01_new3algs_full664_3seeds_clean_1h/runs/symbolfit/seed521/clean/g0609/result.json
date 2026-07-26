@@ -1,0 +1,148 @@
+{
+  "tool": "symbolfit",
+  "task_label": "g0609_first_principles_ideal_gas",
+  "task_global_index": 609,
+  "dataset": "first_principles_ideal_gas",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas",
+  "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas",
+  "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas",
+    "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas",
+    "expected_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas",
+    "actual_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_ideal_gas"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed521/tasks/symbolfit_s521_clean_g0609/iaaccn22/symbolfit/g0609_first_principles_ideal_gas/experiments/g0609_first_principles_ideal_gas_symbolfit_seed521_20260725-232027",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "n",
+    "T",
+    "V"
+  ],
+  "target_name": "target",
+  "train_rows": 20,
+  "valid_rows": 3,
+  "id_test_rows": 3,
+  "ood_test_rows": 4,
+  "seconds": 3604.972,
+  "equation": "7.77976*(-0.60395 + exp(-1.26568*((x2 - 3.776231593304134) * 0.0106673) + sin(sin(((x2 - 3.776231593304134) * 0.0106673)**2))) + sin(0.758836*((x0 - 8.48241412773432) * 0.0118922) + 0.849086))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "7.77976*(-0.60395 + exp(-1.26568*((x2 - 3.776231593304134) * 0.0106673) + sin(sin(((x2 - 3.776231593304134) * 0.0106673)**2))) + sin(0.758836*((x0 - 8.48241412773432) * 0.0118922) + 0.849086))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x2, params):\n    return 8.186691584384821*exp(-0.013501388264*x2 + sin(sin((0.0106673*x2 - 0.04028219527525319)**2))) + 7.77976*sin(0.0090242294792*x0 + 0.772538748373717) - 4.698586052\n",
+    "return_expression_source": "8.186691584384821*exp(-0.013501388264*x2 + sin(sin((0.0106673*x2 - 0.04028219527525319)**2))) + 7.77976*sin(0.0090242294792*x0 + 0.772538748373717) - 4.698586052",
+    "normalized_expression": "8.186691584384821*exp(-0.013501388264*x2 + sin(sin((0.0106673*x2 - 0.04028219527525319)**2))) + 7.77976*sin(0.0090242294792*x0 + 0.772538748373717) - 4.698586052",
+    "instantiated_expression": "8.186691584384821*exp(-0.013501388264*x2 + sin(sin((0.0106673*x2 - 0.04028219527525319)**2))) + 7.77976*sin(0.0090242294792*x0 + 0.772538748373717) - 4.698586052",
+    "variables": [
+      "x0",
+      "x2"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 3,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 26,
+    "tree_depth": 10,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "8.186691584384821*exp(-0.013501388264*x2 + sin(sin((0.0106673*x2 - 0.04028219527525319)**2))) + 7.77976*sin(0.0090242294792*x0 + 0.772538748373717) - 4.698586052"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.1045159313725947,
+    "r2": 0.9933368145442181,
+    "nmse": 0.00017572181459455288,
+    "acc_0_1": 0.7
+  },
+  "valid": {
+    "rmse": 0.17427703428000502,
+    "r2": 0.7877703278575754,
+    "nmse": 0.0004537918444556955,
+    "acc_0_1": 0.6666666666666666
+  },
+  "id_test": {
+    "rmse": 0.22596425551322794,
+    "r2": 0.8927594474074687,
+    "nmse": 0.0007265851667913752,
+    "acc_0_1": 0.3333333333333333
+  },
+  "ood_test": {
+    "rmse": 0.9159384812836059,
+    "r2": 0.8027070235889942,
+    "nmse": 0.01466458509250667,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-26 00:20:32",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed521/tasks/symbolfit_s521_clean_g0609/iaaccn22/symbolfit/g0609_first_principles_ideal_gas/experiments",
+    "exp_name": "g0609_first_principles_ideal_gas_symbolfit_seed521",
+    "n_features": 3,
+    "feature_names": [
+      "n",
+      "T",
+      "V"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'symbolfit' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 1.2803878504345318,
+    "scale": 0.0,
+    "rng_seed": 1556404312,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "budget_exhausted_with_output",
+  "runtime_seconds": 3604.972
+}

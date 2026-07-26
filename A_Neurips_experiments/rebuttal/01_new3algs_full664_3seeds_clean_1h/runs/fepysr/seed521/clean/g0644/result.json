@@ -1,0 +1,148 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0644_Nguyen-9",
+  "task_global_index": 644,
+  "dataset": "Nguyen-9",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/nguyen/Nguyen-9",
+  "expected_dataset_rel": "sim-datasets-data/nguyen/Nguyen-9",
+  "expected_dataset_dir": "sim-datasets-data/nguyen/Nguyen-9",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/nguyen/Nguyen-9",
+    "expected_dataset_dir": "sim-datasets-data/nguyen/Nguyen-9",
+    "expected_normalized": "sim-datasets-data/nguyen/Nguyen-9",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/nguyen/Nguyen-9",
+    "actual_normalized": "sim-datasets-data/nguyen/Nguyen-9"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0644/iaaccn23/fepysr/g0644_Nguyen-9/experiments/g0644_Nguyen-9_fepysr_seed521_20260726-000438",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "target_name": "target",
+  "train_rows": 16,
+  "valid_rows": 2,
+  "id_test_rows": 2,
+  "ood_test_rows": 200,
+  "seconds": 3604.322,
+  "equation": "sin(X0) + cos(log(0.46857846/sin(cos(X1))) + sin(X1 - 1.4707225))",
+  "equation_count": 97,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "sin(X0) + cos(log(0.46857846/sin(cos(X1))) + sin(X1 - 1.4707225))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return sin(x0) + cos(log(0.46857846/sin(cos(x1))) + sin(x1 - 1.4707225))\n",
+    "return_expression_source": "sin(x0) + cos(log(0.46857846/sin(cos(x1))) + sin(x1 - 1.4707225))",
+    "normalized_expression": "sin(x0) + cos(log(0.46857846/sin(cos(x1))) + sin(x1 - 1.4707225))",
+    "instantiated_expression": "sin(x0) + cos(log(0.46857846/sin(cos(x1))) + sin(x1 - 1.4707225))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "log",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 17,
+    "tree_depth": 9,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "sin(x0) + cos(log(0.46857846/sin(cos(x1))) + sin(x1 - 1.4707225))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.004631758146797784,
+    "r2": 0.9997785721232937,
+    "nmse": 2.2304055112805255e-05,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.0036543872219466926,
+    "r2": 0.9991070439766384,
+    "nmse": 2.2630045150660573e-05,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.00316188370461141,
+    "r2": 0.4833616591776736,
+    "nmse": 0.0003324354155920802,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.012898400206826309,
+    "r2": 0.9978765502737799,
+    "nmse": 0.00010091801828609373,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-07-26 01:04:43",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0644/iaaccn23/fepysr/g0644_Nguyen-9/experiments",
+    "exp_name": "g0644_Nguyen-9_fepysr_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "x1",
+      "x2"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 0.3112645963654185,
+    "scale": 0.0,
+    "rng_seed": 4272151621,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3604.322
+}

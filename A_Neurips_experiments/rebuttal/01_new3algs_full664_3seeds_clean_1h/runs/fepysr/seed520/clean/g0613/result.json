@@ -1,0 +1,145 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0613_first_principles_planck",
+  "task_global_index": 613,
+  "dataset": "first_principles_planck",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+  "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+  "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+    "expected_dataset_dir": "sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+    "expected_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+    "actual_normalized": "sim-datasets-data/srbench2025/firstprinciples/first_principles_planck"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed520/tasks/fepysr_s520_clean_g0613/iaaccn24/fepysr/g0613_first_principles_planck/experiments/g0613_first_principles_planck_fepysr_seed520_20260725-131641",
+  "status": "ok",
+  "error": null,
+  "seed": 520,
+  "feature_names": [
+    "nu",
+    "T"
+  ],
+  "target_name": "target",
+  "train_rows": 72,
+  "valid_rows": 9,
+  "id_test_rows": 9,
+  "ood_test_rows": 10,
+  "seconds": 3611.326,
+  "equation": "(16.680427588248 - 20.040142*log(X1))/(log(X1) - 5.041044)",
+  "equation_count": 7,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "(16.680427588248 - 20.040142*log(X1))/(log(X1) - 5.041044)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return (16.680427588248 - 20.040142*log(x1))/(log(x1) - 5.041044)\n",
+    "return_expression_source": "(16.680427588248 - 20.040142*log(x1))/(log(x1) - 5.041044)",
+    "normalized_expression": "(16.680427588248 - 20.040142*log(x1))/(log(x1) - 5.041044)",
+    "instantiated_expression": "(16.680427588248 - 20.040142*log(x1))/(log(x1) - 5.041044)",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "log",
+      "mul",
+      "pow"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 5,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "(16.680427588248 - 20.040142*log(x1))/(log(x1) - 5.041044)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 165.82555242338825,
+    "r2": 0.48836689639649244,
+    "nmse": 0.43418206859376507,
+    "acc_0_1": 0.0
+  },
+  "valid": {
+    "rmse": 1439.5557182357913,
+    "r2": -1688.785083469924,
+    "nmse": 644.7025899628484,
+    "acc_0_1": 0.0
+  },
+  "id_test": {
+    "rmse": 86.42602490178275,
+    "r2": -6.223046774458731,
+    "nmse": 2.34635257521843,
+    "acc_0_1": 0.0
+  },
+  "ood_test": {
+    "rmse": 1210.6427307967285,
+    "r2": -85158.64733526636,
+    "nmse": 952.9906495428892,
+    "acc_0_1": 0.0
+  },
+  "finished_at": "2026-07-25 14:16:52",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed520/tasks/fepysr_s520_clean_g0613/iaaccn24/fepysr/g0613_first_principles_planck/experiments",
+    "exp_name": "g0613_first_principles_planck_fepysr_seed520",
+    "n_features": 2,
+    "feature_names": [
+      "nu",
+      "T"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 231.8313341842812,
+    "scale": 0.0,
+    "rng_seed": 175803611,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3611.326
+}

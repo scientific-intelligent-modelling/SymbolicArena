@@ -31,6 +31,8 @@ AAAI 后续的 SSR-50 十五算法实验。
   - NeurIPS rebuttal 期间新增实验，不改写原四阶段归档
   - 当前第 1 项为新增三算法在 Stage 3 同一 full-664 数据集、同一三种子和
     同一 1h 预算下的 clean 评测
+  - `5976/5976` 个新增任务已完成并通过 8 机严格审计；与 Stage 3 合并后的
+    7 算法 `13944` 条 formal SYM-F 网格也已完成并复验
   - 实验目录：
     `rebuttal/01_new3algs_full664_3seeds_clean_1h/`
 
@@ -66,6 +68,8 @@ NeurIPS Stage 4 与 AAAI Stage 4 不是同一批实验：
 - Stage 4 的 3000 个 clean 归档 `result.json`
 - Stage 4 的 9000 条 noisy run-level 记录与按 sigma 汇总
 - Stage 4 的数值排行榜、formal SYM-F、noise 表、论文表和运行参数快照
+- Rebuttal 1 的 5976 个规范结果、完整分钟快照、审计、7 算法 run-level
+  分析和 13944 条 formal SYM-F
 - 来源映射、文件清单和 SHA256 校验
 
 不包含：

@@ -1,0 +1,145 @@
+{
+  "tool": "symbolfit",
+  "task_label": "g0603_strogatz_shearflow2",
+  "task_global_index": 603,
+  "dataset": "strogatz_shearflow2",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow2"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed521/tasks/symbolfit_s521_clean_g0603/iaaccn22/symbolfit/g0603_strogatz_shearflow2/experiments/g0603_strogatz_shearflow2_symbolfit_seed521_20260725-230441",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3604.955,
+  "equation": "0.0352845*(0.36605*exp(4.53997*cos(cos(-1.25607 + 5.06739*((x1 - -2.7469888932939703) * 0.204324))))*cos(8.51344*((x0 - -4.35009524082152) * 0.125787)) + ((x0 - -4.35009524082152) * 0.125787) - ((x1 - -2.7469888932939703) * 0.204324))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "0.0352845*(0.36605*exp(4.53997*cos(cos(-1.25607 + 5.06739*((x1 - -2.7469888932939703) * 0.204324))))*cos(8.51344*((x0 - -4.35009524082152) * 0.125787)) + ((x0 - -4.35009524082152) * 0.125787) - ((x1 - -2.7469888932939703) * 0.204324))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.0044383314015*x0 - 0.007209470178*x1 + 0.012915891225*exp(4.53997*cos(cos(1.03538939436*x1 + 1.5881331665412904)))*cos(1.07088007728*x0 + 4.65843032766631) - 0.00049717019864624675\n",
+    "return_expression_source": "0.0044383314015*x0 - 0.007209470178*x1 + 0.012915891225*exp(4.53997*cos(cos(1.03538939436*x1 + 1.5881331665412904)))*cos(1.07088007728*x0 + 4.65843032766631) - 0.00049717019864624675",
+    "normalized_expression": "0.0044383314015*x0 - 0.007209470178*x1 + 0.012915891225*exp(4.53997*cos(cos(1.03538939436*x1 + 1.5881331665412904)))*cos(1.07088007728*x0 + 4.65843032766631) - 0.00049717019864624675",
+    "instantiated_expression": "0.0044383314015*x0 - 0.007209470178*x1 + 0.012915891225*exp(4.53997*cos(cos(1.03538939436*x1 + 1.5881331665412904)))*cos(1.07088007728*x0 + 4.65843032766631) - 0.00049717019864624675",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "exp",
+      "mul"
+    ],
+    "ast_node_count": 26,
+    "tree_depth": 9,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.0044383314015*x0 - 0.007209470178*x1 + 0.012915891225*exp(4.53997*cos(cos(1.03538939436*x1 + 1.5881331665412904)))*cos(1.07088007728*x0 + 4.65843032766631) - 0.00049717019864624675"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.04104294475476094,
+    "r2": 0.9698218700672518,
+    "nmse": 0.02951972105359046,
+    "acc_0_1": 0.9765625
+  },
+  "valid": {
+    "rmse": 0.046414566598083344,
+    "r2": 0.9677182263045767,
+    "nmse": 0.0320938837675627,
+    "acc_0_1": 0.96875
+  },
+  "id_test": {
+    "rmse": 0.04353868015167902,
+    "r2": 0.9601549628514524,
+    "nmse": 0.038244755594859785,
+    "acc_0_1": 0.9375
+  },
+  "ood_test": {
+    "rmse": 0.1565077689899206,
+    "r2": 0.930281184977582,
+    "nmse": 0.06653218544813294,
+    "acc_0_1": 0.444
+  },
+  "finished_at": "2026-07-26 00:04:46",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed521/tasks/symbolfit_s521_clean_g0603/iaaccn22/symbolfit/g0603_strogatz_shearflow2/experiments",
+    "exp_name": "g0603_strogatz_shearflow2_symbolfit_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'symbolfit' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 0.23626117037089664,
+    "scale": 0.0,
+    "rng_seed": 3694521574,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "budget_exhausted_with_output",
+  "runtime_seconds": 3604.955
+}

@@ -1,0 +1,151 @@
+{
+  "tool": "symbolfit",
+  "task_label": "g0093_I.43.43_3_0",
+  "task_global_index": 93,
+  "dataset": "I.43.43_3_0",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0",
+    "expected_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0",
+    "actual_normalized": "sim-datasets-data/llm-srbench/lsrtransform/I.43.43_3_0"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed521/tasks/symbolfit_s521_clean_g0093/iaaccn29/symbolfit/g0093_I.43.43_3_0/experiments/g0093_I.43.43_3_0_symbolfit_seed521_20260725-160152",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "kappa",
+    "gamma",
+    "kb",
+    "A"
+  ],
+  "target_name": "v",
+  "train_rows": 75000,
+  "valid_rows": 5000,
+  "id_test_rows": 20000,
+  "ood_test_rows": 20000,
+  "seconds": 3607.84,
+  "equation": "20.0983*(((x0 - 0.0675648599863052) * 0.0761152)*(-0.0685587 + ((x3 - 1.0000152587890625) * 0.250002) + exp(-2.51279*sin(((x2 - 1.0000522136688232) * 0.250009)) + 1.27174*((x1 - 2.000051498413085) * 0.333342) + 1.27174*((x3 - 1.0000152587890625) * 0.250002))))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "20.0983*(((x0 - 0.0675648599863052) * 0.0761152)*(-0.0685587 + ((x3 - 1.0000152587890625) * 0.250002) + exp(-2.51279*sin(((x2 - 1.0000522136688232) * 0.250009)) + 1.27174*((x1 - 2.000051498413085) * 0.333342) + 1.27174*((x3 - 1.0000152587890625) * 0.250002))))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x3, params):\n    return 20.0983*(0.0761152*x0 - 0.00514271283082962)*(0.250002*x3 + 0.31166919178405177*exp(0.42392435508*x1 + 0.31793754348*x3 - 2.51279*sin(0.250009*x2 - 0.2500220538871288)) - 0.31856451472778321)\n",
+    "return_expression_source": "20.0983*(0.0761152*x0 - 0.00514271283082962)*(0.250002*x3 + 0.31166919178405177*exp(0.42392435508*x1 + 0.31793754348*x3 - 2.51279*sin(0.250009*x2 - 0.2500220538871288)) - 0.31856451472778321)",
+    "normalized_expression": "20.0983*(0.0761152*x0 - 0.00514271283082962)*(0.250002*x3 + 0.31166919178405177*exp(0.42392435508*x1 + 0.31793754348*x3 - 2.51279*sin(0.250009*x2 - 0.2500220538871288)) - 0.31856451472778321)",
+    "instantiated_expression": "20.0983*(0.0761152*x0 - 0.00514271283082962)*(0.250002*x3 + 0.31166919178405177*exp(0.42392435508*x1 + 0.31793754348*x3 - 2.51279*sin(0.250009*x2 - 0.2500220538871288)) - 0.31856451472778321)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 30,
+    "tree_depth": 10,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "20.0983*(0.0761152*x0 - 0.00514271283082962)*(0.250002*x3 + 0.31166919178405177*exp(0.42392435508*x1 + 0.31793754348*x3 - 2.51279*sin(0.250009*x2 - 0.2500220538871288)) - 0.31856451472778321)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 3.0215019978573423,
+    "r2": 0.979317475872269,
+    "nmse": 0.010799628826103785,
+    "acc_0_1": 0.05534666666666667
+  },
+  "valid": {
+    "rmse": 3.1191356512843953,
+    "r2": 0.979319973089372,
+    "nmse": 0.010937893580645806,
+    "acc_0_1": 0.0566
+  },
+  "id_test": {
+    "rmse": 3.051032113241588,
+    "r2": 0.97924380751448,
+    "nmse": 0.010957714943307993,
+    "acc_0_1": 0.05645
+  },
+  "ood_test": {
+    "rmse": 9.967379968625822,
+    "r2": 0.9832055708542754,
+    "nmse": 0.014226557601699356,
+    "acc_0_1": 0.13755
+  },
+  "finished_at": "2026-07-25 17:02:00",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed521/tasks/symbolfit_s521_clean_g0093/iaaccn29/symbolfit/g0093_I.43.43_3_0/experiments",
+    "exp_name": "g0093_I.43.43_3_0_symbolfit_seed521",
+    "n_features": 4,
+    "feature_names": [
+      "kappa",
+      "gamma",
+      "kb",
+      "A"
+    ],
+    "target_name": "v"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'symbolfit' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 21.00976118778556,
+    "scale": 0.0,
+    "rng_seed": 1988990028,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "budget_exhausted_with_output",
+  "runtime_seconds": 3607.84
+}

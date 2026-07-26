@@ -1,0 +1,155 @@
+{
+  "tool": "symbolfit",
+  "task_label": "g0487_feynman_III_9_52",
+  "task_global_index": 487,
+  "dataset": "feynman_III_9_52",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_III_9_52",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_III_9_52",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_III_9_52",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_III_9_52",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_III_9_52",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_III_9_52",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_III_9_52",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_III_9_52"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed522/tasks/symbolfit_s522_clean_g0487/iaaccn25/symbolfit/g0487_feynman_III_9_52/experiments/g0487_feynman_III_9_52_symbolfit_seed522_20260726-075007",
+  "status": "ok",
+  "error": null,
+  "seed": 522,
+  "feature_names": [
+    "p_d",
+    "Ef",
+    "t",
+    "h",
+    "omega",
+    "omega_0"
+  ],
+  "target_name": "target",
+  "train_rows": 64000,
+  "valid_rows": 8000,
+  "id_test_rows": 8000,
+  "ood_test_rows": 10000,
+  "seconds": 3627.918,
+  "equation": "exp(x0 + sin((((((x2 * x1) * 0.6632542) - 0.8473212) * (0.7929346 - x3)) + ((x1 * 0.94431955) - x3)) - x3))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "exp(x0 + sin((((((x2 * x1) * 0.6632542) - 0.8473212) * (0.7929346 - x3)) + ((x1 * 0.94431955) - x3)) - x3))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x3, params):\n    return exp(x0 + sin(0.94431955*x1 - 2*x3 + (0.7929346 - x3)*(0.6632542*x1*x2 - 0.8473212)))\n",
+    "return_expression_source": "exp(x0 + sin(0.94431955*x1 - 2*x3 + (0.7929346 - x3)*(0.6632542*x1*x2 - 0.8473212)))",
+    "normalized_expression": "exp(x0 + sin(0.94431955*x1 - 2*x3 + (0.7929346 - x3)*(0.6632542*x1*x2 - 0.8473212)))",
+    "instantiated_expression": "exp(x0 + sin(0.94431955*x1 - 2*x3 + (0.7929346 - x3)*(0.6632542*x1*x2 - 0.8473212)))",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 6,
+    "operator_set": [
+      "add",
+      "exp",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 23,
+    "tree_depth": 8,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "exp(x0 + sin(0.94431955*x1 - 2*x3 + (0.7929346 - x3)*(0.6632542*x1*x2 - 0.8473212)))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 17.85085254890412,
+    "r2": -0.5498454109918063,
+    "nmse": 0.7359091498212572,
+    "acc_0_1": 0.0061875
+  },
+  "valid": {
+    "rmse": 17.434188143368615,
+    "r2": -0.5480724953555987,
+    "nmse": 0.726705745471698,
+    "acc_0_1": 0.005625
+  },
+  "id_test": {
+    "rmse": 18.071542898481212,
+    "r2": -0.5361676056350047,
+    "nmse": 0.7420761287237304,
+    "acc_0_1": 0.004875
+  },
+  "ood_test": {
+    "rmse": 36.48959526485457,
+    "r2": -0.10430294527319228,
+    "nmse": 0.8745747129145981,
+    "acc_0_1": 0.0185
+  },
+  "finished_at": "2026-07-26 08:50:35",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed522/tasks/symbolfit_s522_clean_g0487/iaaccn25/symbolfit/g0487_feynman_III_9_52/experiments",
+    "exp_name": "g0487_feynman_III_9_52_symbolfit_seed522",
+    "n_features": 6,
+    "feature_names": [
+      "p_d",
+      "Ef",
+      "t",
+      "h",
+      "omega",
+      "omega_0"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'symbolfit' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 14.338864864722954,
+    "scale": 0.0,
+    "rng_seed": 2368686346,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "budget_exhausted_with_output",
+  "runtime_seconds": 3627.918
+}

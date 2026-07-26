@@ -24,4 +24,16 @@ tasks = 3 × 664 × 3 = 5976
 3. `2 datasets × 3 algorithms × 3 seeds = 18` 个 600 秒 smoke。
 4. smoke collect、harvest 和 audit 全部通过。
 
+正式实验现已完成：
+
+- `5976/5976` 个任务全部 `done`，三个算法和三个 seed 各自网格完整。
+- 最终 assigned-host 严格审计验证 `5976/5976`，8 台主机全部通过，
+  `issue_count=0`。
+- 正式 harvest、audit 和基础指标分析均已拉回；新三算法与 Stage 3 四算法
+  合并为 `13944` 条 run-level 记录。
+- 7 个 formal SYM-F 分片各 `1992` 条，合并后的 `13944` 条符号指标通过
+  内容哈希、运行键、算法、数据集和 seed 完整性复验。
+- 权威 7 算法榜单为
+  `analysis/full664_7alg_leaderboard_with_symf.csv`。
+
 实验运行和审计细节见该实验目录的 `README.md`。

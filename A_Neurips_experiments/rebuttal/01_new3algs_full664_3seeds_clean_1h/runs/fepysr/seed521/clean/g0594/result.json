@@ -1,0 +1,145 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0594_strogatz_barmag1",
+  "task_global_index": 594,
+  "dataset": "strogatz_barmag1",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "expected_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+    "actual_normalized": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0594/iaaccn25/fepysr/g0594_strogatz_barmag1/experiments/g0594_strogatz_barmag1_fepysr_seed521_20260725-225840",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "x",
+    "y"
+  ],
+  "target_name": "target",
+  "train_rows": 256,
+  "valid_rows": 32,
+  "id_test_rows": 32,
+  "ood_test_rows": 1000,
+  "seconds": 3633.566,
+  "equation": "0.37543768 - sin(sin(X0) - sin(X0 - X1))",
+  "equation_count": 20,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "0.37543768 - sin(sin(X0) - sin(X0 - X1))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, params):\n    return 0.37543768 - sin(sin(x0) - sin(x0 - x1))\n",
+    "return_expression_source": "0.37543768 - sin(sin(x0) - sin(x0 - x1))",
+    "normalized_expression": "0.37543768 - sin(sin(x0) - sin(x0 - x1))",
+    "instantiated_expression": "0.37543768 - sin(sin(x0) - sin(x0 - x1))",
+    "variables": [
+      "x0",
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 16,
+    "tree_depth": 9,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "0.37543768 - sin(sin(x0) - sin(x0 - x1))"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.071460539438699,
+    "r2": 0.8943906687541763,
+    "nmse": 0.07386288663137558,
+    "acc_0_1": 0.8671875
+  },
+  "valid": {
+    "rmse": 0.06990199288531491,
+    "r2": 0.9125908079581138,
+    "nmse": 0.04751927893477422,
+    "acc_0_1": 0.78125
+  },
+  "id_test": {
+    "rmse": 0.06964087912071211,
+    "r2": 0.8673616768515728,
+    "nmse": 0.06462496131986738,
+    "acc_0_1": 0.8125
+  },
+  "ood_test": {
+    "rmse": 0.15227526459408988,
+    "r2": 0.6945167411033832,
+    "nmse": 0.17905795137238367,
+    "acc_0_1": 0.496
+  },
+  "finished_at": "2026-07-25 23:59:13",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0594/iaaccn25/fepysr/g0594_strogatz_barmag1/experiments",
+    "exp_name": "g0594_strogatz_barmag1_fepysr_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "x",
+      "y"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 0.2198948934531235,
+    "scale": 0.0,
+    "rng_seed": 3344600327,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3633.566
+}

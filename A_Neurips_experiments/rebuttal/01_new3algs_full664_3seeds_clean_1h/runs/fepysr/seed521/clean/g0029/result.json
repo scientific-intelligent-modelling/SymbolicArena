@@ -1,0 +1,146 @@
+{
+  "tool": "fepysr",
+  "task_label": "g0029_CRK12",
+  "task_global_index": 29,
+  "dataset": "CRK12",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK12",
+  "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK12",
+  "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK12",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK12",
+    "expected_dataset_dir": "sim-datasets-data/llm-srbench/chem_react/CRK12",
+    "expected_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK12",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/llm-srbench/chem_react/CRK12",
+    "actual_normalized": "sim-datasets-data/llm-srbench/chem_react/CRK12"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0029/iaaccn25/fepysr/g0029_CRK12/experiments/g0029_CRK12_fepysr_seed521_20260725-150247",
+  "status": "ok",
+  "error": null,
+  "seed": 521,
+  "feature_names": [
+    "t",
+    "A"
+  ],
+  "target_name": "dA_dt",
+  "train_rows": 3500,
+  "valid_rows": 500,
+  "id_test_rows": 500,
+  "ood_test_rows": 500,
+  "seconds": 3633.182,
+  "equation": "sin(sin(cos(sin(X1)/X1) - 0.008861177) - 0.5544486)",
+  "equation_count": 8,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "fepysr",
+    "raw_equation": "sin(sin(cos(sin(X1)/X1) - 0.008861177) - 0.5544486)",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x1, params):\n    return sin(sin(cos(sin(x1)/x1) - 0.008861177) - 0.5544486)\n",
+    "return_expression_source": "sin(sin(cos(sin(x1)/x1) - 0.008861177) - 0.5544486)",
+    "normalized_expression": "sin(sin(cos(sin(x1)/x1) - 0.008861177) - 0.5544486)",
+    "instantiated_expression": "sin(sin(cos(sin(x1)/x1) - 0.008861177) - 0.5544486)",
+    "variables": [
+      "x1"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 2,
+    "operator_set": [
+      "add",
+      "cos",
+      "mul",
+      "pow",
+      "sin"
+    ],
+    "ast_node_count": 13,
+    "tree_depth": 8,
+    "normalization_mode": "fepysr_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "sin(sin(cos(sin(x1)/x1) - 0.008861177) - 0.5544486)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.024999899318424834,
+    "r2": 0.8304818715504092,
+    "nmse": 0.009202411453717389,
+    "acc_0_1": 1.0
+  },
+  "valid": {
+    "rmse": 0.023598929474867393,
+    "r2": 0.8658562517223917,
+    "nmse": 0.008207709692966554,
+    "acc_0_1": 1.0
+  },
+  "id_test": {
+    "rmse": 0.02503170665200491,
+    "r2": 0.8380160408020517,
+    "nmse": 0.009396660198163076,
+    "acc_0_1": 1.0
+  },
+  "ood_test": {
+    "rmse": 0.07582702929724279,
+    "r2": -81.67679340625556,
+    "nmse": 0.13949119080050745,
+    "acc_0_1": 1.0
+  },
+  "finished_at": "2026-07-25 16:03:20",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "num_workers": 4,
+    "num_experiments": 8,
+    "fmn_epochs": 30,
+    "fmn_batch_size": 64,
+    "fmn_lr": 0.1,
+    "fea_num": 10,
+    "pysr_num": 6,
+    "niterations": 1000000,
+    "population_size": 40,
+    "populations": 4,
+    "ncycles_per_iteration": 100,
+    "maxsize": 20,
+    "maxdepth": 8,
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/fepysr/seed521/tasks/fepysr_s521_clean_g0029/iaaccn25/fepysr/g0029_CRK12/experiments",
+    "exp_name": "g0029_CRK12_fepysr_seed521",
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt"
+  },
+  "budget_exhausted": false,
+  "timeout_type": "not_timeout",
+  "raw_timeout_error": null,
+  "recovered_from_timeout": false,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 0.06071977941663601,
+    "scale": 0.0,
+    "rng_seed": 2861269622,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "completed",
+  "runtime_seconds": 3633.182
+}

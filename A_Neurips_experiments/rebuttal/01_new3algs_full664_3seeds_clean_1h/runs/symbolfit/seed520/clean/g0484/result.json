@@ -1,0 +1,150 @@
+{
+  "tool": "symbolfit",
+  "task_label": "g0484_feynman_III_4_33",
+  "task_global_index": 484,
+  "dataset": "feynman_III_4_33",
+  "dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_III_4_33",
+  "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_III_4_33",
+  "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_III_4_33",
+  "dataset_identity_check": {
+    "status": "match",
+    "match": true,
+    "expected_dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_III_4_33",
+    "expected_dataset_dir": "sim-datasets-data/srbench1.0/feynman/feynman_III_4_33",
+    "expected_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_III_4_33",
+    "actual_dataset_dir": "/home/zhangziwen/sim-datasets-data/srbench1.0/feynman/feynman_III_4_33",
+    "actual_normalized": "sim-datasets-data/srbench1.0/feynman/feynman_III_4_33"
+  },
+  "experiment_dir": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed520/tasks/symbolfit_s520_clean_g0484/iaaccn26/symbolfit/g0484_feynman_III_4_33/experiments/g0484_feynman_III_4_33_symbolfit_seed520_20260725-112724",
+  "status": "ok",
+  "error": null,
+  "seed": 520,
+  "feature_names": [
+    "h",
+    "omega",
+    "kb",
+    "T"
+  ],
+  "target_name": "target",
+  "train_rows": 64000,
+  "valid_rows": 8000,
+  "id_test_rows": 8000,
+  "ood_test_rows": 10000,
+  "seconds": 3607.347,
+  "equation": "8.33455*((0.236984 + ((x3 - 1.000020837101097) * 0.250004))*(0.460283 + 1.94264*((x2 - 1.0001530435976616) * 0.250019)) + (-0.210183*((x0 - 1.0000360565012263) * 0.250004) + -0.0180072)*sin(((x1 - 1.0000369562413685) * 0.250007)))",
+  "equation_count": 1,
+  "canonical_artifact": {
+    "version": "csp_v1",
+    "tool_name": "symbolfit",
+    "raw_equation": "8.33455*((0.236984 + ((x3 - 1.000020837101097) * 0.250004))*(0.460283 + 1.94264*((x2 - 1.0001530435976616) * 0.250019)) + (-0.210183*((x0 - 1.0000360565012263) * 0.250004) + -0.0180072)*sin(((x1 - 1.0000369562413685) * 0.250007)))",
+    "raw_equation_kind": "prefix_expression",
+    "python_function_source": "def equation(x0, x1, x2, x3, params):\n    return 8.33455*(0.034541285378213168 - 0.052546590732*x0)*sin(0.250007*x1 - 0.25001623931903579) + 8.33455*(0.48569691016*x2 - 0.025488242962503975)*(0.250004*x3 - 0.01302520935862266)\n",
+    "return_expression_source": "8.33455*(0.034541285378213168 - 0.052546590732*x0)*sin(0.250007*x1 - 0.25001623931903579) + 8.33455*(0.48569691016*x2 - 0.025488242962503975)*(0.250004*x3 - 0.01302520935862266)",
+    "normalized_expression": "8.33455*(0.034541285378213168 - 0.052546590732*x0)*sin(0.250007*x1 - 0.25001623931903579) + 8.33455*(0.48569691016*x2 - 0.025488242962503975)*(0.250004*x3 - 0.01302520935862266)",
+    "instantiated_expression": "8.33455*(0.034541285378213168 - 0.052546590732*x0)*sin(0.250007*x1 - 0.25001623931903579) + 8.33455*(0.48569691016*x2 - 0.025488242962503975)*(0.250004*x3 - 0.01302520935862266)",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "parameter_symbols": [],
+    "parameter_values": null,
+    "expected_n_features": 4,
+    "operator_set": [
+      "add",
+      "mul",
+      "sin"
+    ],
+    "ast_node_count": 26,
+    "tree_depth": 6,
+    "normalization_mode": "symbolfit_external_infix",
+    "normalization_notes": [],
+    "artifact_valid": true,
+    "validation_errors": [],
+    "fidelity_check": {},
+    "sympy_parse_ok": true,
+    "sympy_expression": "8.33455*(0.034541285378213168 - 0.052546590732*x0)*sin(0.250007*x1 - 0.25001623931903579) + 8.33455*(0.48569691016*x2 - 0.025488242962503975)*(0.250004*x3 - 0.01302520935862266)"
+  },
+  "canonical_artifact_error": null,
+  "train": {
+    "rmse": 0.05280510286682607,
+    "r2": 0.999892287359287,
+    "nmse": 2.9243045550050413e-05,
+    "acc_0_1": 0.934921875
+  },
+  "valid": {
+    "rmse": 0.05378250486860119,
+    "r2": 0.9998868307895243,
+    "nmse": 3.054283613977558e-05,
+    "acc_0_1": 0.932125
+  },
+  "id_test": {
+    "rmse": 0.05250311770523632,
+    "r2": 0.9998923273200885,
+    "nmse": 2.9119214702684112e-05,
+    "acc_0_1": 0.933125
+  },
+  "ood_test": {
+    "rmse": 0.27750060272799776,
+    "r2": 0.999220899788518,
+    "nmse": 0.0004484543797536403,
+    "acc_0_1": 0.2577
+  },
+  "finished_at": "2026-07-25 12:27:32",
+  "params": {
+    "timeout_in_seconds": 3600,
+    "niterations": 1000000,
+    "maxsize": 25,
+    "model_selection": "accuracy",
+    "binary_operators": [
+      "+",
+      "*",
+      "/",
+      "-"
+    ],
+    "unary_operators": [
+      "sin",
+      "cos",
+      "exp",
+      "log"
+    ],
+    "max_complexity": 25,
+    "input_rescale": true,
+    "scale_y_by": "mean",
+    "max_stderr": 20,
+    "fit_y_unc": false,
+    "y_uncertainty": 1.0,
+    "procs": 1,
+    "parallelism": "serial",
+    "deterministic": true,
+    "exp_path": "/home/zhangziwen/workplace/scientific-intelligent-modelling/experiments/neurips_rebuttal_new3alg_full664_s520-522_clean_1h_20260725-023911/symbolfit/seed520/tasks/symbolfit_s520_clean_g0484/iaaccn26/symbolfit/g0484_feynman_III_4_33/experiments",
+    "exp_name": "g0484_feynman_III_4_33_symbolfit_seed520",
+    "n_features": 4,
+    "feature_names": [
+      "h",
+      "omega",
+      "kb",
+      "T"
+    ],
+    "target_name": "target"
+  },
+  "budget_exhausted": true,
+  "timeout_type": "budget_exhausted_with_output",
+  "raw_timeout_error": "TimeoutError(\"算法 'symbolfit' 的子进程执行超时：action=fit, timeout_in_seconds=3600\")",
+  "recovered_from_timeout": true,
+  "raw_execution_error": null,
+  "recovered_from_error": false,
+  "no_valid_output_reason": null,
+  "train_label_noise": {
+    "enabled": false,
+    "requested": false,
+    "sigma": 0.0,
+    "y_std": 5.087946737767975,
+    "scale": 0.0,
+    "rng_seed": 57004799,
+    "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+  },
+  "termination_reason": "budget_exhausted_with_output",
+  "runtime_seconds": 3607.347
+}
