@@ -1,4 +1,6 @@
 > Long-form draft for author editing. Not paste-ready.
+>
+> Source: Area Chair dXUp meta-review on July 19, 2026, modified July 24, 2026.
 
 # Reply to Area Chair dXUp
 
@@ -11,6 +13,16 @@ GT-Reservoir-664, distills a lower-cost Core-50 benchmark, and evaluates
 heterogeneous methods under one execution contract with fixed artifacts,
 failure semantics, minute-level traces, and a drift-free absolute scoring
 protocol.
+
+## Main concerns addressed
+
+This draft is organized around five issues raised in the meta-review:
+
+1. what SymbolicArena contributes beyond prior SR benchmarks;
+2. how strong the Core-50 representativeness evidence really is;
+3. what to say about documentation and Croissant / RAI metadata gaps;
+4. how narrowly to frame fixed constants, fairness, and tuning scope; and
+5. how explicitly to acknowledge LLM contamination and noisy-data boundaries.
 
 ## 1. Motivation and contribution relative to prior SR benchmarks
 
@@ -70,7 +82,10 @@ We also agree that the Croissant / Responsible-AI metadata issue is real. The
 submission package should have been validated more carefully, and the required
 RAI fields should have been explicit and complete. This is a packaging and
 documentation shortcoming, not a hidden part of the evaluation logic, and we
-should acknowledge it directly rather than defend it.
+should acknowledge it directly rather than defend it. If the public anonymous
+artifact is not fully refreshed before the rebuttal deadline, the rebuttal
+should describe this as an identified packaging issue rather than implying that
+all public-facing metadata has already been corrected.
 
 ## 4. Scoring constants, fairness, and hyperparameter-search scope
 

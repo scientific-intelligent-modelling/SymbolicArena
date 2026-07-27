@@ -1,4 +1,6 @@
 > Long-form draft for author editing. Not paste-ready.
+>
+> Source: Reviewer iM84 official review on June 25, 2026, modified July 23, 2026.
 
 # Reply to Reviewer iM84
 
@@ -9,6 +11,16 @@ the strongest current weaknesses are the held-out validation story for Core-50,
 the lack of a full sensitivity analysis for fixed constants, and the absence of
 an explicit contamination control for LLM-based methods. Below we respond point
 by point and narrow the claims where needed.
+
+## Main concerns addressed
+
+This draft follows the five highest-signal issues in the review:
+
+1. held-out validation of Core-50 beyond the construction panel;
+2. missing sensitivity analysis for fixed constants;
+3. LLM contamination risk;
+4. whether RAG-SR looks genuinely weak or mis-integrated; and
+5. fairness of a shared one-hour budget across heterogeneous paradigms.
 
 ## 1. Distillation faithfulness beyond the construction panel
 

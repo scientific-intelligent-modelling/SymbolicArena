@@ -1,4 +1,6 @@
 > Long-form draft for author editing. Not paste-ready.
+>
+> Source: Reviewer p5tG official review on June 26, 2026, modified July 23, 2026.
 
 # Reply to Reviewer p5tG
 
@@ -8,6 +10,17 @@ make the Core-50 / Full-664 relationship, the leaderboard reading rule, and
 the intended scope under noise as explicit as they should have been. Below we
 answer each concern directly and narrow the claims where the current evidence
 does not support a stronger statement.
+
+## Main concerns addressed
+
+This draft answers the reviewer in the same order as the main questions:
+
+1. Core-50 versus Full-664 correlation and representativeness;
+2. how to read the leaderboard and decide what "best" means;
+3. how to interpret numerical quality versus symbolic quality misalignment;
+4. when small score gaps are or are not meaningful;
+5. why a one-hour budget was chosen; and
+6. what claims are justified for noisy scientific data.
 
 ## 1. Core-50 representativeness and correlation to Full-664
 
@@ -84,7 +97,10 @@ We agree that not every small difference should be interpreted as meaningful.
 The current leaderboard package already reports dataset-bootstrap 95%
 confidence intervals for the formal hexagon scores, but it does not present a
 complete pairwise significance analysis for every close gap. So the paper
-should not imply more certainty than the current statistics support.
+should not imply more certainty than the current statistics support. For
+example, the current clean HexaScore confidence intervals for uDSR and iMCTS
+overlap materially, so their small gap should be treated as suggestive rather
+than as a resolved pairwise ordering.
 
 Our revised interpretation is therefore:
 

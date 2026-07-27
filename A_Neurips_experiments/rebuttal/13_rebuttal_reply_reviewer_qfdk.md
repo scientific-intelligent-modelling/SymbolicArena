@@ -1,4 +1,6 @@
 > Long-form draft for author editing. Not paste-ready.
+>
+> Source: Reviewer QfdK official review on June 25, 2026, modified July 23, 2026.
 
 # Reply to Reviewer QfdK
 
@@ -42,7 +44,9 @@ appendix context.
 
 This point is well taken. The intended story is:
 
-- start from a larger heterogeneous SR candidate pool;
+- start from a larger heterogeneous SR candidate pool drawn from SRSD,
+  LLM-SRBench, SRBench 1.0, SRBench2025 first-principles tasks, and classical
+  synthetic families;
 - retain only tasks with executable formulas, valid splits, consistent targets,
   and sufficient metadata;
 - normalize each retained task into a shared format with train / validation /
