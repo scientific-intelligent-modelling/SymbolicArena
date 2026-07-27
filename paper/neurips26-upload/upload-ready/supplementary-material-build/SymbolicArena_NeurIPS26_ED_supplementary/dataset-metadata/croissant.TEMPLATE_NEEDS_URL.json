@@ -2,8 +2,53 @@
   "@context": {
     "@language": "en",
     "@vocab": "https://schema.org/",
+    "sc": "https://schema.org/",
     "cr": "http://mlcommons.org/croissant/",
-    "rai": "http://mlcommons.org/croissant/RAI/"
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "dct": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform"
   },
   "@type": "sc:Dataset",
   "name": "SymbolicArena Core-50 and GT-Reservoir-664",
@@ -11,7 +56,14 @@
   "url": "TODO_REPLACE_WITH_ANONYMOUS_DATASET_URL",
   "license": "TODO_REPLACE_WITH_LICENSE_URL",
   "conformsTo": "http://mlcommons.org/croissant/1.1",
-  "citation": "TODO_REPLACE_WITH_ANONYMIZED_CITATION_OR_PAPER_REFERENCE",
+  "creator": {
+    "@type": "sc:Organization",
+    "name": "Anonymous authors"
+  },
+  "datePublished": "TODO_REPLACE_WITH_PUBLICATION_DATE",
+  "dateModified": "TODO_REPLACE_WITH_LAST_MODIFIED_DATE",
+  "version": "TODO_REPLACE_WITH_DATASET_VERSION",
+  "citeAs": "TODO_REPLACE_WITH_ANONYMIZED_CITATION_OR_PAPER_REFERENCE",
   "keywords": [
     "symbolic regression",
     "benchmark",
@@ -22,27 +74,68 @@
   "distribution": [
     {
       "@type": "cr:FileObject",
+      "@id": "full_standardized_dataset_payload",
+      "name": "TODO_REPLACE_WITH_DATASET_ARCHIVE_FILENAME",
+      "contentUrl": "TODO_REPLACE_WITH_DIRECT_ARCHIVE_DOWNLOAD_URL",
+      "contentSize": "TODO_REPLACE_WITH_ARCHIVE_SIZE_IN_BYTES",
+      "encodingFormat": "application/zstd",
+      "sha256": "TODO_REPLACE_WITH_ARCHIVE_SHA256",
+      "description": "Compressed archive containing the full standardized SymbolicArena dataset payload. The archive must contain the metadata manifests and standardized per-task data files referenced below."
+    },
+    {
+      "@type": "cr:FileSet",
       "@id": "core50_ground_truth_manifest",
-      "name": "core50_ground_truth_manifest.csv",
-      "contentUrl": "TODO_REPLACE_WITH_DATASET_URL/core50_ground_truth_manifest.csv",
+      "name": "Core-50 ground-truth manifest",
+      "containedIn": {
+        "@id": "full_standardized_dataset_payload"
+      },
+      "includes": "dataset-url-full-standardized/metadata/core50_ground_truth_manifest.csv",
       "encodingFormat": "text/csv",
       "description": "Frozen Core-50 task manifest with dataset identity, source family, subgroup, target variable, feature names, and ground-truth expression."
     },
     {
-      "@type": "cr:FileObject",
+      "@type": "cr:FileSet",
       "@id": "core50_algorithm_hyperparameters",
-      "name": "core50_algorithm_hyperparameters_full.json",
-      "contentUrl": "TODO_REPLACE_WITH_DATASET_URL/core50_algorithm_hyperparameters_full.json",
+      "name": "Core-50 algorithm hyperparameters",
+      "containedIn": {
+        "@id": "full_standardized_dataset_payload"
+      },
+      "includes": "dataset-url-full-standardized/metadata/core50_algorithm_hyperparameters_full.json",
       "encodingFormat": "application/json",
       "description": "Machine-readable hyperparameter manifest for the 12 evaluated symbolic-regression algorithms."
     },
     {
       "@type": "cr:FileSet",
       "@id": "standardized_task_splits",
-      "name": "standardized_task_splits",
-      "containedIn": "TODO_REPLACE_WITH_DATASET_URL",
+      "name": "Standardized task CSV splits",
+      "containedIn": {
+        "@id": "full_standardized_dataset_payload"
+      },
+      "includes": "dataset-url-full-standardized/data/**/*.csv",
       "encodingFormat": "text/csv",
       "description": "Standardized train, validation, ID test, and OOD test splits for benchmark tasks."
+    },
+    {
+      "@type": "cr:FileSet",
+      "@id": "standardized_task_metadata",
+      "name": "Standardized task metadata",
+      "containedIn": {
+        "@id": "full_standardized_dataset_payload"
+      },
+      "includes": "dataset-url-full-standardized/data/**/metadata.yaml",
+      "encodingFormat": "application/yaml",
+      "description": "Per-task metadata recording dataset identity, split counts, feature and target schemas, formula location, source references, and available ID/OOD domains."
+    },
+    {
+      "@type": "cr:FileSet",
+      "@id": "ground_truth_formula_files",
+      "name": "Ground-truth formula files",
+      "containedIn": {
+        "@id": "full_standardized_dataset_payload"
+      },
+      "includes": "dataset-url-full-standardized/data/**/formula.py",
+      "encodingFormat": "text/x-python",
+      "description": "Deterministic ground-truth formula implementations used for formula replay and target validation."
     }
   ],
   "recordSet": [
@@ -54,47 +147,145 @@
       "field": [
         {
           "@type": "cr:Field",
-          "name": "dataset_id",
+          "@id": "core50_tasks/dataset_id",
           "dataType": "sc:Text",
-          "description": "Stable dataset identifier."
+          "description": "Stable dataset identifier.",
+          "source": {
+            "fileSet": {
+              "@id": "core50_ground_truth_manifest"
+            },
+            "extract": {
+              "column": "Dataset"
+            }
+          }
         },
         {
           "@type": "cr:Field",
-          "name": "family",
+          "@id": "core50_tasks/family",
           "dataType": "sc:Text",
-          "description": "Source benchmark family."
+          "description": "Source benchmark family.",
+          "source": {
+            "fileSet": {
+              "@id": "core50_ground_truth_manifest"
+            },
+            "extract": {
+              "column": "Family"
+            }
+          }
         },
         {
           "@type": "cr:Field",
-          "name": "subgroup",
+          "@id": "core50_tasks/subgroup",
           "dataType": "sc:Text",
-          "description": "Source subgroup or task class."
+          "description": "Source subgroup or task class.",
+          "source": {
+            "fileSet": {
+              "@id": "core50_ground_truth_manifest"
+            },
+            "extract": {
+              "column": "Subgroup"
+            }
+          }
         },
         {
           "@type": "cr:Field",
-          "name": "target",
+          "@id": "core50_tasks/target",
           "dataType": "sc:Text",
-          "description": "Target variable name."
+          "description": "Target variable name.",
+          "source": {
+            "fileSet": {
+              "@id": "core50_ground_truth_manifest"
+            },
+            "extract": {
+              "column": "Target"
+            }
+          }
         },
         {
           "@type": "cr:Field",
-          "name": "features",
+          "@id": "core50_tasks/features",
           "dataType": "sc:Text",
-          "description": "Ordered feature names used by the benchmark runner."
+          "description": "Ordered feature names used by the benchmark runner.",
+          "source": {
+            "fileSet": {
+              "@id": "core50_ground_truth_manifest"
+            },
+            "extract": {
+              "column": "Features"
+            }
+          }
         },
         {
           "@type": "cr:Field",
-          "name": "ground_truth_expression",
+          "@id": "core50_tasks/ground_truth_expression",
           "dataType": "sc:Text",
-          "description": "Ground-truth symbolic expression for formula replay and symbolic-fidelity evaluation."
+          "description": "Ground-truth symbolic expression for formula replay and symbolic-fidelity evaluation.",
+          "source": {
+            "fileSet": {
+              "@id": "core50_ground_truth_manifest"
+            },
+            "extract": {
+              "column": "Ground-truth math expression"
+            }
+          }
         }
       ]
     }
   ],
-  "rai:dataCollection": "The benchmark is assembled from public symbolic-regression formula sources and generated deterministic splits. See the paper sections on reservoir standardization and infrastructure/data cleaning.",
-  "rai:dataPreprocessing": "Each task is normalized into train, validation, ID-test, and OOD-test splits with metadata, formula identity, target name, feature names, and source-family tags.",
-  "rai:useCases": "Intended for evaluating symbolic-regression algorithms under a fixed Core-50 benchmark protocol, auditing OOD generalization, symbolic fidelity, efficiency, robustness, and stability.",
-  "rai:limitations": "The benchmark is designed for symbolic-regression evaluation and should not be interpreted as a universal measure of all scientific discovery systems. The Core-50 subset is a compact evaluation subset distilled from a larger reservoir.",
-  "rai:personalSensitiveInformation": "No human-subject or personally identifiable information is included in the benchmark tasks.",
-  "rai:maintenancePlan": "TODO_REPLACE_WITH_MAINTENANCE_PLAN_AND_PUBLIC_RELEASE_POLICY"
+  "rai:dataCollection": "The reservoir is assembled from public SRSD, LLM-SRBench, SRBench 1.0, SRBench2025, and classical symbolic-regression formula families. Upstream splits are preserved when available; formula-backed tasks without complete splits are materialized under the source-specific deterministic split policy described in the paper.",
+  "rai:dataManipulationProtocol": "Each task is normalized to a shared directory contract with train.csv, valid.csv, id_test.csv, optional ood_test.csv, metadata.yaml, and formula.py. Validation checks split presence, non-LFS content, consistent CSV headers, numeric columns, target and feature agreement, finite values, declared row counts, and formula replay. OOD data are generated only when a reliable formula and feature domain are available. Semantic duplicate detection and source-aware constraints are then applied before Core-50 selection.",
+  "rai:dataLimitations": [
+    "Core-50 is a compact subset selected from a fixed 664-task ground-truth reservoir; conclusions may change for task families absent from that reservoir.",
+    "The benchmark evaluates black-box tabular symbolic regression with known ground-truth formulas and controlled splits. It is not validated as a universal measure of open-ended scientific discovery, causal identification, or performance on raw experimental data.",
+    "OOD coverage is source dependent. Tasks without a defensible OOD construction are excluded from OOD-dependent analyses rather than assigned fabricated OOD data.",
+    "Leaderboard results are conditional on the disclosed one-hour wall-clock protocol and should not be generalized to different compute, hardware, implementation, or tuning budgets."
+  ],
+  "rai:dataBiases": [
+    "The reservoir inherits source-selection bias toward established symbolic-regression families, physics-style equations, and formula-backed tabular tasks.",
+    "Formula families, operator sets, feature dimensionalities, sample sizes, and OOD availability are unevenly represented; aggregate scores can therefore obscure family-specific behavior.",
+    "Core-50 selection is conditioned on the algorithms and objectives used during benchmark construction, so future algorithmic paradigms may motivate a versioned benchmark update."
+  ],
+  "rai:dataUseCases": [
+    "Validated use: reproducible comparison of symbolic-regression algorithms under the released splits, failure semantics, one-hour budget, and fixed six-axis scoring protocol.",
+    "Validated use: auditing ID numerical quality, OOD generalization, symbolic fidelity, anytime efficiency, stability, and noisy-training robustness with the accompanying manifests and result schema.",
+    "Validated use: regression-testing new algorithm integrations without changing previously reported absolute scores.",
+    "Not validated for: ranking general scientific-discovery systems, making claims about causal discovery, or estimating performance on unmodeled real-world experimental noise."
+  ],
+  "rai:dataSocialImpact": "Potential benefit: a standardized, auditable benchmark can reduce selective reporting and make symbolic-regression comparisons easier to reproduce. Potential risk: users may over-interpret small score differences, treat formula recovery as equivalent to scientific validity, or generalize controlled benchmark results to real scientific settings. Mitigation: the release preserves source-family labels, task-level artifacts, failure states, formulas, checksums, and multi-axis metrics so aggregate claims can be audited and qualified.",
+  "rai:hasSyntheticData": true,
+  "rai:personalSensitiveInformation": "No human-subject, demographic, personally identifiable, or sensitive personal information is included.",
+  "rai:dataReleaseMaintenance": "During review, the anonymized dataset page should remain accessible. After acceptance, anonymous review links should be replaced by a public archival release. Dataset and metadata changes should use versioned manifests and retained SHA256 checksums; benchmark-membership changes should be released as a new version rather than silently replacing Core-50.",
+  "prov:wasDerivedFrom": [
+    {
+      "@id": "https://github.com/omron-sinicx/srsd-benchmark",
+      "@type": "prov:Entity",
+      "name": "SRSD benchmark repository"
+    },
+    {
+      "@id": "https://huggingface.co/datasets/nnheui/llm-srbench",
+      "@type": "prov:Entity",
+      "name": "LLM-SRBench dataset"
+    },
+    {
+      "@id": "https://github.com/cavalab/srbench",
+      "@type": "prov:Entity",
+      "name": "SRBench dataset and benchmark repository"
+    },
+    {
+      "@id": "https://github.com/cavalab/srbench/tree/srbench_2025",
+      "@type": "prov:Entity",
+      "name": "SRBench2025 source branch"
+    },
+    {
+      "@id": "https://raw.githubusercontent.com/dso-org/deep-symbolic-optimization/master/dso/dso/dso/task/regression/benchmarks.csv",
+      "@type": "prov:Entity",
+      "name": "Classical symbolic-regression formula and domain specifications"
+    }
+  ],
+  "prov:wasGeneratedBy": {
+    "@id": "urn:symbolicarena:activity:standardize-and-distill-template",
+    "@type": "prov:Activity",
+    "prov:label": "SymbolicArena standardization and benchmark-distillation pipeline",
+    "description": "The activity imports the listed source entities, preserves provided splits, materializes missing formula-backed splits under the documented deterministic policy, emits the shared CSV/metadata/formula contract, validates formula replay and file schemas, removes semantic duplicates, and applies source-aware selection constraints to freeze Core-50. No new human labels are added. Exact materialized outputs should be pinned by the archive SHA256 and an included file-level manifest."
+  }
 }

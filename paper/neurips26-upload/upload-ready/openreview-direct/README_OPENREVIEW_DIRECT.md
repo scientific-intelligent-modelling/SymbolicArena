@@ -14,9 +14,22 @@ SymbolicArena_NeurIPS26_ED_main.pdf
 croissant.OPENREVIEW_READY.json
 ```
 
-The ready file already contains the anonymous Dataset URL, license URL, anonymized citation, code URL, and maintenance plan.
+The ready file contains the anonymous dataset URL, direct archive download URLs, archive checksums, license, anonymized citation, code URL, and release-maintenance policy. It also contains the complete NeurIPS 2026 minimal Responsible AI and provenance block:
 
-Before upload, run a Croissant validator if possible.
+- `rai:dataLimitations`
+- `rai:dataBiases`
+- `rai:personalSensitiveInformation`
+- `rai:dataUseCases`
+- `rai:dataSocialImpact`
+- `rai:hasSyntheticData`
+- `prov:wasDerivedFrom`
+- `prov:wasGeneratedBy`
+
+Before upload, validate the exact direct-upload file:
+
+```bash
+mlcroissant validate --jsonld croissant.OPENREVIEW_READY.json
+```
 
 Do not upload any older placeholder Croissant template.
 
