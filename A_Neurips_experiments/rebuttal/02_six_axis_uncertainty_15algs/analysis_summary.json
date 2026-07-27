@@ -1,16 +1,12 @@
 {
   "algorithms": 15,
-  "datasets": 50,
-  "task_component_rows": 750,
-  "new_algorithms": [
-    "fepysr",
-    "jaxsr",
-    "symbolfit"
-  ],
+  "tasks": 50,
+  "primary_task_component_rows": 750,
+  "matched3_task_component_rows": 750,
   "bootstrap_resamples": 20000,
   "permutation_resamples": 20000,
   "random_seed": 20260727,
-  "significant_pairs_holm": {
+  "distinguishable_pairs": {
     "ID_Q": 65,
     "OOD_G": 51,
     "SYM_F": 57,
@@ -18,22 +14,31 @@
     "ROB": 51,
     "STAB": 56
   },
+  "matched3_rank_correlation": {
+    "ID_Q": 0.9928571428571428,
+    "OOD_G": 0.9785714285714284,
+    "SYM_F": 0.9857142857142854,
+    "EFF": 0.9964285714285712,
+    "ROB": 0.9749999999999999
+  },
   "input_sha256": {
-    "neurips_task_components": "232a70394ed0767f3c4cae915ab2a0bc845c25bdf1dc973ae1b7413960bcc042",
-    "aaai_new3_minute60_runs": "e4acb66d2d6b17b2075cc99c4e2e8ba0726a718f777c5bb8c1c1f8782dd46db1",
-    "new3_formal_symf": "567f6f9d4c6169b26224cf5020f063a630be68db8c6513d5d0a8b1bcf8012add"
+    "primary_task_components": "1ccdfc964b401b4d462def6d3e24cf015feff949ef2c5a00c0a93bb5d296762c",
+    "matched3_task_components": "1e8f265353620528a64de2e6a7903806d83f38ef75ec66c3abf4283e8c94d584"
   },
   "output_sha256": {
-    "task_components": "5c6ff76437ef9c78083b0b36561c79c2ef38bd8854be7f0c22276f3aa8eef81b",
-    "means_ci": "b1045ec7a57065e6119f50757d2b672436ac66419508a5ed40cdf4543e4a2f0a",
-    "pairwise_inference": "62f418c086147ec8ae54b21c47959423258e54578d3250adeb2989190b38a077",
-    "figure_png": "b8e4294e67010eb93202adf8f38ad06b7a861249bdc87c479cc4638ebd2b8aa8"
+    "means_ci": "cd35c831b4863478f6a60dac61ddec6ea31a6f68c142f87123b0dfefdc44cf4a",
+    "pairwise_inference": "0ca8adcbd7419aff0f51221deec954fc131aae8f8f436315bde7127da3f8e8c4",
+    "top5_pairwise": "cc210069ea4197976376834124e11b5de1e66d38c11b58c1c560fe3e6492e762",
+    "adjacent_pairwise": "ea8c8de38abc108cdd75c57f237406e81fec57b73fb094363c9fede1e0647a36",
+    "main_figure_png": "ac002c20f6335955cf9e9436031b2acf53ee8a0300b2a817ca0a94b19258ac63",
+    "matrix_figure_png": "a6f8e895042b0de06e11512bb14ad0931d4ca8e6ebb31ad9bf0332179ddf667c",
+    "sensitivity_figure_png": "2e0679940dfb70658e0e7b710e62622113f3e946497ea0a4d38eaa8f1fc941ea"
   },
-  "figure_png": "/home/family/workplace/scientific-intelligent-modelling/A_Neurips_experiments/rebuttal/02_six_axis_uncertainty_15algs/six_axis_uncertainty_15algs.png",
-  "warnings": [
-    "The added algorithms use 3 clean seeds; the original methods use 5.",
-    "Added-method ROBU averages sigma 0.01/0.05; original-method ROBU also includes 0.10.",
-    "EFF and STAB follow the archived proxy-component definitions.",
-    "The frozen formal judge re-applies feature_to_x_map to canonical x-indexed expressions; this supplement preserves that behavior for comparability."
+  "scope_notes": [
+    "Marginal intervals quantify synchronized task-bootstrap uncertainty only.",
+    "Primary estimates use five runs for original methods and three runs for rebuttal-added methods.",
+    "Matched-three-run sensitivity covers ID-Q, OOD-G, SYM-F, EFF, and ROBU.",
+    "Matched-three-run ROBU uses the two common noise levels; STAB is excluded.",
+    "EFF and STAB retain the archived proxy-component definitions in the primary analysis."
   ]
 }
