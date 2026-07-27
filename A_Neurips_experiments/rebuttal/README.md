@@ -37,3 +37,24 @@ tasks = 3 × 664 × 3 = 5976
   `analysis/full664_7alg_leaderboard_with_symf.csv`。
 
 实验运行和审计细节见该实验目录的 `README.md`。
+
+## 2. Core-50 与 Full-664 排名相关性
+
+目录：`02_core50_full664_rank_correlation_9algs/`
+
+使用同时具有 Core-50 和 Full-664 结果的 9 个算法，计算分数与排名的
+Pearson、Spearman 和 Kendall 相关性。分析与证据边界见该目录的
+`README.md`。
+
+## 3. SYM-F 权重敏感性
+
+目录：`03_symf_sensitivity_12algs/`
+
+基于原始 12 算法在 Core-50 上的 `3000` 条逐运行符号指标，复算：
+
+1. TreeSim 与 SOF1 权重的局部扰动和宽范围压力网格。
+2. 非等价分数上限扫描。
+3. TreeSim、变量 F1、算子 F1 的相关性、回归与消融。
+
+本分析只检验 SYM-F 的聚合权重和非等价上限，不检验 CAS/数值等价检测器
+及其阈值。完整结果、图表和复现命令见该目录的 `README.md`。
