@@ -914,6 +914,16 @@ retain the archived proxy-component definitions, and fine-grained ROBU
 comparisons across the two cohorts should account for the different noise
 grids stated above.
 
+## Frozen-judge audit note
+
+The frozen formal judge re-applies `feature_to_x_map` to run-level canonical
+expressions that already use anonymous `x0`, `x1`, ... variables. For example,
+on `g0001` (`Keijzer-11`) a raw `x0*x1` term is cleaned as `x0*x0`. This
+supplement deliberately preserves that frozen behavior so the original 12
+scores do not drift. A corrected judge must be followed by a complete
+15-method SYM-F/STAB recomputation; corrected and frozen scores must not be
+mixed in one figure.
+
 ## Scores
 
 {score_table}
@@ -1001,6 +1011,7 @@ def analyze(args: argparse.Namespace) -> None:
             "The added algorithms use 3 clean seeds; the original methods use 5.",
             "Added-method ROBU averages sigma 0.01/0.05; original-method ROBU also includes 0.10.",
             "EFF and STAB follow the archived proxy-component definitions.",
+            "The frozen formal judge re-applies feature_to_x_map to canonical x-indexed expressions; this supplement preserves that behavior for comparability.",
         ],
     }
     (OUT_DIR / "analysis_summary.json").write_text(

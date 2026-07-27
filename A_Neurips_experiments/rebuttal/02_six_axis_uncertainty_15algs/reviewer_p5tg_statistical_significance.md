@@ -46,6 +46,18 @@ cross-cohort robustness claims.
   `minute_0060`。
 - 新增算法 ROBU 只有 1%/5% 噪声，原算法为 1%/5%/10%，因此仅作补充展示。
 
+## 提交前内部审计提醒
+
+冻结的正式 judge 会对已经采用 `x0/x1/...` 表示的 canonical 表达式再次应用
+`feature_to_x_map`。例如 `g0001`（`Keijzer-11`）中的 `x0*x1` 会被清洗成
+`x0*x0`。当前补充材料为保持与 NeurIPS 原 12 个算法完全可比，复现了这一
+冻结行为。提交前必须在以下两种口径中二选一：
+
+1. 保留冻结口径，并仅称其为对已提交分数的配对不确定性分析。
+2. 修复 judge，并对全部 15 个算法统一重算 SYM-F 及受其影响的 STAB。
+
+不能把修正后的新 3 算法分数与冻结的原 12 算法分数混在同一张图中。
+
 ## Supporting artifacts
 
 - Figure: `six_axis_uncertainty_15algs.png`

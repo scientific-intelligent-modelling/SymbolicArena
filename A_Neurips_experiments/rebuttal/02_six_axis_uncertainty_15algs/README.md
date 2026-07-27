@@ -25,6 +25,16 @@ retain the archived proxy-component definitions, and fine-grained ROBU
 comparisons across the two cohorts should account for the different noise
 grids stated above.
 
+## Frozen-judge audit note
+
+The frozen formal judge re-applies `feature_to_x_map` to run-level canonical
+expressions that already use anonymous `x0`, `x1`, ... variables. For example,
+on `g0001` (`Keijzer-11`) a raw `x0*x1` term is cleaned as `x0*x0`. This
+supplement deliberately preserves that frozen behavior so the original 12
+scores do not drift. A corrected judge must be followed by a complete
+15-method SYM-F/STAB recomputation; corrected and frozen scores must not be
+mixed in one figure.
+
 ## Scores
 
 | display_name   |   ID_Q |   OOD_G |   SYM_F |   EFF |   ROB |   STAB |   six_axis_mean |
