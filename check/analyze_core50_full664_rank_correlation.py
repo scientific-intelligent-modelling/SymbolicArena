@@ -642,15 +642,285 @@ def build_correlation_rows(
     return rows
 
 
+def build_ood_comparison_rows(
+    summaries: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for summary in sorted(
+        summaries,
+        key=lambda row: float(row["full664_ood_rank"]),
+    ):
+        rows.append(
+            {
+                "algorithm": summary["algorithm_display"],
+                "full664_ood_score": summary["full664_ood_score"],
+                "full664_ood_rank": int(float(summary["full664_ood_rank"])),
+                "core50_ood_score": summary["core50_ood_score"],
+                "core50_ood_rank": int(float(summary["core50_ood_rank"])),
+                "rank_shift_core_minus_full": int(
+                    float(summary["ood_rank_shift_core_minus_full"])
+                ),
+            }
+        )
+    return rows
+
+
+def _ood_markdown_table(rows: Sequence[dict[str, Any]]) -> str:
+    lines = [
+        "| Algorithm | Full-664 OOD | Rank | Core-50 OOD | Rank | Rank shift |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for row in rows:
+        shift = int(row["rank_shift_core_minus_full"])
+        shift_text = f"{shift:+d}" if shift else "0"
+        lines.append(
+            "| {algorithm} | {full:.3f} | {full_rank} | "
+            "{core:.3f} | {core_rank} | {shift} |".format(
+                algorithm=row["algorithm"],
+                full=float(row["full664_ood_score"]),
+                full_rank=int(row["full664_ood_rank"]),
+                core=float(row["core50_ood_score"]),
+                core_rank=int(row["core50_ood_rank"]),
+                shift=shift_text,
+            )
+        )
+    return "\n".join(lines)
+
+
+def _write_ood_plot(
+    path: Path,
+    rows: Sequence[dict[str, Any]],
+    *,
+    pearson: float,
+    spearman: float,
+) -> None:
+    from PIL import Image, ImageDraw, ImageFont
+
+    width = 1440
+    height = 1240
+    left = 175
+    right = 90
+    top = 145
+    bottom = 180
+    plot_size = min(width - left - right, height - top - bottom)
+    plot_right = left + plot_size
+    plot_bottom = top + plot_size
+    full_scores = [float(row["full664_ood_score"]) for row in rows]
+    core_scores = [float(row["core50_ood_score"]) for row in rows]
+    low = min(*full_scores, *core_scores) - 0.45
+    high = max(*full_scores, *core_scores) + 0.45
+
+    def load_font(filename: str, size: int) -> Any:
+        candidates = (
+            Path("/usr/share/fonts/truetype/dejavu") / filename,
+            Path(filename),
+        )
+        for candidate in candidates:
+            try:
+                return ImageFont.truetype(str(candidate), size)
+            except OSError:
+                continue
+        return ImageFont.load_default()
+
+    fonts = {
+        "title": load_font("DejaVuSans-Bold.ttf", 38),
+        "axis": load_font("DejaVuSans.ttf", 26),
+        "tick": load_font("DejaVuSans.ttf", 21),
+        "label": load_font("DejaVuSans-Bold.ttf", 21),
+        "note": load_font("DejaVuSans.ttf", 22),
+    }
+
+    image = Image.new("RGB", (width, height), "white")
+    draw = ImageDraw.Draw(image)
+
+    def x_pixel(value: float) -> float:
+        return left + (value - low) / (high - low) * plot_size
+
+    def y_pixel(value: float) -> float:
+        return plot_bottom - (value - low) / (high - low) * plot_size
+
+    tick_start = math.ceil(low)
+    tick_end = math.floor(high)
+    for tick in range(tick_start, tick_end + 1):
+        x_value = x_pixel(tick)
+        y_value = y_pixel(tick)
+        draw.line(
+            [(x_value, top), (x_value, plot_bottom)],
+            fill="#E5E7EB",
+            width=2,
+        )
+        draw.line(
+            [(left, y_value), (plot_right, y_value)],
+            fill="#E5E7EB",
+            width=2,
+        )
+        tick_text = str(tick)
+        tick_box = draw.textbbox((0, 0), tick_text, font=fonts["tick"])
+        tick_width = tick_box[2] - tick_box[0]
+        tick_height = tick_box[3] - tick_box[1]
+        draw.text(
+            (x_value - tick_width / 2, plot_bottom + 14),
+            tick_text,
+            font=fonts["tick"],
+            fill="#374151",
+        )
+        draw.text(
+            (left - tick_width - 16, y_value - tick_height / 2),
+            tick_text,
+            font=fonts["tick"],
+            fill="#374151",
+        )
+
+    draw.line(
+        [(x_pixel(low), y_pixel(low)), (x_pixel(high), y_pixel(high))],
+        fill="#9CA3AF",
+        width=3,
+    )
+    draw.line([(left, top), (left, plot_bottom)], fill="#111827", width=3)
+    draw.line(
+        [(left, plot_bottom), (plot_right, plot_bottom)],
+        fill="#111827",
+        width=3,
+    )
+
+    offsets = {
+        "uDSR": (16, -38),
+        "iMCTS": (16, 12),
+        "DSO": (18, -50),
+        "FePySR": (-104, -42),
+        "SymbolFit": (-132, 12),
+        "JAXSR": (16, -42),
+        "PySR": (16, 12),
+        "LLM-SR": (-112, 12),
+        "PyOperon": (16, -42),
+    }
+    for row, x_value, y_value in zip(rows, full_scores, core_scores):
+        x_coordinate = x_pixel(x_value)
+        y_coordinate = y_pixel(y_value)
+        radius = 9
+        draw.ellipse(
+            [
+                (x_coordinate - radius, y_coordinate - radius),
+                (x_coordinate + radius, y_coordinate + radius),
+            ],
+            fill="#176B87",
+            outline="white",
+            width=2,
+        )
+        offset = offsets.get(str(row["algorithm"]), (16, 12))
+        draw.text(
+            (x_coordinate + offset[0], y_coordinate + offset[1]),
+            str(row["algorithm"]),
+            font=fonts["label"],
+            fill="#111827",
+        )
+
+    title = "Core-50 versus Full-664 OOD performance"
+    title_box = draw.textbbox((0, 0), title, font=fonts["title"])
+    draw.text(
+        ((width - (title_box[2] - title_box[0])) / 2, 46),
+        title,
+        font=fonts["title"],
+        fill="#111827",
+    )
+
+    x_label = "Full-664 penalized OOD log NMSE (lower is better)"
+    x_label_box = draw.textbbox((0, 0), x_label, font=fonts["axis"])
+    draw.text(
+        (
+            left + (plot_size - (x_label_box[2] - x_label_box[0])) / 2,
+            plot_bottom + 70,
+        ),
+        x_label,
+        font=fonts["axis"],
+        fill="#111827",
+    )
+
+    y_label = "Core-50 penalized OOD log NMSE (lower is better)"
+    y_label_box = fonts["axis"].getbbox(y_label)
+    y_label_image = Image.new(
+        "RGBA",
+        (
+            y_label_box[2] - y_label_box[0] + 12,
+            y_label_box[3] - y_label_box[1] + 12,
+        ),
+        (255, 255, 255, 0),
+    )
+    ImageDraw.Draw(y_label_image).text(
+        (6, 6 - y_label_box[1]),
+        y_label,
+        font=fonts["axis"],
+        fill="#111827",
+    )
+    y_label_image = y_label_image.rotate(90, expand=True)
+    image.paste(
+        y_label_image,
+        (
+            35,
+            int(top + (plot_size - y_label_image.height) / 2),
+        ),
+        y_label_image,
+    )
+
+    note = f"Pearson r = {pearson:.3f}\nSpearman rho = {spearman:.3f}"
+    note_box = draw.multiline_textbbox(
+        (0, 0),
+        note,
+        font=fonts["note"],
+        spacing=8,
+    )
+    note_width = note_box[2] - note_box[0]
+    note_height = note_box[3] - note_box[1]
+    note_left = left + 28
+    note_top = top + 25
+    draw.rectangle(
+        [
+            (note_left, note_top),
+            (note_left + note_width + 34, note_top + note_height + 32),
+        ],
+        fill="white",
+        outline="#D1D5DB",
+        width=2,
+    )
+    draw.multiline_text(
+        (note_left + 17, note_top + 14),
+        note,
+        font=fonts["note"],
+        fill="#111827",
+        spacing=8,
+    )
+
+    draw.line(
+        [(plot_right - 195, plot_bottom - 38), (plot_right - 145, plot_bottom - 38)],
+        fill="#9CA3AF",
+        width=3,
+    )
+    draw.text(
+        (plot_right - 133, plot_bottom - 52),
+        "Equal score",
+        font=fonts["tick"],
+        fill="#4B5563",
+    )
+    image.save(path, format="PNG", optimize=True)
+
+
 def _write_readme(
     output_dir: Path,
     summaries: Sequence[dict[str, Any]],
     correlation_rows: Sequence[dict[str, Any]],
+    ood_rows: Sequence[dict[str, Any]],
 ) -> None:
     correlations = {(row["panel"], row["metric"]): row for row in correlation_rows}
     ood = correlations[("all_9", "ood")]
     aggregate = correlations[("all_9", "aggregate")]
-    heldout = correlations[("post_submission_heldout_3", "ood")]
+    pearson_score = float(ood["pearson_score"])
+    pearson_p = float(ood["pearson_score_exact_two_sided_p"])
+    spearman_rank = float(ood["spearman_rank"])
+    spearman_p = float(ood["spearman_exact_two_sided_p"])
+    pairwise_agree = int(ood["pairwise_agree_count"])
+    pairwise_total = int(ood["pairwise_total_count"])
+    aggregate_pearson = float(aggregate["pearson_score"])
+    aggregate_spearman = float(aggregate["spearman_rank"])
 
     order_full = ", ".join(
         row["algorithm_display"]
@@ -666,43 +936,40 @@ def _write_readme(
             key=lambda row: float(row["core50_ood_rank"]),
         )
     )
-    text = f"""# Core-50 vs full-664 rank correlation: 9 algorithms
+    ood_table = _ood_markdown_table(ood_rows)
+    text = f"""# Core-50 vs Full-664 OOD comparison: 9 algorithms
 
-## Primary protocol
+## Direct answer
 
-- Metric: penalized OOD `log10(NMSE)`, clipped to `[-12, 12]`.
-- Missing or invalid split metrics receive `+12`.
-- Each `algorithm x dataset` is first aggregated by the median across seeds.
-- Algorithm scores are then averaged across 664 datasets or the frozen Core-50.
-- Lower scores are better.
+Yes: Core-50 closely tracks Full-664 for the leaderboard's primary numerical
+metric. This is a matched-run comparison: for every method, the Core-50 score is
+computed from the same completed Full-664 runs, restricted to the frozen 50
+tasks. Thus, the two columns differ only in the task set being averaged.
 
-This is a matched-run comparison: Core-50 is sliced directly from the same
-full-664 runs. The AAAI 3-hour Core-50 results are not mixed with the 1-hour
-full-664 results.
+{ood_table}
 
-## Main result
+![Core-50 versus Full-664 OOD comparison](ood_score_comparison.png)
 
-- Pearson correlation of continuous OOD scores: `{ood['pearson_score']:.6f}`
-  (exact two-sided permutation `p={ood['pearson_score_exact_two_sided_p']:.6g}`).
-- Pearson correlation of rank vectors / Spearman rank correlation:
-  `{ood['spearman_rank']:.6f}`
-  (exact two-sided permutation `p={ood['spearman_exact_two_sided_p']:.6g}`).
-- Kendall tau-b: `{ood['kendall_tau_b']:.6f}`.
-- Pairwise ordering agreement:
-  `{ood['pairwise_agree_count']}/{ood['pairwise_total_count']}`
-  (`{ood['pairwise_agreement']:.6f}`).
-- Full-664 OOD order: {order_full}.
-- Core-50 OOD order: {order_core}.
+`OOD` means the penalized OOD `log10(NMSE)` used to rank the clean leaderboard;
+lower is better. The top two methods stay first and second, PySR stays seventh,
+and 32 of the 36 pairwise method orderings are preserved. The largest change is
+DSO moving from rank 3 to rank 6; the methods originally ranked 3--6 remain the
+same four-method block.
 
-For the aggregate numerical score mentioned by the reviewer, defined as the
-equal-weight mean of penalized seed-median ID and OOD log NMSE:
+## Two statistics to report
 
-- Pearson score correlation: `{aggregate['pearson_score']:.6f}`.
-- Spearman rank correlation: `{aggregate['spearman_rank']:.6f}`.
+- **Pearson `r={pearson_score:.3f}`** measures whether the actual OOD score
+  values move together (`p={pearson_p:.4g}`).
+- **Spearman `rho={spearman_rank:.3f}`** measures whether the method ordering is
+  preserved (`p={spearman_p:.4g}`).
 
-The three post-submission algorithms preserve the same internal OOD ordering
-on full-664 and Core-50 (`rho={heldout['spearman_rank']:.6f}`), but `n=3` is
-too small to present as a standalone definitive correlation test.
+These are complementary rather than duplicate coefficients: Pearson compares
+the continuous OOD values, while Spearman compares their ranks. As a secondary
+check on the reviewer's ID/OOD aggregate score, Pearson is
+`{aggregate_pearson:.3f}` and Spearman is `{aggregate_spearman:.3f}`.
+
+The resulting claim is deliberately limited: Core-50 preserves the broad
+Full-664 numerical performance structure, not every adjacent rank exactly.
 
 ## Evidence boundary
 
@@ -714,19 +981,24 @@ too small to present as a standalone definitive correlation test.
 - Only `FePySR`, `JAXSR`, and `SymbolFit` are post-submission held-out
   algorithms. Therefore the nine-algorithm result is an expanded
   representativeness check, not a fully independent nine-algorithm validation.
+- The three held-out methods keep the same internal OOD order on both task sets,
+  but `n=3` is too small to use that fact as a standalone significance claim.
 
-## Suggested rebuttal sentence
+## Paste-ready response
 
-> We added a matched-run comparison on nine methods by slicing the frozen
-> Core-50 directly from their full-664 results. Under the paper's
-> seed-median penalized OOD log-NMSE protocol, Core-50 and full-664 have a
-> Pearson score correlation of {ood['pearson_score']:.3f} and a Spearman rank
-> correlation of {ood['spearman_rank']:.3f}, with
-> {ood['pairwise_agree_count']}/{ood['pairwise_total_count']} pairwise method
-> orderings preserved. The three post-submission methods also retain the same
-> internal ordering. We will explicitly distinguish these truly held-out
-> methods from the construction probes and note that the two discovery probes
-> currently have only one full-reservoir seed.
+> We agree that MAE alone does not directly establish representativeness. We
+> therefore compared Core-50 with Full-664 using the same completed runs and the
+> leaderboard's primary metric, seed-median penalized OOD log-NMSE (lower is
+> better). Across nine methods, the continuous OOD scores have Pearson
+> `r={pearson_score:.3f}` (`p={pearson_p:.4g}`) and the method ranks have
+> Spearman `rho={spearman_rank:.3f}` (`p={spearman_p:.4g}`);
+> `{pairwise_agree}/{pairwise_total}` pairwise orderings are preserved.
+> Concretely, the Full-664 order is {order_full}, while the Core-50 order is
+> {order_core}. For the ID/OOD aggregate score mentioned in the review, Pearson
+> is `{aggregate_pearson:.3f}` and Spearman is
+> `{aggregate_spearman:.3f}`. These results support the narrower claim that
+> Core-50 preserves broad Full-664 numerical conclusions, rather than every
+> adjacent rank exactly.
 """
     (output_dir / "README.md").write_text(text, encoding="utf-8")
 
@@ -766,11 +1038,25 @@ def analyze(
 
     summaries = summarize_algorithms(dataset_scores, runs)
     correlation_rows = build_correlation_rows(summaries)
+    ood_rows = build_ood_comparison_rows(summaries)
+    correlations = {(row["panel"], row["metric"]): row for row in correlation_rows}
+    primary_ood = correlations[("all_9", "ood")]
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(output_dir / "dataset_algorithm_scores.csv", dataset_scores)
     _write_csv(output_dir / "algorithm_scores_and_ranks.csv", summaries)
     _write_csv(output_dir / "correlation_metrics.csv", correlation_rows)
-    _write_readme(output_dir, summaries, correlation_rows)
+    _write_csv(output_dir / "ood_score_comparison.csv", ood_rows)
+    (output_dir / "ood_score_comparison.md").write_text(
+        _ood_markdown_table(ood_rows) + "\n",
+        encoding="utf-8",
+    )
+    _write_ood_plot(
+        output_dir / "ood_score_comparison.png",
+        ood_rows,
+        pearson=float(primary_ood["pearson_score"]),
+        spearman=float(primary_ood["spearman_rank"]),
+    )
+    _write_readme(output_dir, summaries, correlation_rows, ood_rows)
 
     source_paths = {
         "full7_runs": full7_runs_path,
@@ -813,6 +1099,15 @@ def analyze(
             ),
             "correlation_metrics": _repo_relative(
                 output_dir / "correlation_metrics.csv", repo_root
+            ),
+            "ood_score_comparison_csv": _repo_relative(
+                output_dir / "ood_score_comparison.csv", repo_root
+            ),
+            "ood_score_comparison_markdown": _repo_relative(
+                output_dir / "ood_score_comparison.md", repo_root
+            ),
+            "ood_score_comparison_plot": _repo_relative(
+                output_dir / "ood_score_comparison.png", repo_root
             ),
             "summary": _repo_relative(
                 output_dir / "correlation_summary.json", repo_root

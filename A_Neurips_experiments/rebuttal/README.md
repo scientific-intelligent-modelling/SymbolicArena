@@ -42,8 +42,9 @@ tasks = 3 × 664 × 3 = 5976
 
 目录：`02_core50_full664_rank_correlation_9algs/`
 
-使用同时具有 Core-50 和 Full-664 结果的 9 个算法，计算分数与排名的
-Pearson、Spearman 和 Kendall 相关性。分析与证据边界见该目录的
+使用同时具有 Core-50 和 Full-664 结果的 9 个算法，直接对照逐算法 OOD
+分数与排名。主报告用 Pearson 解释连续 OOD 分数的一致性，用 Spearman
+解释算法排序的一致性；紧凑表、散点图、审计统计与证据边界见该目录的
 `README.md`。
 
 ## 3. SYM-F 权重敏感性

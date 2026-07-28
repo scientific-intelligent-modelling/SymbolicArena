@@ -146,6 +146,58 @@ def test_end_to_end_writes_auditable_outputs(tmp_path: Path) -> None:
     assert len(correlation_rows) == 10
     assert (output_dir / "README.md").is_file()
     assert (output_dir / "correlation_summary.json").is_file()
+    assert (output_dir / "ood_score_comparison.csv").is_file()
+    assert (output_dir / "ood_score_comparison.md").is_file()
+    assert (output_dir / "ood_score_comparison.png").is_file()
+    assert (output_dir / "ood_score_comparison.png").stat().st_size > 10_000
+
+    ood_rows = _read_csv(output_dir / "ood_score_comparison.csv")
+    assert list(ood_rows[0]) == [
+        "algorithm",
+        "full664_ood_score",
+        "full664_ood_rank",
+        "core50_ood_score",
+        "core50_ood_rank",
+        "rank_shift_core_minus_full",
+    ]
+    assert [row["algorithm"] for row in ood_rows] == [
+        row["algorithm_display"]
+        for row in sorted(
+            summary["algorithm_scores"],
+            key=lambda row: row["full664_ood_rank"],
+        )
+    ]
+
+    readme = (output_dir / "README.md").read_text(encoding="utf-8")
+    assert "| Algorithm | Full-664 OOD | Rank | Core-50 OOD | Rank |" in readme
+    assert "Pearson" in readme
+    assert "Spearman" in readme
+    assert "AAAI" not in readme
+    assert "3-hour" not in readme
+    assert "truncat" not in readme.lower()
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        "A_Neurips_experiments/rebuttal/03_response_reviewer_p5tg.md",
+        "A_Neurips_experiments/rebuttal/12_rebuttal_reply_reviewer_p5tg.md",
+    ],
+)
+def test_reviewer_response_uses_clear_nine_method_ood_evidence(
+    relative_path: str,
+) -> None:
+    module = _load_module()
+    response = (module.REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+    assert "| Algorithm | Full-664 OOD | Rank | Core-50 OOD | Rank |" in response
+    assert "Pearson `r=0.967`" in response
+    assert "Spearman `rho=0.883`" in response
+    assert "32/36 pairwise method orderings (88.9%)" in response
+    assert "AAAI" not in response
+    assert "3-hour" not in response
+    assert "truncat" not in response.lower()
+    assert "0.989456061" not in response
 
 
 def test_mismatched_algorithm_dataset_grid_is_rejected(

@@ -24,37 +24,42 @@ This draft answers the reviewer in the same order as the main questions:
 
 ## 1. Core-50 representativeness and correlation to Full-664
 
-You are right that aggregate-score MAE alone is not the clearest way to argue
-that Core-50 preserves full-reservoir conclusions. The more direct question is
-whether the ranking observed on Core-50 tracks the ranking observed on the full
-664-task reservoir.
+You are right: MAE measures the size of the score error, but it does not show
+whether Core-50 preserves the relationship among algorithms. We therefore made
+a direct matched-run comparison. For each method, we computed the Core-50
+result by restricting its completed Full-664 runs to the frozen 50 tasks. The
+comparison uses the clean leaderboard's ranking metric, seed-median penalized
+OOD log-NMSE, where lower is better.
 
-We now have a stronger post-submission test based on three algorithms that were
-integrated only after the benchmark had already been frozen: FePySR, JAXSR, and
-SymbolFit. These three methods did not participate in dual-probe mining, the
-12-method Candidate-200 calibration, Probe-4 selection, or Core-50
-construction. We evaluated them on all 664 tasks with seeds 520/521/522 under
-the same clean one-hour contract, yielding all 5976 expected runs.
+| Algorithm | Full-664 OOD | Rank | Core-50 OOD | Rank |
+|---|---:|---:|---:|---:|
+| uDSR | -5.196 | 1 | -5.431 | 1 |
+| iMCTS | -4.252 | 2 | -4.284 | 2 |
+| DSO | -2.095 | 3 | -1.848 | 6 |
+| FePySR | -1.794 | 4 | -2.187 | 3 |
+| SymbolFit | -1.547 | 5 | -2.114 | 4 |
+| JAXSR | -1.244 | 6 | -2.016 | 5 |
+| PySR | -0.751 | 7 | -0.115 | 7 |
+| LLM-SR | 0.797 | 8 | 2.201 | 9 |
+| PyOperon | 0.854 | 9 | 0.820 | 8 |
 
-Using the resulting same-seed comparison between the Core-50 slice and the full
-664-task reservoir:
+The continuous OOD scores have Pearson `r=0.967` (exact permutation
+`p=0.000154`), while the method ranks have Spearman `rho=0.883`
+(`p=0.003075`). These two numbers answer different questions: Pearson measures
+agreement of the actual OOD values, whereas Spearman measures agreement of the
+ordering. In concrete terms, 32/36 pairwise method orderings (88.9%) are
+preserved. The top two methods remain first and second; the largest change is
+DSO moving from rank 3 to rank 6, while the same four methods occupy ranks 3--6.
 
-- across the combined 7 algorithms, penalized OOD log-NMSE has Pearson
-  0.989456061 and Spearman 0.892857143;
-- for the 3 genuinely held-out methods alone, the OOD order is preserved
-  exactly, with Pearson 0.815541684 and Spearman 1.0.
-
-We therefore agree that correlation should be reported explicitly, and this new
-held-out result is the strongest evidence we currently have that Core-50
-preserves broad numerical ordering beyond the algorithms used during
-construction.
-
-For symbolic fidelity, the evidence is more nuanced. Across the 7 algorithms,
-Core-50 and Full-664 SYM-F still correlate strongly (Pearson 0.971269484,
-Spearman 0.857142857), but the 3 held-out methods have unstable symbolic
-ordering (held-out Spearman = -0.5). So the right conclusion is narrower:
-Core-50 preserves broad symbolic trends across the panel, but it should not be
-used to over-interpret fine symbolic differences among nearly tied methods.
+For the ID/OOD aggregate score mentioned in the question, the corresponding
+correlations are Pearson `r=0.975` and Spearman `rho=0.867`. Thus the
+correlation analysis supports the specific claim that Core-50 preserves broad
+Full-664 numerical conclusions; it does not claim that every adjacent rank is
+identical. Of the nine methods, FePySR, JAXSR, and SymbolFit are genuinely
+post-submission held-out methods and keep the same internal OOD order on both
+task sets. We treat that held-out result as supporting evidence rather than a
+standalone significance test because it contains only three methods. PySR and
+LLM-SR currently have one Full-664 seed, which we will state explicitly.
 
 ## 2. How to read the leaderboard and identify the best algorithm
 
