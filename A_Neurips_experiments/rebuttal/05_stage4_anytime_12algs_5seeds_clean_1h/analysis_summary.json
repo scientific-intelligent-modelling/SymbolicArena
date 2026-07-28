@@ -1,0 +1,29 @@
+{
+  "clean_run_minute_rows": 180000,
+  "clean_runs": 3000,
+  "algorithms": 12,
+  "datasets": 50,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "target_minutes": [
+    5,
+    10,
+    30,
+    60
+  ],
+  "checkpoint_valid_rates": {
+    "5": 0.9503333333333334,
+    "10": 0.965,
+    "30": 0.978,
+    "60": 0.9816666666666667
+  },
+  "seed_mean_policy": "mean run-level scores across five seeds, then mean across datasets",
+  "protocol_policy": "paper-defined seed median for ID-Q/OOD-G/EFF; seed mean for lightweight SYM-F proxy",
+  "robu_policy": "NA at 5/10/30; formal final noisy-track score at 60",
+  "future_backfill_used": false
+}

@@ -74,3 +74,20 @@ tasks = 3 × 664 × 3 = 5976
 由于仓库中没有论文所述历史局部搜索选择器的可执行版本，所有结论都受
 基线复现闸门约束；未复现时只报告为 paper-spec counterfactual，不冒充
 历史选择过程。完整证据与复现命令见该目录的 `README.md`。
+
+## 5. Stage-4 逐分钟多种子汇总
+
+目录：`05_stage4_anytime_12algs_5seeds_clean_1h/`
+
+从 NeurIPS Stage 4 的远端原始 clean 快照恢复 `3000 × 60 = 180000`
+条 run-minute 记录，并按 5、10、30、60 分钟整理为图片所示的
+`算法 × 六轴指标 × 时间点` 表。目录同时提供按五种子均值汇总的主表和
+论文协议聚合对照表。
+
+当前边界是：
+
+1. Clean ID-Q、OOD-G 和 EFF 从当时的 best-so-far 重算。
+2. 时间点 SYM-F 与 STAB 为明确标注的轻量 proxy，不冒充正式
+   CAS/NED 或完整结构一致性指标。
+3. Stage 4 未归档 noisy minute snapshots，因此 5/10/30 分钟 ROBU 为
+   `NA`；60 分钟引用完整 noisy track 正式值，不从 clean 结果倒灌。
