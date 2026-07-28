@@ -1,0 +1,67 @@
+{
+  "analysis_type": "local post-processing only; no algorithm rerun",
+  "command": "PYTHONPATH=. python A_Neurips_experiments/rebuttal/05_stage4_noise_seed_mean_summary/analyze_stage4_noise_seed_mean.py",
+  "git_commit_before_generated_outputs": "8227a22c39c4972f1bd759f82ea5dbbc836c7984",
+  "python": "3.11.7 (main, Dec 15 2023, 18:12:31) [GCC 11.2.0]",
+  "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.39",
+  "dependencies": {
+    "numpy": "1.26.4",
+    "pandas": "2.1.4",
+    "matplotlib": "3.8.0",
+    "scipy": "1.11.4"
+  },
+  "inputs": {
+    "clean": {
+      "path": "/home/family/workplace/scientific-intelligent-modelling/paper/neurips26-upload/results-artifact/clean-core50/clean_final_runs_updated.csv",
+      "sha256": "34c5b7dbf6fa016a2fd67a368495d25856a50a8553a18f969ff2b0a75d6fa0bc"
+    },
+    "noise": {
+      "path": "/home/family/workplace/scientific-intelligent-modelling/A_Neurips_experiments/stage4_core50_12algs_5seeds_4noise_1h/noise_robustness/noise_final_runs.csv",
+      "sha256": "e87f4e1f7f8218b88e9d1145794031119cbf6bc092e0c49d942d8ef6066add76"
+    },
+    "formal_robu": {
+      "path": "/home/family/workplace/scientific-intelligent-modelling/A_Neurips_experiments/stage4_core50_12algs_5seeds_4noise_1h/paper_tables/table13_noise_robustness_summary.csv",
+      "sha256": "977d66dfeff8ca9821583d18e77945abed2ccd951ce8d5108ca5dfe2ebbf8eab"
+    }
+  },
+  "definitions": {
+    "seed_aggregation": "arithmetic mean of per-run quality over seeds 0..4",
+    "failure_semantics": "invalid/incomplete/non-finite run uses ID NMSE=OOD NMSE=1e2",
+    "quality_mapping": "project phi_from_nmse from check/plot_core50_hexagon_metrics.py",
+    "joint_quality": "0.5 * ID-Q + 0.5 * OOD-Q",
+    "retention": "clip(noisy_joint_quality / max(clean_joint_quality, 0.25), 0, 1)",
+    "robu_seed_mean": "100 * mean_dataset,sigma(0.7 * joint_quality + 0.3 * retention)"
+  },
+  "grid_audit": {
+    "run_count": 12000,
+    "algorithm_count": 12,
+    "dataset_count": 50,
+    "seed_count": 5,
+    "condition_count": 4,
+    "condition_counts": {
+      "clean": 3000,
+      "noise_0.01": 3000,
+      "noise_0.05": 3000,
+      "noise_0.10": 3000
+    },
+    "status_counts": {
+      "ok": 11900,
+      "no_valid_output": 45,
+      "timed_out": 40,
+      "error": 15
+    },
+    "valid_output_count": 11623,
+    "metric_complete_count": 11500,
+    "usable_metric_count": 11500,
+    "penalized_run_count": 500,
+    "duplicate_key_rows": 0,
+    "algorithm_dataset_condition_cells": 2400,
+    "cells_with_exactly_five_seeds": 2400,
+    "cells_without_exactly_five_seeds": 0
+  },
+  "formal_comparison": {
+    "spearman_rank_correlation": 0.9720279720279721,
+    "mean_absolute_score_difference": 0.8775816679789354,
+    "max_absolute_score_difference": 3.022791162620983
+  }
+}
