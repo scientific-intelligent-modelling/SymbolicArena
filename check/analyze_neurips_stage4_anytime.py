@@ -696,6 +696,8 @@ def write_outputs(
 - `dataset_axis_components.csv`：算法 × 任务 × 时间点分项。
 - `clean_minute_run_level.csv.gz`：180,000 条 run-minute 记录。
 - `checkpoint_coverage.csv`、`snapshot_source_audit.csv`：覆盖率与来源审计。
+- `table_seed_mean_top3_10_20_30_40_50_60.*`：紧急补充的
+  uDSR/iMCTS/PySR 六时间点五种子均值表。
 
 ## 本地中间文件
 

@@ -84,3 +84,14 @@ def test_phi_failure_and_best_quality_bounds() -> None:
     assert 0.0 <= module.retention(1e-4, 1.0) <= 1.0
     assert module.set_f1({"x0"}, {"x1"}) == 0.0
     assert module.structure_signature(sp.Symbol("x0") + 2) == "add(C,X)"
+
+
+def test_top3_checkpoint_contract() -> None:
+    module = load_module(
+        "stage4_top3_checkpoints_test",
+        "check/analyze_neurips_stage4_top3_checkpoints.py",
+    )
+
+    assert module.MINUTES == (10, 20, 30, 40, 50, 60)
+    assert module.ALGORITHMS == ("udsr", "imcts", "pysr")
+    assert module.METRICS == ("ID-Q", "OOD-G", "SYM-F", "EFF", "STAB")

@@ -91,3 +91,6 @@ tasks = 3 × 664 × 3 = 5976
    CAS/NED 或完整结构一致性指标。
 3. Stage 4 未归档 noisy minute snapshots，因此 5/10/30 分钟 ROBU 为
    `NA`；60 分钟引用完整 noisy track 正式值，不从 clean 结果倒灌。
+
+紧急补充的 uDSR、iMCTS、PySR `10/20/30/40/50/60min` 五种子均值表见
+`05_stage4_anytime_12algs_5seeds_clean_1h/table_seed_mean_top3_10_20_30_40_50_60.md`。
