@@ -1,297 +1,420 @@
-# Scientific Intelligent Modelling (科学智能建模)
+# Scientific Intelligent Modelling（科学智能建模）
 
 ![Scientific Intelligent Modelling](./images/cover.png)
 
-一个全面的科学建模框架，为各种符号回归算法和科学计算工具提供统一的访问接口。该框架使用conda环境管理系统来隔离不同工具的依赖，通过子进程机制确保稳定运行。
+Scientific Intelligent Modelling 是一个统一接入、运行和评测符号回归算法的工具箱。项目通过 `SymbolicRegressor` 提供一致的 Python API，并使用独立 Conda 环境和子进程隔离不同算法的依赖。
 
-## 项目概述
+## 功能概览
 
-科学智能建模是一个Python框架，旨在简化将高级建模算法应用于科学数据的过程。该框架为多种符号回归库提供了一致的接口，包括：
+- **统一接口**：不同算法共享 `fit`、`predict`、`get_optimal_equation` 和 `get_total_equations`。
+- **环境隔离**：每类算法映射到独立或可复用的 Conda 环境，减少依赖冲突。
+- **命令行入口**：通过 `sim-cli` 直接运行 CSV、NumPy 文件或标准数据集目录。
+- **标准评测**：标准数据集目录会自动进入统一 benchmark runner，产出方程、指标和运行记录。
+- **可扩展接入**：提供 manifest、脚手架生成器、结构校验和离线 smoke check。
 
-- PySR (Python符号回归)
-- GPlearn (用于符号回归的遗传编程)
-- Operon (高性能符号回归)
-- LLMSR (大语言模型进化符号回归)
+当前已注册的算法包括：
 
-这种统一的接口使研究人员和数据科学家能够轻松尝试不同的建模方法，而无需学习每个底层库的具体细节。
+| 算法 ID | Conda 环境 | 说明 |
+| --- | --- | --- |
+| `gplearn`、`pysr`、`pyoperon` | `sim_base` | 经典符号回归算法 |
+| `fepysr` | `sim_fepysr` | 神经特征提取与 PySR |
+| `jaxsr` | `sim_jaxsr` | 基于 JAX 的符号回归 |
+| `symbolfit` | `sim_symbolfit` | 方程搜索与参数重优化 |
+| `dso`、`udsr` | `sim_dso` | Deep Symbolic Optimization 系列 |
+| `llmsr`、`drsr` | `sim_llm` | 大模型驱动的符号回归 |
+| `tpsr` | `sim_tpsr` | Transformer 规划式符号回归 |
+| `e2esr` | `sim_e2esr` | 端到端符号回归 |
+| `ragsr` | `sim_ragsr` | 检索增强符号回归 |
+| `QLattice` | `sim_qLattice` | QLattice 符号建模 |
+| `iMCTS` | `sim_iMCTS` | 蒙特卡洛树搜索符号回归 |
 
-### 框架特点
+算法 ID 区分大小写，应以
+[`toolbox_config.json`](./scientific_intelligent_modelling/config/toolbox_config.json)
+中的注册值为准。
 
-- **统一接口**：通过一致的API访问不同的符号回归算法
-- **环境隔离**：使用conda环境管理系统避免依赖冲突
-- **子进程执行**：通过子进程机制保证主程序稳定性
-- **配置灵活**：通过JSON配置文件轻松调整工具参数
-- **可扩展性**：简单的插件架构便于添加新工具
+## 安装
 
-## 安装指南
+### 1. 前置条件
 
-### 前提条件
+- Linux 或 macOS
+- Git
+- Conda（推荐 Miniconda 或 Miniforge）
+- 能够访问所选算法需要的软件源、模型权重或 API
 
-- Python 3.8或更高版本
-- Conda (必须，用于环境管理)
+主控环境使用 Python 3.10。部分算法环境使用其他 Python 版本，具体配置见
+[`envs_config.json`](./scientific_intelligent_modelling/config/envs_config.json)。
 
-### 安装步骤
+### 2. 克隆仓库及子模块
 
-1. 克隆仓库：
+```bash
+git clone \
+  https://github.com/scientific-intelligent-modelling/scientific-intelligent-modelling.git
+cd scientific-intelligent-modelling
 
-   ```bash
-   git clone --recursive  https://github.com/scientific-intelligent-modelling/scientific-intelligent-modelling.git
+# 拉取算法源码和数据集 Python 包，不要求访问论文私有子模块。
+git submodule update --init --recursive -- \
+  scientific_intelligent_modelling/algorithms \
+  sim-datasets-py
+```
 
+若你有全部子模块的访问权限，也可以直接使用
+`git clone --recursive`，或在已有仓库中执行
+`git submodule update --init --recursive`。
 
-   git clone --recursive  https://github.com/scientific-intelligent-modelling/scientific-intelligent-modelling.git
-   cd scientific-intelligent-modelling
-   ```
-2. 创建并激活conda环境：
+### 3. 安装主控环境
 
-   ```bash
-   conda env create -f environment.yml
-   conda activate sim
-   ```
-3. 以开发模式安装包：
+```bash
+conda env create -f environment.yml
+conda activate sim
+python -m pip install -e .
+```
 
-   ```bash
-   cd scientific-intelligent-modelling
-   pip install -e .
-   ```
+安装完成后可确认命令行入口：
 
-### 本地数据与包目录约定
+```bash
+sim-cli --help
+```
 
-- `sim-datasets-py/`：`sim-datasets` Python 包源码目录
-- `sim-datasets-data/`：本地数据集仓库目录
-- 若通过 CLI 传入相对数据集路径，建议设置：
+### 4. 创建算法环境
 
-  ```bash
-  export SIM_DATASETS_PATH=$(pwd)/sim-datasets-data
-  ```
-
-### 配置环境
-
-首次运行工具包时，需手动管理环境：
-
-方法一：
+首次实例化某个算法时，框架会根据配置尝试自动创建对应环境。为了让安装过程更可控，也可以提前创建需要的环境：
 
 ```python
 from scientific_intelligent_modelling.srkit.conda_env_manager import env_manager
 
-# 检查所有环境状态
-env_manager.check_all_environments()
-
-# 创建特定环境
-# env_manager.create_environment("test")
-
-# 运行环境管理的命令行界面
-env_manager.run_cli()
+# 按实际需要选择，不必一次安装所有算法。
+for env_name in ["sim_base", "sim_dso"]:
+    if not env_manager.create_environment(env_name):
+        raise RuntimeError(f"环境创建失败: {env_name}")
 ```
 
-方法二：
+将上面代码保存为脚本后，在仓库根目录和 `sim` 环境中运行。也可以进入交互式环境管理器：
 
-```
+```bash
 python -m scientific_intelligent_modelling.srkit.conda_env_manager
 ```
 
-二者实现效果一致
+> 部分环境体积较大，且可能需要下载模型。建议只创建当前任务需要的环境。
 
-## 使用指南
+### 5. 准备数据集（可选）
 
-### 基本示例
+仓库约定：
+
+- `sim-datasets-py/`：数据集 Python 包源码；
+- `sim-datasets-data/`：标准数据集文件目录。
+
+数据文件通常不随主仓库 Git 历史完整分发。需要完整 benchmark 数据时，可按
+[`sim-datasets-data/README.md`](./sim-datasets-data/README.md)
+从 Hugging Face 或 ModelScope 获取，并安装 Git LFS。
+
+若 CLI 使用相对于数据集根目录的路径，设置：
+
+```bash
+export SIM_DATASETS_PATH="$(pwd)/sim-datasets-data"
+```
+
+## 快速使用
+
+### Python API
+
+下面以安装较轻量的 `gplearn` 为例：
 
 ```python
-from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor
 import numpy as np
 
-# 生成示例数据
-X = np.random.rand(100, 2)
-y = X[:, 0]**2 + X[:, 1] + 0.1*np.random.randn(100)
+from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor
 
-# 创建使用特定算法的回归器
-regressor = SymbolicRegressor(tool_name="gplearn")
+rng = np.random.RandomState(0)
+X = rng.rand(100, 2)
+y = X[:, 0] ** 2 + X[:, 1] + 0.01 * rng.randn(100)
 
-# 训练模型
+regressor = SymbolicRegressor(
+    "gplearn",
+    problem_name="quickstart",
+    seed=42,
+    population_size=500,
+    generations=10,
+)
 regressor.fit(X, y)
 
-# 进行预测
-predictions = regressor.predict(X)
-
-# 显示发现的最优方程
-print(regressor.get_optimal_equation())
-
-# 获取所有方程
-equations = regressor.get_total_equations()
-for eq in equations:
-    print(eq)
+print("最优方程:", regressor.get_optimal_equation())
+print("候选方程:", regressor.get_total_equations()[:3])
+print("预测结果:", regressor.predict(X[:5]))
 ```
 
-### 算法选择与参数配置
+不同算法的参数通过 `SymbolicRegressor(..., **kwargs)` 传入包装器。已有的参数和依赖说明可查阅
+[`docs/`](./docs/) 下对应的 `工具_<算法>.md`，其余算法以包装器实现和配置文件为准。
 
-您可以选择多种已实现的算法并传递特定参数：
+### 命令行运行单个文件
 
-```python
-# 使用GPlearn，设置种群大小和代数
-regressor = SymbolicRegressor(tool_name="gplearn", population_size=1000, generations=20)
+CSV 默认第一行为表头、最后一列为目标列：
 
-# 使用Operon，设置迭代次数
-regressor = SymbolicRegressor(tool_name="pyoperon", niterations=100)
-
-# 使用PySR，设置公式复杂度和超参数
-regressor = SymbolicRegressor(tool_name="pysr", maxsize=30, parsimony=0.001)
+```bash
+sim-cli \
+  --algorithm gplearn \
+  --train-path /path/to/train.csv \
+  --dataset-name demo \
+  --seed 42 \
+  --population-size 500 \
+  --generations 10
 ```
 
-### 配置系统
+除通用参数外，其余 `--key value` 或 `--key=value` 参数会转成下划线命名并传给算法包装器。例如 `--population-size` 会作为 `population_size` 传入。
 
-该框架使用位于 `config`目录中的配置文件：
+CLI 还支持：
 
-- `envs_config.json`：定义不同工具所需的conda环境配置
+- 带表头或不带表头的 CSV/文本数据；
+- `.npy`；
+- 包含 `arr_0` 的 `.npz`；
+- 标准数据集目录。
 
-  - 包含Python版本、依赖包和安装后命令
-  - 可根据需要添加新环境
-- `toolbox_config.json`：定义算法映射和执行参数
+### 运行标准数据集
 
-  - 将工具名称映射到环境名称和具体的回归器类
-  - 设置子进程超时和内存限制
+标准数据集目录至少包含：
 
-配置示例：
-
-```json
-// toolbox_config.json
-{
-  "auto_env_creation": true,
-  "subprocess_timeout": 3600,
-  "memory_limit": 16000,
-  "tool_mapping": {
-    "gplearn": {"env": "test", "regressor": "GPLearnRegressor"},
-    "pysr": {"env": "test", "regressor": "PySRRegressor"},
-    "pyoperon": {"env": "test", "regressor": "OperonRegressor"}
-  }
-}
+```text
+dataset_name/
+├── metadata.yaml
+├── train.csv
+├── valid.csv
+├── id_test.csv
+└── ood_test.csv
 ```
 
-## 开发指南
+将目录直接传给 `--train-path`，CLI 会自动切换到统一 benchmark runner：
 
-### 项目结构
-
-```
-scientific_intelligent_modelling/
-├── algorithms/               # 算法包装器
-│   ├── base_wrapper.py       # 算法包装器的基类
-│   ├── gplearn_wrapper/      # GPlearn实现
-│   ├── pyoperon_wrapper/     # PyOperon实现
-│   └── pysr_wrapper/         # PySR实现
-├── config/                   # 配置文件
-│   ├── envs_config.json      # 环境配置
-│   └── toolbox_config.json   # 算法参数
-└── srkit/                    # 核心工具
-    ├── conda_env_manager.py  # 管理conda环境
-    ├── config_manager.py     # 处理配置加载
-    ├── regressor.py          # 主回归器接口
-    └── subprocess_runner.py  # 管理算法的子进程
+```bash
+sim-cli \
+  --algorithm pysr \
+  --train-path sim-datasets-data/srbench1.0/black-box/dataset_name \
+  --seed 42 \
+  --timeout-in-seconds 600 \
+  --output-root bench_results/quickstart
 ```
 
-### 工作原理
+标准 runner 会读取 `metadata.yaml` 中的特征名和目标列，并显式向包装器注入 `n_features`、`feature_names` 和 `target_name` 数据契约。
 
-1. **统一接口层**：`SymbolicRegressor` 提供一致的API
-2. **子进程执行**：通过 `subprocess_runner.py` 在隔离的环境中执行工具
-3. **环境管理**：`conda_env_manager.py` 创建和维护工具所需的conda环境
-4. **配置系统**：`config_manager.py` 读取和管理配置文件
-5. **工具包装器**：各个算法包装器提供标准化接口
+### 运行算法自检
 
-### 添加新工具
+先运行目标算法的 check 脚本，不建议一开始就执行所有算法：
 
-要向框架添加新算法：
+```bash
+python check/check_gplearn.py
+python check/check_pysr.py
+python check/check_dso.py
+```
 
-1. 在 `scientific_intelligent_modelling/algorithms/`中创建一个名为 `your_algorithm_wrapper/`的新目录
-2. 实现一个继承自 `base_wrapper.py`中 `BaseWrapper`类的 `wrapper.py`文件
-3. 实现以下必需的方法：
-   - `fit(X, y)`：训练模型
-   - `predict(X)`：进行预测
-   - `get_optimal_equation()`：返回最优符号表达式
-   - `get_total_equations()`：返回所有获得的方程
-4. 更新 `config/envs_config.json`添加工具所需的conda环境
-5. 更新 `config/toolbox_config.json`添加工具映射配置
+其他算法使用同名脚本，例如 `check/check_llmsr.py`、`check/check_tpsr.py`。涉及大模型、外部服务或权重的算法，还需按对应工具文档配置 API key、网关或模型路径。
 
-完整的包装器示例：
+## 输出位置
+
+直接使用 `SymbolicRegressor` 时，默认输出到：
+
+```text
+experiments/<problem>_<tool>_seed<seed>_<timestamp>/
+```
+
+使用标准数据集目录时，结果写入 `--output-root`；未指定时默认为：
+
+```text
+bench_results/sim_cli/
+```
+
+不同算法还可能在实验目录中保存日志、进度快照、候选方程或检查点。排查失败时，应先查看该任务的实验目录和单任务日志，不要只根据上层异常判断根因。
+
+## 扩展新算法
+
+推荐使用仓库内置的 `sr-tool-onboarder` 流程，而不是手工复制旧包装器。一次完整接入包含四层：
+
+1. **包装层**：实现统一 API，并适配底层工具的输入、输出和序列化。
+2. **注册层**：注册算法 ID、包装器类和 Conda 环境。
+3. **验收层**：提供可离线运行的 `check/check_<tool>.py`。
+4. **Manifest 层**：用机器可读文件记录接入方式、依赖和 smoke 参数。
+
+### 1. 验证上游算法
+
+先在独立环境中确认上游仓库能够完成最小训练和预测，再接入工具箱。若上游依赖与现有环境冲突，为新算法创建独立环境，不要直接污染 `sim` 主控环境。
+
+外部源码可以作为子模块放在包装器目录下：
+
+```bash
+mkdir -p scientific_intelligent_modelling/algorithms/mytool_wrapper
+git submodule add <上游仓库地址> \
+  scientific_intelligent_modelling/algorithms/mytool_wrapper/mytool
+```
+
+如果上游包可稳定从 PyPI 安装，也可以仅在环境配置中声明依赖。
+
+### 2. 创建 Manifest
+
+复制示例：
+
+```bash
+cp tools/sr_onboarder/manifests/example_external_sr.json \
+  tools/sr_onboarder/manifests/mytool.json
+```
+
+至少修改以下字段：
+
+- `tool_name`：小写、稳定的算法 ID；
+- `wrapper_class_name`：包装器类名；
+- `integration_mode`：`python_api` 或 `cli_only`；
+- `vendor_repo_relpath`：上游源码在仓库中的相对路径；
+- `entrypoint`：上游 Python 模块和入口对象；
+- `env`：环境名、Python 版本、依赖和安装命令；
+- `adapter`：输入形状、预测能力、序列化方式和参数白名单；
+- `smoke_test`：离线验收参数。
+
+API key 只能在运行时通过环境变量注入，不能写入 manifest 或仓库。
+
+### 3. 生成接入骨架
+
+```bash
+python3 tools/sr_onboarder/scripts/create_sr_tool.py \
+  --manifest tools/sr_onboarder/manifests/mytool.json
+```
+
+生成器会创建或更新：
+
+```text
+scientific_intelligent_modelling/algorithms/mytool_wrapper/
+├── __init__.py
+└── wrapper.py
+check/check_mytool.py
+scientific_intelligent_modelling/config/toolbox_config.json
+scientific_intelligent_modelling/config/envs_config.json
+```
+
+生成器不会猜测上游的真实训练入口，也不会自动解决依赖冲突；`wrapper.py` 中的 TODO 需要手工完成。
+
+### 4. 实现包装器契约
+
+包装器继承
+[`BaseWrapper`](./scientific_intelligent_modelling/algorithms/base_wrapper.py)，
+必须实现：
 
 ```python
 from scientific_intelligent_modelling.algorithms.base_wrapper import BaseWrapper
 
-class YourAlgorithmWrapper(BaseWrapper):
+
+class MyToolRegressor(BaseWrapper):
     def __init__(self, **kwargs):
         self.params = kwargs
         self.model = None
-  
+
     def fit(self, X, y):
-        # 导入您的算法
-        from your_package import YourModel
-  
-        # 创建并训练模型
-        self.model = YourModel(**self.params)
-        self.model.fit(X, y)
+        self._validate_explicit_dataset_contract(
+            X,
+            n_features=self.params.pop("n_features", None),
+            feature_names=self.params.pop("feature_names", None),
+            target_name=self.params.pop("target_name", None),
+            context=self.__class__.__name__,
+        )
+        # 延迟导入上游工具，构造模型并训练。
         return self
-  
+
     def predict(self, X):
-        if self.model is None:
-            raise ValueError("模型尚未训练，请先调用fit方法")
-        return self.model.predict(X)
-  
+        raise NotImplementedError
+
     def get_optimal_equation(self):
-        if self.model is None:
-            raise ValueError("模型尚未训练，请先调用fit方法")
-        # 返回最优方程
-        return str(self.model.best_equation)
-  
+        raise NotImplementedError
+
     def get_total_equations(self):
-        if self.model is None:
-            raise ValueError("模型尚未训练，请先调用fit方法")
-        # 返回所有方程
-        return [str(eq) for eq in self.model.equations]
+        raise NotImplementedError
 ```
 
-然后在 `toolbox_config.json`中添加配置：
+实现时还要处理：
 
-```json
-"your_tool": {"env": "your_env", "regressor": "YourAlgorithmWrapper"}
+- 框架元参数与上游模型参数的分离；
+- `X.shape == (n_samples, n_features)` 的输入约定；
+- 最优方程和候选方程的统一提取；
+- 模型状态跨子进程序列化；
+- 上游不支持 `predict` 或仅提供 CLI 时的明确降级行为；
+- 标准 runner 注入的数据契约，避免元参数误传给第三方库。
+
+如果底层模型不能可靠 pickle，应覆盖 `serialize()` 和 `deserialize()`，只保存恢复预测和方程所需的最小状态。
+
+### 5. 注册与验收
+
+确认两个配置文件中的名称完全一致：
+
+- `toolbox_config.json`：`tool_name -> env + regressor`；
+- `envs_config.json`：环境版本、依赖和安装后命令。
+
+然后依次运行：
+
+```bash
+# 结构与导入检查
+python3 tools/sr_onboarder/scripts/validate_sr_tool.py \
+  --manifest tools/sr_onboarder/manifests/mytool.json
+
+# 创建或准备好算法环境后，运行真实 smoke check
+python3 tools/sr_onboarder/scripts/validate_sr_tool.py \
+  --manifest tools/sr_onboarder/manifests/mytool.json \
+  --runtime-check
+
+# 直接执行算法自检
+python check/check_mytool.py
 ```
 
-## 技术实现细节
+最低验收标准：
 
-### conda环境管理系统
+- manifest 可解析，目录、配置和类名相互一致；
+- 包装器模块能在目标环境中导入；
+- `SymbolicRegressor("mytool")` 能实例化；
+- 离线小数据能完成 `fit`；
+- 最优方程非空；
+- 若声明支持预测，`predict` 返回行数正确且数值有效；
+- 新增测试通过后，再进行在线、GPU 或远程批量实验。
 
-`srkit/conda_env_manager.py`提供了自动化conda环境管理的功能：
+DSO 的历史接入过程可参考
+[`docs/如何集成dso.md`](./docs/如何集成dso.md)，
+当前统一接入契约和脚手架流程以
+[`sr-tool-onboarder`](./.codex/skills/sr-tool-onboarder/SKILL.md)
+为准。
 
-- **环境创建**：自动创建指定的conda环境，安装所需包
-- **环境检查**：验证环境是否正确配置
-- **命令行界面**：提供交互式界面管理环境
-- **环境隔离**：确保不同工具的依赖不会冲突
+## 常见问题
 
-### 子进程执行系统
+### 子模块目录为空
 
-`srkit/subprocess_runner.py`实现了子进程执行系统：
+```bash
+git submodule update --init --recursive -- \
+  scientific_intelligent_modelling/algorithms \
+  sim-datasets-py
+```
 
-- **安全执行**：在隔离的环境中执行工具操作
-- **动态加载**：根据工具名称动态导入相应的包装器
-- **统一接口**：处理不同工具的fit、predict等通用操作
-- **错误处理**：提供详细的错误信息和堆栈跟踪
+### 找不到算法环境
 
-### 序列化机制
+在 `sim` 环境和仓库根目录中运行环境管理器，创建 `toolbox_config.json` 为该算法映射的环境。
 
-BaseWrapper类提供了序列化和反序列化方法，确保模型状态可以在子进程之间传递：
+### TPSR/E2ESR 缺少权重
 
-- **serialize()**：将模型序列化为base64编码的字符串
-- **deserialize()**：从序列化字符串重建模型
+按对应工具文档设置模型路径或执行环境配置中的下载步骤：
+
+- [`docs/工具_tpsr.md`](./docs/工具_tpsr.md)
+- [`docs/工具_e2esr.md`](./docs/工具_e2esr.md)
+
+### LLM 算法调用失败
+
+确认模型名、provider、API key 和网关地址都与运行配置一致。密钥应通过环境变量或本地配置注入，不要提交到 Git。
+
+### PySR 首次运行很慢
+
+首次启动可能需要准备 Julia 环境和编译依赖。重复运行前先确认当前任务仍在初始化，而不是直接中断。
+
+### 标准数据集被识别为普通 CSV
+
+确保传入的是目录本身，并至少存在 `metadata.yaml` 和 `train.csv`。完整评测还需要 `valid.csv`、`id_test.csv` 和 `ood_test.csv`。
+
+## 进一步阅读
+
+- [快速使用教程](./docs/使用教程.md)
+- [工具参数目录](./docs/tool_parameters_catalog.md)
+- [统一 benchmark 指标](./docs/benchmark_metrics.md)
+- [DSO 使用说明](./docs/工具_dso.md)
+- [DSO 历史接入记录](./docs/如何集成dso.md)
+- [数据集 Python 包](./sim-datasets-py/README.md)
 
 ## 许可证
 
-本项目根据LICENSE文件中指定的条款进行许可。
-
-## 文档
-
-有关更详细的信息，请参阅 `docs/`目录中的文档文件：
-
-- `pysr.md`：PySR包装器的特定文档
-- `readme.md`：附加说明和详细解释
-
-## LLMSR/DRSR 接口与依赖说明
-
-- 统一 LLM 接口：本仓库通过 `scientific_intelligent_modelling/srkit/llm.py` 的 `ClientFactory` 统一调用各提供商（如 DeepSeek、SiliconFlow、BLT、Ollama）。配置模型名时采用 `provider/model` 形式，例如：`deepseek/deepseek-chat`、`blt/gpt-3.5-turbo`。
-- 环境变量：请设置相应提供商的密钥（如 `DEEPSEEK_API_KEY`、`SILICONFLOW_API_KEY`、`BLT_API_KEY`），自定义网关可通过 `api_base` 或相应环境变量传入。
-- DRSR 评估依赖 SciPy：真实评估使用 BFGS 优化，需要 `scipy`。已在 `sim_llmsr` 环境中补充 `scipy` 依赖，请在该环境下运行 DRSR。
-- DRSR 内的数据分析与残差分析、采样等调用已切换为使用统一的 `ClientFactory.chat` 接口，避免直接使用底层 `http.client`。
+本项目采用 [GPL-3.0-or-later](./LICENSE) 许可证。
