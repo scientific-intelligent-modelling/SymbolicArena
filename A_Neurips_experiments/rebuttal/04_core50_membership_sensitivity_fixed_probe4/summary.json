@@ -1,0 +1,168 @@
+{
+  "input_audit": {
+    "analysis_type": "offline_fixed_probe4_paper_spec_reconstruction",
+    "new_sr_runs_launched": false,
+    "dataset_level": "exp-planning/03.四探针全量664三种子验证/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_level.csv",
+    "dataset_algorithm": "exp-planning/03.四探针全量664三种子验证/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_algorithm.csv",
+    "core_manifest": "exp-planning/04.Core50正式全量评测/core50_datasets.csv",
+    "dataset_level_sha256": "f88a594cd678ef7497f91301675a7c7f3e8169f14e6fd7dc9dbcf640821f7a13",
+    "dataset_algorithm_sha256": "7a00dc7461e3a129f2973108b5f4ed1f1e2dce282f173d7be479689ec1fb3aa5",
+    "core_manifest_sha256": "5a0824c10f57009b13f2ebc16059e1472baac3743473a47f170df2cdcc5ecf65",
+    "dataset_count": 664,
+    "dataset_algorithm_rows": 2656,
+    "probe4": [
+      "dso",
+      "imcts",
+      "pyoperon",
+      "udsr"
+    ],
+    "frozen_core_count": 50,
+    "structural_fields_used": [
+      "family",
+      "subgroup",
+      "operator_group",
+      "feature_count_bin",
+      "sample_count_bin",
+      "complexity_bin",
+      "dummy_variable_status"
+    ],
+    "response_fields_used": [
+      "difficulty_bin",
+      "failure_mode",
+      "winner_probe",
+      "valid_output_pattern"
+    ],
+    "declared_but_unavailable_fields": [
+      "ood_type"
+    ],
+    "balance_structural_share_assumption": 0.6,
+    "limited_quota_cap": null,
+    "limited_quota_note": "论文与可执行代码均未提供数值，主分析不事后猜测",
+    "historical_selector_available": false,
+    "historical_selector_note": "论文所述 constrained local search 无对应历史可执行脚本；本分析为 paper-spec reconstruction",
+    "nominal_objective": {
+      "coverage_weight": 0.45,
+      "information_weight": 0.35,
+      "balance_weight": 0.2,
+      "structural_share": 0.6
+    },
+    "nominal_constraints": {
+      "family_smoothing": 0.6,
+      "family_lower_slack": 1.0,
+      "family_upper_slack": 2.0,
+      "subgroup_cap": 5,
+      "require_all_difficulty_bins": true
+    },
+    "random_seed": 20260728,
+    "baseline_restarts_requested": 6,
+    "grid_auxiliary_starts_requested": 2,
+    "frozen_constraint_audit": {
+      "size_excess": 0,
+      "semantic_duplicate_excess": 0,
+      "basename_duplicate_excess": 0,
+      "family_quota_excess": 0,
+      "subgroup_cap_excess": 0,
+      "difficulty_missing": 0,
+      "hard_constraint_excess": 0
+    }
+  },
+  "baseline_reproduction": {
+    "coverage_weight": 0.45,
+    "information_weight": 0.35,
+    "balance_weight": 0.2,
+    "structural_share": 0.6,
+    "objective": 0.8210513135133937,
+    "coverage": 0.9769230769230769,
+    "structural_coverage": 1.0,
+    "response_coverage": 0.9423076923076923,
+    "mean_information": 0.5941346185873777,
+    "balance": 0.8674440619621342,
+    "structural_balance": 0.877065404475043,
+    "response_balance": 0.8530120481927711,
+    "size_excess": 0,
+    "semantic_duplicate_excess": 0,
+    "basename_duplicate_excess": 0,
+    "family_quota_excess": 0,
+    "subgroup_cap_excess": 0,
+    "difficulty_missing": 0,
+    "hard_constraint_excess": 0,
+    "frozen_overlap": 23,
+    "frozen_jaccard": 0.2987012987012987,
+    "reference_overlap": 50,
+    "reference_jaccard": 1.0,
+    "exact_frozen_match": false,
+    "exact_reference_match": true,
+    "score_pearson": 0.9911408935336083,
+    "rank_spearman": 1.0,
+    "rank_kendall": 1.0,
+    "pairwise_rank_agreement": 1.0,
+    "aggregate_score_mae": 1.2820070920742808,
+    "rank_order": "udsr,imcts,dso,pyoperon",
+    "gate": "fail_exact_reproduction",
+    "frozen_objective": 0.7607028919966539,
+    "objective_improvement_over_frozen": 0.0603484215167398,
+    "best_start_index": 2,
+    "restart_count_requested": 6,
+    "restart_count_unique": 6,
+    "accepted_swaps": 17,
+    "frozen_probe4_scores": {
+      "dso": -2.5565607749956305,
+      "imcts": -4.659991068500234,
+      "pyoperon": 0.24854308667251254,
+      "udsr": -6.1597417096304525
+    },
+    "reconstructed_probe4_scores": {
+      "dso": -2.930885757826951,
+      "imcts": -5.47975307303946,
+      "pyoperon": 1.2011168353870154,
+      "udsr": -8.568659830877836
+    },
+    "full664_probe4_scores": {
+      "dso": -2.5421764596651983,
+      "imcts": -4.637737129169558,
+      "pyoperon": 0.12092543448281264,
+      "udsr": -5.751548105516571
+    }
+  },
+  "local_weight_sweep": {
+    "configurations": 121,
+    "exact_frozen_match_rate": 0.0,
+    "frozen_overlap_min": 19,
+    "frozen_overlap_median": 23.0,
+    "frozen_overlap_max": 24,
+    "frozen_jaccard_min": 0.2345679012345679,
+    "frozen_jaccard_median": 0.2987012987012987,
+    "reference_overlap_min": 43,
+    "reference_jaccard_min": 0.7543859649122807,
+    "rank_spearman_min": 1.0,
+    "rank_kendall_min": 1.0,
+    "pairwise_rank_agreement_min": 1.0,
+    "aggregate_score_mae_max": 1.3616096950154222,
+    "unique_rank_orders": 1
+  },
+  "broad_simplex_sweep": {
+    "configurations": 66,
+    "exact_frozen_match_rate": 0.0,
+    "frozen_overlap_min": 12,
+    "frozen_overlap_median": 22.0,
+    "frozen_overlap_max": 33,
+    "frozen_jaccard_min": 0.13636363636363635,
+    "frozen_jaccard_median": 0.28205128205128205,
+    "reference_overlap_min": 16,
+    "reference_jaccard_min": 0.19047619047619047,
+    "rank_spearman_min": 1.0,
+    "rank_kendall_min": 1.0,
+    "pairwise_rank_agreement_min": 1.0,
+    "aggregate_score_mae_max": 1.7071356202369385,
+    "unique_rank_orders": 1
+  },
+  "constraint_stress": {
+    "configurations": 27,
+    "optimized": 21,
+    "no_feasible_start": 6,
+    "frozen_infeasible": 15,
+    "frozen_overlap_min": 19,
+    "reference_jaccard_min": 0.6666666666666666,
+    "rank_spearman_min": 1.0
+  }
+}

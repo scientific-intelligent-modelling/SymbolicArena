@@ -1,0 +1,67 @@
+{
+  "analysis_type": "offline_fixed_probe4_paper_spec_reconstruction",
+  "new_sr_runs_launched": false,
+  "dataset_level": "exp-planning/03.四探针全量664三种子验证/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_level.csv",
+  "dataset_algorithm": "exp-planning/03.四探针全量664三种子验证/generated/postprocess_final_20260501-105508/probe4_postprocess_dataset_algorithm.csv",
+  "core_manifest": "exp-planning/04.Core50正式全量评测/core50_datasets.csv",
+  "dataset_level_sha256": "f88a594cd678ef7497f91301675a7c7f3e8169f14e6fd7dc9dbcf640821f7a13",
+  "dataset_algorithm_sha256": "7a00dc7461e3a129f2973108b5f4ed1f1e2dce282f173d7be479689ec1fb3aa5",
+  "core_manifest_sha256": "5a0824c10f57009b13f2ebc16059e1472baac3743473a47f170df2cdcc5ecf65",
+  "dataset_count": 664,
+  "dataset_algorithm_rows": 2656,
+  "probe4": [
+    "dso",
+    "imcts",
+    "pyoperon",
+    "udsr"
+  ],
+  "frozen_core_count": 50,
+  "structural_fields_used": [
+    "family",
+    "subgroup",
+    "operator_group",
+    "feature_count_bin",
+    "sample_count_bin",
+    "complexity_bin",
+    "dummy_variable_status"
+  ],
+  "response_fields_used": [
+    "difficulty_bin",
+    "failure_mode",
+    "winner_probe",
+    "valid_output_pattern"
+  ],
+  "declared_but_unavailable_fields": [
+    "ood_type"
+  ],
+  "balance_structural_share_assumption": 0.6,
+  "limited_quota_cap": null,
+  "limited_quota_note": "论文与可执行代码均未提供数值，主分析不事后猜测",
+  "historical_selector_available": false,
+  "historical_selector_note": "论文所述 constrained local search 无对应历史可执行脚本；本分析为 paper-spec reconstruction",
+  "nominal_objective": {
+    "coverage_weight": 0.45,
+    "information_weight": 0.35,
+    "balance_weight": 0.2,
+    "structural_share": 0.6
+  },
+  "nominal_constraints": {
+    "family_smoothing": 0.6,
+    "family_lower_slack": 1.0,
+    "family_upper_slack": 2.0,
+    "subgroup_cap": 5,
+    "require_all_difficulty_bins": true
+  },
+  "random_seed": 20260728,
+  "baseline_restarts_requested": 6,
+  "grid_auxiliary_starts_requested": 2,
+  "frozen_constraint_audit": {
+    "size_excess": 0,
+    "semantic_duplicate_excess": 0,
+    "basename_duplicate_excess": 0,
+    "family_quota_excess": 0,
+    "subgroup_cap_excess": 0,
+    "difficulty_missing": 0,
+    "hard_constraint_excess": 0
+  }
+}

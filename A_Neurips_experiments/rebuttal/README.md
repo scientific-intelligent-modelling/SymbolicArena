@@ -58,3 +58,18 @@ Pearson、Spearman 和 Kendall 相关性。分析与证据边界见该目录的
 
 本分析只检验 SYM-F 的聚合权重和非等价上限，不检验 CAS/数值等价检测器
 及其阈值。完整结果、图表和复现命令见该目录的 `README.md`。
+
+## 4. 固定 Probe-4 的 Core-50 成员敏感性
+
+目录：`04_core50_membership_sensitivity_fixed_probe4/`
+
+只复用已完成的 Full-664 Probe-4 三种子结果，不启动新的算法训练。分析先
+检查论文目标函数重构能否精确复现冻结 Core-50，再扫描：
+
+1. `Coverage / MeanInfo / Balance` 三个主权重的 ±20% 全因子扰动。
+2. 步长 0.1 的完整权重单纯形压力测试。
+3. 结构/响应混合、family smoothing 与 subgroup cap。
+
+由于仓库中没有论文所述历史局部搜索选择器的可执行版本，所有结论都受
+基线复现闸门约束；未复现时只报告为 paper-spec counterfactual，不冒充
+历史选择过程。完整证据与复现命令见该目录的 `README.md`。
