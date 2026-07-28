@@ -13,7 +13,7 @@ upload-ready/openreview-direct/
 OpenReview fields:
 
 - `PDF`: upload `SymbolicArena_NeurIPS26_ED_main.pdf`.
-- `Croissant File`: upload `croissant.OPENREVIEW_NEEDS_URL.json` after replacing URL/license placeholders and validating it.
+- `Croissant File`: upload `croissant.OPENREVIEW_READY.json` after validating the exact ready file.
 - `Supplementary Material`: upload `SymbolicArena_NeurIPS26_ED_supplementary_material.zip`.
 
 The supplementary zip is intentionally small and contains only slim result tables, dataset metadata, manifests, and checksums. It excludes raw run directories, minute-level snapshots, conda environments, and large external artifacts.
@@ -46,7 +46,9 @@ The small directory below contains metadata-only helper files and should not be 
 upload-ready/anonymous-dataset-url/
 ```
 
-After hosting, fill the OpenReview `Dataset URL` field with that anonymous URL and update the Croissant file.
+After hosting, fill the OpenReview `Dataset URL` field with that anonymous URL.
+The current ready Croissant file already points to the anonymous OSF release
+listed below, so do not replace it with an older placeholder template.
 
 Current anonymous Dataset URL:
 
@@ -105,7 +107,7 @@ https://osf.io/qvs5g/overview?view_only=496e544380f04bf5a97fb4ab9ea2b95f
 
 ## Remaining Manual Steps
 
-- Replace all `TODO_REPLACE_*` placeholders with anonymous URLs and license metadata.
-- Validate Croissant JSON before uploading it to OpenReview.
+- Validate `openreview-direct/croissant.OPENREVIEW_READY.json` before uploading
+  it to OpenReview.
 - Ensure the hosting account, repository names, commit history, README text, and downloadable files do not expose author identity.
 - Confirm the OpenReview form uses the corrected plain-text abstract and TL;DR from `openreview-direct/openreview_fields_ready_NEEDS_URL.md`.

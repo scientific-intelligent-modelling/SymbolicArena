@@ -29,7 +29,8 @@ upload-ready/
 - Dataset / benchmark artifact:
   - Use an anonymous reviewer-accessible hosting URL.
   - Provide a validated Croissant metadata file on OpenReview.
-  - Current local template: `dataset-metadata/croissant.TEMPLATE_NEEDS_URL.json`.
+  - Review-ready file: `dataset-metadata/croissant.OPENREVIEW_READY.json`.
+  - Host-agnostic fallback template: `dataset-metadata/croissant.TEMPLATE_NEEDS_URL.json`.
 
 - Code artifact:
   - Use an anonymous code hosting URL for the full runnable repository.
@@ -54,7 +55,8 @@ upload-ready/
   - Unzipped LaTeX source tree.
 
 - `dataset-metadata/`
-  - Core-50 manifests, result summary tables, hyperparameter manifests, and Croissant template.
+  - Core-50 manifests, result summary tables, hyperparameter manifests, the
+    ready Croissant record, and the host-agnostic template.
 
 - `code-artifact/`
   - Minimal code snapshot and environment/config files.
@@ -77,9 +79,7 @@ upload-ready/
 
 ## Blocking items before final upload
 
-- Replace placeholder dataset URL in `dataset-metadata/croissant.TEMPLATE_NEEDS_URL.json`.
-- Replace placeholder license in Croissant metadata.
 - Decide whether review is double-blind or single-blind in OpenReview.
 - If double-blind, ensure dataset/code hosting accounts and URLs do not expose identities.
-- Validate the final Croissant JSON before upload.
+- Validate `dataset-metadata/croissant.OPENREVIEW_READY.json` before upload.
 - Confirm OpenReview file-size limits for any supplemental zip.

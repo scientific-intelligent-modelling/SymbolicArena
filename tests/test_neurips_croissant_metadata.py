@@ -14,6 +14,10 @@ DIRECT_READY_PATH = (
     / "openreview-direct"
     / "croissant.OPENREVIEW_READY.json"
 )
+UPLOAD_READY_README = (
+    ROOT / "paper" / "neurips26-upload" / "upload-ready" / "README.md"
+)
+PACKAGE_README = ROOT / "paper" / "neurips26-upload" / "README_upload_package.md"
 
 REQUIRED_RAI_FIELDS = {
     "rai:dataLimitations",
@@ -22,6 +26,11 @@ REQUIRED_RAI_FIELDS = {
     "rai:dataUseCases",
     "rai:dataSocialImpact",
     "rai:hasSyntheticData",
+}
+LEGACY_INVALID_RAI_FIELDS = {
+    "rai:limitations",
+    "rai:useCases",
+    "rai:maintenancePlan",
 }
 
 
@@ -116,3 +125,17 @@ def test_template_keeps_only_host_specific_placeholders() -> None:
 
 def test_openreview_ready_copy_matches_canonical_metadata() -> None:
     assert _load(DIRECT_READY_PATH) == _load(READY_PATH)
+
+
+def test_ready_croissant_does_not_use_legacy_invalid_rai_field_names() -> None:
+    metadata = _load(READY_PATH)
+    assert LEGACY_INVALID_RAI_FIELDS.isdisjoint(metadata.keys())
+
+
+def test_readmes_point_to_ready_croissant_file() -> None:
+    upload_ready_text = UPLOAD_READY_README.read_text(encoding="utf-8")
+    package_text = PACKAGE_README.read_text(encoding="utf-8")
+
+    assert "croissant.OPENREVIEW_READY.json" in upload_ready_text
+    assert "croissant.OPENREVIEW_NEEDS_URL.json" not in upload_ready_text
+    assert "dataset-metadata/croissant.OPENREVIEW_READY.json" in package_text
