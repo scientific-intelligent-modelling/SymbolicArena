@@ -152,6 +152,105 @@ def _validate_task_row(task_row: sqlite3.Row, *, expected_spec_json: str, contex
     return state
 
 
+def _validate_file_sha256(
+    path: Path,
+    *,
+    expected_sha256: str,
+    context: str,
+    artifact_label: str,
+) -> None:
+    if not path.is_file():
+        raise FrozenResultIndexError(f"{context} {artifact_label}不存在: {path}")
+    actual_sha256 = _sha256_file(path)
+    if actual_sha256 != expected_sha256:
+        raise FrozenResultIndexError(f"{context} {artifact_label} SHA256 漂移")
+
+
+def _validate_optional_plan_identity(
+    payload: Mapping[str, object],
+    *,
+    plan_sha256: str,
+    context: str,
+) -> None:
+    plan_sha_value = payload.get("plan_sha256")
+    if plan_sha_value is None:
+        return
+    payload_plan_sha256 = _require_sha256(
+        plan_sha_value,
+        context=f"{context}.plan_sha256",
+    )
+    if payload_plan_sha256 != plan_sha256:
+        raise FrozenResultIndexError(f"{context}.plan_sha256 漂移")
+
+
+def _validate_non_applicable_evidence_payload(
+    payload: Mapping[str, object],
+    *,
+    entry: object,
+    reason: str,
+    evidence_sha256: str,
+    plan_sha256: str,
+    context: str,
+) -> None:
+    request = entry.definition.request
+    request_evidence_hash = _require_sha256(
+        request.get("evidence_hash"),
+        context=f"{context}.plan_request.evidence_hash",
+    )
+    if request_evidence_hash != evidence_sha256:
+        raise FrozenResultIndexError(
+            f"{context}.plan_request.evidence_hash 与证据文件 SHA256 不一致"
+        )
+    expected_pairs = {
+        "logical_id": entry.logical_id,
+        "task_type": entry.definition.task_spec.task_type,
+        "condition": entry.definition.task_spec.condition,
+        "reason": reason,
+    }
+    for field_name, expected_value in expected_pairs.items():
+        actual_value = _require_string(payload.get(field_name), context=f"{context}.{field_name}")
+        if actual_value != expected_value:
+            raise FrozenResultIndexError(f"{context}.{field_name} 漂移")
+    expected_phase_by_task_type = {
+        "gt_simplify": "gt",
+        "pred_simplify": "pred",
+        "equivalence": "equivalence",
+        "stab_structure": "structure",
+    }
+    phase = _require_string(payload.get("phase"), context=f"{context}.phase")
+    expected_phase = expected_phase_by_task_type.get(entry.definition.task_spec.task_type)
+    if expected_phase is not None and phase != expected_phase:
+        raise FrozenResultIndexError(f"{context}.phase 漂移")
+    dependencies = payload.get("dependencies")
+    expected_dependencies = list(entry.definition.task_spec.dependencies)
+    if dependencies != expected_dependencies:
+        raise FrozenResultIndexError(f"{context}.dependencies 漂移")
+    request_context = _require_mapping(
+        payload.get("request_context"),
+        context=f"{context}.request_context",
+    )
+    expected_request_context = {
+        key: value for key, value in request.items() if key != "evidence_hash"
+    }
+    if dict(request_context) != expected_request_context:
+        raise FrozenResultIndexError(f"{context}.request_context 与 plan request 不一致")
+    # evaluation_key 依赖证据文件 SHA，不能反向写进证据文件本身，否则会形成
+    # 循环指纹。旧证据若携带该字段仍严格核验；新证据由 plan 顶层和状态库绑定。
+    payload_evaluation_key = payload.get("evaluation_key")
+    if payload_evaluation_key is not None:
+        actual_evaluation_key = _require_string(
+            payload_evaluation_key,
+            context=f"{context}.evaluation_key",
+        )
+        if actual_evaluation_key != entry.evaluation_key:
+            raise FrozenResultIndexError(f"{context}.evaluation_key 漂移")
+    _validate_optional_plan_identity(
+        payload,
+        plan_sha256=plan_sha256,
+        context=context,
+    )
+
+
 def _build_frozen_row(
     *,
     connection: sqlite3.Connection,
@@ -186,11 +285,12 @@ def _build_frozen_row(
         context=f"{context}.result_sha256",
     )
     attempt_id = _require_string(frozen_row["attempt_id"], context=f"{context}.attempt_id")
-    if not result_path.is_file():
-        raise FrozenResultIndexError(f"{context} 结果文件不存在: {result_path}")
-    actual_sha256 = _sha256_file(result_path)
-    if actual_sha256 != expected_sha256:
-        raise FrozenResultIndexError(f"{context} 结果文件 SHA256 漂移")
+    _validate_file_sha256(
+        result_path,
+        expected_sha256=expected_sha256,
+        context=context,
+        artifact_label="结果文件",
+    )
 
     payload = _read_json_object(result_path, context=f"{context}.result_json")
     task_kind = _infer_task_kind(entry.definition.task_spec.task_type, entry.definition.task_kind)
@@ -202,6 +302,11 @@ def _build_frozen_row(
         raise FrozenResultIndexError(f"{context} result_json.task_type 漂移")
     if payload.get("task_kind") != task_kind:
         raise FrozenResultIndexError(f"{context} result_json.task_kind 漂移")
+    _validate_optional_plan_identity(
+        payload,
+        plan_sha256=plan_sha256,
+        context=f"{context}.result_json",
+    )
 
     structured_output = payload.get("structured_output")
     try:
@@ -266,6 +371,25 @@ def _build_non_applicable_row(
         non_applicable_row["evidence_sha256"],
         context=f"{context}.evidence_sha256",
     )
+    evidence_path_obj = Path(evidence_path)
+    _validate_file_sha256(
+        evidence_path_obj,
+        expected_sha256=evidence_sha256,
+        context=context,
+        artifact_label="证据文件",
+    )
+    evidence_payload = _read_json_object(
+        evidence_path_obj,
+        context=f"{context}.evidence_json",
+    )
+    _validate_non_applicable_evidence_payload(
+        evidence_payload,
+        entry=entry,
+        reason=reason,
+        evidence_sha256=evidence_sha256,
+        plan_sha256=plan_sha256,
+        context=f"{context}.evidence_json",
+    )
     task_kind = _infer_task_kind(entry.definition.task_spec.task_type, entry.definition.task_kind)
 
     return {
@@ -283,7 +407,7 @@ def _build_non_applicable_row(
         "structured_output": None,
         "non_applicable": {
             "reason": reason,
-            "evidence_path": evidence_path,
+            "evidence_path": str(evidence_path_obj),
             "evidence_sha256": evidence_sha256,
         },
     }

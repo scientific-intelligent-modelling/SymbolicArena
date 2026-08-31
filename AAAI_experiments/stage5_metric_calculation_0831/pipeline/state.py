@@ -770,6 +770,98 @@ class TaskStateStore:
                 },
             )
 
+    def reopen_exhausted_failed_attempt(
+        self,
+        attempt_id: str,
+        *,
+        allowed_error_classes: Sequence[str],
+        reclassified_error_class: str,
+        audit_reason: str,
+        now: float | None = None,
+    ) -> None:
+        """审计后重开被旧分类器过早耗尽、且仍有尝试额度的任务。"""
+
+        timestamp = time.time() if now is None else float(now)
+        whitelist = tuple(dict.fromkeys(str(item) for item in allowed_error_classes if str(item)))
+        if not whitelist:
+            raise StateContractError("重开任务必须提供原 error_class 白名单")
+        if not reclassified_error_class:
+            raise StateContractError("重开任务必须提供新 error_class")
+        if not audit_reason:
+            raise StateContractError("重开任务必须包含审计原因")
+        with self._write_transaction() as connection:
+            attempt = connection.execute(
+                "SELECT * FROM attempts WHERE attempt_id = ?",
+                (attempt_id,),
+            ).fetchone()
+            if attempt is None:
+                raise StateContractError(f"未知 attempt: {attempt_id}")
+            if attempt["status"] != "failed":
+                raise StateContractError(f"attempt {attempt_id!r} 当前状态不是 failed")
+            original_error_class = str(attempt["error_class"] or "")
+            if original_error_class not in whitelist:
+                raise StateContractError(
+                    f"attempt {attempt_id!r} 的 error_class={original_error_class!r} 不在重开白名单内"
+                )
+            task = connection.execute(
+                "SELECT * FROM tasks WHERE evaluation_key = ?",
+                (attempt["evaluation_key"],),
+            ).fetchone()
+            if task is None:
+                raise StateContractError(f"attempt {attempt_id!r} 关联任务不存在")
+            if task["state"] != "exhausted":
+                raise StateContractError(
+                    f"任务 {attempt['evaluation_key']} 当前状态 {task['state']!r}，不可重开"
+                )
+            latest_attempt = connection.execute(
+                """SELECT attempt_id FROM attempts
+                   WHERE evaluation_key = ?
+                   ORDER BY attempt_number DESC LIMIT 1""",
+                (attempt["evaluation_key"],),
+            ).fetchone()
+            if latest_attempt is None or latest_attempt["attempt_id"] != attempt_id:
+                raise StateContractError(f"attempt {attempt_id!r} 不是该任务最新尝试")
+            if int(task["attempt_count"]) >= self.max_attempts_per_task:
+                raise StateContractError(
+                    f"任务 {attempt['evaluation_key']} 已耗尽任务级尝试预算"
+                )
+            global_count = self.attempt_offset + int(
+                connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()["count"]
+            )
+            if global_count >= self.attempt_cap:
+                raise StateContractError("全局物理尝试预算已耗尽")
+            if connection.execute(
+                "SELECT 1 FROM frozen_results WHERE evaluation_key = ?",
+                (attempt["evaluation_key"],),
+            ).fetchone() is not None:
+                raise StateContractError(f"任务 {attempt['evaluation_key']} 已冻结")
+            if connection.execute(
+                "SELECT 1 FROM non_applicable_results WHERE evaluation_key = ?",
+                (attempt["evaluation_key"],),
+            ).fetchone() is not None:
+                raise StateContractError(f"任务 {attempt['evaluation_key']} 已标记 non_applicable")
+            connection.execute(
+                """UPDATE tasks
+                   SET state='retry_wait', lease_expires_at=NULL,
+                       last_error_class=?, updated_at=?
+                   WHERE evaluation_key=?""",
+                (reclassified_error_class, timestamp, attempt["evaluation_key"]),
+            )
+            self._event(
+                connection,
+                event_type="failed_attempt_reopened",
+                event_at=timestamp,
+                evaluation_key=attempt["evaluation_key"],
+                attempt_id=attempt_id,
+                details={
+                    "audit_reason": audit_reason,
+                    "original_error_class": original_error_class,
+                    "reclassified_error_class": reclassified_error_class,
+                    "attempt_count": int(task["attempt_count"]),
+                    "max_attempts_per_task": self.max_attempts_per_task,
+                },
+            )
+
     def frozen_result(self, evaluation_key: str) -> dict[str, str] | None:
         with self._connect() as connection:
             row = connection.execute(

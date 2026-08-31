@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Any
@@ -121,6 +122,8 @@ def _build_plan_row(
     *,
     task_type: str = "equivalence",
     priority: int = 1,
+    request: dict[str, Any] | None = None,
+    dependencies: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     task_kind = _task_kind_for(task_type)
     contract_dir = tmp_path / "contract" / logical_id.replace("::", "__")
@@ -136,13 +139,16 @@ def _build_plan_row(
     )
     prompt_sha256 = _sha256_file(prompt_path)
     schema_sha256 = _sha256_file(schema_path)
-    request = {
-        "lhs": "x0 + x1",
-        "rhs": "x1 + x0",
-        "evidence_hash": f"evidence::{logical_id}",
-    }
+    request_payload = dict(
+        request
+        or {
+            "lhs": "x0 + x1",
+            "rhs": "x1 + x0",
+            "evidence_hash": _sha256_text(f"evidence::{logical_id}"),
+        }
+    )
     normalized_input = {
-        "request": dict(request),
+        "request": dict(request_payload),
         "prompt_sha256": prompt_sha256,
         "schema_sha256": schema_sha256,
     }
@@ -155,7 +161,7 @@ def _build_plan_row(
         prompt_sha256=prompt_sha256,
         schema_sha256=schema_sha256,
         normalized_input=normalized_input,
-        evidence_hash=request["evidence_hash"],
+        evidence_hash=request_payload["evidence_hash"],
     )
     spec = TaskSpec(
         evaluation_key=key,
@@ -166,7 +172,7 @@ def _build_plan_row(
         input_hash=input_hash,
         prompt_version=f"{task_kind}.v1",
         schema_version=f"{task_kind}.v1",
-        dependencies=(),
+        dependencies=dependencies,
     )
     return {
         "evaluation_key": key,
@@ -180,15 +186,15 @@ def _build_plan_row(
         "prompt_sha256": prompt_sha256,
         "schema_version": f"{task_kind}.v1",
         "schema_sha256": schema_sha256,
-        "dependencies": [],
+        "dependencies": list(dependencies),
         "prompt_path": str(prompt_path),
         "schema_path": str(schema_path),
         "prompt_template": prompt_template,
         "schema_content": schema_content,
         "normalized_input": normalized_input,
-        "request": request,
+        "request": request_payload,
         "task_spec": json.loads(spec.canonical_json()),
-        "rendered_prompt": render_prompt(prompt_template, request, schema_content),
+        "rendered_prompt": render_prompt(prompt_template, request_payload, schema_content),
     }
 
 
@@ -204,6 +210,44 @@ def _task_spec_from_plan_row(row: dict[str, Any]) -> TaskSpec:
         schema_version=str(row["schema_version"]),
         dependencies=tuple(row["dependencies"]),
     )
+
+
+def _build_non_applicable_fixture(
+    tmp_path: Path,
+    *,
+    logical_id: str,
+    task_type: str = "stab_structure",
+    reason: str = "invalid_seed_pair",
+    payload_overrides: dict[str, Any] | None = None,
+    write_evidence: bool = True,
+) -> tuple[dict[str, Any], Path, str, dict[str, Any]]:
+    phase = "structure" if task_type.endswith("structure") else "equivalence"
+    request_context = {"lhs": "x0 + x1", "rhs": "x1 + x0"}
+    payload: dict[str, Any] = {
+        "schema_version": "symbolic_non_applicable.v1",
+        "logical_id": logical_id,
+        "task_type": task_type,
+        "phase": phase,
+        "condition": "clean",
+        "reason": reason,
+        "dependencies": [],
+        "request_context": request_context,
+    }
+    if payload_overrides:
+        payload.update(payload_overrides)
+    evidence_path = tmp_path / "audit" / f"{logical_id.replace('::', '__')}.json"
+    evidence_text = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    evidence_sha256 = _sha256_text(evidence_text)
+    if write_evidence:
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(evidence_text, encoding="utf-8")
+    row = _build_plan_row(
+        tmp_path,
+        logical_id,
+        task_type=task_type,
+        request={**request_context, "evidence_hash": evidence_sha256},
+    )
+    return row, evidence_path, evidence_sha256, payload
 
 
 def _freeze_task(
@@ -238,11 +282,10 @@ def _freeze_task(
 
 def test_build_frozen_result_index_cli_writes_index_and_summary(tmp_path: Path) -> None:
     frozen_row = _build_plan_row(tmp_path, "equivalence::frozen", task_type="equivalence", priority=1)
-    non_applicable_row = _build_plan_row(
+    non_applicable_row, evidence_path, evidence_sha256, _ = _build_non_applicable_fixture(
         tmp_path,
-        "structure::skipped",
-        task_type="structure",
-        priority=2,
+        logical_id="structure::skipped",
+        task_type="stab_structure",
     )
     plan_path = tmp_path / "plan.jsonl"
     plan_sha256 = _write_plan_jsonl(plan_path, [frozen_row, non_applicable_row])
@@ -253,8 +296,8 @@ def test_build_frozen_result_index_cli_writes_index_and_summary(tmp_path: Path) 
     store.mark_non_applicable(
         str(non_applicable_row["evaluation_key"]),
         reason="invalid_seed_pair",
-        evidence_path="audit/non_applicable.json",
-        evidence_sha256="f" * 64,
+        evidence_path=str(evidence_path),
+        evidence_sha256=evidence_sha256,
         now=3.0,
     )
 
@@ -288,8 +331,8 @@ def test_build_frozen_result_index_cli_writes_index_and_summary(tmp_path: Path) 
     assert rows[1]["structured_output"] is None
     assert rows[1]["non_applicable"] == {
         "reason": "invalid_seed_pair",
-        "evidence_path": "audit/non_applicable.json",
-        "evidence_sha256": "f" * 64,
+        "evidence_path": str(evidence_path),
+        "evidence_sha256": evidence_sha256,
     }
 
     summary = json.loads(summary_json.read_text(encoding="utf-8"))
@@ -380,6 +423,224 @@ def test_invalid_structured_output_hard_fails(tmp_path: Path) -> None:
     )
 
     with pytest.raises(FrozenResultIndexError, match="structured_output"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+def test_non_applicable_requires_existing_evidence_file(tmp_path: Path) -> None:
+    row, evidence_path, missing_evidence_sha256, _ = _build_non_applicable_fixture(
+        tmp_path,
+        logical_id="structure::missing_evidence",
+        write_evidence=False,
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    store.register_task(_task_spec_from_plan_row(row))
+    store.mark_non_applicable(
+        str(row["evaluation_key"]),
+        reason="invalid_seed_pair",
+        evidence_path=str(evidence_path),
+        evidence_sha256=missing_evidence_sha256,
+        now=3.0,
+    )
+
+    with pytest.raises(FrozenResultIndexError, match="证据文件不存在"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+def test_non_applicable_evidence_sha_drift_hard_fails(tmp_path: Path) -> None:
+    row, evidence_path, evidence_sha256, _ = _build_non_applicable_fixture(
+        tmp_path,
+        logical_id="structure::evidence_drift",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    store.register_task(_task_spec_from_plan_row(row))
+    evidence_path.write_text("{\"tampered\":true}\n", encoding="utf-8")
+    store.mark_non_applicable(
+        str(row["evaluation_key"]),
+        reason="invalid_seed_pair",
+        evidence_path=str(evidence_path),
+        evidence_sha256=evidence_sha256,
+        now=3.0,
+    )
+
+    with pytest.raises(FrozenResultIndexError, match="证据文件 SHA256 漂移"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+def test_missing_frozen_result_sha256_hard_fails(tmp_path: Path) -> None:
+    row = _build_plan_row(tmp_path, "equivalence::missing_sha", task_type="equivalence")
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _freeze_task(store, row, tmp_path / "frozen" / "missing_sha.json")
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "UPDATE frozen_results SET result_sha256 = '' WHERE evaluation_key = ?",
+            (str(row["evaluation_key"]),),
+        )
+        connection.commit()
+
+    with pytest.raises(FrozenResultIndexError, match="result_sha256"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+def test_non_applicable_evidence_identity_drift_hard_fails_even_if_state_sha_is_synced(
+    tmp_path: Path,
+) -> None:
+    row, evidence_path, original_sha256, original_payload = _build_non_applicable_fixture(
+        tmp_path,
+        logical_id="structure::identity_drift",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    store.register_task(_task_spec_from_plan_row(row))
+    store.mark_non_applicable(
+        str(row["evaluation_key"]),
+        reason="invalid_seed_pair",
+        evidence_path=str(evidence_path),
+        evidence_sha256=original_sha256,
+        now=3.0,
+    )
+
+    drifted_payload = {**original_payload, "reason": "tampered_reason"}
+    _write_json(evidence_path, drifted_payload)
+    drifted_sha256 = _sha256_file(evidence_path)
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "UPDATE non_applicable_results SET evidence_sha256 = ? WHERE evaluation_key = ?",
+            (drifted_sha256, str(row["evaluation_key"])),
+        )
+        connection.commit()
+
+    with pytest.raises(FrozenResultIndexError, match="plan_request.evidence_hash"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+def test_non_applicable_plan_evidence_hash_must_bind_actual_file(tmp_path: Path) -> None:
+    original_row, evidence_path, evidence_sha256, _ = _build_non_applicable_fixture(
+        tmp_path,
+        logical_id="structure::plan_evidence_drift",
+    )
+    row = _build_plan_row(
+        tmp_path,
+        str(original_row["logical_id"]),
+        task_type="stab_structure",
+        request={
+            "lhs": "x0 + x1",
+            "rhs": "x1 + x0",
+            "evidence_hash": "0" * 64,
+        },
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    store.register_task(_task_spec_from_plan_row(row))
+    store.mark_non_applicable(
+        str(row["evaluation_key"]),
+        reason="invalid_seed_pair",
+        evidence_path=str(evidence_path),
+        evidence_sha256=evidence_sha256,
+        now=3.0,
+    )
+
+    with pytest.raises(FrozenResultIndexError, match="plan_request.evidence_hash"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+@pytest.mark.parametrize(
+    ("payload_overrides", "error_pattern"),
+    [
+        ({"reason": "tampered_reason"}, "evidence_json.reason"),
+        ({"phase": "equivalence"}, "evidence_json.phase"),
+        ({"dependencies": ["unexpected"]}, "evidence_json.dependencies"),
+        ({"request_context": {"lhs": "tampered"}}, "evidence_json.request_context"),
+    ],
+)
+def test_non_applicable_evidence_context_binding_hard_fails(
+    tmp_path: Path,
+    payload_overrides: dict[str, Any],
+    error_pattern: str,
+) -> None:
+    row, evidence_path, evidence_sha256, _ = _build_non_applicable_fixture(
+        tmp_path,
+        logical_id="structure::context_drift",
+        payload_overrides=payload_overrides,
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    store.register_task(_task_spec_from_plan_row(row))
+    store.mark_non_applicable(
+        str(row["evaluation_key"]),
+        reason="invalid_seed_pair",
+        evidence_path=str(evidence_path),
+        evidence_sha256=evidence_sha256,
+        now=3.0,
+    )
+
+    with pytest.raises(FrozenResultIndexError, match=error_pattern):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+def test_frozen_result_plan_sha_identity_drift_hard_fails(tmp_path: Path) -> None:
+    row = _build_plan_row(tmp_path, "equivalence::plan_sha_drift", task_type="equivalence")
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _freeze_task(
+        store,
+        row,
+        tmp_path / "frozen" / "plan_sha_drift.json",
+        payload_overrides={"plan_sha256": "0" * 64},
+    )
+
+    with pytest.raises(FrozenResultIndexError, match="plan_sha256"):
         build_frozen_result_index(
             plan_jsonl=plan_path,
             state_db=state_db,

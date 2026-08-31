@@ -433,3 +433,72 @@ def test_promote_failed_attempt_rejects_non_whitelisted_or_wrong_state(tmp_path:
             audit_reason="validator_fix_rechecked",
             now=3.0,
         )
+
+
+def test_reopen_exhausted_failed_attempt_preserves_attempt_and_audits_reclassification(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10, max_attempts_per_task=3)
+    store.register_task(task("a"))
+    lease = store.reserve_attempt("a", now=1.0, lease_seconds=10)
+    store.finish_failure(
+        lease.attempt_id,
+        error_class="contract_drift",
+        retryable=False,
+        now=2.0,
+    )
+    assert store.task_state("a") == "exhausted"
+
+    store.reopen_exhausted_failed_attempt(
+        lease.attempt_id,
+        allowed_error_classes=("contract_drift",),
+        reclassified_error_class="turn_contract_violation",
+        audit_reason="旧分类器把隔离的多轮运行时异常误判为永久契约漂移",
+        now=3.0,
+    )
+
+    assert store.task_state("a") == "retry_wait"
+    assert store.attempts_reserved() == 1
+    retry = store.reserve_attempt("a", now=4.0, lease_seconds=10)
+    assert retry.attempt_number == 2
+    with sqlite3.connect(state_db) as connection:
+        connection.row_factory = sqlite3.Row
+        event = connection.execute(
+            "SELECT event_type, details_json FROM events WHERE event_type='failed_attempt_reopened'"
+        ).fetchone()
+    assert event is not None
+    assert event["event_type"] == "failed_attempt_reopened"
+    details = json.loads(str(event["details_json"]))
+    assert details["original_error_class"] == "contract_drift"
+    assert details["reclassified_error_class"] == "turn_contract_violation"
+
+
+def test_reopen_exhausted_failed_attempt_rejects_wrong_class_or_spent_budget(
+    tmp_path: Path,
+) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=10, max_attempts_per_task=1)
+    store.register_task(task("a"))
+    lease = store.reserve_attempt("a", now=1.0, lease_seconds=10)
+    store.finish_failure(
+        lease.attempt_id,
+        error_class="contract_drift",
+        retryable=False,
+        now=2.0,
+    )
+    with pytest.raises(StateContractError, match="不在重开白名单内"):
+        store.reopen_exhausted_failed_attempt(
+            lease.attempt_id,
+            allowed_error_classes=("timeout",),
+            reclassified_error_class="turn_contract_violation",
+            audit_reason="test",
+            now=3.0,
+        )
+    with pytest.raises(StateContractError, match="任务级尝试预算"):
+        store.reopen_exhausted_failed_attempt(
+            lease.attempt_id,
+            allowed_error_classes=("contract_drift",),
+            reclassified_error_class="turn_contract_violation",
+            audit_reason="test",
+            now=3.0,
+        )

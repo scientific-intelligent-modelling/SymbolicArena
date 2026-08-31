@@ -9,6 +9,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     CONTRACT_MODEL,
     ContractViolation,
     build_claude_command,
+    canonical_json,
     compact_request_for_prompt,
     evaluation_key,
     render_prompt,
@@ -288,12 +289,336 @@ def test_prompt_compaction_preserves_nonidentical_expression_fields() -> None:
     compacted = compact_request_for_prompt(request)
     assert compacted["original_expression"] == "x0 + 1.0"
     assert "domain_assumptions" not in compacted["deterministic_evidence"]
-    assert compacted["deterministic_evidence"]["symbolic_artifact"]["source_text"] == "x0 + 1.0"
+    assert "source_text" not in compacted["deterministic_evidence"]["symbolic_artifact"]
     assert "canonical_expression" not in compacted["deterministic_evidence"]["symbolic_artifact"]
     assert compacted["ast_source_evidence"] == {
         "selected_expression_source": "equation",
         "result_path": "/tmp/demo/result.json",
     }
+
+
+def test_pair_evidence_compaction_hoists_probe_and_preserves_side_summaries() -> None:
+    probe_points = [
+        {"split": "id_test", "row_index": 0, "values": {"x0": 1.0, "x1": 2.0}},
+        {"split": "id_test", "row_index": 1, "values": {"x0": 3.0, "x1": 4.0}},
+    ]
+    request = {
+        "dataset_id": "DemoEq",
+        "simplified_ground_truth_expression": "x0 + x1",
+        "simplified_prediction_expression": "x0 - x1",
+        "deterministic_evidence": {
+            "schema_version": "symbolic_pair_evidence.v2",
+            "phase": "equivalence",
+            "pair_seed": 520,
+            "pair_evidence": {
+                "decision": "not_equivalent",
+                "lhs_artifact": {
+                    "source_text": "x0 + x1",
+                    "canonical_expression": "x0 + x1",
+                    "canonical_tree": {"type": "add", "args": [{"type": "symbol"}]},
+                    "constants_abstracted_canonical_tree": {"type": "add", "args": []},
+                    "constants_abstracted_tree_fingerprint": "a" * 64,
+                    "artifact_sha256": "b" * 64,
+                    "node_count": 3,
+                    "function_set": [],
+                    "operator_set": ["add"],
+                },
+                "rhs_artifact": {
+                    "source_text": "x0 - x1",
+                    "canonical_expression": "x0 - x1",
+                    "canonical_tree": {"type": "sub", "args": [{"type": "symbol"}]},
+                    "constants_abstracted_canonical_tree": {"type": "sub", "args": []},
+                    "constants_abstracted_tree_fingerprint": "c" * 64,
+                    "artifact_sha256": "d" * 64,
+                    "node_count": 3,
+                    "function_set": [],
+                    "operator_set": ["sub"],
+                },
+                "symbolic_difference": {
+                    "decision": "not_equivalent",
+                    "proof_basis": "numeric_counterexample",
+                    "counterexample": {"x0": 1.0, "x1": 2.0},
+                    "numeric_probes": [{"lhs": 3.0, "rhs": -1.0}],
+                    "probe_hash": "e" * 64,
+                    "probe_source": "dataset_probes_v1",
+                    "probe_sample_sha256": "f" * 64,
+                    "normalized_probe_points_sha256": "1" * 64,
+                    "skipped_probe_count": 1,
+                    "skipped_probe_reasons": {"nonfinite": 1},
+                    "skipped_probes": [{"reason": "nonfinite"}],
+                    "max_abs_error": 4.0,
+                    "max_rel_error": 2.0,
+                    "max_tolerance": 1e-9,
+                    "assumptions": ["real-domain"],
+                },
+                "probe_seed": 520,
+                "probe_source": "dataset_probes_v1",
+                "probe_sample_sha256": "f" * 64,
+                "normalized_probe_points_sha256": "1" * 64,
+                "probe_count": 1,
+                "skipped_probe_count": 1,
+                "skipped_probe_reasons": {"nonfinite": 1},
+                "skipped_probes": [{"reason": "nonfinite"}],
+                "numeric_probes": [{"lhs": 3.0, "rhs": -1.0}],
+                "probe_hash": "e" * 64,
+                "max_abs_error": 4.0,
+                "max_rel_error": 2.0,
+                "max_tolerance": 1e-9,
+                "evidence_sha256": "2" * 64,
+            },
+            "dataset_probe": {
+                "schema_version": "dataset_probes_v1",
+                "dataset_name": "DemoEq",
+                "variables": ["x0", "x1"],
+                "target_name": "y",
+                "point_count": 2,
+                "points": probe_points,
+                "source_sha256": {"metadata_yaml": "3" * 64},
+                "sample_sha256": "f" * 64,
+                "evidence_sha256": "4" * 64,
+            },
+            "domain_assumptions": {
+                "lhs": {"number_system": "real"},
+                "rhs": {"number_system": "real"},
+            },
+            "allowed_variables": ["x0", "x1"],
+            "allowed_functions": [],
+            "lhs_binding": {
+                "role": "lhs",
+                "logical_id": "gt",
+                "frozen_simplified_expression": "x0 + x1",
+                "frozen_plan_sha256": "5" * 64,
+            },
+            "rhs_binding": {
+                "role": "rhs",
+                "logical_id": "pred",
+                "frozen_simplified_expression": "x0 - x1",
+                "frozen_result_sha256": "6" * 64,
+            },
+            "evidence_sha256": "7" * 64,
+        },
+        "evidence_hash": "7" * 64,
+    }
+
+    compacted = compact_request_for_prompt(request)
+    assert compacted["probe_points"] == probe_points
+    assert compacted["probe_source"] == "dataset_probes_v1"
+    assert compacted["probe_sample_sha256"] == "f" * 64
+    compact_evidence = compacted["deterministic_evidence"]
+    assert "points" not in compact_evidence["dataset_probe"]
+    assert "frozen_simplified_expression" not in compact_evidence["lhs_binding"]
+    assert "frozen_simplified_expression" not in compact_evidence["rhs_binding"]
+    pair = compact_evidence["pair_evidence"]
+    assert "numeric_probes" not in pair
+    assert "skipped_probes" not in pair
+    assert "numeric_probes" not in pair["symbolic_difference"]
+    assert "skipped_probes" not in pair["symbolic_difference"]
+    assert "canonical_tree" not in pair["lhs_artifact"]
+    assert "constants_abstracted_canonical_tree" not in pair["lhs_artifact"]
+    assert "source_text" not in pair["lhs_artifact"]
+    assert "canonical_expression" not in pair["lhs_artifact"]
+    assert pair["lhs_artifact"]["artifact_sha256"] == "b" * 64
+    assert pair["lhs_artifact"]["node_count"] == 3
+    assert pair["rhs_artifact"]["artifact_sha256"] == "d" * 64
+    assert pair["symbolic_difference"]["probe_hash"] == "e" * 64
+    assert pair["symbolic_difference"]["max_abs_error"] == 4.0
+
+
+def test_structure_pair_evidence_alias_and_large_tree_compaction() -> None:
+    def huge_tree(depth: int) -> dict[str, object]:
+        node: dict[str, object] = {"type": "symbol", "name": "x0"}
+        for index in range(depth):
+            node = {
+                "type": "add",
+                "args": [
+                    node,
+                    {"type": "mul", "args": [{"type": "const", "value": index}, {"type": "symbol", "name": "x1"}]},
+                ],
+            }
+        return node
+
+    large_tree = huge_tree(180)
+    request = {
+        "dataset_id": "DemoStructure",
+        "simplified_prediction_a_expression": "x0 + x1",
+        "simplified_prediction_b_expression": "x0 + x1 + 1",
+        "deterministic_evidence": {
+            "schema_version": "symbolic_pair_evidence.v2",
+            "phase": "structure",
+            "pair_seed": 520521,
+            "pair_evidence": {
+                "decision": "not_equivalent",
+                "lhs_artifact": {
+                    "source_text": "x0 + x1",
+                    "canonical_expression": "x0 + x1",
+                    "canonical_tree": large_tree,
+                    "constants_abstracted_canonical_tree": large_tree,
+                    "constants_abstracted_tree_fingerprint": "8" * 64,
+                    "artifact_sha256": "9" * 64,
+                    "node_count": 999,
+                    "function_set": [],
+                    "operator_set": ["add", "mul"],
+                },
+                "rhs_artifact": {
+                    "source_text": "x0 + x1 + 1",
+                    "canonical_expression": "x0 + x1 + 1",
+                    "canonical_tree": large_tree,
+                    "constants_abstracted_canonical_tree": large_tree,
+                    "constants_abstracted_tree_fingerprint": "a" * 64,
+                    "artifact_sha256": "b" * 64,
+                    "node_count": 1001,
+                    "function_set": [],
+                    "operator_set": ["add", "mul"],
+                },
+                "symbolic_difference": {
+                    "decision": "not_equivalent",
+                    "proof_basis": "structural_analysis",
+                    "counterexample": None,
+                    "numeric_probes": [{"lhs": 1.0, "rhs": 2.0}] * 20,
+                    "probe_hash": "c" * 64,
+                    "probe_source": "dataset_probes_v1",
+                    "probe_sample_sha256": "d" * 64,
+                    "normalized_probe_points_sha256": "e" * 64,
+                    "skipped_probe_count": 20,
+                    "skipped_probe_reasons": {"overflow": 20},
+                    "skipped_probes": [{"reason": "overflow"}] * 20,
+                    "max_abs_error": 1.0,
+                    "max_rel_error": 1.0,
+                    "max_tolerance": 1e-9,
+                    "assumptions": ["real-domain"],
+                },
+                "numeric_probes": [{"lhs": 1.0, "rhs": 2.0}] * 20,
+                "skipped_probes": [{"reason": "overflow"}] * 20,
+                "probe_hash": "c" * 64,
+                "probe_count": 20,
+                "max_abs_error": 1.0,
+                "max_rel_error": 1.0,
+                "max_tolerance": 1e-9,
+            },
+            "dataset_probe": {
+                "schema_version": "dataset_probes_v1",
+                "dataset_name": "DemoStructure",
+                "variables": ["x0", "x1"],
+                "target_name": "y",
+                "point_count": 20,
+                "points": [
+                    {"split": "id_test", "row_index": index, "values": {"x0": float(index), "x1": float(index + 1)}}
+                    for index in range(20)
+                ],
+                "source_sha256": {"metadata_yaml": "f" * 64},
+                "sample_sha256": "d" * 64,
+                "evidence_sha256": "1" * 64,
+            },
+            "domain_assumptions": {
+                "lhs": {"number_system": "real"},
+                "rhs": {"number_system": "real"},
+            },
+            "lhs_binding": {
+                "role": "lhs",
+                "frozen_simplified_expression": "x0 + x1",
+                "frozen_plan_sha256": "2" * 64,
+            },
+            "rhs_binding": {
+                "role": "rhs",
+                "frozen_simplified_expression": "x0 + x1 + 1",
+                "frozen_plan_sha256": "3" * 64,
+            },
+            "evidence_sha256": "4" * 64,
+        },
+        "deterministic_pair_evidence": {
+            "schema_version": "symbolic_pair_evidence.v2",
+            "phase": "structure",
+            "pair_seed": 520521,
+            "pair_evidence": {
+                "decision": "not_equivalent",
+                "lhs_artifact": {
+                    "source_text": "x0 + x1",
+                    "canonical_expression": "x0 + x1",
+                    "canonical_tree": large_tree,
+                    "constants_abstracted_canonical_tree": large_tree,
+                    "constants_abstracted_tree_fingerprint": "8" * 64,
+                    "artifact_sha256": "9" * 64,
+                    "node_count": 999,
+                    "function_set": [],
+                    "operator_set": ["add", "mul"],
+                },
+                "rhs_artifact": {
+                    "source_text": "x0 + x1 + 1",
+                    "canonical_expression": "x0 + x1 + 1",
+                    "canonical_tree": large_tree,
+                    "constants_abstracted_canonical_tree": large_tree,
+                    "constants_abstracted_tree_fingerprint": "a" * 64,
+                    "artifact_sha256": "b" * 64,
+                    "node_count": 1001,
+                    "function_set": [],
+                    "operator_set": ["add", "mul"],
+                },
+                "symbolic_difference": {
+                    "decision": "not_equivalent",
+                    "proof_basis": "structural_analysis",
+                    "counterexample": None,
+                    "numeric_probes": [{"lhs": 1.0, "rhs": 2.0}] * 20,
+                    "probe_hash": "c" * 64,
+                    "probe_source": "dataset_probes_v1",
+                    "probe_sample_sha256": "d" * 64,
+                    "normalized_probe_points_sha256": "e" * 64,
+                    "skipped_probe_count": 20,
+                    "skipped_probe_reasons": {"overflow": 20},
+                    "skipped_probes": [{"reason": "overflow"}] * 20,
+                    "max_abs_error": 1.0,
+                    "max_rel_error": 1.0,
+                    "max_tolerance": 1e-9,
+                    "assumptions": ["real-domain"],
+                },
+                "numeric_probes": [{"lhs": 1.0, "rhs": 2.0}] * 20,
+                "skipped_probes": [{"reason": "overflow"}] * 20,
+                "probe_hash": "c" * 64,
+                "probe_count": 20,
+                "max_abs_error": 1.0,
+                "max_rel_error": 1.0,
+                "max_tolerance": 1e-9,
+            },
+            "dataset_probe": {
+                "schema_version": "dataset_probes_v1",
+                "dataset_name": "DemoStructure",
+                "variables": ["x0", "x1"],
+                "target_name": "y",
+                "point_count": 20,
+                "points": [
+                    {"split": "id_test", "row_index": index, "values": {"x0": float(index), "x1": float(index + 1)}}
+                    for index in range(20)
+                ],
+                "source_sha256": {"metadata_yaml": "f" * 64},
+                "sample_sha256": "d" * 64,
+                "evidence_sha256": "1" * 64,
+            },
+            "domain_assumptions": {
+                "lhs": {"number_system": "real"},
+                "rhs": {"number_system": "real"},
+            },
+            "lhs_binding": {
+                "role": "lhs",
+                "frozen_simplified_expression": "x0 + x1",
+                "frozen_plan_sha256": "2" * 64,
+            },
+            "rhs_binding": {
+                "role": "rhs",
+                "frozen_simplified_expression": "x0 + x1 + 1",
+                "frozen_plan_sha256": "3" * 64,
+            },
+            "evidence_sha256": "4" * 64,
+        },
+        "evidence_hash": "4" * 64,
+    }
+
+    compacted = compact_request_for_prompt(request)
+    assert "deterministic_pair_evidence" not in compacted
+    assert compacted["deterministic_pair_evidence_alias"] == "deterministic_evidence"
+    assert "probe_points" in compacted
+    before = len("REQ=" + canonical_json(request))
+    after = len(render_prompt("REQ={{REQUEST_JSON}}", request))
+    assert after < before // 20
+    assert after < 20000
 
 
 def test_validate_simplify_output_is_strict() -> None:

@@ -376,6 +376,10 @@ The task-seed symbolic score is
 m^{SYM}
 =
 \begin{cases}
+0,
+&
+\text{if no valid and parsable final expression is produced},
+\\[4pt]
 1,
 &
 Eq=1,
@@ -408,7 +412,12 @@ where:
 - \(V\): variable recovery;
 - \(O\): operator recovery.
 
-The design gives full credit to mathematically equivalent expressions. Non-equivalent expressions receive partial credit according to tree, variable, and operator recovery and can receive at most 0.5.
+The design gives full credit to mathematically equivalent expressions. If exact
+equivalence is undetermined for an otherwise valid and parsable expression, it
+is handled by the \(Eq=0\) branch and receives only evidence-backed partial
+credit. Invalid, missing, or unparsable final expressions receive zero. Other
+non-equivalent expressions receive partial credit according to tree, variable,
+and operator recovery and can receive at most 0.5.
 
 ---
 

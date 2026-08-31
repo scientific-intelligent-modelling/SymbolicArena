@@ -343,14 +343,6 @@ def _validate_simplify_semantics(
 
 
 def _enforce_runtime_envelope_contract(envelope: Mapping[str, object]) -> None:
-    stop_reason = envelope.get("stop_reason")
-    num_turns = envelope.get("num_turns")
-    valid_stop_pairs = {(1, "end_turn")}
-    if (num_turns, stop_reason) not in valid_stop_pairs:
-        raise ContractViolation(
-            f"num_turns/stop_reason 契约不符: {num_turns!r}/{stop_reason!r}"
-        )
-
     usage = envelope.get("usage")
     if not isinstance(usage, Mapping):
         raise ContractViolation("usage 元数据缺失或无效")
@@ -370,6 +362,14 @@ def _enforce_runtime_envelope_contract(envelope: Mapping[str, object]) -> None:
         raise ContractViolation("modelUsage 元数据缺失或无效")
     if set(model_usage) != {CONTRACT_MODEL}:
         raise ContractViolation(f"Claude 模型契约不符: {list(model_usage)!r}")
+
+    stop_reason = envelope.get("stop_reason")
+    num_turns = envelope.get("num_turns")
+    valid_stop_pairs = {(1, "end_turn")}
+    if (num_turns, stop_reason) not in valid_stop_pairs:
+        raise TurnContractViolation(
+            f"num_turns/stop_reason 契约不符: {num_turns!r}/{stop_reason!r}"
+        )
 
 
 def _load_json_file(path: Path) -> JsonDict:
@@ -438,6 +438,10 @@ class ClaudeRunnerCircuitBreaker(RuntimeError):
         super().__init__(message)
         self.evaluation_key = evaluation_key
         self.attempt_id = attempt_id
+
+
+class TurnContractViolation(ContractViolation):
+    """turn 数与 stop_reason 未命中约定的单轮调用契约。"""
 
 
 class ClaudeRunner:
@@ -720,6 +724,16 @@ class ClaudeRunner:
                             task_kind=task_kind,
                             schema=definition.schema,
                         )
+                    except TurnContractViolation as exc:
+                        error_class = "turn_contract_violation"
+                        retryable = True
+                        circuit_break = True
+                        validation = {
+                            "ok": False,
+                            "error_class": error_class,
+                            "error_message": str(exc),
+                            "structured_output": None,
+                        }
                     except ContractViolation as exc:
                         error_class = "contract_drift" if _is_circuit_break_violation(exc) else "validation_failed"
                         retryable = not _is_circuit_break_violation(exc)

@@ -839,8 +839,6 @@ def test_global_budget_is_reserved_before_invocation(tmp_path: Path) -> None:
     ("mutator", "label"),
     [
         (lambda envelope: envelope["usage"]["server_tool_use"].__setitem__("web_search_requests", 1), "server-tool"),
-        (lambda envelope: envelope.__setitem__("stop_reason", "completed"), "stop-reason"),
-        (lambda envelope: envelope.__setitem__("num_turns", 2), "num-turns"),
         (lambda envelope: envelope.__setitem__("modelUsage", {"claude-sonnet": {"canonicalModel": "claude-sonnet"}}), "model"),
         (lambda envelope: envelope.__setitem__("usage", {}), "usage-metadata"),
     ],
@@ -883,3 +881,90 @@ def test_contract_drift_variants_raise_global_circuit_breaker_and_finish_failure
     assert attempt_audit["validation"]["error_class"] == "contract_drift"
     assert attempt_audit["metadata"]["retryable"] is False
     assert len(fake_run.calls) == 1, label
+
+
+@pytest.mark.parametrize(
+    ("mutator", "label"),
+    [
+        (lambda envelope: envelope.__setitem__("num_turns", 2), "num-turns"),
+        (lambda envelope: envelope.__setitem__("stop_reason", "completed"), "stop-reason"),
+    ],
+)
+def test_turn_contract_violation_triggers_breaker_but_keeps_retry_wait_when_budget_remains(
+    tmp_path: Path,
+    mutator: object,
+    label: str,
+) -> None:
+    definition = _task_definition(tmp_path, f"ek-turn-contract-{label}")
+    drifted = _valid_envelope()
+    mutator(drifted)  # type: ignore[misc]
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(drifted, ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+    runner = _runner(tmp_path, store, fake_run)
+
+    with pytest.raises(ClaudeRunnerCircuitBreaker, match="Claude 全局熔断"):
+        runner.execute(definition)
+
+    assert store.attempts_reserved() == 1
+    assert store.task_state(definition.task_spec.evaluation_key) == "retry_wait"
+    attempt_audit = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert attempt_audit["validation"]["error_class"] == "turn_contract_violation"
+    assert attempt_audit["metadata"]["retryable"] is True
+    assert len(fake_run.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("mutator", "label"),
+    [
+        (lambda envelope: envelope["usage"]["server_tool_use"].__setitem__("web_search_requests", 1), "server-tool"),
+        (lambda envelope: envelope.__setitem__("modelUsage", {"claude-sonnet": {"canonicalModel": "claude-sonnet"}}), "model"),
+    ],
+)
+def test_server_tool_or_model_drift_takes_precedence_over_turn_contract_violation(
+    tmp_path: Path,
+    mutator: object,
+    label: str,
+) -> None:
+    definition = _task_definition(tmp_path, f"ek-drift-precedence-{label}")
+    drifted = _valid_envelope()
+    drifted["num_turns"] = 2
+    mutator(drifted)  # type: ignore[misc]
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(drifted, ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+    runner = _runner(tmp_path, store, fake_run)
+
+    with pytest.raises(ClaudeRunnerCircuitBreaker, match="Claude 全局熔断"):
+        runner.execute(definition)
+
+    assert store.attempts_reserved() == 1
+    assert store.task_state(definition.task_spec.evaluation_key) == "exhausted"
+    attempt_audit = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert attempt_audit["validation"]["error_class"] == "contract_drift"
+    assert attempt_audit["metadata"]["retryable"] is False
+    assert len(fake_run.calls) == 1

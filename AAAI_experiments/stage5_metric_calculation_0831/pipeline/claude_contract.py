@@ -60,14 +60,148 @@ def _compact_symbolic_artifact_for_prompt(artifact: Mapping[str, Any]) -> dict[s
     }
 
 
+def _top_level_expression_values(request: Mapping[str, object]) -> set[str]:
+    expressions: set[str] = set()
+    for key, value in request.items():
+        if not isinstance(value, str) or not value.strip():
+            continue
+        if key == "expression" or key.endswith("_expression"):
+            expressions.add(value)
+    return expressions
+
+
+def _compact_symbolic_difference_for_prompt(
+    difference: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        key: _copy_json_value(value)
+        for key, value in difference.items()
+        if key not in {"numeric_probes", "skipped_probes"}
+    }
+
+
+def _compact_upstream_binding_for_prompt(
+    binding: Mapping[str, Any],
+    *,
+    expression_values: set[str],
+) -> dict[str, Any]:
+    compacted: dict[str, Any] = {}
+    for key, value in binding.items():
+        if key == "frozen_simplified_expression" and value in expression_values:
+            continue
+        compacted[key] = _copy_json_value(value)
+    return compacted
+
+
+def _compact_pair_evidence_for_prompt(
+    pair_evidence: Mapping[str, Any],
+    *,
+    expression_values: set[str],
+) -> dict[str, Any]:
+    compacted: dict[str, Any] = {}
+    for key, value in pair_evidence.items():
+        if key in {"numeric_probes", "skipped_probes"}:
+            continue
+        if key in {"lhs_artifact", "rhs_artifact"} and isinstance(value, Mapping):
+            compact_artifact = _compact_symbolic_artifact_for_prompt(value)
+            if compact_artifact.get("source_text") in expression_values:
+                compact_artifact.pop("source_text", None)
+            if compact_artifact.get("canonical_expression") in expression_values:
+                compact_artifact.pop("canonical_expression", None)
+            compacted[key] = compact_artifact
+            continue
+        if key == "symbolic_difference" and isinstance(value, Mapping):
+            compacted[key] = _compact_symbolic_difference_for_prompt(value)
+            continue
+        compacted[key] = _copy_json_value(value)
+    return compacted
+
+
+def _probe_contract_from_dataset_probe(
+    probe: Mapping[str, Any],
+) -> tuple[object, str | None, str | None]:
+    points = probe.get("points")
+    source = probe.get("schema_version")
+    sample_sha256 = probe.get("sample_sha256")
+    if points is None:
+        return None, None, None
+    return _copy_json_value(points), str(source) if isinstance(source, str) else None, (
+        str(sample_sha256) if isinstance(sample_sha256, str) else None
+    )
+
+
+def _probe_contract_from_request(
+    request: Mapping[str, object],
+) -> tuple[object, str | None, str | None]:
+    if request.get("probe_points") is not None:
+        return (
+            _copy_json_value(request.get("probe_points")),
+            str(request.get("probe_source")) if isinstance(request.get("probe_source"), str) else None,
+            (
+                str(request.get("probe_sample_sha256"))
+                if isinstance(request.get("probe_sample_sha256"), str)
+                else None
+            ),
+        )
+    for key in ("deterministic_evidence", "deterministic_pair_evidence"):
+        value = request.get(key)
+        if not isinstance(value, Mapping):
+            continue
+        probe = value.get("dataset_probe")
+        if isinstance(probe, Mapping) and probe.get("points") is not None:
+            return _probe_contract_from_dataset_probe(probe)
+    return None, None, None
+
+
+def _compact_deterministic_evidence_for_prompt(
+    evidence: Mapping[str, Any],
+    *,
+    probe_points: object,
+    expression_values: set[str],
+    domain_assumptions: object,
+) -> dict[str, Any]:
+    compacted: dict[str, Any] = {}
+    for evidence_key, evidence_value in evidence.items():
+        if evidence_key == "dataset_probe" and isinstance(evidence_value, Mapping):
+            compacted[evidence_key] = _compact_dataset_probe_for_prompt(
+                evidence_value,
+                probe_points=probe_points,
+            )
+            continue
+        if evidence_key == "domain_assumptions" and evidence_value == domain_assumptions:
+            continue
+        if evidence_key == "symbolic_artifact" and isinstance(evidence_value, Mapping):
+            compact_artifact = _compact_symbolic_artifact_for_prompt(evidence_value)
+            if compact_artifact.get("source_text") in expression_values:
+                compact_artifact.pop("source_text", None)
+            if compact_artifact.get("canonical_expression") in expression_values:
+                compact_artifact.pop("canonical_expression", None)
+            compacted[evidence_key] = compact_artifact
+            continue
+        if evidence_key == "pair_evidence" and isinstance(evidence_value, Mapping):
+            compacted[evidence_key] = _compact_pair_evidence_for_prompt(
+                evidence_value,
+                expression_values=expression_values,
+            )
+            continue
+        if evidence_key in {"lhs_binding", "rhs_binding"} and isinstance(evidence_value, Mapping):
+            compacted[evidence_key] = _compact_upstream_binding_for_prompt(
+                evidence_value,
+                expression_values=expression_values,
+            )
+            continue
+        compacted[evidence_key] = _copy_json_value(evidence_value)
+    return compacted
+
+
 def _compact_ast_source_evidence_for_prompt(
     evidence: Mapping[str, Any],
     *,
-    expression: object,
+    expression_values: set[str],
 ) -> dict[str, Any]:
     compacted: dict[str, Any] = {}
     for key, value in evidence.items():
-        if value == expression:
+        if isinstance(value, str) and value in expression_values:
             continue
         if key in {
             "canonical_artifact",
@@ -84,12 +218,20 @@ def _compact_ast_source_evidence_for_prompt(
 def compact_request_for_prompt(request: Mapping[str, object]) -> dict[str, Any]:
     """生成仅用于 prompt 传输的稳定投影，不修改原始 request。"""
 
-    probe_points = request.get("probe_points")
+    expression_values = _top_level_expression_values(request)
+    probe_points, probe_source, probe_sample_sha256 = _probe_contract_from_request(request)
     expression = request.get("expression")
     domain_assumptions = request.get("domain_assumptions")
+    duplicate_pair_evidence = (
+        isinstance(request.get("deterministic_evidence"), Mapping)
+        and request.get("deterministic_evidence") == request.get("deterministic_pair_evidence")
+    )
     projected: dict[str, Any] = {}
     for key, value in request.items():
         if key == "original_expression" and value == expression:
+            continue
+        if key == "deterministic_pair_evidence" and duplicate_pair_evidence:
+            projected["deterministic_pair_evidence_alias"] = "deterministic_evidence"
             continue
         if key == "dataset_probe_evidence" and isinstance(value, Mapping):
             projected[key] = _compact_dataset_probe_for_prompt(
@@ -100,32 +242,24 @@ def compact_request_for_prompt(request: Mapping[str, object]) -> dict[str, Any]:
         if key == "ast_source_evidence" and isinstance(value, Mapping):
             projected[key] = _compact_ast_source_evidence_for_prompt(
                 value,
-                expression=expression,
+                expression_values=expression_values,
             )
             continue
-        if key == "deterministic_evidence" and isinstance(value, Mapping):
-            compact_deterministic: dict[str, Any] = {}
-            for evidence_key, evidence_value in value.items():
-                if evidence_key == "dataset_probe" and isinstance(evidence_value, Mapping):
-                    compact_deterministic[evidence_key] = _compact_dataset_probe_for_prompt(
-                        evidence_value,
-                        probe_points=probe_points,
-                    )
-                    continue
-                if evidence_key == "domain_assumptions" and evidence_value == domain_assumptions:
-                    continue
-                if evidence_key == "symbolic_artifact" and isinstance(evidence_value, Mapping):
-                    compact_artifact = _compact_symbolic_artifact_for_prompt(evidence_value)
-                    if compact_artifact.get("source_text") == expression:
-                        compact_artifact.pop("source_text", None)
-                    if compact_artifact.get("canonical_expression") == expression:
-                        compact_artifact.pop("canonical_expression", None)
-                    compact_deterministic[evidence_key] = compact_artifact
-                    continue
-                compact_deterministic[evidence_key] = _copy_json_value(evidence_value)
-            projected[key] = compact_deterministic
+        if key in {"deterministic_evidence", "deterministic_pair_evidence"} and isinstance(value, Mapping):
+            projected[key] = _compact_deterministic_evidence_for_prompt(
+                value,
+                probe_points=probe_points,
+                expression_values=expression_values,
+                domain_assumptions=domain_assumptions,
+            )
             continue
         projected[key] = _copy_json_value(value)
+    if "probe_points" not in projected and probe_points is not None:
+        projected["probe_points"] = probe_points
+    if "probe_source" not in projected and probe_source is not None:
+        projected["probe_source"] = probe_source
+    if "probe_sample_sha256" not in projected and probe_sample_sha256 is not None:
+        projected["probe_sample_sha256"] = probe_sample_sha256
     return projected
 
 

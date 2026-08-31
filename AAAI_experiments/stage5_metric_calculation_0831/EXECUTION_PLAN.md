@@ -311,7 +311,7 @@ prompt、schema、表达式、证据、模型或 effort 任一变化都会产生
 
 - 进程超时；
 - HTTP 408/429 或临时 5xx；
-- Claude CLI 非零退出；
+- Claude CLI 非零退出，但不包括已明确分类为 `prompt_too_long` 的确定性请求错误；
 - stdout 为空或被截断；
 - 外层 JSON 无效；
 - 缺失 `structured_output`；
@@ -327,6 +327,7 @@ prompt、schema、表达式、证据、模型或 effort 任一变化都会产生
 - 源公式缺失；
 - 依赖任务缺失或已经 exhausted；
 - Schema 合法的 `unable` 或 `undetermined`；
+- `prompt_too_long`；相同传输请求不得原样重试，必须先修订并审计 prompt-only 投影；
 - 任务已经有 frozen 结果；
 - 全局物理尝试预算耗尽；
 - 契约不一致导致全局熔断，等待修复后再恢复。
