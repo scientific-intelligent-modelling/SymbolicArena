@@ -523,13 +523,16 @@ Interpretation:
 
 A higher MIN score indicates a more concise recovered expression.
 
-Under the current 15-algorithm, 50-task, 3-seed setting, SYM and MIN process only
+Under the current 15-algorithm, 50-task, 3-seed setting, the formal SYM and MIN
+leaderboard aggregates
 
 \[
 15\times50\times3=2250
 \]
 
-final expressions.
+clean final expressions. The symbolic pipeline still processes every available
+final expression from all 6750 clean and noisy runs. The 4500 noisy-run symbolic
+artifacts are retained only for supplementary diagnostics.
 
 ---
 
@@ -846,7 +849,7 @@ The geometric mean requires numerical, output-validity, and symbolic-structure c
 | Clean final expression | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | Minute-level best-so-far trajectory | ✓ | ✓ |  |  | ✓ |  |
 | Mandatory Claude Code single-turn processing |  |  | Every run; clean scored | Every run; clean scored |  | Every valid clean seed pair |
-| noise001 / noise005 runs | Supplementary only | Supplementary only |  |  |  |  |
+| noise001 / noise005 runs | Supplementary only | Supplementary only | LLM artifacts only | LLM artifacts only |  |  |
 
 The key computational separation is:
 
