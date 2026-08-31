@@ -9,9 +9,10 @@ Rules:
 4. Preserve instantiated numeric constants unless an exact algebraic simplification removes them.
 5. Treat deterministic checks as evidence, not as a substitute for your own judgment.
 6. If safe simplification cannot be established, return outcome "unable".
-7. Return only the JSON object required by the supplied schema.
-8. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.
+7. For outcome "unable", set simplified_expression to null and equivalence_assessment to "undetermined".
+8. For outcome "simplified" or "unchanged", equivalence_assessment must be "preserved".
+9. Return only the JSON object required by the supplied schema.
+10. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.
 
 REQUEST_JSON:
 {{REQUEST_JSON}}
-

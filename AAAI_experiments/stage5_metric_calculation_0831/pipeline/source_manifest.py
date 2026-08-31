@@ -312,6 +312,25 @@ def validate_ground_truth_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def validate_source_ground_truth_alignment(
+    source_rows: list[dict[str, Any]],
+    ground_truth_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """验证运行清单与 Ground Truth 引用的是同一组 benchmark 任务。"""
+
+    source_datasets = {str(row["dataset_id"]) for row in source_rows}
+    ground_truth_datasets = {str(row["basename"]) for row in ground_truth_rows}
+    missing_from_source = sorted(ground_truth_datasets - source_datasets)
+    missing_from_ground_truth = sorted(source_datasets - ground_truth_datasets)
+    return {
+        "ok": not missing_from_source and not missing_from_ground_truth,
+        "source_dataset_count": len(source_datasets),
+        "ground_truth_dataset_count": len(ground_truth_datasets),
+        "missing_from_source": missing_from_source,
+        "missing_from_ground_truth": missing_from_ground_truth,
+    }
+
+
 def build_ground_truth_manifest(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     manifest_rows: list[dict[str, Any]] = []
     for row in rows:
@@ -369,6 +388,14 @@ def build_source_preflight(
     if not gt_validation["ok"]:
         raise ValueError("; ".join(gt_validation["errors"]))
 
+    alignment = validate_source_ground_truth_alignment(stage4_rows, gt_rows)
+    if not alignment["ok"]:
+        raise ValueError(
+            "Stage4 与 Ground Truth 数据集集合不一致: "
+            f"source 缺失={alignment['missing_from_source']}, "
+            f"GT 缺失={alignment['missing_from_ground_truth']}"
+        )
+
     source_manifest = build_source_runs_manifest(stage4_rows)
     ground_truth_manifest = build_ground_truth_manifest(gt_rows)
     report = {
@@ -382,6 +409,7 @@ def build_source_preflight(
         },
         "stage4": stage4_validation["summary"],
         "ground_truth": gt_validation["summary"],
+        "source_ground_truth_alignment": alignment,
         "outputs": {
             "source_runs_row_count": len(source_manifest),
             "ground_truth_row_count": len(ground_truth_manifest),
@@ -426,4 +454,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

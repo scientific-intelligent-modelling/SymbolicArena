@@ -1,0 +1,29 @@
+{
+  "schema_version": "trajectory_repairs.v1",
+  "condition": "clean",
+  "horizon": 180,
+  "repairs": [
+    {
+      "logical_key": "fepysr::Nguyen-12::s520::clean",
+      "task_id": "fepysr_s520_clean_g0021",
+      "host": "iaaccn23",
+      "rule": "carry_forward_last_observed_best",
+      "missing_minutes": [165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179],
+      "source_minute": 164,
+      "source_snapshot_sha256": "e9c08a692839b87a5659087acbad254f9cfee32196b8aa2a74f5e6a50bdf50c8",
+      "source_record_type": "periodic_best",
+      "source_elapsed_seconds": 9840.016,
+      "excluded_future_minute": 180,
+      "excluded_future_snapshot_sha256": "1046fcb1b90eab0d642f3b33c7be0753a626d7b7dc3da641dcbf1c0f5a5ba15a",
+      "supporting_evidence": {
+        "current_best_path": "AAAI_experiments/stage5_metric_calculation_0831/source_snapshot/recovery_evidence/fepysr_s520_clean_g0021.current_best.json",
+        "current_best_sha256": "4f0085bbb89d9a40406e6e05db1449f230bc86b635733d48bc6ed8d37f50e761",
+        "current_best_remote_mtime": "2026-06-24 18:41:22.185783558 +0800",
+        "wrapper_path": "scientific_intelligent_modelling/algorithms/fepysr_wrapper/wrapper.py",
+        "wrapper_sha256": "b93d7325058429db7994fa43c9f864c226d09078e61a33f2effed8c411e0a56c",
+        "wrapper_best_update_lines": "483-499"
+      },
+      "rationale": "The frozen minute 164 payload is the last observed best-so-far. The independently frozen current-best state contains the same equation and was last updated earlier; the hash-matched wrapper updates that state only when score improves. Minutes 165-179 therefore conservatively carry minute 164 forward, while recovered minute 180 is explicitly excluded."
+    }
+  ]
+}

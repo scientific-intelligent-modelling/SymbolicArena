@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.source_manifest import (
     NOISE_ORDER,
     build_source_preflight,
+    validate_source_ground_truth_alignment,
 )
 
 
@@ -41,6 +42,22 @@ class SourceManifestTest(unittest.TestCase):
             {"clean", "noise001", "noise005"},
         )
         self.assertTrue(all(len(row["formula_py_sha256"]) == 64 for row in gt_rows))
+        self.assertTrue(report["source_ground_truth_alignment"]["ok"])
+
+    def test_source_and_ground_truth_dataset_sets_must_match_exactly(self) -> None:
+        matched = validate_source_ground_truth_alignment(
+            [{"dataset_id": "g1"}, {"dataset_id": "g2"}],
+            [{"basename": "g2"}, {"basename": "g1"}],
+        )
+        self.assertTrue(matched["ok"])
+
+        mismatched = validate_source_ground_truth_alignment(
+            [{"dataset_id": "g1"}, {"dataset_id": "unexpected"}],
+            [{"basename": "g1"}, {"basename": "g2"}],
+        )
+        self.assertFalse(mismatched["ok"])
+        self.assertEqual(mismatched["missing_from_source"], ["g2"])
+        self.assertEqual(mismatched["missing_from_ground_truth"], ["unexpected"])
 
     def test_cli_writes_manifest_and_report(self) -> None:
         tmp_dir = REPO_ROOT / "AAAI_experiments/stage5_metric_calculation_0831/tests/.tmp_source_manifest"

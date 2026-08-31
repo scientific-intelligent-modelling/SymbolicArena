@@ -53,15 +53,19 @@ class TaskStateStore:
         path: str | Path,
         *,
         attempt_cap: int = 23700,
+        logical_task_cap: int = 15800,
         max_attempts_per_task: int = 3,
     ) -> None:
         if attempt_cap <= 0:
             raise StateContractError("attempt_cap 必须为正整数")
+        if logical_task_cap <= 0:
+            raise StateContractError("logical_task_cap 必须为正整数")
         if max_attempts_per_task <= 0:
             raise StateContractError("max_attempts_per_task 必须为正整数")
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.attempt_cap = int(attempt_cap)
+        self.logical_task_cap = int(logical_task_cap)
         self.max_attempts_per_task = int(max_attempts_per_task)
         self._initialize()
 
@@ -133,6 +137,13 @@ class TaskStateStore:
                     result_sha256 TEXT NOT NULL,
                     frozen_at REAL NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS non_applicable_results (
+                    evaluation_key TEXT PRIMARY KEY REFERENCES tasks(evaluation_key),
+                    reason TEXT NOT NULL,
+                    evidence_path TEXT NOT NULL,
+                    evidence_sha256 TEXT NOT NULL,
+                    marked_at REAL NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS events (
                     event_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     evaluation_key TEXT,
@@ -146,6 +157,7 @@ class TaskStateStore:
             existing = dict(connection.execute("SELECT key, value FROM meta").fetchall())
             desired = {
                 "attempt_cap": str(self.attempt_cap),
+                "logical_task_cap": str(self.logical_task_cap),
                 "max_attempts_per_task": str(self.max_attempts_per_task),
                 "schema_version": "state.v1",
             }
@@ -186,6 +198,8 @@ class TaskStateStore:
     def register_task(self, spec: TaskSpec, *, now: float | None = None) -> None:
         if not spec.evaluation_key or not spec.logical_id:
             raise StateContractError("evaluation_key 和 logical_id 不得为空")
+        if spec.condition not in {"clean", "noise001", "noise005"}:
+            raise StateContractError(f"未知任务条件: {spec.condition!r}")
         timestamp = time.time() if now is None else float(now)
         spec_json = spec.canonical_json()
         dependencies_json = json.dumps(list(spec.dependencies), ensure_ascii=False)
@@ -200,6 +214,13 @@ class TaskStateStore:
                         f"任务 {spec.logical_id!r} 已存在，但契约内容发生漂移"
                     )
                 return
+            logical_count = int(
+                connection.execute("SELECT COUNT(*) AS count FROM tasks").fetchone()["count"]
+            )
+            if logical_count >= self.logical_task_cap:
+                raise StateContractError(
+                    f"逻辑任务预算已耗尽: {logical_count}/{self.logical_task_cap}"
+                )
             connection.execute(
                 """INSERT INTO tasks(
                        evaluation_key, logical_id, task_type, condition_name,
@@ -255,17 +276,62 @@ class TaskStateStore:
                 return False
         return True
 
+    @staticmethod
+    def _condition_unlocked(connection: sqlite3.Connection, condition: str) -> bool:
+        order = ("clean", "noise001", "noise005")
+        try:
+            index = order.index(condition)
+        except ValueError as exc:
+            raise StateContractError(f"未知任务条件: {condition!r}") from exc
+        for preceding in order[:index]:
+            unfinished = int(
+                connection.execute(
+                    """SELECT COUNT(*) AS count FROM tasks
+                       WHERE condition_name = ?
+                         AND state NOT IN ('frozen', 'non_applicable')""",
+                    (preceding,),
+                ).fetchone()["count"]
+            )
+            if unfinished:
+                return False
+        return True
+
+    @staticmethod
+    def _priority_unlocked(
+        connection: sqlite3.Connection,
+        *,
+        condition: str,
+        priority: int,
+    ) -> bool:
+        unfinished = int(
+            connection.execute(
+                """SELECT COUNT(*) AS count FROM tasks
+                   WHERE condition_name = ?
+                     AND priority < ?
+                     AND state NOT IN ('frozen', 'non_applicable')""",
+                (condition, int(priority)),
+            ).fetchone()["count"]
+        )
+        return unfinished == 0
+
     def next_ready_key(self, *, allowed_conditions: Sequence[str]) -> str | None:
         if not allowed_conditions:
             return None
-        placeholders = ",".join("?" for _ in allowed_conditions)
-        query = f"""SELECT evaluation_key, dependencies_json
-                    FROM tasks
-                    WHERE state IN ('pending', 'retry_wait')
-                      AND condition_name IN ({placeholders})
-                    ORDER BY priority ASC, logical_id ASC"""
         with self._connect() as connection:
-            rows = connection.execute(query, tuple(allowed_conditions)).fetchall()
+            unlocked_conditions = tuple(
+                condition
+                for condition in allowed_conditions
+                if self._condition_unlocked(connection, condition)
+            )
+            if not unlocked_conditions:
+                return None
+            placeholders = ",".join("?" for _ in unlocked_conditions)
+            query = f"""SELECT evaluation_key, dependencies_json
+                        FROM tasks
+                        WHERE state IN ('pending', 'retry_wait')
+                          AND condition_name IN ({placeholders})
+                        ORDER BY priority ASC, logical_id ASC"""
+            rows = connection.execute(query, unlocked_conditions).fetchall()
             for row in rows:
                 if self._dependencies_frozen(connection, row["dependencies_json"]):
                     return str(row["evaluation_key"])
@@ -291,6 +357,18 @@ class TaskStateStore:
             if row["state"] not in {"pending", "retry_wait"}:
                 raise StateContractError(
                     f"任务 {evaluation_key} 当前状态 {row['state']!r}，不可预占"
+                )
+            if not self._condition_unlocked(connection, str(row["condition_name"])):
+                raise StateContractError(
+                    f"任务 {evaluation_key} 的条件尚未解锁: {row['condition_name']}"
+                )
+            if not self._priority_unlocked(
+                connection,
+                condition=str(row["condition_name"]),
+                priority=int(row["priority"]),
+            ):
+                raise StateContractError(
+                    f"任务 {evaluation_key} 的低优先级阶段尚未完成"
                 )
             if not self._dependencies_frozen(connection, row["dependencies_json"]):
                 raise StateContractError(f"任务 {evaluation_key} 的依赖尚未全部冻结")
@@ -466,6 +544,86 @@ class TaskStateStore:
             "attempt_id": str(row["attempt_id"]),
         }
 
+    def mark_non_applicable(
+        self,
+        evaluation_key: str,
+        *,
+        reason: str,
+        evidence_path: str,
+        evidence_sha256: str,
+        now: float | None = None,
+    ) -> None:
+        timestamp = time.time() if now is None else float(now)
+        if not reason or not evidence_path or not evidence_sha256:
+            raise StateContractError("non_applicable 必须包含原因、证据路径和 SHA-256")
+        with self._write_transaction() as connection:
+            task = connection.execute(
+                "SELECT state FROM tasks WHERE evaluation_key = ?",
+                (evaluation_key,),
+            ).fetchone()
+            if task is None:
+                raise StateContractError(f"未知任务: {evaluation_key}")
+            existing = connection.execute(
+                """SELECT reason, evidence_path, evidence_sha256
+                   FROM non_applicable_results WHERE evaluation_key = ?""",
+                (evaluation_key,),
+            ).fetchone()
+            if existing is not None:
+                current = (
+                    str(existing["reason"]),
+                    str(existing["evidence_path"]),
+                    str(existing["evidence_sha256"]),
+                )
+                requested = (reason, evidence_path, evidence_sha256)
+                if current != requested:
+                    raise StateContractError(
+                        f"任务 {evaluation_key} 的 non_applicable 证据发生漂移"
+                    )
+                return
+            if task["state"] not in {"pending", "retry_wait"}:
+                raise StateContractError(
+                    f"任务 {evaluation_key} 当前状态 {task['state']!r}，不可标记 non_applicable"
+                )
+            connection.execute(
+                """INSERT INTO non_applicable_results(
+                       evaluation_key, reason, evidence_path, evidence_sha256, marked_at
+                   ) VALUES (?, ?, ?, ?, ?)""",
+                (evaluation_key, reason, evidence_path, evidence_sha256, timestamp),
+            )
+            connection.execute(
+                """UPDATE tasks
+                   SET state='non_applicable', lease_expires_at=NULL,
+                       last_error_class=NULL, updated_at=?
+                   WHERE evaluation_key=?""",
+                (timestamp, evaluation_key),
+            )
+            self._event(
+                connection,
+                event_type="task_non_applicable",
+                event_at=timestamp,
+                evaluation_key=evaluation_key,
+                details={
+                    "reason": reason,
+                    "evidence_path": evidence_path,
+                    "evidence_sha256": evidence_sha256,
+                },
+            )
+
+    def non_applicable_result(self, evaluation_key: str) -> dict[str, str] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """SELECT reason, evidence_path, evidence_sha256
+                   FROM non_applicable_results WHERE evaluation_key = ?""",
+                (evaluation_key,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "reason": str(row["reason"]),
+            "evidence_path": str(row["evidence_path"]),
+            "evidence_sha256": str(row["evidence_sha256"]),
+        }
+
     def recover_expired_leases(self, *, now: float | None = None) -> list[str]:
         timestamp = time.time() if now is None else float(now)
         recovered: list[str] = []
@@ -509,4 +667,3 @@ class TaskStateStore:
                 )
                 recovered.append(str(row["attempt_id"]))
         return recovered
-

@@ -174,6 +174,7 @@ def scan_task(
     *,
     horizon: int = 180,
     freeze_raw: bool = False,
+    verify_inner: bool = True,
 ) -> dict[str, Any]:
     """扫描一个 selected run；任何冲突只报告，不做静默选择。"""
 
@@ -193,7 +194,9 @@ def scan_task(
         snapshots.append(
             _scan_snapshot_pair(
                 outer_progress / filename,
-                inner_progress / filename if inner_progress is not None else None,
+                inner_progress / filename
+                if verify_inner and inner_progress is not None
+                else None,
                 minute=minute,
                 freeze_raw=freeze_raw,
             )
@@ -258,6 +261,11 @@ def main() -> None:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--horizon", type=int, default=180)
     parser.add_argument("--freeze-raw", action="store_true")
+    parser.add_argument(
+        "--outer-only",
+        action="store_true",
+        help="只冻结 selected outer；仅可在独立 inner 一致性预检通过后使用",
+    )
     args = parser.parse_args()
 
     totals = {
@@ -269,10 +277,16 @@ def main() -> None:
         "conflicting_snapshots": 0,
         "parse_errors": 0,
         "freeze_raw": bool(args.freeze_raw),
+        "verify_inner": not bool(args.outer_only),
     }
     with _open_text(args.output, "w") as output:
         for task in _load_tasks(args.tasks):
-            record = scan_task(task, horizon=args.horizon, freeze_raw=args.freeze_raw)
+            record = scan_task(
+                task,
+                horizon=args.horizon,
+                freeze_raw=args.freeze_raw,
+                verify_inner=not args.outer_only,
+            )
             output.write(_canonical_json(record) + "\n")
             totals["tasks"] += 1
             if record["result"].get("status") != "ok":

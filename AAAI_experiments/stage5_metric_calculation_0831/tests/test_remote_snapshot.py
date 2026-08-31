@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.remote_snapshot import (
@@ -81,6 +83,18 @@ def test_conflicting_outer_and_inner_snapshot_is_not_silently_selected(tmp_path:
     assert minute_two["selected_path"] is None
 
 
+def test_outer_only_freeze_skips_already_audited_inner_copy(tmp_path: Path) -> None:
+    record = scan_task(
+        make_task(tmp_path, conflict=True),
+        horizon=3,
+        freeze_raw=True,
+        verify_inner=False,
+    )
+    assert record["summary"]["conflicting_snapshots"] == 0
+    assert all(item["inner_path"] is None for item in record["snapshots"])
+    assert json.loads(record["snapshots"][1]["raw_text"])["equation"] == "x0"
+
+
 def test_missing_snapshot_is_explicit(tmp_path: Path) -> None:
     task = make_task(tmp_path)
     result_path = Path(task["path"])
@@ -91,3 +105,23 @@ def test_missing_snapshot_is_explicit(tmp_path: Path) -> None:
     assert record["summary"]["missing_snapshots"] == 1
     assert record["snapshots"][1]["status"] == "missing"
 
+
+def test_controller_returns_nonzero_when_any_host_fails(tmp_path: Path) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_timeout = fake_bin / "timeout"
+    fake_timeout.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    fake_timeout.chmod(0o755)
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts/scan_clean_via_iaaccn22.sh"
+    )
+    completed = subprocess.run(
+        ["/bin/bash", str(script), str(tmp_path / "remote"), "inventory"],
+        env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode != 0
+    assert "FAILED_HOSTS" in completed.stdout

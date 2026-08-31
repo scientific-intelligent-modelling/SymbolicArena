@@ -113,14 +113,14 @@ def _point_from_candidate(candidate: _Candidate, minute: int, source: str) -> Tr
     )
 
 
-def _empty_point(minute: int) -> TrajectoryPoint:
+def _empty_point(minute: int, *, source: str = "explicit_no_valid_output") -> TrajectoryPoint:
     return TrajectoryPoint(
         minute=minute,
         id_quality=0.0,
         ood_quality=0.0,
         quality=0.0,
         expression="",
-        source="explicit_no_valid_output",
+        source=source,
         valid_output=False,
     )
 
@@ -130,7 +130,7 @@ def reconstruct_trajectory(
     *,
     horizon: int = 180,
 ) -> list[TrajectoryPoint]:
-    """从完整检查点映射重建固定网格，拒绝缺失和 future backfill。"""
+    """从完整检查点映射重建固定网格，拒绝缺失并忽略 future backfill。"""
 
     if horizon <= 0:
         raise TrajectoryContractError("horizon 必须为正整数")
@@ -140,7 +140,14 @@ def reconstruct_trajectory(
 
     latest: _Candidate | None = None
     points: list[TrajectoryPoint] = []
-    allowed = {"periodic_best", "periodic_heartbeat", "periodic_backfill", "final_best"}
+    allowed = {
+        "periodic_best",
+        "periodic_heartbeat",
+        "periodic_backfill",
+        "final_best",
+        "recovered_final",
+        "audited_carry_forward",
+    }
     for minute in range(1, horizon + 1):
         payload = snapshots.get(minute)
         if payload is None:
@@ -163,19 +170,54 @@ def reconstruct_trajectory(
                     f"minute_{minute:04d} 的 backfilled_from_minute 无效"
                 ) from None
             if source_minute > minute:
-                raise TrajectoryContractError(
-                    f"minute_{minute:04d} 使用 minute_{source_minute:04d} 的未来信息"
-                )
+                prefix = f"future_backfill_ignored:{source_minute}"
+                if latest is not None:
+                    points.append(
+                        _point_from_candidate(
+                            latest,
+                            minute,
+                            f"{prefix};carry_forward:{latest.minute}",
+                        )
+                    )
+                else:
+                    points.append(
+                        _empty_point(
+                            minute,
+                            source=f"{prefix};explicit_no_valid_output",
+                        )
+                    )
+                continue
 
         current = _candidate(payload, minute)
         if current is not None:
             latest = current
+            if record_type == "audited_carry_forward":
+                provenance = payload.get("recovery_provenance")
+                if not isinstance(provenance, Mapping):
+                    raise TrajectoryContractError(
+                        f"minute_{minute:04d} 缺少 recovery_provenance"
+                    )
+                source_minute = provenance.get("source_minute")
+                source_label = f"audited_repair:{source_minute}"
+            else:
+                prefix = (
+                    "final"
+                    if record_type in {"final_best", "recovered_final"}
+                    else "snapshot"
+                )
+                source_label = f"{prefix}:{minute}"
+            points.append(_point_from_candidate(current, minute, source_label))
+            continue
+        expression = canonical_expression(payload)
+        if expression or payload.get("status") in {"error", "failed", "invalid"}:
+            latest = None
             prefix = "final" if record_type == "final_best" else "snapshot"
-            points.append(_point_from_candidate(current, minute, f"{prefix}:{minute}"))
+            points.append(
+                _empty_point(minute, source=f"{prefix}_evaluator_error:{minute}")
+            )
             continue
         if latest is not None:
             points.append(_point_from_candidate(latest, minute, f"carry_forward:{latest.minute}"))
         else:
             points.append(_empty_point(minute))
     return points
-

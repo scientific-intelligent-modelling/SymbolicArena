@@ -34,6 +34,8 @@ def evaluation_key(
     logical_id: str,
     prompt_version: str,
     schema_version: str,
+    prompt_sha256: str,
+    schema_sha256: str,
     normalized_input: Mapping[str, object],
     evidence_hash: str,
     model: str = CONTRACT_MODEL,
@@ -41,11 +43,20 @@ def evaluation_key(
 ) -> str:
     """为逻辑任务生成包含全部评测契约的稳定指纹。"""
 
+    for field_name, value in (
+        ("prompt_sha256", prompt_sha256),
+        ("schema_sha256", schema_sha256),
+    ):
+        if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+            raise ContractViolation(f"{field_name} 必须是小写十六进制 SHA-256")
+
     payload = {
         "task_type": task_type,
         "logical_id": logical_id,
         "prompt_version": prompt_version,
         "schema_version": schema_version,
+        "prompt_sha256": prompt_sha256,
+        "schema_sha256": schema_sha256,
         "model": model,
         "effort": effort,
         "normalized_input": normalized_input,
@@ -150,6 +161,8 @@ def validate_structured_output(
             raise ContractViolation(f"未知 equivalence_assessment: {assessment!r}")
         if outcome in {"simplified", "unchanged"} and assessment != "preserved":
             raise ContractViolation("可接受的化简结果必须声明 equivalence_assessment=preserved")
+        if outcome == "unable" and assessment != "undetermined":
+            raise ContractViolation("outcome=unable 时 equivalence_assessment 必须为 undetermined")
         _require_assumptions(output["assumptions"])
     elif normalized_kind == "equivalence":
         expected = {
@@ -162,7 +175,8 @@ def validate_structured_output(
         _require_exact_keys(output, expected)
         if output["decision"] not in {"equivalent", "not_equivalent", "undetermined"}:
             raise ContractViolation(f"未知 equivalence decision: {output['decision']!r}")
-        if output["evidence_basis"] not in {
+        evidence_basis = output["evidence_basis"]
+        if evidence_basis not in {
             "symbolic_proof",
             "numerical_support",
             "structural_analysis",
@@ -170,6 +184,8 @@ def validate_structured_output(
             "insufficient",
         }:
             raise ContractViolation(f"未知 evidence_basis: {output['evidence_basis']!r}")
+        if output["decision"] in {"equivalent", "not_equivalent"} and evidence_basis == "insufficient":
+            raise ContractViolation("确定的 equivalence decision 不能使用 insufficient 证据")
         _require_assumptions(output["assumptions"])
     elif normalized_kind == "structure":
         expected = {"decision", "confidence", "brief_reason"}
@@ -204,6 +220,12 @@ def validate_claude_envelope(
     turns = envelope.get("num_turns")
     if isinstance(turns, bool) or not isinstance(turns, int) or turns < 1 or turns > 2:
         raise ContractViolation(f"单轮结构化调用出现异常 num_turns={turns!r}")
+    stop_reason = envelope.get("stop_reason")
+    expected_stop_reason = "tool_use" if turns == 2 else "end_turn"
+    if stop_reason != expected_stop_reason:
+        raise ContractViolation(
+            f"结构化单轮 stop_reason 不匹配: {stop_reason!r}，期望 {expected_stop_reason!r}"
+        )
 
     model_usage = envelope.get("modelUsage")
     if not isinstance(model_usage, Mapping) or set(model_usage) != {CONTRACT_MODEL}:
@@ -217,20 +239,25 @@ def validate_claude_envelope(
         )
 
     permission_denials = envelope.get("permission_denials")
-    if permission_denials not in (None, []):
+    if permission_denials != []:
         raise ContractViolation("Claude 尝试调用了被禁用的工具或权限")
     usage = envelope.get("usage")
-    server_tools: Mapping[str, object] = {}
-    if isinstance(usage, Mapping) and isinstance(usage.get("server_tool_use"), Mapping):
-        server_tools = usage["server_tool_use"]  # type: ignore[assignment]
-    if any(int(value or 0) != 0 for value in server_tools.values()):
+    if not isinstance(usage, Mapping) or not isinstance(usage.get("server_tool_use"), Mapping):
+        raise ContractViolation("Claude 响应缺少可审计的 server_tool_use")
+    server_tools: Mapping[str, object] = usage["server_tool_use"]  # type: ignore[assignment]
+    try:
+        used_server_tool = any(int(value or 0) != 0 for value in server_tools.values())
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ContractViolation("Claude server_tool_use 统计不是合法整数") from exc
+    if used_server_tool:
         raise ContractViolation("Claude 使用了被禁止的服务器工具")
     subagents = envelope.get("subagent_stats")
-    if isinstance(subagents, Mapping) and int(subagents.get("spawned") or 0) != 0:
+    if not isinstance(subagents, Mapping) or "spawned" not in subagents:
+        raise ContractViolation("Claude 响应缺少可审计的 subagent_stats")
+    if int(subagents.get("spawned") or 0) != 0:
         raise ContractViolation("Claude 使用了被禁止的 subagent 工具")
 
     structured = envelope.get("structured_output")
     if not isinstance(structured, Mapping):
         raise ContractViolation("Claude 输出缺失 structured_output")
     return validate_structured_output(task_kind, structured)
-

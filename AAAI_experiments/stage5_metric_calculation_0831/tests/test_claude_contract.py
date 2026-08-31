@@ -48,12 +48,16 @@ def test_evaluation_key_is_deterministic_and_contract_sensitive() -> None:
         "logical_id": "pred_simplify::demo",
         "prompt_version": "simplify.v1",
         "schema_version": "simplify.v1",
+        "prompt_sha256": "a" * 64,
+        "schema_sha256": "b" * 64,
         "normalized_input": {"expression": "x0 + 0"},
         "evidence_hash": "abc",
     }
     first = evaluation_key(**kwargs)
     assert first == evaluation_key(**kwargs)
     assert first != evaluation_key(**{**kwargs, "evidence_hash": "def"})
+    assert first != evaluation_key(**{**kwargs, "prompt_sha256": "c" * 64})
+    assert first != evaluation_key(**{**kwargs, "schema_sha256": "d" * 64})
 
 
 def test_build_command_fixes_single_turn_contract() -> None:
@@ -89,6 +93,14 @@ def test_validate_simplify_output_is_strict() -> None:
         validate_structured_output("simplify", {**output, "extra": True})
     with pytest.raises(ContractViolation):
         validate_structured_output("simplify", {**output, "confidence": 2})
+    unable = {
+        **output,
+        "outcome": "unable",
+        "simplified_expression": None,
+        "equivalence_assessment": "preserved",
+    }
+    with pytest.raises(ContractViolation, match="undetermined"):
+        validate_structured_output("simplify", unable)
 
 
 def test_validate_equivalence_and_structure_enums() -> None:
@@ -108,6 +120,11 @@ def test_validate_equivalence_and_structure_enums() -> None:
     validate_structured_output("structure", structure)
     with pytest.raises(ContractViolation):
         validate_structured_output("structure", {**structure, "decision": "same"})
+    with pytest.raises(ContractViolation, match="insufficient"):
+        validate_structured_output(
+            "equivalence",
+            {**equivalence, "decision": "equivalent"},
+        )
 
 
 def test_validate_envelope_accepts_schema_tool_turn_but_no_real_tools() -> None:
@@ -138,3 +155,17 @@ def test_validate_envelope_rejects_model_or_tool_contract_drift() -> None:
     with pytest.raises(ContractViolation, match="工具"):
         validate_claude_envelope(web_used, task_kind="structure")
 
+    missing_tool_usage = valid_envelope(structured)
+    missing_tool_usage["usage"] = {}
+    with pytest.raises(ContractViolation, match="server_tool_use"):
+        validate_claude_envelope(missing_tool_usage, task_kind="structure")
+
+    missing_subagent_stats = valid_envelope(structured)
+    missing_subagent_stats.pop("subagent_stats")
+    with pytest.raises(ContractViolation, match="subagent"):
+        validate_claude_envelope(missing_subagent_stats, task_kind="structure")
+
+    bad_turn_pair = valid_envelope(structured)
+    bad_turn_pair["num_turns"] = 1
+    with pytest.raises(ContractViolation, match="stop_reason"):
+        validate_claude_envelope(bad_turn_pair, task_kind="structure")
