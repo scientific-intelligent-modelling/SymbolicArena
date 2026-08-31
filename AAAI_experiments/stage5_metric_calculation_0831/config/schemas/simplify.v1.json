@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "symbolicarena.simplify.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": ["simplified", "unchanged", "unable"]
+    },
+    "simplified_expression": {
+      "type": ["string", "null"]
+    },
+    "equivalence_assessment": {
+      "type": "string",
+      "enum": ["preserved", "not_preserved", "undetermined"]
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "maxItems": 8
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "brief_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "outcome",
+    "simplified_expression",
+    "equivalence_assessment",
+    "assumptions",
+    "confidence",
+    "brief_reason"
+  ]
+}

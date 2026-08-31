@@ -1,0 +1,236 @@
+"""Claude Code 单轮调用契约、指纹和严格输出校验。"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+from typing import Any, Mapping
+
+
+CONTRACT_MODEL = "claude-opus-5[1m]"
+CONTRACT_CANONICAL_MODEL = "claude-opus-5"
+CONTRACT_EFFORT = "xhigh"
+MAX_LOGICAL_TASKS = 15800
+MAX_PHYSICAL_ATTEMPTS = 23700
+MAX_ATTEMPTS_PER_TASK = 3
+
+
+class ContractViolation(ValueError):
+    """Claude 请求或响应违反冻结契约。"""
+
+
+def canonical_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def sha256_json(value: object) -> str:
+    return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def evaluation_key(
+    *,
+    task_type: str,
+    logical_id: str,
+    prompt_version: str,
+    schema_version: str,
+    normalized_input: Mapping[str, object],
+    evidence_hash: str,
+    model: str = CONTRACT_MODEL,
+    effort: str = CONTRACT_EFFORT,
+) -> str:
+    """为逻辑任务生成包含全部评测契约的稳定指纹。"""
+
+    payload = {
+        "task_type": task_type,
+        "logical_id": logical_id,
+        "prompt_version": prompt_version,
+        "schema_version": schema_version,
+        "model": model,
+        "effort": effort,
+        "normalized_input": normalized_input,
+        "deterministic_evidence_hash": evidence_hash,
+    }
+    return sha256_json(payload)
+
+
+def render_prompt(template: str, request: Mapping[str, object]) -> str:
+    """只替换一个显式 JSON 占位符，避免模板插值改变数学表达式。"""
+
+    placeholder = "{{REQUEST_JSON}}"
+    if template.count(placeholder) != 1:
+        raise ContractViolation("prompt 模板必须恰好包含一个 {{REQUEST_JSON}} 占位符")
+    return template.replace(placeholder, canonical_json(request))
+
+
+def build_claude_command(schema: Mapping[str, object]) -> list[str]:
+    """构造固定的一次性 Claude Code 命令；prompt 由 stdin 传入。"""
+
+    return [
+        "claude",
+        "--print",
+        "--safe-mode",
+        "--setting-sources",
+        "user",
+        "--model",
+        CONTRACT_MODEL,
+        "--effort",
+        CONTRACT_EFFORT,
+        "--tools",
+        "",
+        "--max-turns",
+        "1",
+        "--no-session-persistence",
+        "--disable-slash-commands",
+        "--strict-mcp-config",
+        "--output-format",
+        "json",
+        "--json-schema",
+        canonical_json(schema),
+    ]
+
+
+def _require_exact_keys(output: Mapping[str, object], expected: set[str]) -> None:
+    actual = set(output)
+    if actual != expected:
+        raise ContractViolation(
+            f"结构化输出字段不匹配，缺失={sorted(expected-actual)}，额外={sorted(actual-expected)}"
+        )
+
+
+def _require_confidence(value: object) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ContractViolation("confidence 必须是数值")
+    if not math.isfinite(float(value)) or not 0.0 <= float(value) <= 1.0:
+        raise ContractViolation("confidence 必须是 [0, 1] 内的有限数值")
+
+
+def _require_reason(value: object) -> None:
+    if not isinstance(value, str) or not value.strip() or len(value) > 1000:
+        raise ContractViolation("brief_reason 必须是 1--1000 字符的非空字符串")
+
+
+def _require_assumptions(value: object) -> None:
+    if not isinstance(value, list) or len(value) > 8:
+        raise ContractViolation("assumptions 必须是最多 8 项的数组")
+    if not all(isinstance(item, str) for item in value):
+        raise ContractViolation("assumptions 的每一项都必须是字符串")
+
+
+def validate_structured_output(
+    task_kind: str,
+    output: Mapping[str, object],
+) -> dict[str, object]:
+    """执行独立于 Claude CLI 的第二层严格校验。"""
+
+    if not isinstance(output, Mapping):
+        raise ContractViolation("structured_output 必须是 JSON object")
+    normalized_kind = "simplify" if task_kind.endswith("simplify") else task_kind
+    if normalized_kind == "simplify":
+        expected = {
+            "outcome",
+            "simplified_expression",
+            "equivalence_assessment",
+            "assumptions",
+            "confidence",
+            "brief_reason",
+        }
+        _require_exact_keys(output, expected)
+        outcome = output["outcome"]
+        if outcome not in {"simplified", "unchanged", "unable"}:
+            raise ContractViolation(f"未知 simplify outcome: {outcome!r}")
+        expression = output["simplified_expression"]
+        if outcome in {"simplified", "unchanged"}:
+            if not isinstance(expression, str) or not expression.strip():
+                raise ContractViolation("成功化简必须返回非空 simplified_expression")
+        elif expression is not None:
+            raise ContractViolation("outcome=unable 时 simplified_expression 必须为 null")
+        assessment = output["equivalence_assessment"]
+        if assessment not in {"preserved", "not_preserved", "undetermined"}:
+            raise ContractViolation(f"未知 equivalence_assessment: {assessment!r}")
+        if outcome in {"simplified", "unchanged"} and assessment != "preserved":
+            raise ContractViolation("可接受的化简结果必须声明 equivalence_assessment=preserved")
+        _require_assumptions(output["assumptions"])
+    elif normalized_kind == "equivalence":
+        expected = {
+            "decision",
+            "evidence_basis",
+            "assumptions",
+            "confidence",
+            "brief_reason",
+        }
+        _require_exact_keys(output, expected)
+        if output["decision"] not in {"equivalent", "not_equivalent", "undetermined"}:
+            raise ContractViolation(f"未知 equivalence decision: {output['decision']!r}")
+        if output["evidence_basis"] not in {
+            "symbolic_proof",
+            "numerical_support",
+            "structural_analysis",
+            "mixed",
+            "insufficient",
+        }:
+            raise ContractViolation(f"未知 evidence_basis: {output['evidence_basis']!r}")
+        _require_assumptions(output["assumptions"])
+    elif normalized_kind == "structure":
+        expected = {"decision", "confidence", "brief_reason"}
+        _require_exact_keys(output, expected)
+        if output["decision"] not in {
+            "mathematically_equivalent",
+            "same_canonical_structure",
+            "different_structure",
+            "undetermined",
+        }:
+            raise ContractViolation(f"未知 structure decision: {output['decision']!r}")
+    else:
+        raise ContractViolation(f"未知 task_kind: {task_kind!r}")
+    _require_confidence(output["confidence"])
+    _require_reason(output["brief_reason"])
+    return dict(output)
+
+
+def validate_claude_envelope(
+    envelope: Mapping[str, object],
+    *,
+    task_kind: str,
+) -> dict[str, object]:
+    """校验 Claude Code JSON envelope、模型和零外部工具契约。"""
+
+    if not isinstance(envelope, Mapping):
+        raise ContractViolation("Claude 外层输出不是 JSON object")
+    if envelope.get("type") != "result" or envelope.get("subtype") != "success":
+        raise ContractViolation("Claude 外层输出不是成功 result")
+    if envelope.get("is_error") is not False or envelope.get("terminal_reason") != "completed":
+        raise ContractViolation("Claude 调用未正常完成")
+    turns = envelope.get("num_turns")
+    if isinstance(turns, bool) or not isinstance(turns, int) or turns < 1 or turns > 2:
+        raise ContractViolation(f"单轮结构化调用出现异常 num_turns={turns!r}")
+
+    model_usage = envelope.get("modelUsage")
+    if not isinstance(model_usage, Mapping) or set(model_usage) != {CONTRACT_MODEL}:
+        raise ContractViolation(f"Claude 模型契约不符: {list(model_usage or {})!r}")
+    model_record = model_usage[CONTRACT_MODEL]
+    if not isinstance(model_record, Mapping):
+        raise ContractViolation("Claude modelUsage 记录无效")
+    if model_record.get("canonicalModel") != CONTRACT_CANONICAL_MODEL:
+        raise ContractViolation(
+            f"Claude 实际模型不符: {model_record.get('canonicalModel')!r}"
+        )
+
+    permission_denials = envelope.get("permission_denials")
+    if permission_denials not in (None, []):
+        raise ContractViolation("Claude 尝试调用了被禁用的工具或权限")
+    usage = envelope.get("usage")
+    server_tools: Mapping[str, object] = {}
+    if isinstance(usage, Mapping) and isinstance(usage.get("server_tool_use"), Mapping):
+        server_tools = usage["server_tool_use"]  # type: ignore[assignment]
+    if any(int(value or 0) != 0 for value in server_tools.values()):
+        raise ContractViolation("Claude 使用了被禁止的服务器工具")
+    subagents = envelope.get("subagent_stats")
+    if isinstance(subagents, Mapping) and int(subagents.get("spawned") or 0) != 0:
+        raise ContractViolation("Claude 使用了被禁止的 subagent 工具")
+
+    structured = envelope.get("structured_output")
+    if not isinstance(structured, Mapping):
+        raise ContractViolation("Claude 输出缺失 structured_output")
+    return validate_structured_output(task_kind, structured)
+
