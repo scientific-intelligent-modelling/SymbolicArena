@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from typing import Any, Mapping
 
 from jsonschema import Draft7Validator
@@ -130,6 +131,21 @@ def _require_exact_keys(output: Mapping[str, object], expected: set[str]) -> Non
         raise ContractViolation(
             f"结构化输出字段不匹配，缺失={sorted(expected-actual)}，额外={sorted(actual-expected)}"
         )
+
+
+def _parse_single_json_result(result_text: str) -> Mapping[str, object]:
+    """解析原始 JSON，或仅由单个 json 代码围栏包裹的 JSON。"""
+
+    stripped = result_text.strip()
+    fenced = re.fullmatch(r"```json[ \t]*\r?\n([\s\S]*?)\r?\n```", stripped)
+    candidate = fenced.group(1) if fenced is not None else stripped
+    try:
+        structured = json.loads(candidate)
+    except json.JSONDecodeError as exc:
+        raise ContractViolation(f"Claude result 不是合法 JSON: {exc}") from exc
+    if not isinstance(structured, Mapping):
+        raise ContractViolation("Claude result 必须是 JSON object")
+    return structured
 
 
 def _require_confidence(value: object) -> None:
@@ -283,12 +299,7 @@ def validate_claude_envelope(
     result_text = envelope.get("result")
     if not isinstance(result_text, str) or not result_text.strip():
         raise ContractViolation("Claude 输出缺失纯 JSON result 文本")
-    try:
-        structured = json.loads(result_text)
-    except json.JSONDecodeError as exc:
-        raise ContractViolation(f"Claude result 不是合法 JSON: {exc}") from exc
-    if not isinstance(structured, Mapping):
-        raise ContractViolation("Claude result 必须是 JSON object")
+    structured = _parse_single_json_result(result_text)
     if schema is not None:
         try:
             Draft7Validator.check_schema(schema)

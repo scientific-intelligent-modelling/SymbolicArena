@@ -187,7 +187,7 @@ def test_validate_envelope_rejects_model_or_tool_contract_drift() -> None:
         validate_claude_envelope(bad_turn_pair, task_kind="structure")
 
 
-def test_validate_envelope_rejects_markdown_or_schema_invalid_result() -> None:
+def test_validate_envelope_accepts_single_json_fence_but_rejects_extra_text() -> None:
     structured = {
         "decision": "different_structure",
         "confidence": 0.8,
@@ -197,8 +197,16 @@ def test_validate_envelope_rejects_markdown_or_schema_invalid_result() -> None:
 
     markdown = valid_envelope(structured)
     markdown["result"] = "```json\n" + json.dumps(structured) + "\n```"
+    assert validate_claude_envelope(
+        markdown,
+        task_kind="structure",
+        schema=schema,
+    ) == structured
+
+    extra_text = valid_envelope(structured)
+    extra_text["result"] = "Result:\n```json\n" + json.dumps(structured) + "\n```"
     with pytest.raises(ContractViolation, match="合法 JSON"):
-        validate_claude_envelope(markdown, task_kind="structure", schema=schema)
+        validate_claude_envelope(extra_text, task_kind="structure", schema=schema)
 
     missing = valid_envelope(structured)
     missing["result"] = json.dumps({"decision": "different_structure"})

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
+    CONTRACT_MODEL,
     canonical_json,
     evaluation_key,
     render_prompt,
@@ -110,6 +111,23 @@ def test_failed_validation_can_be_promoted_without_new_attempt(tmp_path: Path) -
         "confidence": 0.9,
         "brief_reason": "Removed an additive zero.",
     }
+    envelope = {
+        "type": "result",
+        "subtype": "success",
+        "is_error": False,
+        "terminal_reason": "completed",
+        "num_turns": 1,
+        "stop_reason": "end_turn",
+        "permission_denials": [],
+        "result": "```json\n" + json.dumps(structured_output) + "\n```",
+        "usage": {
+            "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}
+        },
+        "subagent_stats": {"spawned": 0},
+        "modelUsage": {
+            CONTRACT_MODEL: {"canonicalModel": "claude-opus-5"}
+        },
+    }
     attempt_path = tmp_path / "attempt.json"
     attempt_path.write_text(
         json.dumps(
@@ -119,13 +137,13 @@ def test_failed_validation_can_be_promoted_without_new_attempt(tmp_path: Path) -
                 "request": request,
                 "prompt": render_prompt(prompt_template, request, schema),
                 "command": ["claude"],
-                "stdout": "{}",
+                "stdout": json.dumps(envelope),
                 "stderr": "",
-                "envelope": {},
+                "envelope": envelope,
                 "validation": {
                     "ok": False,
                     "error_class": "validation_failed",
-                    "structured_output": structured_output,
+                    "structured_output": None,
                 },
                 "metadata": {
                     "error_class": "validation_failed",

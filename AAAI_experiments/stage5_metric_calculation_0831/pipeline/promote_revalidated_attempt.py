@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
+    validate_claude_envelope,
     validate_structured_output,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import (
@@ -91,8 +92,6 @@ def promote_revalidated_attempt(
     if not isinstance(validation, Mapping) or validation.get("ok") is not False:
         raise PromotionError("原 attempt 不是验证失败状态")
     structured_raw = validation.get("structured_output")
-    if not isinstance(structured_raw, Mapping):
-        raise PromotionError("原 attempt 缺少可重验证的 structured_output")
 
     loaded_plan = load_plan_jsonl(plan_jsonl)
     by_key = {entry.evaluation_key: entry for entry in loaded_plan.entries}
@@ -108,7 +107,17 @@ def promote_revalidated_attempt(
         raise PromotionError("当前补冻器仅允许重验证 simplify 任务")
     if attempt.get("request") != definition.request:
         raise PromotionError("attempt request 与冻结 plan 不一致")
-    structured_output = validate_structured_output(task_kind, structured_raw)
+    if isinstance(structured_raw, Mapping):
+        structured_output = validate_structured_output(task_kind, structured_raw)
+    else:
+        envelope = attempt.get("envelope")
+        if not isinstance(envelope, Mapping):
+            raise PromotionError("原 attempt 缺少可重解析的 Claude envelope")
+        structured_output = validate_claude_envelope(
+            envelope,
+            task_kind=task_kind,
+            schema=definition.schema,
+        )
     semantic_evidence = _validate_simplify_semantics(definition, structured_output)
     if semantic_evidence.get("decision") not in {"equivalent", "not_applicable"}:
         raise PromotionError("重验证未形成可接受的等价闭环")
