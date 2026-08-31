@@ -634,8 +634,9 @@ def execute_plan(
                 else None
             ),
         )
-        for entry in loaded_plan.entries:
-            store.register_task(entry.definition.task_spec)
+        store.register_tasks(
+            [entry.definition.task_spec for entry in loaded_plan.entries]
+        )
         recovered_expired_attempt_ids = store.recover_expired_leases()
         attempts_reserved_at_start = store.attempts_reserved()
         _verify_cached_frozen_entries(store, loaded_plan.entries)

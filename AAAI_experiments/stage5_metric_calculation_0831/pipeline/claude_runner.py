@@ -36,7 +36,11 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_evidence 
 
 JsonDict = dict[str, object]
 
-_SECRET_KEY_PATTERN = re.compile(r"(token|api[_-]?key|authorization|secret|password)", re.IGNORECASE)
+_SECRET_KEY_PATTERN = re.compile(
+    r"(?:^|[_-])(?:auth(?:entication)?[_-]?token|access[_-]?token|refresh[_-]?token|"
+    r"api[_-]?key|authorization|secret|password|token)(?:$|[_-])",
+    re.IGNORECASE,
+)
 _SECRET_VALUE_PATTERNS = (
     re.compile(r"sk-[A-Za-z0-9._-]+"),
     re.compile(r"Bearer\s+[A-Za-z0-9._-]+", re.IGNORECASE),
@@ -183,6 +187,9 @@ def _infer_task_kind(task_type: str, explicit: str | None) -> str:
 
 def _is_retryable_cli_exit(stdout: str, stderr: str) -> tuple[str, bool]:
     text = f"{stdout}\n{stderr}".lower()
+    if "prompt_too_long" in text or "prompt is too long" in text:
+        # 请求体不会在原地随机变短；继续重试只会无效消耗任务级尝试预算。
+        return ("prompt_too_long", False)
     if any(code in text for code in (" 408", " 429", " 500", " 502", " 503", " 504")):
         return ("http_transient", True)
     if "timed out" in text or "timeout" in text:

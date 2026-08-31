@@ -1267,10 +1267,15 @@ def validate_simplification(
         allowed_variables=allowed_variables,
         allowed_functions=allowed_functions,
     )
+    simplified_allowed_functions = set(allowed_functions)
+    # 比较表达式在 canonical tree 中会成为 Piecewise(1/0)。允许模型使用
+    # 等价的显式 Piecewise 记法，但不放宽其它新函数。
+    if "piecewise" in set(original_artifact["operator_set"]):
+        simplified_allowed_functions.add("where")
     simplified_artifact = build_symbolic_artifact(
         simplified,
         allowed_variables=allowed_variables,
-        allowed_functions=allowed_functions,
+        allowed_functions=simplified_allowed_functions,
     )
     original_variables = set(original_artifact["variables"])
     simplified_variables = set(simplified_artifact["variables"])
@@ -1280,7 +1285,9 @@ def validate_simplification(
         )
     original_functions = set(original_artifact["function_set"])
     simplified_functions = set(simplified_artifact["function_set"])
-    if not simplified_functions.issubset(original_functions | set(allowed_functions)):
+    if not simplified_functions.issubset(
+        original_functions | simplified_allowed_functions
+    ):
         raise SymbolicEvidenceError(
             f"化简结果引入了新函数: {tuple(sorted(simplified_functions - original_functions))}"
         )

@@ -9,6 +9,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     CONTRACT_MODEL,
     ContractViolation,
     build_claude_command,
+    compact_request_for_prompt,
     evaluation_key,
     render_prompt,
     validate_claude_envelope,
@@ -88,6 +89,211 @@ def test_render_prompt_replaces_one_request_placeholder() -> None:
     assert '"expression":"x0 + 0"' in rendered
     assert "OUTPUT_JSON_SCHEMA_DRAFT_07" in rendered
     assert '"$id":"symbolicarena.simplify.v1"' in rendered
+
+
+def test_prompt_compaction_is_transport_only_and_preserves_hash_material() -> None:
+    probe_points = [
+        {
+            "split": "id_test",
+            "row_index": 0,
+            "values": {"x0": 1.0, "x1": 2.0},
+        }
+    ]
+    request = {
+        "dataset_id": "DemoSet",
+        "expression": "x0 + sin(x1)",
+        "original_expression": "x0 + sin(x1)",
+        "variables": ["x0", "x1"],
+        "allowed_functions": ["sin"],
+        "domain_assumptions": {
+            "number_system": "real",
+            "operator_semantics": ["ordinary real semantics"],
+        },
+        "probe_points": probe_points,
+        "probe_source": "dataset_probes_v1",
+        "probe_sample_sha256": "a" * 64,
+        "dataset_probe_evidence": {
+            "schema_version": "dataset_probes_v1",
+            "dataset_name": "DemoSet",
+            "target_name": "y",
+            "variables": ["x0", "x1"],
+            "point_count": 1,
+            "points": probe_points,
+            "source_sha256": {"metadata_yaml": "b" * 64},
+            "sample_sha256": "a" * 64,
+            "evidence_sha256": "c" * 64,
+        },
+        "deterministic_evidence": {
+            "dataset_probe": {
+                "schema_version": "dataset_probes_v1",
+                "dataset_name": "DemoSet",
+                "target_name": "y",
+                "variables": ["x0", "x1"],
+                "point_count": 1,
+                "points": probe_points,
+                "source_sha256": {"metadata_yaml": "b" * 64},
+                "sample_sha256": "a" * 64,
+                "evidence_sha256": "c" * 64,
+            },
+            "domain_assumptions": {
+                "number_system": "real",
+                "operator_semantics": ["ordinary real semantics"],
+            },
+            "symbolic_artifact": {
+                "source_kind": "expression",
+                "canonical_expression": "x0 + sin(x1)",
+                "source_text": "x0 + sin(x1)",
+                "canonical_tree": {"type": "add", "args": [{"type": "symbol"}]},
+                "constants_abstracted_canonical_tree": {
+                    "type": "add",
+                    "args": [{"type": "const"}],
+                },
+                "constants_abstracted_tree_fingerprint": "d" * 64,
+                "node_count": 4,
+                "variables": ["x0", "x1"],
+                "function_set": ["sin"],
+                "operator_set": ["add", "sin"],
+                "artifact_sha256": "e" * 64,
+            },
+        },
+        "evidence_hash": "f" * 64,
+        "ast_source_evidence": {
+            "selected_expression_source": "canonical_artifact.instantiated_expression",
+            "selected_expression_before_variable_mapping": "x0 + sin(x1)",
+            "semantic_expression_after_variable_mapping": "x0 + sin(x1)",
+            "extracted_expression_body": "x0 + sin(x1)",
+            "feature_names": ["x0", "x1"],
+            "variable_mapping": {"X0": "x0", "X1": "x1"},
+            "formula_resolution": {
+                "status": "mapped",
+                "manifest_entry": {"resolution": "direct"},
+            },
+            "formula_candidates": {
+                "instantiated_expression": "x0 + sin(x1)",
+                "normalized_expression": "x0 + sin(x1)",
+                "return_expression_source": "x0 + sin(x1)",
+                "equation": "x0 + sin(x1)",
+            },
+            "canonical_artifact": {
+                "instantiated_expression": "x0 + sin(x1)",
+                "python_function_source": "def equation(x0, x1): return x0 + sin(x1)",
+            },
+            "result_status": "ok",
+            "result_path": "/tmp/demo/result.json",
+            "result_raw_sha256": "1" * 64,
+            "source_row_sha256": "2" * 64,
+        },
+    }
+    request_snapshot = json.loads(json.dumps(request, ensure_ascii=False, sort_keys=True))
+
+    compacted = compact_request_for_prompt(request)
+    assert request == request_snapshot
+    assert request["dataset_probe_evidence"]["points"] == probe_points
+    assert request["deterministic_evidence"]["dataset_probe"]["points"] == probe_points
+    assert "canonical_tree" in request["deterministic_evidence"]["symbolic_artifact"]
+    assert (
+        "constants_abstracted_canonical_tree"
+        in request["deterministic_evidence"]["symbolic_artifact"]
+    )
+    assert request["original_expression"] == request["expression"]
+    assert "formula_candidates" in request["ast_source_evidence"]
+
+    assert compacted["probe_points"] == probe_points
+    assert "original_expression" not in compacted
+    assert "points" not in compacted["dataset_probe_evidence"]
+    assert "points" not in compacted["deterministic_evidence"]["dataset_probe"]
+    assert "domain_assumptions" not in compacted["deterministic_evidence"]
+    compact_artifact = compacted["deterministic_evidence"]["symbolic_artifact"]
+    assert "source_text" not in compact_artifact
+    assert "canonical_expression" not in compact_artifact
+    assert "canonical_tree" not in compact_artifact
+    assert "constants_abstracted_canonical_tree" not in compact_artifact
+    assert compact_artifact["node_count"] == 4
+    assert compact_artifact["function_set"] == ["sin"]
+    assert compact_artifact["operator_set"] == ["add", "sin"]
+    assert compact_artifact["artifact_sha256"] == "e" * 64
+    assert compact_artifact["constants_abstracted_tree_fingerprint"] == "d" * 64
+    assert compacted["dataset_probe_evidence"]["source_sha256"] == {"metadata_yaml": "b" * 64}
+    assert compacted["dataset_probe_evidence"]["sample_sha256"] == "a" * 64
+    assert compacted["dataset_probe_evidence"]["evidence_sha256"] == "c" * 64
+    assert compacted["evidence_hash"] == "f" * 64
+    compact_ast = compacted["ast_source_evidence"]
+    assert compact_ast == {
+        "selected_expression_source": "canonical_artifact.instantiated_expression",
+        "feature_names": ["x0", "x1"],
+        "variable_mapping": {"X0": "x0", "X1": "x1"},
+        "formula_resolution": {
+            "status": "mapped",
+            "manifest_entry": {"resolution": "direct"},
+        },
+        "result_status": "ok",
+        "result_path": "/tmp/demo/result.json",
+        "result_raw_sha256": "1" * 64,
+        "source_row_sha256": "2" * 64,
+    }
+
+    rendered = render_prompt("REQ={{REQUEST_JSON}}", request)
+    assert '"probe_points":[{"row_index":0,"split":"id_test","values":{"x0":1.0,"x1":2.0}}]' in rendered
+    assert '"artifact_sha256":"' + ("e" * 64) + '"' in rendered
+    assert '"constants_abstracted_tree_fingerprint":"' + ("d" * 64) + '"' in rendered
+    assert '"sample_sha256":"' + ("a" * 64) + '"' in rendered
+    assert '"evidence_sha256":"' + ("c" * 64) + '"' in rendered
+    assert '"canonical_tree"' not in rendered
+    assert '"constants_abstracted_canonical_tree"' not in rendered
+    assert '"original_expression"' not in rendered
+    assert '"source_text"' not in rendered
+    assert '"canonical_expression":"x0 + sin(x1)"' not in rendered
+    assert '"selected_expression_before_variable_mapping"' not in rendered
+    assert '"semantic_expression_after_variable_mapping"' not in rendered
+    assert '"formula_candidates"' not in rendered
+    assert '"canonical_artifact"' not in rendered
+    assert request == request_snapshot
+
+
+def test_prompt_compaction_keeps_ordinary_requests_compatible() -> None:
+    request = {
+        "expression": "x0 + 0",
+        "metadata": {"notes": ["demo"], "points": [1, 2, 3]},
+    }
+    compacted = compact_request_for_prompt(request)
+    assert compacted == request
+    rendered = render_prompt("{{REQUEST_JSON}}", request)
+    assert rendered == json.dumps(request, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def test_prompt_compaction_preserves_nonidentical_expression_fields() -> None:
+    request = {
+        "expression": "x0 + 1",
+        "original_expression": "x0 + 1.0",
+        "domain_assumptions": {"number_system": "real"},
+        "deterministic_evidence": {
+            "domain_assumptions": {"number_system": "real"},
+            "symbolic_artifact": {
+                "source_text": "x0 + 1.0",
+                "canonical_expression": "x0 + 1",
+                "artifact_sha256": "a" * 64,
+                "node_count": 3,
+                "function_set": [],
+                "operator_set": ["add"],
+                "constants_abstracted_tree_fingerprint": "b" * 64,
+            },
+        },
+        "ast_source_evidence": {
+            "selected_expression_source": "equation",
+            "selected_expression_before_variable_mapping": "x0 + 1.0",
+            "semantic_expression_after_variable_mapping": "x0 + 1",
+            "result_path": "/tmp/demo/result.json",
+        },
+    }
+    compacted = compact_request_for_prompt(request)
+    assert compacted["original_expression"] == "x0 + 1.0"
+    assert "domain_assumptions" not in compacted["deterministic_evidence"]
+    assert compacted["deterministic_evidence"]["symbolic_artifact"]["source_text"] == "x0 + 1.0"
+    assert "canonical_expression" not in compacted["deterministic_evidence"]["symbolic_artifact"]
+    assert compacted["ast_source_evidence"] == {
+        "selected_expression_source": "equation",
+        "result_path": "/tmp/demo/result.json",
+    }
 
 
 def test_validate_simplify_output_is_strict() -> None:

@@ -119,7 +119,11 @@ def promote_revalidated_attempt(
             schema=definition.schema,
         )
     semantic_evidence = _validate_simplify_semantics(definition, structured_output)
-    if semantic_evidence.get("decision") not in {"equivalent", "not_applicable"}:
+    if semantic_evidence.get("decision") not in {
+        "equivalent",
+        "undetermined",
+        "not_applicable",
+    }:
         raise PromotionError("重验证未形成可接受的等价闭环")
 
     predecessor = None

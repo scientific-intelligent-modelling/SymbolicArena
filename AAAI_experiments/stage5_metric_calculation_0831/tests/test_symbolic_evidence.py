@@ -407,6 +407,25 @@ def test_piecewise_abs_aliases_preserve_literal_where_semantics() -> None:
     assert evidence["symbolic_decision"] == "equivalent"
 
 
+def test_comparison_indicator_allows_equivalent_explicit_piecewise_notation() -> None:
+    evidence = validate_simplification(
+        original="2*x0 - 0.5*(x0 >= 1e-6)",
+        simplified="2*x0 - 0.5*Piecewise((1, x0 >= 1e-6), (0, True))",
+        allowed_variables={"x0"},
+        allowed_functions=set(),
+        seed=521,
+        probe_points=[
+            {"split": "id_test", "row_index": 0, "values": {"x0": 0.0}},
+            {"split": "ood_test", "row_index": 1, "values": {"x0": 2.0}},
+        ],
+        probe_source="unit_test",
+        probe_sample_sha256="b" * 64,
+    )
+
+    assert evidence["decision"] == "equivalent"
+    assert evidence["symbolic_decision"] == "equivalent"
+
+
 def test_special_function_identity_is_equivalent_via_artifact_short_circuit() -> None:
     evidence = validate_simplification(
         original="gradient(x0)",

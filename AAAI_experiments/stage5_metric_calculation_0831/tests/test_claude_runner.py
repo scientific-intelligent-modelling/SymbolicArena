@@ -22,6 +22,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner impo
     ClaudeRunner,
     ClaudeRunnerCircuitBreaker,
     TaskDefinition,
+    _is_retryable_cli_exit,
     _looks_like_cli_contract_drift,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskSpec, TaskStateStore
@@ -601,6 +602,36 @@ def test_timeout_expired_bytes_are_normalized_and_hashed_without_leaking_secrets
     assert "top-secret-token" not in json.dumps(first_attempt, ensure_ascii=False)
 
 
+def test_usage_token_counts_are_preserved_while_credentials_are_redacted(tmp_path: Path) -> None:
+    definition = _task_definition(tmp_path, "ek-usage-audit")
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    envelope = _valid_envelope()
+    envelope["usage"]["anthropic_auth_token"] = "Bearer credential-test-value"  # type: ignore[index]
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(envelope, ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert attempt["metadata"]["usage"]["input_tokens"] == 11
+    assert attempt["metadata"]["usage"]["output_tokens"] == 7
+    assert attempt["metadata"]["usage"]["anthropic_auth_token"] == "[REDACTED]"
+    assert "credential-test-value" not in json.dumps(attempt, ensure_ascii=False)
+
+
 def test_three_attempts_exhaust_task(tmp_path: Path) -> None:
     definition = _task_definition(tmp_path, "ek-exhausted")
     store = TaskStateStore(
@@ -688,6 +719,57 @@ def test_looks_like_cli_contract_drift_distinguishes_cli_flags_from_api_errors(
     expected: bool,
 ) -> None:
     assert _looks_like_cli_contract_drift("", stderr) is expected
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        '{"terminal_reason":"prompt_too_long"}',
+        "Prompt is too long; reduce request size.",
+    ],
+)
+def test_prompt_too_long_is_task_terminal_and_not_retried(payload: str) -> None:
+    assert _is_retryable_cli_exit(payload, "") == ("prompt_too_long", False)
+
+
+def test_nonzero_prompt_too_long_envelope_stops_after_one_attempt(tmp_path: Path) -> None:
+    definition = _task_definition(tmp_path, "ek-prompt-too-long")
+    envelope = _valid_envelope()
+    envelope.update(
+        {
+            "is_error": True,
+            "terminal_reason": "prompt_too_long",
+            "stop_reason": "stop_sequence",
+            "result": "Prompt is too long",
+            "total_cost_usd": 0,
+        }
+    )
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=1,
+                stdout=json.dumps(envelope, ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "exhausted"
+    assert result.error_class == "prompt_too_long"
+    assert store.attempts_reserved() == 1
+    assert len(fake_run.calls) == 1
+    attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert attempt["validation"]["error_class"] == "prompt_too_long"
+    assert attempt["metadata"]["retryable"] is False
+    assert attempt["metadata"]["total_cost_usd"] == 0
 
 
 def test_nonzero_exit_with_valid_envelope_keeps_usage_cost_audit_and_retries(tmp_path: Path) -> None:

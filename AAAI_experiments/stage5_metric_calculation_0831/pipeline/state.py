@@ -267,60 +267,142 @@ class TaskStateStore:
             ),
         )
 
-    def register_task(self, spec: TaskSpec, *, now: float | None = None) -> None:
+    @staticmethod
+    def _validate_task_spec(spec: TaskSpec) -> None:
         if not spec.evaluation_key or not spec.logical_id:
             raise StateContractError("evaluation_key 和 logical_id 不得为空")
         if spec.condition not in {"clean", "noise001", "noise005"}:
             raise StateContractError(f"未知任务条件: {spec.condition!r}")
+
+    @staticmethod
+    def _load_existing_task_specs(
+        connection: sqlite3.Connection,
+        *,
+        evaluation_keys: Sequence[str],
+        logical_ids: Sequence[str],
+    ) -> tuple[dict[str, dict[str, str]], dict[str, str]]:
+        known_by_evaluation: dict[str, dict[str, str]] = {}
+        known_by_logical: dict[str, str] = {}
+        for values, column in (
+            (tuple(dict.fromkeys(evaluation_keys)), "evaluation_key"),
+            (tuple(dict.fromkeys(logical_ids)), "logical_id"),
+        ):
+            if not values:
+                continue
+            for start in range(0, len(values), 500):
+                chunk = values[start : start + 500]
+                placeholders = ",".join("?" for _ in chunk)
+                query = (
+                    "SELECT evaluation_key, logical_id, spec_json FROM tasks "
+                    f"WHERE {column} IN ({placeholders})"
+                )
+                for row in connection.execute(query, chunk).fetchall():
+                    evaluation_key = str(row["evaluation_key"])
+                    logical_id = str(row["logical_id"])
+                    known_by_evaluation[evaluation_key] = {
+                        "logical_id": logical_id,
+                        "spec_json": str(row["spec_json"]),
+                    }
+                    known_by_logical[logical_id] = evaluation_key
+        return known_by_evaluation, known_by_logical
+
+    def register_task(self, spec: TaskSpec, *, now: float | None = None) -> None:
+        self.register_tasks((spec,), now=now)
+
+    def register_tasks(self, specs: Sequence[TaskSpec], *, now: float | None = None) -> None:
+        if not specs:
+            return
         timestamp = time.time() if now is None else float(now)
-        spec_json = spec.canonical_json()
-        dependencies_json = json.dumps(list(spec.dependencies), ensure_ascii=False)
+        prepared_specs: list[tuple[TaskSpec, str, str]] = []
+        for spec in specs:
+            self._validate_task_spec(spec)
+            prepared_specs.append(
+                (
+                    spec,
+                    spec.canonical_json(),
+                    json.dumps(list(spec.dependencies), ensure_ascii=False),
+                )
+            )
         with self._write_transaction() as connection:
-            existing = connection.execute(
-                "SELECT spec_json FROM tasks WHERE evaluation_key = ? OR logical_id = ?",
-                (spec.evaluation_key, spec.logical_id),
-            ).fetchone()
-            if existing is not None:
-                if existing["spec_json"] != spec_json:
-                    raise StateContractError(
-                        f"任务 {spec.logical_id!r} 已存在，但契约内容发生漂移"
-                    )
-                return
             logical_count = int(
                 connection.execute("SELECT COUNT(*) AS count FROM tasks").fetchone()["count"]
             )
-            if logical_count >= self.logical_task_cap:
-                raise StateContractError(
-                    f"逻辑任务预算已耗尽: {logical_count}/{self.logical_task_cap}"
-                )
-            connection.execute(
-                """INSERT INTO tasks(
-                       evaluation_key, logical_id, task_type, condition_name,
-                       priority, input_hash, prompt_version, schema_version,
-                       dependencies_json, spec_json, state, created_at, updated_at
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)""",
-                (
-                    spec.evaluation_key,
-                    spec.logical_id,
-                    spec.task_type,
-                    spec.condition,
-                    int(spec.priority),
-                    spec.input_hash,
-                    spec.prompt_version,
-                    spec.schema_version,
-                    dependencies_json,
-                    spec_json,
-                    timestamp,
-                    timestamp,
-                ),
-            )
-            self._event(
+            known_by_evaluation, known_by_logical = self._load_existing_task_specs(
                 connection,
-                event_type="task_registered",
-                event_at=timestamp,
-                evaluation_key=spec.evaluation_key,
-                details={"logical_id": spec.logical_id},
+                evaluation_keys=[spec.evaluation_key for spec, _, _ in prepared_specs],
+                logical_ids=[spec.logical_id for spec, _, _ in prepared_specs],
             )
+            pending_inserts: list[tuple[object, ...]] = []
+            pending_events: list[tuple[str, float, dict[str, object]]] = []
+            new_logical_count = 0
+            # 先在内存里完成整批去重、漂移和预算校验，确认无误后再一次性落库。
+            for spec, spec_json, dependencies_json in prepared_specs:
+                known_entry = known_by_evaluation.get(spec.evaluation_key)
+                known_evaluation_key = known_by_logical.get(spec.logical_id)
+                if known_entry is None and known_evaluation_key is None:
+                    if logical_count + new_logical_count >= self.logical_task_cap:
+                        raise StateContractError(
+                            f"逻辑任务预算已耗尽: {logical_count + new_logical_count}/{self.logical_task_cap}"
+                        )
+                    pending_inserts.append(
+                        (
+                            spec.evaluation_key,
+                            spec.logical_id,
+                            spec.task_type,
+                            spec.condition,
+                            int(spec.priority),
+                            spec.input_hash,
+                            spec.prompt_version,
+                            spec.schema_version,
+                            dependencies_json,
+                            spec_json,
+                            timestamp,
+                            timestamp,
+                        )
+                    )
+                    pending_events.append(
+                        (
+                            spec.evaluation_key,
+                            timestamp,
+                            {"logical_id": spec.logical_id},
+                        )
+                    )
+                    known_by_evaluation[spec.evaluation_key] = {
+                        "logical_id": spec.logical_id,
+                        "spec_json": spec_json,
+                    }
+                    known_by_logical[spec.logical_id] = spec.evaluation_key
+                    new_logical_count += 1
+                    continue
+                if known_entry is None or known_evaluation_key != spec.evaluation_key:
+                    raise StateContractError(
+                        "任务唯一标识冲突: "
+                        f"evaluation_key={spec.evaluation_key!r}, logical_id={spec.logical_id!r}"
+                    )
+                if (
+                    known_entry["logical_id"] != spec.logical_id
+                    or known_entry["spec_json"] != spec_json
+                ):
+                    raise StateContractError(
+                        f"任务 {spec.logical_id!r} 已存在，但契约内容发生漂移"
+                    )
+            if pending_inserts:
+                connection.executemany(
+                    """INSERT INTO tasks(
+                           evaluation_key, logical_id, task_type, condition_name,
+                           priority, input_hash, prompt_version, schema_version,
+                           dependencies_json, spec_json, state, created_at, updated_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)""",
+                    pending_inserts,
+                )
+                for evaluation_key, event_at, details in pending_events:
+                    self._event(
+                        connection,
+                        event_type="task_registered",
+                        event_at=event_at,
+                        evaluation_key=evaluation_key,
+                        details=details,
+                    )
 
     def attempts_reserved(self) -> int:
         with self._connect() as connection:

@@ -357,6 +357,57 @@ def test_registers_all_tasks_but_limit_only_caps_this_run(tmp_path: Path) -> Non
     assert store.task_state(rows[2]["evaluation_key"]) == "pending"
 
 
+def test_run_uses_single_bulk_registration_call(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import main
+
+    rows = [
+        _build_plan_row(tmp_path, "equivalence::task-1", priority=1),
+        _build_plan_row(tmp_path, "equivalence::task-2", priority=2),
+        _build_plan_row(tmp_path, "equivalence::task-3", priority=3),
+    ]
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, rows)
+    recorded_batches: list[list[str]] = []
+    original_register_tasks = TaskStateStore.register_tasks
+
+    def wrapped_register_tasks(
+        self: TaskStateStore,
+        specs: Any,
+        *,
+        now: float | None = None,
+    ) -> None:
+        spec_list = list(specs)
+        recorded_batches.append([spec.logical_id for spec in spec_list])
+        original_register_tasks(self, spec_list, now=now)
+
+    def fail_register_task(self: TaskStateStore, spec: TaskSpec, *, now: float | None = None) -> None:
+        raise AssertionError(f"不应回退到逐条注册: {spec.logical_id}")
+
+    monkeypatch.setattr(TaskStateStore, "register_tasks", wrapped_register_tasks)
+    monkeypatch.setattr(TaskStateStore, "register_task", fail_register_task)
+
+    exit_code = main(
+        [
+            "--plan-jsonl",
+            str(plan_path),
+            "--state-db",
+            str(tmp_path / "control" / "state.sqlite3"),
+            "--attempts-dir",
+            str(tmp_path / "llm" / "attempts"),
+            "--frozen-dir",
+            str(tmp_path / "llm" / "frozen"),
+            "--report-json",
+            str(tmp_path / "reports" / "progress.json"),
+            "--limit",
+            "1",
+        ],
+        runner_factory=_runner_factory(behaviors={}, calls=[]),
+    )
+
+    assert exit_code == 0
+    assert recorded_batches == [[row["logical_id"] for row in rows]]
+
+
 def test_cached_resume_skips_runner_and_counts_cache(tmp_path: Path) -> None:
     from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import main
 

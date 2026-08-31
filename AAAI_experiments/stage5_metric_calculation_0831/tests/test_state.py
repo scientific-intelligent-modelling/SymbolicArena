@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -43,12 +44,93 @@ def predecessor_manifest(tmp_path: Path, *, attempt_count: int) -> PredecessorAt
     )
 
 
+def _table_count(path: Path, table: str) -> int:
+    with sqlite3.connect(path) as connection:
+        row = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+    assert row is not None
+    return int(row[0])
+
+
 def test_register_is_idempotent_but_rejects_contract_drift(tmp_path: Path) -> None:
     store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=10)
     store.register_task(task("a"))
     store.register_task(task("a"))
     with pytest.raises(StateContractError):
         store.register_task(task("a", condition="noise001"))
+
+
+def test_register_tasks_registers_once_and_is_restart_idempotent(tmp_path: Path) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    specs = (task("a"), task("a"), task("b"))
+
+    store.register_tasks(specs, now=12.0)
+    store.register_tasks(specs, now=34.0)
+
+    assert _table_count(state_db, "tasks") == 2
+    assert _table_count(state_db, "events") == 2
+    assert store.task_state("a") == "pending"
+    assert store.task_state("b") == "pending"
+
+
+def test_register_tasks_rejects_in_batch_identity_conflict_without_partial_write(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    conflicting = TaskSpec(
+        evaluation_key="b",
+        logical_id="logical::a",
+        task_type="pred_simplify",
+        condition="clean",
+        priority=10,
+        input_hash="input::b",
+        prompt_version="simplify.v1",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+
+    with pytest.raises(StateContractError, match="唯一标识冲突"):
+        store.register_tasks((task("a"), conflicting), now=12.0)
+
+    assert _table_count(state_db, "tasks") == 0
+    assert _table_count(state_db, "events") == 0
+
+
+def test_register_tasks_rolls_back_when_logical_task_cap_is_exceeded(tmp_path: Path) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(
+        state_db,
+        attempt_cap=10,
+        logical_task_cap=1,
+    )
+
+    with pytest.raises(StateContractError, match="逻辑任务预算"):
+        store.register_tasks((task("a"), task("b")), now=12.0)
+
+    assert _table_count(state_db, "tasks") == 0
+    assert _table_count(state_db, "events") == 0
+
+
+def test_register_tasks_rolls_back_when_existing_spec_drift_is_detected(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    store.register_task(task("a"), now=1.0)
+
+    with pytest.raises(StateContractError, match="契约内容发生漂移"):
+        store.register_tasks(
+            (
+                task("b"),
+                task("a", condition="noise001"),
+            ),
+            now=2.0,
+        )
+
+    assert _table_count(state_db, "tasks") == 1
+    assert _table_count(state_db, "events") == 1
+    assert store.task_state("a") == "pending"
 
 
 def test_retry_limit_is_initial_plus_two_retries(tmp_path: Path) -> None:

@@ -33,6 +33,102 @@ def sha256_json(value: object) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def _copy_json_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: _copy_json_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_copy_json_value(item) for item in value]
+    return value
+
+
+def _compact_dataset_probe_for_prompt(
+    probe: Mapping[str, Any],
+    *,
+    probe_points: object,
+) -> dict[str, Any]:
+    compact_probe = {key: _copy_json_value(value) for key, value in probe.items()}
+    if compact_probe.get("points") == probe_points:
+        compact_probe.pop("points", None)
+    return compact_probe
+
+
+def _compact_symbolic_artifact_for_prompt(artifact: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: _copy_json_value(value)
+        for key, value in artifact.items()
+        if key not in {"canonical_tree", "constants_abstracted_canonical_tree"}
+    }
+
+
+def _compact_ast_source_evidence_for_prompt(
+    evidence: Mapping[str, Any],
+    *,
+    expression: object,
+) -> dict[str, Any]:
+    compacted: dict[str, Any] = {}
+    for key, value in evidence.items():
+        if value == expression:
+            continue
+        if key in {
+            "canonical_artifact",
+            "formula_candidates",
+            "extracted_expression_body",
+            "selected_expression_before_variable_mapping",
+            "semantic_expression_after_variable_mapping",
+        }:
+            continue
+        compacted[key] = _copy_json_value(value)
+    return compacted
+
+
+def compact_request_for_prompt(request: Mapping[str, object]) -> dict[str, Any]:
+    """生成仅用于 prompt 传输的稳定投影，不修改原始 request。"""
+
+    probe_points = request.get("probe_points")
+    expression = request.get("expression")
+    domain_assumptions = request.get("domain_assumptions")
+    projected: dict[str, Any] = {}
+    for key, value in request.items():
+        if key == "original_expression" and value == expression:
+            continue
+        if key == "dataset_probe_evidence" and isinstance(value, Mapping):
+            projected[key] = _compact_dataset_probe_for_prompt(
+                value,
+                probe_points=probe_points,
+            )
+            continue
+        if key == "ast_source_evidence" and isinstance(value, Mapping):
+            projected[key] = _compact_ast_source_evidence_for_prompt(
+                value,
+                expression=expression,
+            )
+            continue
+        if key == "deterministic_evidence" and isinstance(value, Mapping):
+            compact_deterministic: dict[str, Any] = {}
+            for evidence_key, evidence_value in value.items():
+                if evidence_key == "dataset_probe" and isinstance(evidence_value, Mapping):
+                    compact_deterministic[evidence_key] = _compact_dataset_probe_for_prompt(
+                        evidence_value,
+                        probe_points=probe_points,
+                    )
+                    continue
+                if evidence_key == "domain_assumptions" and evidence_value == domain_assumptions:
+                    continue
+                if evidence_key == "symbolic_artifact" and isinstance(evidence_value, Mapping):
+                    compact_artifact = _compact_symbolic_artifact_for_prompt(evidence_value)
+                    if compact_artifact.get("source_text") == expression:
+                        compact_artifact.pop("source_text", None)
+                    if compact_artifact.get("canonical_expression") == expression:
+                        compact_artifact.pop("canonical_expression", None)
+                    compact_deterministic[evidence_key] = compact_artifact
+                    continue
+                compact_deterministic[evidence_key] = _copy_json_value(evidence_value)
+            projected[key] = compact_deterministic
+            continue
+        projected[key] = _copy_json_value(value)
+    return projected
+
+
 def evaluation_key(
     *,
     task_type: str,
@@ -80,7 +176,7 @@ def render_prompt(
     placeholder = "{{REQUEST_JSON}}"
     if template.count(placeholder) != 1:
         raise ContractViolation("prompt 模板必须恰好包含一个 {{REQUEST_JSON}} 占位符")
-    rendered = template.replace(placeholder, canonical_json(request))
+    rendered = template.replace(placeholder, canonical_json(compact_request_for_prompt(request)))
     if schema is None:
         return rendered
     try:
