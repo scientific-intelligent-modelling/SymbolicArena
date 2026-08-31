@@ -22,6 +22,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner impo
     ClaudeRunner,
     ClaudeRunnerCircuitBreaker,
     TaskDefinition,
+    _looks_like_cli_contract_drift,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskSpec, TaskStateStore
 
@@ -89,21 +90,22 @@ def _task_definition(tmp_path: Path, key: str, *, request: dict[str, object] | N
 
 
 def _valid_envelope() -> dict[str, object]:
+    structured_output = {
+        "decision": "equivalent",
+        "evidence_basis": "symbolic_proof",
+        "assumptions": [],
+        "confidence": 1.0,
+        "brief_reason": "Expressions are identical.",
+    }
     return {
         "type": "result",
         "subtype": "success",
         "is_error": False,
         "terminal_reason": "completed",
-        "num_turns": 2,
-        "stop_reason": "tool_use",
+        "num_turns": 1,
+        "stop_reason": "end_turn",
         "permission_denials": [],
-        "structured_output": {
-            "decision": "equivalent",
-            "evidence_basis": "symbolic_proof",
-            "assumptions": [],
-            "confidence": 1.0,
-            "brief_reason": "Expressions are identical.",
-        },
+        "result": json.dumps(structured_output, ensure_ascii=False),
         "usage": {
             "input_tokens": 11,
             "output_tokens": 7,
@@ -182,14 +184,14 @@ def _simplify_envelope(
     outcome: str = "simplified",
 ) -> dict[str, object]:
     envelope = _valid_envelope()
-    envelope["structured_output"] = {
+    envelope["result"] = json.dumps({
         "outcome": outcome,
         "simplified_expression": expression,
         "equivalence_assessment": "undetermined" if outcome == "unable" else "preserved",
         "assumptions": [],
         "confidence": 0.9,
         "brief_reason": "Simplification result.",
-    }
+    }, ensure_ascii=False)
     return envelope
 
 
@@ -243,7 +245,7 @@ def test_success_freezes_once_and_restart_is_idempotent(tmp_path: Path) -> None:
 
     assert first.state == "frozen"
     assert first.from_cache is False
-    assert first.structured_output == _valid_envelope()["structured_output"]
+    assert first.structured_output == json.loads(str(_valid_envelope()["result"]))
     assert first.total_cost_usd == pytest.approx(0.03125)
     assert first.claude_version == "claude 1.2.3"
     assert second.state == "frozen"
@@ -281,7 +283,11 @@ def test_success_freezes_once_and_restart_is_idempotent(tmp_path: Path) -> None:
     assert "env" not in attempt_audit["metadata"]
     assert attempt_audit["metadata"]["request_sha256"] == _sha256_text(canonical_json(definition.request))
     assert attempt_audit["metadata"]["rendered_prompt_sha256"] == _sha256_text(
-        render_prompt(definition.prompt_template, definition.request)
+        render_prompt(
+            definition.prompt_template,
+            definition.request,
+            definition.schema,
+        )
     )
     assert attempt_audit["metadata"]["stdout_sha256"] == _sha256_text(
         json.dumps(_valid_envelope(), ensure_ascii=False)
@@ -289,11 +295,9 @@ def test_success_freezes_once_and_restart_is_idempotent(tmp_path: Path) -> None:
     assert attempt_audit["metadata"]["stderr_sha256"] == _sha256_text("")
 
 
-def test_one_turn_end_turn_envelope_is_also_a_valid_single_call(tmp_path: Path) -> None:
+def test_plain_json_end_turn_envelope_is_a_valid_single_call(tmp_path: Path) -> None:
     definition = _task_definition(tmp_path, "ek-one-turn")
     envelope = _valid_envelope()
-    envelope["num_turns"] = 1
-    envelope["stop_reason"] = "end_turn"
     store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
     fake_run = FakeSubprocessRun(
         [
@@ -309,7 +313,7 @@ def test_one_turn_end_turn_envelope_is_also_a_valid_single_call(tmp_path: Path) 
     result = _runner(tmp_path, store, fake_run).execute(definition)
 
     assert result.state == "frozen"
-    assert result.structured_output == envelope["structured_output"]
+    assert result.structured_output == json.loads(str(envelope["result"]))
     assert store.attempts_reserved() == 1
 
 
@@ -623,6 +627,110 @@ def test_three_attempts_exhaust_task(tmp_path: Path) -> None:
         runner.execute(definition)
 
 
+def test_cli_rejected_schema_triggers_immediate_circuit_breaker(tmp_path: Path) -> None:
+    definition = _task_definition(tmp_path, "ek-schema-rejected")
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=1,
+                stdout="",
+                stderr=(
+                    "Error: --json-schema is not a valid JSON Schema: no schema "
+                    'with key or ref "https://json-schema.org/draft/2020-12/schema"'
+                ),
+            ),
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_valid_envelope(), ensure_ascii=False),
+                stderr="",
+            ),
+        ]
+    )
+
+    with pytest.raises(ClaudeRunnerCircuitBreaker, match="Claude 全局熔断"):
+        _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert store.attempts_reserved() == 1
+    assert store.task_state(definition.task_spec.evaluation_key) == "exhausted"
+    attempt = json.loads(
+        (
+            tmp_path
+            / "llm"
+            / "attempts"
+            / f"{definition.task_spec.evaluation_key}.a01.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert attempt["validation"]["error_class"] == "contract_drift"
+    assert attempt["metadata"]["retryable"] is False
+    assert len(fake_run.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected"),
+    [
+        ("Error: unknown option '--effort'", True),
+        ('Error: unrecognized option "--no-session-persistence"', True),
+        ("Error: unknown option: --json-schema", True),
+        ("Error: invalid argument = --setting-sources", True),
+        ("Error: unexpected flag '--max-turns' found", True),
+        (
+            'APIError: {"type":"invalid_request_error","message":"Unknown option for response_format: json_schema"}',
+            False,
+        ),
+        ("Error: request failed with status 400", False),
+    ],
+)
+def test_looks_like_cli_contract_drift_distinguishes_cli_flags_from_api_errors(
+    stderr: str,
+    expected: bool,
+) -> None:
+    assert _looks_like_cli_contract_drift("", stderr) is expected
+
+
+def test_nonzero_exit_with_valid_envelope_keeps_usage_cost_audit_and_retries(tmp_path: Path) -> None:
+    definition = _task_definition(tmp_path, "ek-nonzero-envelope")
+    first_envelope = _valid_envelope()
+    first_envelope["usage"]["total_cost_usd"] = 0.125  # type: ignore[index]
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=1,
+                stdout=json.dumps(first_envelope, ensure_ascii=False),
+                stderr="Error: max_turns exceeded before completion",
+            ),
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_valid_envelope(), ensure_ascii=False),
+                stderr="",
+            ),
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    assert result.total_cost_usd == pytest.approx(0.15625)
+    first_attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert first_attempt["validation"]["ok"] is False
+    assert first_attempt["validation"]["error_class"] == "cli_exit"
+    assert first_attempt["metadata"]["retryable"] is True
+    assert first_attempt["metadata"]["returncode"] == 1
+    assert first_attempt["metadata"]["total_cost_usd"] == pytest.approx(0.125)
+    assert first_attempt["metadata"]["usage"]["total_cost_usd"] == pytest.approx(0.125)
+    assert first_attempt["envelope"]["usage"]["total_cost_usd"] == pytest.approx(0.125)
+    assert len(fake_run.calls) == 2
+
+
 def test_global_budget_is_reserved_before_invocation(tmp_path: Path) -> None:
     first = _task_definition(tmp_path / "task1", "ek-budget-a")
     second = _task_definition(tmp_path / "task2", "ek-budget-b")
@@ -650,7 +758,7 @@ def test_global_budget_is_reserved_before_invocation(tmp_path: Path) -> None:
     [
         (lambda envelope: envelope["usage"]["server_tool_use"].__setitem__("web_search_requests", 1), "server-tool"),
         (lambda envelope: envelope.__setitem__("stop_reason", "completed"), "stop-reason"),
-        (lambda envelope: envelope.__setitem__("num_turns", 1), "num-turns"),
+        (lambda envelope: envelope.__setitem__("num_turns", 2), "num-turns"),
         (lambda envelope: envelope.__setitem__("modelUsage", {"claude-sonnet": {"canonicalModel": "claude-sonnet"}}), "model"),
         (lambda envelope: envelope.__setitem__("usage", {}), "usage-metadata"),
     ],
@@ -686,9 +794,10 @@ def test_contract_drift_variants_raise_global_circuit_breaker_and_finish_failure
         runner.execute(definition)
 
     assert store.attempts_reserved() == 1
-    assert store.task_state(definition.task_spec.evaluation_key) == "retry_wait"
+    assert store.task_state(definition.task_spec.evaluation_key) == "exhausted"
     attempt_audit = json.loads(
         (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(encoding="utf-8")
     )
     assert attempt_audit["validation"]["error_class"] == "contract_drift"
+    assert attempt_audit["metadata"]["retryable"] is False
     assert len(fake_run.calls) == 1, label

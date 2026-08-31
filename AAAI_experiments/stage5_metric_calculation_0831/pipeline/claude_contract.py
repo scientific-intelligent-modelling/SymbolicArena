@@ -7,10 +7,14 @@ import json
 import math
 from typing import Any, Mapping
 
+from jsonschema import Draft7Validator
+from jsonschema.exceptions import SchemaError, ValidationError
+
 
 CONTRACT_MODEL = "claude-opus-5[1m]"
 CONTRACT_CANONICAL_MODEL = "claude-opus-5"
 CONTRACT_EFFORT = "xhigh"
+CONTRACT_TRANSPORT_VERSION = "plain_json_prompt_schema.v1"
 MAX_LOGICAL_TASKS = 15800
 MAX_PHYSICAL_ATTEMPTS = 23700
 MAX_ATTEMPTS_PER_TASK = 3
@@ -65,17 +69,38 @@ def evaluation_key(
     return sha256_json(payload)
 
 
-def render_prompt(template: str, request: Mapping[str, object]) -> str:
-    """只替换一个显式 JSON 占位符，避免模板插值改变数学表达式。"""
+def render_prompt(
+    template: str,
+    request: Mapping[str, object],
+    schema: Mapping[str, object] | None = None,
+) -> str:
+    """渲染请求，并把输出 schema 作为单轮 prompt 的显式组成部分。"""
 
     placeholder = "{{REQUEST_JSON}}"
     if template.count(placeholder) != 1:
         raise ContractViolation("prompt 模板必须恰好包含一个 {{REQUEST_JSON}} 占位符")
-    return template.replace(placeholder, canonical_json(request))
+    rendered = template.replace(placeholder, canonical_json(request))
+    if schema is None:
+        return rendered
+    try:
+        Draft7Validator.check_schema(schema)
+    except SchemaError as exc:
+        raise ContractViolation(f"输出 schema 不是合法 Draft-07: {exc.message}") from exc
+    return (
+        rendered.rstrip()
+        + "\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n"
+        + canonical_json(schema)
+        + "\n"
+    )
 
 
 def build_claude_command(schema: Mapping[str, object]) -> list[str]:
-    """构造固定的一次性 Claude Code 命令；prompt 由 stdin 传入。"""
+    """构造固定的一次性 Claude Code 命令；schema 由 stdin prompt 提供。"""
+
+    try:
+        Draft7Validator.check_schema(schema)
+    except SchemaError as exc:
+        raise ContractViolation(f"输出 schema 不是合法 Draft-07: {exc.message}") from exc
 
     return [
         "claude",
@@ -96,8 +121,6 @@ def build_claude_command(schema: Mapping[str, object]) -> list[str]:
         "--strict-mcp-config",
         "--output-format",
         "json",
-        "--json-schema",
-        canonical_json(schema),
     ]
 
 
@@ -208,8 +231,9 @@ def validate_claude_envelope(
     envelope: Mapping[str, object],
     *,
     task_kind: str,
+    schema: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    """校验 Claude Code JSON envelope、模型和零外部工具契约。"""
+    """校验单轮纯 JSON envelope、模型、零工具和本地输出 schema。"""
 
     if not isinstance(envelope, Mapping):
         raise ContractViolation("Claude 外层输出不是 JSON object")
@@ -218,13 +242,12 @@ def validate_claude_envelope(
     if envelope.get("is_error") is not False or envelope.get("terminal_reason") != "completed":
         raise ContractViolation("Claude 调用未正常完成")
     turns = envelope.get("num_turns")
-    if isinstance(turns, bool) or not isinstance(turns, int) or turns < 1 or turns > 2:
-        raise ContractViolation(f"单轮结构化调用出现异常 num_turns={turns!r}")
+    if turns != 1:
+        raise ContractViolation(f"单轮调用出现异常 num_turns={turns!r}")
     stop_reason = envelope.get("stop_reason")
-    expected_stop_reason = "tool_use" if turns == 2 else "end_turn"
-    if stop_reason != expected_stop_reason:
+    if stop_reason != "end_turn":
         raise ContractViolation(
-            f"结构化单轮 stop_reason 不匹配: {stop_reason!r}，期望 {expected_stop_reason!r}"
+            f"单轮 stop_reason 不匹配: {stop_reason!r}，期望 'end_turn'"
         )
 
     model_usage = envelope.get("modelUsage")
@@ -257,7 +280,21 @@ def validate_claude_envelope(
     if int(subagents.get("spawned") or 0) != 0:
         raise ContractViolation("Claude 使用了被禁止的 subagent 工具")
 
-    structured = envelope.get("structured_output")
+    result_text = envelope.get("result")
+    if not isinstance(result_text, str) or not result_text.strip():
+        raise ContractViolation("Claude 输出缺失纯 JSON result 文本")
+    try:
+        structured = json.loads(result_text)
+    except json.JSONDecodeError as exc:
+        raise ContractViolation(f"Claude result 不是合法 JSON: {exc}") from exc
     if not isinstance(structured, Mapping):
-        raise ContractViolation("Claude 输出缺失 structured_output")
+        raise ContractViolation("Claude result 必须是 JSON object")
+    if schema is not None:
+        try:
+            Draft7Validator.check_schema(schema)
+            Draft7Validator(schema).validate(structured)
+        except SchemaError as exc:
+            raise ContractViolation(f"输出 schema 不是合法 Draft-07: {exc.message}") from exc
+        except ValidationError as exc:
+            raise ContractViolation(f"Claude result 未通过 Draft-07 schema: {exc.message}") from exc
     return validate_structured_output(task_kind, structured)

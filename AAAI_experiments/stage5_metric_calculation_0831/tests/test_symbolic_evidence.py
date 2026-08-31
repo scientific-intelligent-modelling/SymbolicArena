@@ -371,6 +371,42 @@ def test_validate_simplification_rejects_new_function_and_variable() -> None:
         )
 
 
+def test_piecewise_abs_aliases_preserve_literal_where_semantics() -> None:
+    original = (
+        "0.23 + 14.2*np.where(np.abs(3*x5) > 0.001, "
+        "np.divide(x2 + x4, 3*x5), 1.0)"
+    )
+    simplified = (
+        "0.23 + 14.2*Piecewise(((x2 + x4)/(3*x5), "
+        "Abs(3*x5) > 0.001), (1.0, True))"
+    )
+
+    evidence = validate_simplification(
+        original=original,
+        simplified=simplified,
+        allowed_variables={"x2", "x4", "x5"},
+        allowed_functions={"where", "abs", "divide"},
+        seed=520,
+        probe_points=[
+            {
+                "split": "id_test",
+                "row_index": 0,
+                "values": {"x2": 2.0, "x4": 1.0, "x5": 0.5},
+            },
+            {
+                "split": "ood_test",
+                "row_index": 1,
+                "values": {"x2": -1.0, "x4": 4.0, "x5": 0.0},
+            },
+        ],
+        probe_source="unit_test",
+        probe_sample_sha256="a" * 64,
+    )
+
+    assert evidence["decision"] == "equivalent"
+    assert evidence["symbolic_decision"] == "equivalent"
+
+
 def test_special_function_identity_is_equivalent_via_artifact_short_circuit() -> None:
     evidence = validate_simplification(
         original="gradient(x0)",

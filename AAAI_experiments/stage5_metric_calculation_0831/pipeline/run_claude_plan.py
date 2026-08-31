@@ -23,7 +23,12 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner impo
     ClaudeRunnerCircuitBreaker,
     TaskDefinition,
 )
-from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskSpec, TaskStateStore
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import (
+    PredecessorAttemptManifest,
+    StateContractError,
+    TaskSpec,
+    TaskStateStore,
+)
 
 
 JsonDict = dict[str, object]
@@ -45,6 +50,13 @@ class LoadedPlan:
     plan_path: Path
     plan_sha256: str
     entries: tuple[PlannedDefinition, ...]
+
+
+@dataclass(frozen=True)
+class LoadedPredecessorAttemptManifest:
+    path: Path
+    sha256: str
+    attempt_count: int
 
 
 RunnerFactory = Callable[[TaskStateStore], Any]
@@ -109,6 +121,126 @@ def _canonical_schema(value: Mapping[str, object]) -> JsonDict:
     if not isinstance(payload, dict):
         raise PlanContractError("schema_content 必须是 JSON object")
     return payload
+
+
+def _load_predecessor_attempt_manifest(
+    path: str | Path,
+) -> LoadedPredecessorAttemptManifest:
+    manifest_path = Path(path).resolve()
+    try:
+        raw = manifest_path.read_bytes()
+    except OSError as exc:
+        raise PlanContractError(
+            f"无法读取 predecessor attempt manifest {manifest_path}: {exc}"
+        ) from exc
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise PlanContractError(
+            f"predecessor attempt manifest 解析失败: {manifest_path}: {exc}"
+        ) from exc
+    row = _require_mapping(payload, context="predecessor_attempt_manifest")
+    if row.get("schema_version") != "predecessor_attempts.v1":
+        raise PlanContractError(
+            "predecessor_attempt_manifest.schema_version 必须为 predecessor_attempts.v1"
+        )
+    attempt_ids = _require_string_list(
+        row.get("attempt_ids"),
+        context="predecessor_attempt_manifest.attempt_ids",
+    )
+    if len(set(attempt_ids)) != len(attempt_ids):
+        raise PlanContractError("predecessor_attempt_manifest.attempt_ids 存在重复项")
+    declared_count = row.get("attempt_count")
+    if declared_count is not None:
+        declared_count = _require_int(
+            declared_count,
+            context="predecessor_attempt_manifest.attempt_count",
+        )
+        if declared_count != len(attempt_ids):
+            raise PlanContractError(
+                "predecessor_attempt_manifest.attempt_count 与 attempt_ids 数量不一致"
+            )
+    source_state_db_raw = _require_string(
+        row.get("source_state_db"),
+        context="predecessor_attempt_manifest.source_state_db",
+    )
+    source_attempts_dir_raw = _require_string(
+        row.get("source_attempts_dir"),
+        context="predecessor_attempt_manifest.source_attempts_dir",
+    )
+
+    def resolve_source(raw_path: str) -> Path:
+        source = Path(raw_path)
+        if source.is_absolute():
+            return source.resolve()
+        cwd_candidate = (Path.cwd() / source).resolve()
+        if cwd_candidate.exists():
+            return cwd_candidate
+        return (manifest_path.parent / source).resolve()
+
+    source_state_db = resolve_source(source_state_db_raw)
+    source_attempts_dir = resolve_source(source_attempts_dir_raw)
+    if not source_state_db.is_file():
+        raise PlanContractError(f"predecessor source_state_db 不存在: {source_state_db}")
+    if not source_attempts_dir.is_dir():
+        raise PlanContractError(
+            f"predecessor source_attempts_dir 不存在: {source_attempts_dir}"
+        )
+    try:
+        connection = sqlite3.connect(
+            f"{source_state_db.as_uri()}?mode=ro",
+            uri=True,
+        )
+        try:
+            db_attempt_ids = tuple(
+                str(record[0])
+                for record in connection.execute(
+                    "SELECT attempt_id FROM attempts ORDER BY attempt_id"
+                ).fetchall()
+            )
+        finally:
+            connection.close()
+    except sqlite3.Error as exc:
+        raise PlanContractError(f"predecessor source_state_db 无法核验: {exc}") from exc
+    if tuple(sorted(attempt_ids)) != db_attempt_ids:
+        raise PlanContractError(
+            "predecessor attempt_ids 与 source_state_db.attempts 不完全一致"
+        )
+
+    declared_hashes = _require_mapping(
+        row.get("attempt_file_sha256"),
+        context="predecessor_attempt_manifest.attempt_file_sha256",
+    )
+    if set(declared_hashes) != set(attempt_ids):
+        raise PlanContractError(
+            "predecessor attempt_file_sha256 键必须与 attempt_ids 完全一致"
+        )
+    for attempt_id in attempt_ids:
+        expected_sha256 = _require_string(
+            declared_hashes.get(attempt_id),
+            context=f"predecessor attempt_file_sha256[{attempt_id!r}]",
+        )
+        if len(expected_sha256) != 64 or any(
+            character not in "0123456789abcdef" for character in expected_sha256
+        ):
+            raise PlanContractError(f"predecessor attempt SHA-256 非法: {attempt_id}")
+        audit_path = source_attempts_dir / f"{attempt_id}.json"
+        try:
+            audit_raw = audit_path.read_bytes()
+            audit_payload = json.loads(audit_raw.decode("utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise PlanContractError(
+                f"predecessor attempt 审计文件不可读: {audit_path}: {exc}"
+            ) from exc
+        if _sha256_bytes(audit_raw) != expected_sha256:
+            raise PlanContractError(f"predecessor attempt 审计 SHA 漂移: {attempt_id}")
+        if not isinstance(audit_payload, Mapping) or audit_payload.get("attempt_id") != attempt_id:
+            raise PlanContractError(f"predecessor attempt 审计 ID 不一致: {attempt_id}")
+    return LoadedPredecessorAttemptManifest(
+        path=manifest_path,
+        sha256=_sha256_bytes(raw),
+        attempt_count=len(attempt_ids),
+    )
 
 
 def _default_runner_factory(
@@ -182,7 +314,11 @@ def _row_to_definition(row: Mapping[str, Any], *, line_number: int) -> PlannedDe
     if _canonical_schema(loaded_schema) != schema_content:
         raise PlanContractError(f"{context}.schema_content 与文件不一致")
 
-    recomputed_rendered_prompt = render_prompt(prompt_template, request)
+    recomputed_rendered_prompt = render_prompt(
+        prompt_template,
+        request,
+        schema_content,
+    )
     rendered_prompt = row.get("rendered_prompt")
     if rendered_prompt is not None and rendered_prompt != recomputed_rendered_prompt:
         raise PlanContractError(f"{context}.rendered_prompt 与 request/prompt_template 不一致")
@@ -355,10 +491,16 @@ def _build_report(
     stopped_by_circuit_breaker: bool,
     stopped_by_fatal_error: bool,
     recovered_expired_attempt_ids: Sequence[str],
+    predecessor_attempt_manifest: LoadedPredecessorAttemptManifest | None,
+    attempts_reserved_at_start: int,
     status: str,
     error: str | None = None,
 ) -> JsonDict:
     state_map = _task_state_map(store, entries)
+    attempts_reserved_total = store.attempts_reserved()
+    attempts_reserved_this_run = attempts_reserved_total - attempts_reserved_at_start
+    if attempts_reserved_this_run < 0:
+        raise StateContractError("运行期 attempt 计数出现倒退")
     payload: JsonDict = {
         "status": status,
         "error": error,
@@ -373,7 +515,27 @@ def _build_report(
         "completed_task_count": completed_task_count,
         "result_counts": dict(result_counts),
         "state_distribution": _distribution_from_state_map(state_map),
-        "attempts_reserved_total": _attempt_count_for_plan(store, entries),
+        "attempts_reserved_total": attempts_reserved_total,
+        "attempts_reserved_before_run": attempts_reserved_at_start,
+        "attempts_reserved_this_run": attempts_reserved_this_run,
+        "model_invoked": attempts_reserved_this_run > 0,
+        "attempts_reserved_for_plan": _attempt_count_for_plan(store, entries),
+        "physical_attempt_offset": store.attempt_offset,
+        "predecessor_attempt_manifest_path": (
+            str(predecessor_attempt_manifest.path)
+            if predecessor_attempt_manifest is not None
+            else None
+        ),
+        "predecessor_attempt_manifest_sha256": (
+            predecessor_attempt_manifest.sha256
+            if predecessor_attempt_manifest is not None
+            else None
+        ),
+        "predecessor_attempt_count": (
+            predecessor_attempt_manifest.attempt_count
+            if predecessor_attempt_manifest is not None
+            else 0
+        ),
         "elapsed_seconds": max(0.0, time.monotonic() - started_at_monotonic),
         "total_cost_usd": 0.0,
         "stopped_by_circuit_breaker": stopped_by_circuit_breaker,
@@ -409,23 +571,73 @@ def execute_plan(
     limit: int | None = None,
     logical_ids: Sequence[str] = (),
     workers: int = 1,
+    physical_attempt_offset: int = 0,
+    predecessor_attempt_manifest: str | Path | None = None,
     runner_factory: Callable[[TaskStateStore, Path, Path], Any] | None = None,
 ) -> int:
     if workers <= 0:
         raise ValueError("workers 必须为正整数")
     if limit is not None and limit <= 0:
         raise ValueError("limit 必须为正整数")
+    if physical_attempt_offset < 0:
+        raise ValueError("physical_attempt_offset 不能为负数")
 
     started_at_monotonic = time.monotonic()
     report_path = Path(report_json)
     result_counts = {"success": 0, "cache": 0, "failure": 0, "circuit_breaker": 0}
+    loaded_plan: LoadedPlan | None = None
+    loaded_predecessor_manifest: LoadedPredecessorAttemptManifest | None = None
 
     try:
         loaded_plan = load_plan_jsonl(plan_jsonl)
-        store = TaskStateStore(state_db)
+    except PlanContractError as exc:
+        _atomic_write_json(
+            report_path,
+            {
+                "status": "plan_contract_error",
+                "error": str(exc),
+                "plan_jsonl": str(plan_jsonl),
+                "plan_sha256": None,
+                "model_invoked": False,
+            },
+        )
+        return 2
+    if predecessor_attempt_manifest is not None:
+        try:
+            loaded_predecessor_manifest = _load_predecessor_attempt_manifest(
+                predecessor_attempt_manifest
+            )
+        except PlanContractError as exc:
+            _atomic_write_json(
+                report_path,
+                {
+                    "status": "plan_contract_error",
+                    "error": str(exc),
+                    "plan_jsonl": str(plan_jsonl),
+                    "plan_sha256": loaded_plan.plan_sha256,
+                    "model_invoked": False,
+                },
+            )
+            return 2
+
+    try:
+        store = TaskStateStore(
+            state_db,
+            attempt_offset=physical_attempt_offset,
+            predecessor_attempt_manifest=(
+                PredecessorAttemptManifest(
+                    path=str(loaded_predecessor_manifest.path),
+                    sha256=loaded_predecessor_manifest.sha256,
+                    attempt_count=loaded_predecessor_manifest.attempt_count,
+                )
+                if loaded_predecessor_manifest is not None
+                else None
+            ),
+        )
         for entry in loaded_plan.entries:
             store.register_task(entry.definition.task_spec)
         recovered_expired_attempt_ids = store.recover_expired_leases()
+        attempts_reserved_at_start = store.attempts_reserved()
         _verify_cached_frozen_entries(store, loaded_plan.entries)
         selected_entries = _select_scope(loaded_plan.entries, logical_ids=logical_ids)
         selected_state_map = _task_state_map(store, selected_entries)
@@ -458,6 +670,8 @@ def execute_plan(
                 stopped_by_circuit_breaker=False,
                 stopped_by_fatal_error=False,
                 recovered_expired_attempt_ids=recovered_expired_attempt_ids,
+                predecessor_attempt_manifest=loaded_predecessor_manifest,
+                attempts_reserved_at_start=attempts_reserved_at_start,
                 status="running",
             ),
         )
@@ -468,7 +682,37 @@ def execute_plan(
                 "status": "plan_contract_error",
                 "error": str(exc),
                 "plan_jsonl": str(plan_jsonl),
-                "plan_sha256": None,
+                "plan_sha256": loaded_plan.plan_sha256,
+                "model_invoked": False,
+            },
+        )
+        return 2
+    except StateContractError as exc:
+        _atomic_write_json(
+            report_path,
+            {
+                "status": "state_contract_error",
+                "error": str(exc),
+                "plan_jsonl": str(plan_jsonl),
+                "plan_sha256": loaded_plan.plan_sha256,
+                "state_db": str(state_db),
+                "model_invoked": False,
+                "physical_attempt_offset": physical_attempt_offset,
+                "predecessor_attempt_manifest_path": (
+                    str(loaded_predecessor_manifest.path)
+                    if loaded_predecessor_manifest is not None
+                    else None
+                ),
+                "predecessor_attempt_manifest_sha256": (
+                    loaded_predecessor_manifest.sha256
+                    if loaded_predecessor_manifest is not None
+                    else None
+                ),
+                "predecessor_attempt_count": (
+                    loaded_predecessor_manifest.attempt_count
+                    if loaded_predecessor_manifest is not None
+                    else 0
+                ),
             },
         )
         return 2
@@ -536,8 +780,10 @@ def execute_plan(
                     workers=workers,
                     stopped_by_circuit_breaker=stopped_by_circuit_breaker,
                     stopped_by_fatal_error=stopped_by_fatal_error,
-                    recovered_expired_attempt_ids=recovered_expired_attempt_ids,
-                    status="failed" if fatal_error else "running",
+                        recovered_expired_attempt_ids=recovered_expired_attempt_ids,
+                        predecessor_attempt_manifest=loaded_predecessor_manifest,
+                        attempts_reserved_at_start=attempts_reserved_at_start,
+                        status="failed" if fatal_error else "running",
                     error=fatal_error,
                 )
                 report_payload["total_cost_usd"] = total_cost_usd
@@ -571,6 +817,8 @@ def execute_plan(
         stopped_by_circuit_breaker=stopped_by_circuit_breaker,
         stopped_by_fatal_error=stopped_by_fatal_error,
         recovered_expired_attempt_ids=recovered_expired_attempt_ids,
+        predecessor_attempt_manifest=loaded_predecessor_manifest,
+        attempts_reserved_at_start=attempts_reserved_at_start,
         status=final_status,
         error=fatal_error,
     )
@@ -589,6 +837,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--limit", type=_positive_int, default=None)
     parser.add_argument("--logical-id", dest="logical_ids", action="append", default=[])
     parser.add_argument("--workers", type=_positive_int, default=1)
+    parser.add_argument("--physical-attempt-offset", type=int, default=0)
+    parser.add_argument("--predecessor-attempt-manifest", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -607,6 +857,8 @@ def main(
         limit=args.limit,
         logical_ids=tuple(args.logical_ids),
         workers=args.workers,
+        physical_attempt_offset=args.physical_attempt_offset,
+        predecessor_attempt_manifest=args.predecessor_attempt_manifest,
         runner_factory=runner_factory,
     )
 

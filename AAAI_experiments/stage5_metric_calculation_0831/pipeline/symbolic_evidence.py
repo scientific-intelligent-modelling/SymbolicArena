@@ -95,6 +95,8 @@ def _normalize_name(name: str) -> str:
         "Abs": "abs",
         "Max": "maximum",
         "Min": "minimum",
+        "Piecewise": "where",
+        "piecewise": "where",
         "atan": "arctan",
     }
     return aliases.get(name, name)
@@ -404,6 +406,30 @@ def _compare_relation(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
     return _convert_compare(node, ctx)
 
 
+def _convert_piecewise_call(node: ast.Call, ctx: _BuildContext) -> sp.Basic:
+    """只接受与二分支 ``where`` 等价的标准 SymPy Piecewise 写法。"""
+
+    if len(node.args) != 2:
+        raise SymbolicEvidenceError("Piecewise 仅允许两个分支")
+    branches: list[tuple[sp.Basic, sp.Basic | bool]] = []
+    for index, branch in enumerate(node.args):
+        if not isinstance(branch, ast.Tuple) or len(branch.elts) != 2:
+            raise SymbolicEvidenceError("Piecewise 分支必须是 (value, condition) 二元组")
+        value_node, condition_node = branch.elts
+        value = _convert_node(value_node, ctx)
+        if index == 1:
+            if not (
+                isinstance(condition_node, ast.Constant)
+                and condition_node.value is True
+            ):
+                raise SymbolicEvidenceError("Piecewise 最后一个分支条件必须为 True")
+            condition: sp.Basic | bool = True
+        else:
+            condition = _compare_relation(condition_node, ctx)
+        branches.append((value, condition))
+    return sp.Piecewise(*branches)
+
+
 def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
     if isinstance(node, ast.Constant):
         return _ensure_real_number(node.value)
@@ -435,7 +461,15 @@ def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
             return operand
         raise SymbolicEvidenceError(f"不支持的一元运算: {type(node.op).__name__}")
     if isinstance(node, ast.Call):
+        is_piecewise = (
+            isinstance(node.func, ast.Name)
+            and node.func.id in {"Piecewise", "piecewise"}
+        )
         normalized = _record_function(ctx, _resolve_call_name(node.func))
+        if is_piecewise:
+            if node.keywords:
+                raise SymbolicEvidenceError("Piecewise 不支持关键字参数")
+            return _convert_piecewise_call(node, ctx)
         if normalized == "where":
             if len(node.args) != 3:
                 raise SymbolicEvidenceError("where 需要 3 个参数")

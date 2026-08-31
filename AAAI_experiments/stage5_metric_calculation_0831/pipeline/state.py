@@ -45,6 +45,13 @@ class AttemptLease:
     lease_expires_at: float
 
 
+@dataclass(frozen=True)
+class PredecessorAttemptManifest:
+    path: str
+    sha256: str
+    attempt_count: int
+
+
 class TaskStateStore:
     """支持并发 worker、断点恢复和硬预算的任务状态库。"""
 
@@ -55,6 +62,8 @@ class TaskStateStore:
         attempt_cap: int = 23700,
         logical_task_cap: int = 15800,
         max_attempts_per_task: int = 3,
+        attempt_offset: int = 0,
+        predecessor_attempt_manifest: PredecessorAttemptManifest | None = None,
     ) -> None:
         if attempt_cap <= 0:
             raise StateContractError("attempt_cap 必须为正整数")
@@ -62,11 +71,34 @@ class TaskStateStore:
             raise StateContractError("logical_task_cap 必须为正整数")
         if max_attempts_per_task <= 0:
             raise StateContractError("max_attempts_per_task 必须为正整数")
+        if attempt_offset < 0:
+            raise StateContractError("attempt_offset 不能为负数")
+        if predecessor_attempt_manifest is not None:
+            if not predecessor_attempt_manifest.path:
+                raise StateContractError("predecessor_attempt_manifest.path 不得为空")
+            if not predecessor_attempt_manifest.sha256:
+                raise StateContractError("predecessor_attempt_manifest.sha256 不得为空")
+            if predecessor_attempt_manifest.attempt_count < 0:
+                raise StateContractError("predecessor_attempt_manifest.attempt_count 不能为负数")
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.attempt_cap = int(attempt_cap)
         self.logical_task_cap = int(logical_task_cap)
         self.max_attempts_per_task = int(max_attempts_per_task)
+        self.requested_attempt_offset = int(attempt_offset)
+        self.predecessor_attempt_manifest = predecessor_attempt_manifest
+        self.predecessor_attempt_manifest_path = (
+            predecessor_attempt_manifest.path if predecessor_attempt_manifest is not None else ""
+        )
+        self.predecessor_attempt_manifest_sha256 = (
+            predecessor_attempt_manifest.sha256 if predecessor_attempt_manifest is not None else ""
+        )
+        self.predecessor_attempt_count = (
+            int(predecessor_attempt_manifest.attempt_count)
+            if predecessor_attempt_manifest is not None
+            else 0
+        )
+        self.attempt_offset = self.predecessor_attempt_count
         self._initialize()
 
     def _connect(self) -> sqlite3.Connection:
@@ -155,14 +187,54 @@ class TaskStateStore:
                 """
             )
             existing = dict(connection.execute("SELECT key, value FROM meta").fetchall())
+            existing_attempt_offset = int(existing.get("attempt_offset", "0"))
+            legacy_needs_manifest = (
+                existing_attempt_offset > 0 and "predecessor_attempt_count" not in existing
+            )
+            if legacy_needs_manifest and self.predecessor_attempt_manifest is None:
+                raise StateContractError(
+                    "检测到 legacy attempt_offset 但缺少 predecessor_attempt_manifest；"
+                    "请显式提供旧 attempt 清单完成迁移，避免静默重置预算"
+                )
+            if (
+                self.predecessor_attempt_manifest is None
+                and int(existing.get("predecessor_attempt_count", "0")) > 0
+            ):
+                raise StateContractError(
+                    "状态库已冻结 predecessor_attempt_manifest 元数据；"
+                    "恢复同一 DB 时必须继续传入同一 manifest，避免静默重置预算"
+                )
+            if self.predecessor_attempt_manifest is None and self.requested_attempt_offset > 0:
+                raise StateContractError(
+                    "非零 attempt_offset 已禁用；请改用 predecessor_attempt_manifest 提供旧 attempt 清单"
+                )
+            if self.predecessor_attempt_manifest is not None and self.requested_attempt_offset not in {
+                0,
+                self.predecessor_attempt_count,
+            }:
+                raise StateContractError(
+                    "attempt_offset 与 predecessor_attempt_manifest.attempt_count 不一致"
+                )
+            self.attempt_offset = (
+                self.predecessor_attempt_count
+                if self.predecessor_attempt_manifest is not None
+                else existing_attempt_offset
+            )
             desired = {
                 "attempt_cap": str(self.attempt_cap),
                 "logical_task_cap": str(self.logical_task_cap),
                 "max_attempts_per_task": str(self.max_attempts_per_task),
-                "schema_version": "state.v1",
+                "attempt_offset": str(self.attempt_offset),
+                "predecessor_attempt_manifest_path": self.predecessor_attempt_manifest_path,
+                "predecessor_attempt_manifest_sha256": self.predecessor_attempt_manifest_sha256,
+                "predecessor_attempt_count": str(self.predecessor_attempt_count),
+                "schema_version": "state.v2",
             }
             for key, value in desired.items():
                 previous = existing.get(key)
+                if key == "schema_version" and previous == "state.v1":
+                    connection.execute("UPDATE meta SET value = ? WHERE key = ?", (value, key))
+                    continue
                 if previous is not None and previous != value:
                     raise StateContractError(
                         f"状态库参数漂移: {key} 原为 {previous!r}，当前请求 {value!r}"
@@ -253,7 +325,7 @@ class TaskStateStore:
     def attempts_reserved(self) -> int:
         with self._connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()
-        return int(row["count"])
+        return self.attempt_offset + int(row["count"])
 
     def task_state(self, evaluation_key: str) -> str:
         with self._connect() as connection:
@@ -375,7 +447,7 @@ class TaskStateStore:
             count = int(row["attempt_count"])
             if count >= self.max_attempts_per_task:
                 raise StateContractError(f"任务 {evaluation_key} 已达到单任务尝试上限")
-            global_count = int(
+            global_count = self.attempt_offset + int(
                 connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()["count"]
             )
             if global_count >= self.attempt_cap:
@@ -437,7 +509,7 @@ class TaskStateStore:
                 "SELECT * FROM tasks WHERE evaluation_key = ?",
                 (attempt["evaluation_key"],),
             ).fetchone()
-            global_count = int(
+            global_count = self.attempt_offset + int(
                 connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()["count"]
             )
             can_retry = (
@@ -527,6 +599,93 @@ class TaskStateStore:
                 evaluation_key=attempt["evaluation_key"],
                 attempt_id=attempt_id,
                 details={"result_path": result_path, "result_sha256": result_sha256},
+            )
+
+    def promote_failed_attempt(
+        self,
+        attempt_id: str,
+        *,
+        result_path: str,
+        result_sha256: str,
+        allowed_error_classes: Sequence[str],
+        audit_reason: str,
+        now: float | None = None,
+    ) -> None:
+        timestamp = time.time() if now is None else float(now)
+        if not result_path or not result_sha256:
+            raise StateContractError("补冻结果必须包含路径和 SHA-256")
+        if not audit_reason:
+            raise StateContractError("补冻结果必须包含审计原因")
+        whitelist = tuple(dict.fromkeys(str(item) for item in allowed_error_classes if str(item)))
+        if not whitelist:
+            raise StateContractError("补冻结果必须提供原 error_class 白名单")
+        with self._write_transaction() as connection:
+            attempt = connection.execute(
+                "SELECT * FROM attempts WHERE attempt_id = ?",
+                (attempt_id,),
+            ).fetchone()
+            if attempt is None:
+                raise StateContractError(f"未知 attempt: {attempt_id}")
+            if attempt["status"] != "failed":
+                raise StateContractError(f"attempt {attempt_id!r} 当前状态不是 failed")
+            original_error_class = str(attempt["error_class"] or "")
+            if original_error_class not in whitelist:
+                raise StateContractError(
+                    f"attempt {attempt_id!r} 的 error_class={original_error_class!r} 不在补冻白名单内"
+                )
+            task = connection.execute(
+                "SELECT * FROM tasks WHERE evaluation_key = ?",
+                (attempt["evaluation_key"],),
+            ).fetchone()
+            if task is None:
+                raise StateContractError(f"attempt {attempt_id!r} 关联任务不存在")
+            if task["state"] not in {"retry_wait", "exhausted"}:
+                raise StateContractError(
+                    f"任务 {attempt['evaluation_key']} 当前状态 {task['state']!r}，不可补冻 failed attempt"
+                )
+            existing = connection.execute(
+                "SELECT attempt_id FROM frozen_results WHERE evaluation_key = ?",
+                (attempt["evaluation_key"],),
+            ).fetchone()
+            if existing is not None:
+                raise StateContractError(
+                    f"任务 {attempt['evaluation_key']} 已由 {existing['attempt_id']} 冻结"
+                )
+            connection.execute(
+                """INSERT INTO frozen_results(
+                       evaluation_key, attempt_id, result_path, result_sha256, frozen_at
+                   ) VALUES (?, ?, ?, ?, ?)""",
+                (
+                    attempt["evaluation_key"],
+                    attempt_id,
+                    result_path,
+                    result_sha256,
+                    timestamp,
+                ),
+            )
+            connection.execute(
+                "UPDATE attempts SET status='accepted' WHERE attempt_id=?",
+                (attempt_id,),
+            )
+            connection.execute(
+                """UPDATE tasks
+                   SET state='frozen', lease_expires_at=NULL,
+                       last_error_class=NULL, updated_at=?
+                   WHERE evaluation_key=?""",
+                (timestamp, attempt["evaluation_key"]),
+            )
+            self._event(
+                connection,
+                event_type="failed_attempt_promoted",
+                event_at=timestamp,
+                evaluation_key=attempt["evaluation_key"],
+                attempt_id=attempt_id,
+                details={
+                    "result_path": result_path,
+                    "result_sha256": result_sha256,
+                    "audit_reason": audit_reason,
+                    "original_error_class": original_error_class,
+                },
             )
 
     def frozen_result(self, evaluation_key: str) -> dict[str, str] | None:
@@ -635,7 +794,7 @@ class TaskStateStore:
                    WHERE a.status='running' AND a.lease_expires_at < ?""",
                 (timestamp,),
             ).fetchall()
-            global_count = int(
+            global_count = self.attempt_offset + int(
                 connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()["count"]
             )
             for row in rows:

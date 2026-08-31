@@ -130,7 +130,11 @@ class PlannedTask:
         payload = asdict(self)
         payload["dependencies"] = list(self.dependencies)
         payload["task_spec"] = json.loads(self.to_task_spec().canonical_json())
-        payload["rendered_prompt"] = render_prompt(self.prompt_template, self.request)
+        payload["rendered_prompt"] = render_prompt(
+            self.prompt_template,
+            self.request,
+            self.schema_content,
+        )
         return payload
 
 

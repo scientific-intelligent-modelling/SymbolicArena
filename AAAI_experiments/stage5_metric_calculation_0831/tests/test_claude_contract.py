@@ -19,16 +19,23 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
 STAGE = Path("AAAI_experiments/stage5_metric_calculation_0831")
 
 
+def test_formal_schemas_use_claude_cli_compatible_draft_07() -> None:
+    for path in sorted((STAGE / "config/schemas").glob("*.json")):
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        assert schema["$schema"] == "http://json-schema.org/draft-07/schema#"
+        assert schema["additionalProperties"] is False
+
+
 def valid_envelope(structured: dict[str, object]) -> dict[str, object]:
     return {
         "type": "result",
         "subtype": "success",
         "is_error": False,
         "terminal_reason": "completed",
-        "num_turns": 2,
-        "stop_reason": "tool_use",
+        "num_turns": 1,
+        "stop_reason": "end_turn",
         "permission_denials": [],
-        "structured_output": structured,
+        "result": json.dumps(structured),
         "usage": {
             "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}
         },
@@ -70,13 +77,17 @@ def test_build_command_fixes_single_turn_contract() -> None:
     assert command[command.index("--max-turns") + 1] == "1"
     assert "--no-session-persistence" in command
     assert command[command.index("--setting-sources") + 1] == "user"
+    assert "--json-schema" not in command
 
 
 def test_render_prompt_replaces_one_request_placeholder() -> None:
     template = (STAGE / "config/prompts/simplify.v1.txt").read_text()
-    rendered = render_prompt(template, {"expression": "x0 + 0"})
+    schema = json.loads((STAGE / "config/schemas/simplify.v1.json").read_text())
+    rendered = render_prompt(template, {"expression": "x0 + 0"}, schema)
     assert "{{REQUEST_JSON}}" not in rendered
     assert '"expression":"x0 + 0"' in rendered
+    assert "OUTPUT_JSON_SCHEMA_DRAFT_07" in rendered
+    assert '"$id":"symbolicarena.simplify.v1"' in rendered
 
 
 def test_validate_simplify_output_is_strict() -> None:
@@ -127,7 +138,7 @@ def test_validate_equivalence_and_structure_enums() -> None:
         )
 
 
-def test_validate_envelope_accepts_schema_tool_turn_but_no_real_tools() -> None:
+def test_validate_envelope_accepts_plain_json_single_turn_but_no_real_tools() -> None:
     structured = {
         "decision": "equivalent",
         "evidence_basis": "symbolic_proof",
@@ -136,7 +147,12 @@ def test_validate_envelope_accepts_schema_tool_turn_but_no_real_tools() -> None:
         "brief_reason": "Expressions are identical.",
     }
     envelope = valid_envelope(structured)
-    assert validate_claude_envelope(envelope, task_kind="equivalence") == structured
+    schema = json.loads((STAGE / "config/schemas/equivalence.v1.json").read_text())
+    assert validate_claude_envelope(
+        envelope,
+        task_kind="equivalence",
+        schema=schema,
+    ) == structured
 
 
 def test_validate_envelope_rejects_model_or_tool_contract_drift() -> None:
@@ -166,6 +182,25 @@ def test_validate_envelope_rejects_model_or_tool_contract_drift() -> None:
         validate_claude_envelope(missing_subagent_stats, task_kind="structure")
 
     bad_turn_pair = valid_envelope(structured)
-    bad_turn_pair["num_turns"] = 1
-    with pytest.raises(ContractViolation, match="stop_reason"):
+    bad_turn_pair["num_turns"] = 2
+    with pytest.raises(ContractViolation, match="num_turns"):
         validate_claude_envelope(bad_turn_pair, task_kind="structure")
+
+
+def test_validate_envelope_rejects_markdown_or_schema_invalid_result() -> None:
+    structured = {
+        "decision": "different_structure",
+        "confidence": 0.8,
+        "brief_reason": "Trees differ.",
+    }
+    schema = json.loads((STAGE / "config/schemas/structure.v1.json").read_text())
+
+    markdown = valid_envelope(structured)
+    markdown["result"] = "```json\n" + json.dumps(structured) + "\n```"
+    with pytest.raises(ContractViolation, match="合法 JSON"):
+        validate_claude_envelope(markdown, task_kind="structure", schema=schema)
+
+    missing = valid_envelope(structured)
+    missing["result"] = json.dumps({"decision": "different_structure"})
+    with pytest.raises(ContractViolation, match="Draft-07"):
+        validate_claude_envelope(missing, task_kind="structure", schema=schema)

@@ -188,7 +188,7 @@ def _build_plan_row(
         "normalized_input": normalized_input,
         "request": request,
         "task_spec": json.loads(spec.canonical_json()),
-        "rendered_prompt": render_prompt(prompt_template, request),
+        "rendered_prompt": render_prompt(prompt_template, request, schema_content),
     }
 
 

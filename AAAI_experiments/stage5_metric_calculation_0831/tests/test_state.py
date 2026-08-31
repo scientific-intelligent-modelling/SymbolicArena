@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import (
+    PredecessorAttemptManifest,
     StateContractError,
     TaskSpec,
     TaskStateStore,
@@ -22,6 +25,21 @@ def task(key: str, *, condition: str = "clean", priority: int = 10) -> TaskSpec:
         prompt_version="simplify.v1",
         schema_version="simplify.v1",
         dependencies=(),
+    )
+
+
+def predecessor_manifest(tmp_path: Path, *, attempt_count: int) -> PredecessorAttemptManifest:
+    manifest_path = tmp_path / f"predecessor-{attempt_count}.json"
+    payload = {
+        "attempt_count": attempt_count,
+        "attempt_ids": [f"legacy::{index:05d}" for index in range(attempt_count)],
+    }
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    manifest_path.write_bytes(raw)
+    return PredecessorAttemptManifest(
+        path=str(manifest_path.resolve()),
+        sha256=hashlib.sha256(raw).hexdigest(),
+        attempt_count=attempt_count,
     )
 
 
@@ -61,6 +79,57 @@ def test_global_budget_is_reserved_before_process_start(tmp_path: Path) -> None:
     assert store.attempts_reserved() == 2
     with pytest.raises(StateContractError, match="全局尝试预算"):
         store.reserve_attempt("a", now=5.0, lease_seconds=10)
+
+
+def test_predecessor_manifest_preserves_budget_across_revised_state_db(tmp_path: Path) -> None:
+    manifest = predecessor_manifest(tmp_path, attempt_count=11)
+    store = TaskStateStore(
+        tmp_path / "state_v2.sqlite3",
+        attempt_cap=12,
+        predecessor_attempt_manifest=manifest,
+    )
+    store.register_task(task("a"))
+    store.register_task(task("b"))
+    lease = store.reserve_attempt("a", now=1.0, lease_seconds=10)
+    store.finish_failure(
+        lease.attempt_id,
+        error_class="cli_exit",
+        retryable=True,
+        now=2.0,
+    )
+    assert store.attempts_reserved() == 12
+    with pytest.raises(StateContractError, match="全局尝试预算"):
+        store.reserve_attempt("b", now=3.0, lease_seconds=10)
+
+    reopened = TaskStateStore(
+        tmp_path / "state_v2.sqlite3",
+        attempt_cap=12,
+        predecessor_attempt_manifest=manifest,
+    )
+    assert reopened.attempts_reserved() == 12
+
+    with pytest.raises(StateContractError, match="继续传入同一 manifest"):
+        TaskStateStore(
+            tmp_path / "state_v2.sqlite3",
+            attempt_cap=12,
+        )
+
+    with pytest.raises(StateContractError, match="attempt_count 不一致"):
+        TaskStateStore(
+            tmp_path / "state_v2.sqlite3",
+            attempt_cap=12,
+            attempt_offset=10,
+            predecessor_attempt_manifest=manifest,
+        )
+
+
+def test_nonzero_legacy_offset_requires_manifest(tmp_path: Path) -> None:
+    with pytest.raises(StateContractError, match="predecessor_attempt_manifest"):
+        TaskStateStore(
+            tmp_path / "state_v2.sqlite3",
+            attempt_cap=12,
+            attempt_offset=11,
+        )
 
 
 def test_logical_task_cap_is_enforced_at_registration(tmp_path: Path) -> None:
@@ -214,3 +283,71 @@ def test_non_applicable_is_auditable_idempotent_and_costs_no_attempt(tmp_path: P
         "evidence_path": "audit/a.json",
         "evidence_sha256": "sha-a",
     }
+
+
+def test_promote_failed_attempt_freezes_whitelisted_archived_output(tmp_path: Path) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=10)
+    store.register_task(task("a"))
+    lease = store.reserve_attempt("a", now=1.0, lease_seconds=10)
+    store.finish_failure(
+        lease.attempt_id,
+        error_class="outer_json_invalid",
+        retryable=True,
+        now=2.0,
+    )
+
+    store.promote_failed_attempt(
+        lease.attempt_id,
+        result_path="llm/frozen/a.json",
+        result_sha256="sha-a",
+        allowed_error_classes=("outer_json_invalid",),
+        audit_reason="validator_fix_rechecked",
+        now=3.0,
+    )
+
+    assert store.task_state("a") == "frozen"
+    assert store.frozen_result("a") == {
+        "result_path": "llm/frozen/a.json",
+        "result_sha256": "sha-a",
+        "attempt_id": lease.attempt_id,
+    }
+
+
+def test_promote_failed_attempt_rejects_non_whitelisted_or_wrong_state(tmp_path: Path) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=10)
+    store.register_task(task("a"))
+    lease = store.reserve_attempt("a", now=1.0, lease_seconds=10)
+    store.finish_failure(
+        lease.attempt_id,
+        error_class="timeout",
+        retryable=True,
+        now=2.0,
+    )
+    with pytest.raises(StateContractError, match="不在补冻白名单内"):
+        store.promote_failed_attempt(
+            lease.attempt_id,
+            result_path="llm/frozen/a.json",
+            result_sha256="sha-a",
+            allowed_error_classes=("outer_json_invalid",),
+            audit_reason="validator_fix_rechecked",
+            now=3.0,
+        )
+
+    accepted = TaskStateStore(tmp_path / "state_2.sqlite3", attempt_cap=10)
+    accepted.register_task(task("b"))
+    accepted_lease = accepted.reserve_attempt("b", now=1.0, lease_seconds=10)
+    accepted.freeze_result(
+        accepted_lease.attempt_id,
+        result_path="llm/frozen/b.json",
+        result_sha256="sha-b",
+        now=2.0,
+    )
+    with pytest.raises(StateContractError, match="不是 failed"):
+        accepted.promote_failed_attempt(
+            accepted_lease.attempt_id,
+            result_path="llm/frozen/b-2.json",
+            result_sha256="sha-b2",
+            allowed_error_classes=("timeout",),
+            audit_reason="validator_fix_rechecked",
+            now=3.0,
+        )

@@ -15,6 +15,7 @@ from typing import Any, Callable, Mapping, Sequence
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     CONTRACT_EFFORT,
     CONTRACT_MODEL,
+    CONTRACT_TRANSPORT_VERSION,
     ContractViolation,
     build_claude_command,
     canonical_json,
@@ -56,6 +57,33 @@ _CIRCUIT_BREAK_PATTERNS = (
     "command contract",
     "task definition",
     "frozen result",
+)
+_CLI_UNKNOWN_OPTION_PATTERN = re.compile(
+    r"""
+    \b(?:unknown|unrecognized|unexpected|invalid)\s+
+    (?:option|argument|flag)\b
+    [^-\n\r]*
+    [:=]?
+    [^-\n\r]*
+    (?P<flag>--[a-z0-9][a-z0-9-]*)
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+_CLI_CONTRACT_FLAGS = frozenset(
+    {
+        "--print",
+        "--safe-mode",
+        "--setting-sources",
+        "--model",
+        "--effort",
+        "--tools",
+        "--max-turns",
+        "--no-session-persistence",
+        "--disable-slash-commands",
+        "--strict-mcp-config",
+        "--output-format",
+        "--json-schema",
+    }
 )
 SEMANTIC_VALIDATOR_VERSION = "symbolic_evidence.v1"
 
@@ -160,6 +188,17 @@ def _is_retryable_cli_exit(stdout: str, stderr: str) -> tuple[str, bool]:
     if "timed out" in text or "timeout" in text:
         return ("timeout", True)
     return ("cli_exit", True)
+
+
+def _looks_like_cli_contract_drift(stdout: str, stderr: str) -> bool:
+    text = f"{stdout}\n{stderr}"
+    lowered = text.lower()
+    if "--json-schema" in lowered and "not a valid json schema" in lowered:
+        return True
+    for match in _CLI_UNKNOWN_OPTION_PATTERN.finditer(text):
+        if match.group("flag").lower() in _CLI_CONTRACT_FLAGS:
+            return True
+    return False
 
 
 def _is_circuit_break_violation(exc: Exception) -> bool:
@@ -299,7 +338,7 @@ def _validate_simplify_semantics(
 def _enforce_runtime_envelope_contract(envelope: Mapping[str, object]) -> None:
     stop_reason = envelope.get("stop_reason")
     num_turns = envelope.get("num_turns")
-    valid_stop_pairs = {(1, "end_turn"), (2, "tool_use")}
+    valid_stop_pairs = {(1, "end_turn")}
     if (num_turns, stop_reason) not in valid_stop_pairs:
         raise ContractViolation(
             f"num_turns/stop_reason 契约不符: {num_turns!r}/{stop_reason!r}"
@@ -445,7 +484,11 @@ class ClaudeRunner:
 
         task_kind = _infer_task_kind(definition.task_spec.task_type, definition.task_kind)
         prompt_sha256, schema_sha256 = self._verify_task_definition(definition)
-        prompt = render_prompt(definition.prompt_template, definition.request)
+        prompt = render_prompt(
+            definition.prompt_template,
+            definition.request,
+            definition.schema,
+        )
         command = self._build_and_validate_command(definition.schema)
         cumulative_cost_usd = 0.0
         has_cost = False
@@ -610,8 +653,26 @@ class ClaudeRunner:
             returncode = int(completed.returncode)
             stdout = _normalize_text_output(completed.stdout)
             stderr = _normalize_text_output(completed.stderr)
+            parsed_stdout: object | None = None
+            stdout_json_error: json.JSONDecodeError | None = None
+            if stdout.strip():
+                try:
+                    parsed_stdout = json.loads(stdout)
+                except json.JSONDecodeError as exc:
+                    stdout_json_error = exc
+                else:
+                    if isinstance(parsed_stdout, dict):
+                        envelope = parsed_stdout
+                        usage_raw = envelope.get("usage")
+                        usage = dict(usage_raw) if isinstance(usage_raw, Mapping) else None
+                        total_cost_usd = _parse_total_cost_usd(envelope)
+
             if returncode != 0:
-                error_class, retryable = _is_retryable_cli_exit(stdout, stderr)
+                if _looks_like_cli_contract_drift(stdout, stderr):
+                    error_class, retryable = ("contract_drift", False)
+                    circuit_break = True
+                else:
+                    error_class, retryable = _is_retryable_cli_exit(stdout, stderr)
                 validation = {
                     "ok": False,
                     "error_class": error_class,
@@ -627,101 +688,99 @@ class ClaudeRunner:
                     "structured_output": None,
                 }
             else:
-                try:
-                    parsed = json.loads(stdout)
-                except json.JSONDecodeError as exc:
+                if stdout_json_error is not None:
                     error_class, retryable = ("outer_json_invalid", True)
                     validation = {
                         "ok": False,
                         "error_class": error_class,
-                        "error_message": str(exc),
+                        "error_message": str(stdout_json_error),
+                        "structured_output": None,
+                    }
+                elif not isinstance(parsed_stdout, dict):
+                    error_class, retryable = ("outer_json_invalid", True)
+                    validation = {
+                        "ok": False,
+                        "error_class": error_class,
+                        "error_message": "Claude 外层输出不是 JSON object",
                         "structured_output": None,
                     }
                 else:
-                    if not isinstance(parsed, dict):
-                        error_class, retryable = ("outer_json_invalid", True)
+                    assert envelope is not None
+                    try:
+                        _enforce_runtime_envelope_contract(envelope)
+                        structured_output = validate_claude_envelope(
+                            envelope,
+                            task_kind=task_kind,
+                            schema=definition.schema,
+                        )
+                    except ContractViolation as exc:
+                        error_class = "contract_drift" if _is_circuit_break_violation(exc) else "validation_failed"
+                        retryable = not _is_circuit_break_violation(exc)
+                        circuit_break = _is_circuit_break_violation(exc)
                         validation = {
                             "ok": False,
                             "error_class": error_class,
-                            "error_message": "Claude 外层输出不是 JSON object",
+                            "error_message": str(exc),
                             "structured_output": None,
                         }
                     else:
-                        envelope = parsed
-                        usage_raw = envelope.get("usage")
-                        usage = dict(usage_raw) if isinstance(usage_raw, Mapping) else None
-                        total_cost_usd = _parse_total_cost_usd(envelope)
-                        try:
-                            _enforce_runtime_envelope_contract(envelope)
-                            structured_output = validate_claude_envelope(envelope, task_kind=task_kind)
-                        except ContractViolation as exc:
-                            error_class = "contract_drift" if _is_circuit_break_violation(exc) else "validation_failed"
-                            retryable = True
-                            circuit_break = _is_circuit_break_violation(exc)
-                            validation = {
-                                "ok": False,
-                                "error_class": error_class,
-                                "error_message": str(exc),
-                                "structured_output": None,
-                            }
-                        else:
-                            semantic_evidence: JsonDict | None = None
-                            if task_kind == "simplify":
-                                try:
-                                    semantic_evidence = _validate_simplify_semantics(
-                                        definition,
-                                        structured_output,
-                                    )
-                                except SimplificationContractError as exc:
-                                    error_class = "validation_failed"
-                                    retryable = True
-                                    semantic_evidence = dict(exc.evidence)
-                                    validation = {
-                                        "ok": False,
-                                        "error_class": error_class,
-                                        "error_message": str(exc),
-                                        "structured_output": structured_output,
-                                        "semantic_evidence": semantic_evidence,
-                                    }
-                                except SymbolicEvidenceError as exc:
-                                    error_class = "validation_failed"
-                                    retryable = True
-                                    semantic_evidence = {
-                                        "decision": "contract_error",
-                                        "error_type": type(exc).__name__,
-                                        "error_message": str(exc),
-                                    }
-                                    validation = {
-                                        "ok": False,
-                                        "error_class": error_class,
-                                        "error_message": str(exc),
-                                        "structured_output": structured_output,
-                                        "semantic_evidence": semantic_evidence,
-                                    }
-                                except Exception as exc:  # pragma: no cover - 符号库异常兜底
-                                    error_class = "semantic_validator_error"
-                                    retryable = True
-                                    semantic_evidence = {
-                                        "decision": "validator_error",
-                                        "error_type": type(exc).__name__,
-                                        "error_message": str(exc),
-                                    }
-                                    validation = {
-                                        "ok": False,
-                                        "error_class": error_class,
-                                        "error_message": str(exc),
-                                        "structured_output": structured_output,
-                                        "semantic_evidence": semantic_evidence,
-                                    }
-                            if error_class is None:
+                        semantic_evidence: JsonDict | None = None
+                        if task_kind == "simplify":
+                            try:
+                                semantic_evidence = _validate_simplify_semantics(
+                                    definition,
+                                    structured_output,
+                                )
+                            except SimplificationContractError as exc:
+                                error_class = "validation_failed"
+                                retryable = True
+                                semantic_evidence = dict(exc.evidence)
                                 validation = {
-                                    "ok": True,
-                                    "error_class": None,
-                                    "error_message": None,
+                                    "ok": False,
+                                    "error_class": error_class,
+                                    "error_message": str(exc),
                                     "structured_output": structured_output,
+                                    "semantic_evidence": semantic_evidence,
                                 }
-                                if semantic_evidence is not None:
-                                    validation["semantic_evidence"] = semantic_evidence
+                            except SymbolicEvidenceError as exc:
+                                error_class = "validation_failed"
+                                retryable = True
+                                semantic_evidence = {
+                                    "decision": "contract_error",
+                                    "error_type": type(exc).__name__,
+                                    "error_message": str(exc),
+                                }
+                                validation = {
+                                    "ok": False,
+                                    "error_class": error_class,
+                                    "error_message": str(exc),
+                                    "structured_output": structured_output,
+                                    "semantic_evidence": semantic_evidence,
+                                }
+                            except Exception as exc:  # pragma: no cover - 符号库异常兜底
+                                error_class = "semantic_validator_error"
+                                retryable = True
+                                semantic_evidence = {
+                                    "decision": "validator_error",
+                                    "error_type": type(exc).__name__,
+                                    "error_message": str(exc),
+                                }
+                                validation = {
+                                    "ok": False,
+                                    "error_class": error_class,
+                                    "error_message": str(exc),
+                                    "structured_output": structured_output,
+                                    "semantic_evidence": semantic_evidence,
+                                }
+                        if error_class is None:
+                            validation = {
+                                "ok": True,
+                                "error_class": None,
+                                "error_message": None,
+                                "structured_output": structured_output,
+                            }
+                            if semantic_evidence is not None:
+                                validation["semantic_evidence"] = semantic_evidence
         except subprocess.TimeoutExpired as exc:
             timed_out = True
             request_text = canonical_json(definition.request)
@@ -760,6 +819,7 @@ class ClaudeRunner:
             "task_kind": task_kind,
             "requested_model": CONTRACT_MODEL,
             "requested_effort": CONTRACT_EFFORT,
+            "transport_version": CONTRACT_TRANSPORT_VERSION,
             "prompt_path": str(definition.prompt_path),
             "prompt_sha256": prompt_sha256,
             "rendered_prompt_sha256": rendered_prompt_sha256,

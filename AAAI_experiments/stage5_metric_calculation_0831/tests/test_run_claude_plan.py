@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 import sys
 import threading
 from pathlib import Path
@@ -44,6 +45,35 @@ def _write_plan_jsonl(path: Path, rows: list[dict[str, Any]]) -> str:
             handle.write(canonical_json(row))
             handle.write("\n")
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_predecessor_attempt_manifest(tmp_path: Path, *, attempt_count: int) -> Path:
+    manifest_path = tmp_path / f"predecessor-{attempt_count}.json"
+    source_state_db = tmp_path / "predecessor-state.sqlite3"
+    source_attempts_dir = tmp_path / "predecessor-attempts"
+    source_attempts_dir.mkdir(parents=True, exist_ok=True)
+    attempt_ids = [f"legacy::{index:05d}" for index in range(attempt_count)]
+    with sqlite3.connect(source_state_db) as connection:
+        connection.execute("CREATE TABLE attempts(attempt_id TEXT PRIMARY KEY)")
+        connection.executemany(
+            "INSERT INTO attempts(attempt_id) VALUES (?)",
+            [(attempt_id,) for attempt_id in attempt_ids],
+        )
+    attempt_hashes: dict[str, str] = {}
+    for attempt_id in attempt_ids:
+        audit_path = source_attempts_dir / f"{attempt_id}.json"
+        _write_json(audit_path, {"attempt_id": attempt_id})
+        attempt_hashes[attempt_id] = hashlib.sha256(audit_path.read_bytes()).hexdigest()
+    payload = {
+        "attempt_count": attempt_count,
+        "attempt_ids": attempt_ids,
+        "attempt_file_sha256": attempt_hashes,
+        "schema_version": "predecessor_attempts.v1",
+        "source_attempts_dir": str(source_attempts_dir),
+        "source_state_db": str(source_state_db),
+    }
+    _write_json(manifest_path, payload)
+    return manifest_path
 
 
 def _task_spec(
@@ -142,7 +172,7 @@ def _build_plan_row(tmp_path: Path, logical_id: str, *, priority: int = 1) -> di
         "normalized_input": normalized_input,
         "request": request,
         "task_spec": json.loads(spec.canonical_json()),
-        "rendered_prompt": render_prompt(prompt_template, request),
+        "rendered_prompt": render_prompt(prompt_template, request, schema_content),
     }
 
 
@@ -222,6 +252,7 @@ class FakeRunner:
             "attempt_id": attempt_id,
             "evaluation_key": definition.task_spec.evaluation_key,
             "logical_id": definition.task_spec.logical_id,
+            "task_type": definition.task_spec.task_type,
             "structured_output": {
                 "decision": "equivalent",
                 "evidence_basis": "symbolic_proof",
@@ -397,6 +428,7 @@ def test_cached_resume_skips_runner_and_counts_cache(tmp_path: Path) -> None:
     assert report["result_counts"]["success"] == 1
     assert report["total_cost_usd"] == pytest.approx(0.1)
     assert report["state_distribution"] == {"frozen": 2}
+    assert report["attempts_reserved_total"] == 2
 
 
 def test_circuit_breaker_stops_new_submissions_but_allows_inflight_to_finish(tmp_path: Path) -> None:
@@ -652,3 +684,99 @@ def test_cached_result_sha_drift_fails_before_runner_invocation(tmp_path: Path) 
     report = json.loads(report_json.read_text(encoding="utf-8"))
     assert report["status"] == "plan_contract_error"
     assert "SHA256" in report["error"]
+
+
+def test_state_contract_error_is_reported_before_runner_invocation(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import main
+
+    row = _build_plan_row(tmp_path, "equivalence::legacy-offset")
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    report_json = tmp_path / "reports" / "progress.json"
+    calls: list[str] = []
+
+    exit_code = main(
+        [
+            "--plan-jsonl",
+            str(plan_path),
+            "--state-db",
+            str(tmp_path / "control" / "state.sqlite3"),
+            "--attempts-dir",
+            str(tmp_path / "llm" / "attempts"),
+            "--frozen-dir",
+            str(tmp_path / "llm" / "frozen"),
+            "--report-json",
+            str(report_json),
+            "--physical-attempt-offset",
+            "11",
+        ],
+        runner_factory=_runner_factory(behaviors={}, calls=calls),
+    )
+
+    assert exit_code == 2
+    assert calls == []
+    report = json.loads(report_json.read_text(encoding="utf-8"))
+    assert report["status"] == "state_contract_error"
+    assert report["model_invoked"] is False
+    assert "predecessor_attempt_manifest" in report["error"]
+
+
+def test_predecessor_manifest_resume_keeps_same_db_budget_without_recount(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import main
+
+    row = _build_plan_row(tmp_path, "equivalence::migrated")
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    manifest_path = _write_predecessor_attempt_manifest(tmp_path, attempt_count=11)
+    state_db = tmp_path / "control" / "state.sqlite3"
+    frozen_dir = tmp_path / "llm" / "frozen"
+    report_json = tmp_path / "reports" / "progress.json"
+    calls: list[str] = []
+
+    first_exit = main(
+        [
+            "--plan-jsonl",
+            str(plan_path),
+            "--state-db",
+            str(state_db),
+            "--attempts-dir",
+            str(tmp_path / "llm" / "attempts"),
+            "--frozen-dir",
+            str(frozen_dir),
+            "--report-json",
+            str(report_json),
+            "--predecessor-attempt-manifest",
+            str(manifest_path),
+        ],
+        runner_factory=_runner_factory(behaviors={}, calls=calls),
+    )
+
+    assert first_exit == 0
+    first_report = json.loads(report_json.read_text(encoding="utf-8"))
+    assert first_report["attempts_reserved_total"] == 12
+    assert first_report["physical_attempt_offset"] == 11
+    assert first_report["predecessor_attempt_count"] == 11
+
+    second_exit = main(
+        [
+            "--plan-jsonl",
+            str(plan_path),
+            "--state-db",
+            str(state_db),
+            "--attempts-dir",
+            str(tmp_path / "llm" / "attempts"),
+            "--frozen-dir",
+            str(frozen_dir),
+            "--report-json",
+            str(report_json),
+            "--predecessor-attempt-manifest",
+            str(manifest_path),
+        ],
+        runner_factory=_runner_factory(behaviors={}, calls=calls),
+    )
+
+    assert second_exit == 0
+    assert calls == ["equivalence::migrated"]
+    second_report = json.loads(report_json.read_text(encoding="utf-8"))
+    assert second_report["attempts_reserved_total"] == 12
+    assert second_report["result_counts"]["cache"] == 1
