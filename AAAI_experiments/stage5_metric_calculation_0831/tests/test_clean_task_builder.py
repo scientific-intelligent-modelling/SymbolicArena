@@ -18,7 +18,11 @@ if str(REPO_ROOT) not in sys.path:
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.clean_task_builder import (  # noqa: E402
     PlannedTask,
     build_clean_task_plan,
+    extract_expression_body,
+    instantiate_parameters,
+    load_formula_recovery_manifest,
     main,
+    map_indexed_variables,
     select_formula_with_source,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (  # noqa: E402
@@ -39,6 +43,60 @@ def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
             handle.write("\n")
+
+
+def _write_probe_jsonl(
+    path: Path,
+    *,
+    dataset_id: str,
+    variables: list[str],
+    target_name: str,
+) -> None:
+    points = [
+        {
+            "split": "id_test",
+            "row_index": 0,
+            "values": {name: float(index + 1) for index, name in enumerate(variables)},
+        }
+    ]
+    row: dict[str, object] = {
+        "schema_version": "dataset_probes_v1",
+        "core50_index": 1,
+        "dataset_name": dataset_id,
+        "basename": dataset_id,
+        "dataset_dir": f"/tmp/{dataset_id}",
+        "target_name": target_name,
+        "variables": variables,
+        "point_count": len(points),
+        "points": points,
+        "source_sha256": {
+            "metadata_yaml": "a" * 64,
+            "id_test_csv": "b" * 64,
+            "ood_test_csv": "c" * 64,
+        },
+    }
+    row["sample_sha256"] = hashlib.sha256(
+        json.dumps(
+            {
+                "schema_version": row["schema_version"],
+                "dataset_name": dataset_id,
+                "variables": variables,
+                "points": points,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    row["evidence_sha256"] = hashlib.sha256(
+        json.dumps(
+            row,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    _write_jsonl(path, [row])
 
 
 def _build_freeze_row(
@@ -101,16 +159,26 @@ def test_real_counts_and_clean_validation(real_all_plan: tuple[list[PlannedTask]
     gt_logical_ids = [task.logical_id for task in tasks if task.task_type == "gt_simplify"]
     assert "gt_simplify::II.34.2_1_0" in gt_logical_ids
     assert gt_logical_ids == sorted(gt_logical_ids)
+    assert report["validation"]["dataset_probes"] == {
+        "jsonl_sha256": "d939b69ab0a319f975293f8a10dfdf8ef929f62f101166800dddbb31329d8fe1",
+        "dataset_count": 50,
+        "schema_version": "dataset_probes_v1",
+    }
 
 
 def test_real_build_is_stable(real_all_plan: tuple[list[PlannedTask], dict[str, object]]) -> None:
     first_tasks, first_report = real_all_plan
-    second_tasks, second_report = build_clean_task_plan(phase="all")
-    assert [task.evaluation_key for task in first_tasks] == [task.evaluation_key for task in second_tasks]
-    assert [task.input_hash for task in first_tasks] == [task.input_hash for task in second_tasks]
+    first_gt_tasks = [task for task in first_tasks if task.task_type == "gt_simplify"]
+    second_tasks, second_report = build_clean_task_plan(phase="gt")
+    assert [task.evaluation_key for task in first_gt_tasks] == [
+        task.evaluation_key for task in second_tasks
+    ]
+    assert [task.input_hash for task in first_gt_tasks] == [
+        task.input_hash for task in second_tasks
+    ]
     assert first_report["contract"] == second_report["contract"]
     first_record = json.dumps(
-        first_tasks[0].to_json_record(),
+        first_gt_tasks[0].to_json_record(),
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -156,6 +224,49 @@ def test_formula_priority_prefers_instantiated_then_normalized_then_return_then_
     assert select_formula_with_source(payload) == ("x0 + 3", "equation")
 
 
+def test_indexed_prediction_variables_map_atomically_to_dataset_feature_names() -> None:
+    mapped, mapping = map_indexed_variables(
+        "x0*x1 + X1 + col0",
+        ["t", "P"],
+    )
+    assert mapped == "t*P + P + t"
+    assert mapping == {"X1": "P", "col0": "t", "x0": "t", "x1": "P"}
+
+
+def test_indexed_variable_mapping_rejects_referenced_out_of_range_column() -> None:
+    with pytest.raises(Exception, match="超出 feature_names"):
+        map_indexed_variables("x2 + x0", ["t", "P"])
+
+
+def test_function_body_extraction_and_parameter_instantiation_are_static() -> None:
+    source = '''def equation(x0, params):
+    """first"""
+    """second"""
+    return params[0] * x0 + params[-1]
+'''
+    body = extract_expression_body(source)
+    assert body == "params[0] * x0 + params[-1]"
+    assert instantiate_parameters(body, [1.25, -2.5]) == "(1.25) * x0 + (-2.5)"
+
+
+def test_parameter_instantiation_rejects_dynamic_or_out_of_range_index() -> None:
+    with pytest.raises(Exception, match="静态实例化"):
+        instantiate_parameters("params[index] + x0", [1.0])
+    with pytest.raises(Exception, match="超出长度"):
+        instantiate_parameters("params[-2] + x0", [1.0])
+
+
+def test_real_formula_recovery_manifest_is_strict_and_hashed() -> None:
+    entries, manifest_sha256 = load_formula_recovery_manifest(
+        STAGE_ROOT / "manifests/formula_recovery.v1.json"
+    )
+    assert len(entries) == 11
+    assert len(manifest_sha256) == 64
+    assert {entry["resolution"] for entry in entries.values()} == {"recovered_params"}
+    assert all(entry.get("_candidate_function") for entry in entries.values())
+    assert all(entry.get("_candidate_file_sha256") for entry in entries.values())
+
+
 def test_missing_formula_emits_explicit_no_call_plan(tmp_path: Path) -> None:
     gt_path = tmp_path / "ground_truth_extract.jsonl"
     _write_jsonl(
@@ -175,10 +286,18 @@ def test_missing_formula_emits_explicit_no_call_plan(tmp_path: Path) -> None:
         ],
     )
     freeze_path = tmp_path / "clean_freeze_demo.jsonl.gz"
+    probes_path = tmp_path / "dataset_probes.jsonl"
+    _write_probe_jsonl(
+        probes_path,
+        dataset_id="DemoGT",
+        variables=["x0"],
+        target_name="y",
+    )
     missing_payload = {
         "status": "error",
         "equation": "",
         "feature_names": ["x0"],
+        "target_name": "y",
         "canonical_artifact": {
             "instantiated_expression": "",
             "normalized_expression": "",
@@ -196,6 +315,7 @@ def test_missing_formula_emits_explicit_no_call_plan(tmp_path: Path) -> None:
     }
     row = _build_freeze_row(
         task_id="demoalg_s520_clean_g0001",
+        dataset_id="DemoGT",
         algorithm="DemoAlg",
         payload=missing_payload,
     )
@@ -206,6 +326,7 @@ def test_missing_formula_emits_explicit_no_call_plan(tmp_path: Path) -> None:
     tasks, report = build_clean_task_plan(
         phase="pred",
         ground_truth_jsonl=gt_path,
+        dataset_probes_jsonl=probes_path,
         freeze_glob=str(freeze_path),
         expected_gt_count=1,
         expected_pred_count=1,
@@ -267,6 +388,17 @@ def test_real_pred_tasks_have_variables_and_frozen_formula_sources(
         assert source in allowed_sources
         expression = task.request["expression"]
         assert isinstance(expression, str) and expression.strip()
+        assert "params[" not in expression
+        probe = task.request["dataset_probe_evidence"]
+        assert probe["dataset_name"] == task.request["dataset_id"]
+        assert probe["variables"] == variables
+        assert task.request["probe_points"] == probe["points"]
+        assert task.request["probe_sample_sha256"] == probe["sample_sha256"]
+        artifact = task.request["deterministic_evidence"]["symbolic_artifact"]
+        assert artifact["artifact_sha256"]
+        assert artifact["node_count"] >= 1
+        assert "sympy_expression" not in artifact
+        assert task.request["original_expression"] == expression
         if variables:
             continue
         assert not CANONICAL_VARIABLE_PATTERN.findall(expression)
@@ -292,10 +424,18 @@ def test_cli_dry_run_reports_contract_hashes(tmp_path: Path, capsys: pytest.Capt
         ],
     )
     freeze_path = tmp_path / "clean_freeze_demo.jsonl.gz"
+    probes_path = tmp_path / "dataset_probes.jsonl"
+    _write_probe_jsonl(
+        probes_path,
+        dataset_id="DemoGT",
+        variables=["x0"],
+        target_name="y",
+    )
     payload = {
         "status": "ok",
         "equation": "x0 + 1",
         "feature_names": ["x0"],
+        "target_name": "y",
         "canonical_artifact": {
             "instantiated_expression": "x0 + 1",
             "normalized_expression": "x0 + 1",
@@ -313,6 +453,7 @@ def test_cli_dry_run_reports_contract_hashes(tmp_path: Path, capsys: pytest.Capt
     }
     row = _build_freeze_row(
         task_id="demoalg_s520_clean_g0001",
+        dataset_id="DemoGT",
         algorithm="DemoAlg",
         payload=payload,
     )
@@ -328,6 +469,8 @@ def test_cli_dry_run_reports_contract_hashes(tmp_path: Path, capsys: pytest.Capt
             str(gt_path),
             "--freeze-glob",
             str(freeze_path),
+            "--dataset-probes-jsonl",
+            str(probes_path),
             "--expected-gt-count",
             "1",
             "--expected-pred-count",

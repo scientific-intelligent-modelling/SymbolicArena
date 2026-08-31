@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -119,6 +120,79 @@ def _valid_envelope() -> dict[str, object]:
     }
 
 
+def _simplify_task_definition(tmp_path: Path, key: str) -> TaskDefinition:
+    prompt_template = "Simplify this expression.\n{{REQUEST_JSON}}\n"
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "outcome": {"type": "string"},
+            "simplified_expression": {"type": ["string", "null"]},
+            "equivalence_assessment": {"type": "string"},
+            "assumptions": {"type": "array", "items": {"type": "string"}},
+            "confidence": {"type": "number"},
+            "brief_reason": {"type": "string"},
+        },
+        "required": [
+            "outcome",
+            "simplified_expression",
+            "equivalence_assessment",
+            "assumptions",
+            "confidence",
+            "brief_reason",
+        ],
+    }
+    prompt_path = tmp_path / "simplify.v1.txt"
+    schema_path = tmp_path / "simplify.v1.json"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_text(prompt_template, encoding="utf-8")
+    schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    spec = TaskSpec(
+        evaluation_key=key,
+        logical_id=f"gt_simplify::{key}",
+        task_type="gt_simplify",
+        condition="clean",
+        priority=1,
+        input_hash=f"input::{key}",
+        prompt_version="simplify.v1",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+    return TaskDefinition(
+        task_spec=spec,
+        request={
+            "expression": "x0 + x1",
+            "variables": ["x0", "x1"],
+            "allowed_functions": [],
+            "evidence_hash": "evidence",
+        },
+        prompt_path=prompt_path,
+        prompt_sha256=_sha256_text(prompt_template),
+        schema_path=schema_path,
+        schema_sha256=_sha256_text(schema_path.read_text(encoding="utf-8")),
+        prompt_template=prompt_template,
+        schema=schema,
+        task_kind="simplify",
+    )
+
+
+def _simplify_envelope(
+    expression: str | None,
+    *,
+    outcome: str = "simplified",
+) -> dict[str, object]:
+    envelope = _valid_envelope()
+    envelope["structured_output"] = {
+        "outcome": outcome,
+        "simplified_expression": expression,
+        "equivalence_assessment": "undetermined" if outcome == "unable" else "preserved",
+        "assumptions": [],
+        "confidence": 0.9,
+        "brief_reason": "Simplification result.",
+    }
+    return envelope
+
+
 class FakeSubprocessRun:
     def __init__(self, outcomes: list[object]) -> None:
         self.outcomes = list(outcomes)
@@ -176,6 +250,9 @@ def test_success_freezes_once_and_restart_is_idempotent(tmp_path: Path) -> None:
     assert second.from_cache is True
     assert len(fake_run.calls) == 1
     assert store.attempts_reserved() == 1
+    scratch_path = tmp_path / "llm" / "scratch" / str(first.attempt_id)
+    assert fake_run.calls[0]["cwd"] == str(scratch_path)
+    assert scratch_path.is_dir()
 
     attempt_audit = json.loads((tmp_path / "llm" / "attempts" / f"{first.attempt_id}.json").read_text(encoding="utf-8"))
     assert set(attempt_audit) == {
@@ -193,6 +270,7 @@ def test_success_freezes_once_and_restart_is_idempotent(tmp_path: Path) -> None:
     assert attempt_audit["metadata"]["prompt_sha256"] == definition.prompt_sha256
     assert attempt_audit["metadata"]["schema_sha256"] == definition.schema_sha256
     assert attempt_audit["metadata"]["wall_latency_seconds"] >= 0.0
+    assert attempt_audit["metadata"]["scratch_dir"] == str(scratch_path)
     assert attempt_audit["metadata"]["usage"]["server_tool_use"] == {
         "web_fetch_requests": 0,
         "web_search_requests": 0,
@@ -233,6 +311,157 @@ def test_one_turn_end_turn_envelope_is_also_a_valid_single_call(tmp_path: Path) 
     assert result.state == "frozen"
     assert result.structured_output == envelope["structured_output"]
     assert store.attempts_reserved() == 1
+
+
+def test_simplify_semantic_validation_is_audited_before_freeze(tmp_path: Path) -> None:
+    definition = _simplify_task_definition(tmp_path, "ek-simplify-valid")
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope("x1 + x0"), ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    audit = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{result.attempt_id}.json").read_text(encoding="utf-8")
+    )
+    evidence = audit["validation"]["semantic_evidence"]
+    assert evidence["decision"] == "equivalent"
+    assert evidence["probe_seed"] >= 0
+
+
+def test_simplify_uses_and_audits_frozen_dataset_probes(tmp_path: Path) -> None:
+    definition = _simplify_task_definition(tmp_path, "ek-simplify-dataset-probes")
+    points = [
+        {"split": "id_test", "row_index": 3, "values": {"x0": 2.0, "x1": 5.0}}
+    ]
+    probe: dict[str, object] = {
+        "schema_version": "dataset_probes_v1",
+        "core50_index": 1,
+        "dataset_name": "DemoSet",
+        "basename": "DemoSet",
+        "dataset_dir": "/tmp/DemoSet",
+        "target_name": "y",
+        "variables": ["x0", "x1"],
+        "point_count": 1,
+        "points": points,
+        "source_sha256": {
+            "metadata_yaml": "a" * 64,
+            "id_test_csv": "b" * 64,
+            "ood_test_csv": "c" * 64,
+        },
+    }
+    sample_payload = {
+        "schema_version": probe["schema_version"],
+        "dataset_name": probe["dataset_name"],
+        "variables": probe["variables"],
+        "points": points,
+    }
+    probe["sample_sha256"] = _sha256_text(canonical_json(sample_payload))
+    probe["evidence_sha256"] = _sha256_text(canonical_json(probe))
+    request = dict(definition.request)
+    request.update(
+        {
+            "dataset_id": "DemoSet",
+            "probe_points": points,
+            "probe_source": "dataset_probes_v1",
+            "probe_sample_sha256": probe["sample_sha256"],
+            "dataset_probe_evidence": probe,
+        }
+    )
+    definition = replace(definition, request=request)
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope("x1 + x0"), ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    audit = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{result.attempt_id}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    evidence = audit["validation"]["semantic_evidence"]
+    assert evidence["probe_source"] == "dataset_probes_v1"
+    assert evidence["probe_sample_sha256"] == probe["sample_sha256"]
+    assert evidence["probe_count"] == 1
+    assert evidence["normalized_probe_points_sha256"] != probe["sample_sha256"]
+
+
+def test_simplify_counterexample_retries_then_freezes_first_valid_result(tmp_path: Path) -> None:
+    definition = _simplify_task_definition(tmp_path, "ek-simplify-retry")
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope("x0 - x1"), ensure_ascii=False),
+                stderr="",
+            ),
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope("x0 + x1", outcome="unchanged"), ensure_ascii=False),
+                stderr="",
+            ),
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    assert store.attempts_reserved() == 2
+    assert result.total_cost_usd == pytest.approx(0.0625)
+    first = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert first["validation"]["error_class"] == "validation_failed"
+    assert first["validation"]["semantic_evidence"]["counterexample"]
+
+
+def test_simplify_unable_is_valid_terminal_without_formula_validation(tmp_path: Path) -> None:
+    definition = _simplify_task_definition(tmp_path, "ek-simplify-unable")
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope(None, outcome="unable"), ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    assert store.attempts_reserved() == 1
+    frozen = json.loads(Path(result.result_path or "").read_text(encoding="utf-8"))
+    assert frozen["validation"]["semantic_evidence"] == {
+        "decision": "not_applicable",
+        "reason": "outcome_unable",
+    }
 
 
 def test_cached_frozen_sha_drift_triggers_circuit_breaker_without_invocation(tmp_path: Path) -> None:
@@ -315,6 +544,21 @@ def test_retryable_failures_are_audited_then_retried(
     assert first_attempt["metadata"]["retryable"] is True
     assert second_attempt["validation"]["ok"] is True
     assert len(fake_run.calls) == 2
+
+
+def test_retry_backoff_applies_bounded_jitter(tmp_path: Path) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3")
+    runner = ClaudeRunner(
+        store,
+        attempts_dir=tmp_path / "attempts",
+        frozen_dir=tmp_path / "frozen",
+        backoff_schedule_seconds=(10.0, 20.0),
+        backoff_jitter_ratio=0.25,
+        uniform_fn=lambda lower, upper: upper,
+    )
+    assert runner._backoff_delay(1) == 12.5
+    assert runner._backoff_delay(2) == 25.0
+    assert runner._backoff_delay(3) == 25.0
 
 
 def test_timeout_expired_bytes_are_normalized_and_hashed_without_leaking_secrets(tmp_path: Path) -> None:

@@ -1,0 +1,1361 @@
+"""Stage5 符号证据工具。
+
+仅做安全 AST / 前缀表达式恢复，不使用 `eval` 或 `sympify`。
+"""
+
+from __future__ import annotations
+
+import ast
+from collections import Counter
+import hashlib
+import json
+import math
+import random
+import re
+import sys
+from dataclasses import dataclass, field
+from functools import lru_cache
+from typing import Any, Collection, Mapping, Sequence
+
+import sympy as sp
+
+
+class SymbolicEvidenceError(ValueError):
+    """不可信表达式或证据契约违规。"""
+
+
+class SimplificationContractError(ValueError):
+    """化简结果被确定性反例否定。"""
+
+    def __init__(self, message: str, evidence: dict[str, object]) -> None:
+        super().__init__(message)
+        self.evidence = evidence
+
+
+@dataclass
+class _BuildContext:
+    allowed_variables: set[str] | None
+    allowed_functions: set[str] | None
+    inferred_variables: set[str]
+    symbols: dict[str, sp.Symbol] = field(default_factory=dict)
+    source_functions: set[str] = field(default_factory=set)
+
+    def symbol(self, name: str) -> sp.Symbol:
+        if name not in self.symbols:
+            self.symbols[name] = sp.Symbol(name)
+        return self.symbols[name]
+
+
+NUMPY_ATTRIBUTE_WHITELIST = {
+    "abs",
+    "cos",
+    "divide",
+    "exp",
+    "log",
+    "maximum",
+    "minimum",
+    "pi",
+    "sin",
+    "sqrt",
+    "tan",
+    "tanh",
+    "where",
+}
+CONSTANT_NAMES = {
+    "E": sp.E,
+    "I": sp.I,
+    "pi": sp.pi,
+    "zoo": sp.zoo,
+}
+OPAQUE_FUNCTIONS = {"gradient"}
+SYMBOLIC_PROOF_NODE_LIMIT = 64
+PREFIX_TOKEN_RE = re.compile(
+    r"""
+    (?P<number>[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)
+    |(?P<ident>[A-Za-z_][A-Za-z0-9_]*)
+    |(?P<lpar>\()
+    |(?P<rpar>\))
+    |(?P<comma>,)
+    |(?P<space>\s+)
+    """,
+    re.VERBOSE,
+)
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _normalize_name(name: str) -> str:
+    aliases = {
+        "Abs": "abs",
+        "Max": "maximum",
+        "Min": "minimum",
+        "atan": "arctan",
+    }
+    return aliases.get(name, name)
+
+
+def _record_function(ctx: _BuildContext, name: str) -> str:
+    normalized = _normalize_name(name)
+    if ctx.allowed_functions is not None and normalized not in ctx.allowed_functions:
+        raise SymbolicEvidenceError(f"检测到未授权函数: {normalized}")
+    ctx.source_functions.add(normalized)
+    return normalized
+
+
+def _resolve_call_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return _normalize_name(node.id)
+    if isinstance(node, ast.Attribute):
+        if not isinstance(node.value, ast.Name) or node.value.id != "np":
+            raise SymbolicEvidenceError("只允许 np.<math> 形式的属性调用")
+        if node.attr not in NUMPY_ATTRIBUTE_WHITELIST:
+            raise SymbolicEvidenceError(f"不支持的 np 属性: np.{node.attr}")
+        return _normalize_name(node.attr)
+    raise SymbolicEvidenceError("只允许显式白名单函数调用")
+
+
+def _resolve_constant(node: ast.AST) -> sp.Basic:
+    if isinstance(node, ast.Name) and node.id in CONSTANT_NAMES:
+        return CONSTANT_NAMES[node.id]
+    if isinstance(node, ast.Attribute):
+        if not isinstance(node.value, ast.Name) or node.value.id != "np":
+            raise SymbolicEvidenceError("只允许 np.pi 常量属性")
+        if node.attr != "pi":
+            raise SymbolicEvidenceError(f"不支持的常量属性: np.{node.attr}")
+        return sp.pi
+    raise SymbolicEvidenceError("未知常量")
+
+
+def _literal_subscript_index(node: ast.AST) -> int:
+    if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool):
+        return int(node.value)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        operand = node.operand
+        if isinstance(operand, ast.Constant) and isinstance(operand.value, int):
+            return -int(operand.value)
+    raise SymbolicEvidenceError("只允许 params[整数] 形式的下标访问")
+
+
+def _parameter_symbol_name(index: int) -> str:
+    if index < 0:
+        return f"params__neg_{abs(index)}"
+    return f"params__{index}"
+
+
+def _ensure_real_number(value: object) -> sp.Basic:
+    if isinstance(value, bool):
+        raise SymbolicEvidenceError("布尔字面量不能作为普通数值常量")
+    if isinstance(value, int):
+        return sp.Integer(value)
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise SymbolicEvidenceError(f"只允许有限常量，收到: {value!r}")
+        return sp.Float(repr(value))
+    raise SymbolicEvidenceError(f"不支持的字面量常量: {value!r}")
+
+
+def _extract_expression_ast(source: str) -> tuple[ast.AST, str, set[str]]:
+    try:
+        parsed = ast.parse(source, mode="eval")
+        return parsed.body, "expression", set()
+    except SyntaxError:
+        module = ast.parse(source, mode="exec")
+        if len(module.body) != 1 or not isinstance(module.body[0], ast.FunctionDef):
+            raise SymbolicEvidenceError("表达式必须是单个表达式或单个函数定义")
+        fn = module.body[0]
+        if fn.decorator_list:
+            raise SymbolicEvidenceError("不允许装饰器")
+        statements = list(fn.body)
+        while statements and isinstance(statements[0], ast.Expr):
+            doc_value = statements[0].value
+            if isinstance(doc_value, ast.Constant) and isinstance(doc_value.value, str):
+                statements = statements[1:]
+                continue
+            break
+        if len(statements) != 1 or not isinstance(statements[0], ast.Return) or statements[0].value is None:
+            raise SymbolicEvidenceError("函数定义必须只包含一个 return 表达式")
+        inferred_variables = {
+            arg.arg
+            for arg in fn.args.args
+            if arg.arg != "params"
+        }
+        return statements[0].value, "function_def", inferred_variables
+
+
+def _looks_like_prefix_expression(source: str) -> bool:
+    stripped = source.lstrip()
+    return (not stripped.startswith("def ")) and bool(re.match(r"^[A-Za-z_][A-Za-z0-9_]*\(", stripped))
+
+
+@dataclass(frozen=True)
+class _PrefixToken:
+    kind: str
+    value: str
+
+
+class _PrefixTokenStream:
+    def __init__(self, source: str) -> None:
+        self.tokens: list[_PrefixToken] = []
+        position = 0
+        while position < len(source):
+            match = PREFIX_TOKEN_RE.match(source, position)
+            if match is None:
+                raise SymbolicEvidenceError(
+                    f"prefix 表达式包含非法字符: {source[position:position+16]!r}"
+                )
+            position = match.end()
+            kind = match.lastgroup
+            if kind == "space":
+                continue
+            assert kind is not None
+            self.tokens.append(_PrefixToken(kind, match.group(kind)))
+        self.index = 0
+
+    def peek(self) -> _PrefixToken | None:
+        if self.index >= len(self.tokens):
+            return None
+        return self.tokens[self.index]
+
+    def pop(self) -> _PrefixToken:
+        token = self.peek()
+        if token is None:
+            raise SymbolicEvidenceError("prefix 表达式提前结束")
+        self.index += 1
+        return token
+
+    def expect(self, kind: str) -> _PrefixToken:
+        token = self.pop()
+        if token.kind != kind:
+            raise SymbolicEvidenceError(
+                f"prefix 表达式期望 {kind}，实际是 {token.kind}"
+            )
+        return token
+
+
+def _parse_prefix_number(text: str) -> sp.Basic:
+    if any(character in text for character in ".eE"):
+        value = float(text)
+        if not math.isfinite(value):
+            raise SymbolicEvidenceError(f"只允许有限常量，收到: {text!r}")
+        return sp.Float(text)
+    return sp.Integer(int(text))
+
+
+def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
+    if name in CONSTANT_NAMES:
+        return CONSTANT_NAMES[name]
+    normalized = _normalize_name(name)
+    if normalized in {
+        "abs",
+        "sin",
+        "cos",
+        "tan",
+        "tanh",
+        "sinh",
+        "exp",
+        "log",
+        "sqrt",
+        "where",
+        "divide",
+        "div",
+        "power",
+        "add",
+        "sub",
+        "mul",
+        "maximum",
+        "minimum",
+        "arctan",
+        "gradient",
+        "compare",
+    }:
+        raise SymbolicEvidenceError(f"函数名不能作为裸变量出现: {name}")
+    if name == "params":
+        raise SymbolicEvidenceError("只允许 params[整数] 形式的下标访问")
+    if ctx.allowed_variables is not None and name not in ctx.allowed_variables and name not in ctx.inferred_variables:
+        raise SymbolicEvidenceError(f"检测到未授权变量: {name}")
+    return ctx.symbol(name)
+
+
+def _require_arity(name: str, args: list[sp.Basic], expected: int) -> list[sp.Basic]:
+    if len(args) != expected:
+        raise SymbolicEvidenceError(f"{name} 需要 {expected} 个参数，收到 {len(args)} 个")
+    return args
+
+
+def _require_min_arity(name: str, args: list[sp.Basic], minimum: int) -> list[sp.Basic]:
+    if len(args) < minimum:
+        raise SymbolicEvidenceError(f"{name} 至少需要 {minimum} 个参数，收到 {len(args)} 个")
+    return args
+
+
+def _build_where(args: list[sp.Basic]) -> sp.Basic:
+    condition, when_true, when_false = _require_arity("where", args, 3)
+    if not (
+        bool(getattr(condition, "is_Boolean", False))
+        or bool(getattr(condition, "is_Relational", False))
+    ):
+        raise SymbolicEvidenceError("where 的第一个参数必须是比较条件")
+    return sp.Piecewise((when_true, condition), (when_false, True))
+
+
+def _call_handler(name: str):
+    unary = {
+        "abs": sp.Abs,
+        "arctan": sp.atan,
+        "cos": sp.cos,
+        "exp": sp.exp,
+        "log": sp.log,
+        "sin": sp.sin,
+        "sinh": sp.sinh,
+        "sqrt": sp.sqrt,
+        "tan": sp.tan,
+        "tanh": sp.tanh,
+    }
+    if name in unary:
+        return lambda args: unary[name](_require_arity(name, args, 1)[0])
+    if name == "gradient":
+        gradient = sp.Function("gradient")
+        return lambda args: gradient(_require_arity(name, args, 1)[0])
+    if name in {"divide", "div"}:
+        return lambda args: _require_arity(name, args, 2)[0] / _require_arity(name, args, 2)[1]
+    if name == "power":
+        return lambda args: sp.Pow(*_require_arity(name, args, 2))
+    if name == "add":
+        return lambda args: sp.Add(*_require_min_arity(name, args, 2))
+    if name == "sub":
+        return lambda args: _require_arity(name, args, 2)[0] - _require_arity(name, args, 2)[1]
+    if name == "mul":
+        return lambda args: sp.Mul(*_require_min_arity(name, args, 2))
+    if name == "maximum":
+        return lambda args: sp.Max(*_require_min_arity(name, args, 2))
+    if name == "minimum":
+        return lambda args: sp.Min(*_require_min_arity(name, args, 2))
+    if name == "where":
+        return lambda args: _build_where(args)
+    if name == "compare":
+        return lambda args: sp.StrictGreaterThan(*_require_arity(name, args, 2))
+    raise SymbolicEvidenceError(f"不支持的函数: {name}")
+
+
+def _parse_prefix_term(stream: _PrefixTokenStream, ctx: _BuildContext) -> sp.Basic:
+    token = stream.pop()
+    if token.kind == "number":
+        return _parse_prefix_number(token.value)
+    if token.kind != "ident":
+        raise SymbolicEvidenceError(
+            f"prefix 表达式期望 number/ident，实际是 {token.kind}"
+        )
+    name = token.value
+    if stream.peek() is not None and stream.peek().kind == "lpar":
+        stream.pop()
+        args: list[sp.Basic] = []
+        while stream.peek() is not None and stream.peek().kind != "rpar":
+            args.append(_parse_prefix_term(stream, ctx))
+            next_token = stream.peek()
+            if next_token is None:
+                raise SymbolicEvidenceError("prefix 表达式缺少右括号")
+            if next_token.kind == "comma":
+                stream.pop()
+        stream.expect("rpar")
+        normalized = _record_function(ctx, name)
+        return _call_handler(normalized)(args)
+    return _resolve_identifier(name, ctx)
+
+
+def _build_prefix_expression(source: str, ctx: _BuildContext) -> sp.Basic:
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), 20000))
+    stream = _PrefixTokenStream(source)
+    expr = _parse_prefix_term(stream, ctx)
+    if stream.peek() is not None:
+        raise SymbolicEvidenceError("prefix 表达式存在未消费尾部")
+    return expr
+
+
+def _convert_compare(node: ast.Compare, ctx: _BuildContext) -> sp.Basic:
+    if len(node.ops) != 1 or len(node.comparators) != 1:
+        raise SymbolicEvidenceError("只支持单一比较运算")
+    left = _convert_node(node.left, ctx)
+    right = _convert_node(node.comparators[0], ctx)
+    op = node.ops[0]
+    if isinstance(op, ast.Gt):
+        return sp.StrictGreaterThan(left, right)
+    if isinstance(op, ast.GtE):
+        return sp.GreaterThan(left, right)
+    if isinstance(op, ast.Lt):
+        return sp.StrictLessThan(left, right)
+    if isinstance(op, ast.LtE):
+        return sp.LessThan(left, right)
+    if isinstance(op, ast.Eq):
+        return sp.Eq(left, right)
+    if isinstance(op, ast.NotEq):
+        return sp.Ne(left, right)
+    raise SymbolicEvidenceError(f"不支持的比较运算: {type(op).__name__}")
+
+
+def _compare_relation(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
+    if not isinstance(node, ast.Compare):
+        raise SymbolicEvidenceError("where 的条件必须是比较表达式")
+    return _convert_compare(node, ctx)
+
+
+def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
+    if isinstance(node, ast.Constant):
+        return _ensure_real_number(node.value)
+    if isinstance(node, ast.Name):
+        if node.id in CONSTANT_NAMES:
+            return CONSTANT_NAMES[node.id]
+        return _resolve_identifier(node.id, ctx)
+    if isinstance(node, ast.Attribute):
+        return _resolve_constant(node)
+    if isinstance(node, ast.BinOp):
+        left = _convert_node(node.left, ctx)
+        right = _convert_node(node.right, ctx)
+        if isinstance(node.op, ast.Add):
+            return left + right
+        if isinstance(node.op, ast.Sub):
+            return left - right
+        if isinstance(node.op, ast.Mult):
+            return left * right
+        if isinstance(node.op, ast.Div):
+            return left / right
+        if isinstance(node.op, ast.Pow):
+            return sp.Pow(left, right)
+        raise SymbolicEvidenceError(f"不支持的二元运算: {type(node.op).__name__}")
+    if isinstance(node, ast.UnaryOp):
+        operand = _convert_node(node.operand, ctx)
+        if isinstance(node.op, ast.USub):
+            return -operand
+        if isinstance(node.op, ast.UAdd):
+            return operand
+        raise SymbolicEvidenceError(f"不支持的一元运算: {type(node.op).__name__}")
+    if isinstance(node, ast.Call):
+        normalized = _record_function(ctx, _resolve_call_name(node.func))
+        if normalized == "where":
+            if len(node.args) != 3:
+                raise SymbolicEvidenceError("where 需要 3 个参数")
+            condition = _compare_relation(node.args[0], ctx)
+            args = [condition] + [_convert_node(arg, ctx) for arg in node.args[1:]]
+        elif normalized == "compare":
+            args = [_convert_node(arg, ctx) for arg in node.args]
+        else:
+            args = [_convert_node(arg, ctx) for arg in node.args]
+        if node.keywords:
+            raise SymbolicEvidenceError("不支持关键字参数")
+        return _call_handler(normalized)(args)
+    if isinstance(node, ast.Compare):
+        relation = _convert_compare(node, ctx)
+        return sp.Piecewise((sp.Integer(1), relation), (sp.Integer(0), True))
+    if isinstance(node, ast.Subscript):
+        if not isinstance(node.value, ast.Name) or node.value.id != "params":
+            raise SymbolicEvidenceError("只允许 params[整数] 形式的下标访问")
+        index = _literal_subscript_index(node.slice)
+        return ctx.symbol(_parameter_symbol_name(index))
+
+    banned = (
+        ast.Lambda,
+        ast.ListComp,
+        ast.SetComp,
+        ast.DictComp,
+        ast.GeneratorExp,
+        ast.List,
+        ast.Tuple,
+        ast.Dict,
+        ast.Set,
+        ast.IfExp,
+        ast.BoolOp,
+        ast.NamedExpr,
+    )
+    if isinstance(node, banned):
+        raise SymbolicEvidenceError(f"不支持的语法节点: {type(node).__name__}")
+    raise SymbolicEvidenceError(f"不支持的 AST 节点: {type(node).__name__}")
+
+
+def _normalize_sympy_name(expr: sp.Basic) -> str:
+    name = type(expr).__name__
+    aliases = {
+        "Add": "add",
+        "Mul": "mul",
+        "Pow": "pow",
+        "StrictGreaterThan": "gt",
+        "GreaterThan": "ge",
+        "StrictLessThan": "lt",
+        "LessThan": "le",
+        "Equality": "eq",
+        "Unequality": "ne",
+        "Piecewise": "piecewise",
+        "Abs": "abs",
+        "Max": "maximum",
+        "Min": "minimum",
+        "Exp1": "E",
+        "Pi": "pi",
+    }
+    return aliases.get(name, _normalize_name(name))
+
+
+def _canonical_tree(expr: sp.Basic) -> dict[str, object]:
+    if not isinstance(expr, sp.Basic):
+        raise SymbolicEvidenceError("只能为 SymPy 表达式生成 canonical tree")
+    node_type = _normalize_sympy_name(expr)
+    if not expr.args:
+        return {"type": node_type, "value": sp.srepr(expr)}
+    return {"type": node_type, "args": [_canonical_tree(arg) for arg in expr.args]}
+
+
+def _count_nodes(expr: sp.Basic) -> int:
+    if not isinstance(expr, sp.Basic):
+        return 0
+    return 1 + sum(_count_nodes(arg) for arg in expr.args if isinstance(arg, sp.Basic))
+
+
+def _collect_operator_set(expr: sp.Basic) -> tuple[str, ...]:
+    names: set[str] = set()
+
+    def visit(node: sp.Basic) -> None:
+        if not isinstance(node, sp.Basic):
+            return
+        if node.args:
+            names.add(_normalize_sympy_name(node))
+        for child in node.args:
+            if isinstance(child, sp.Basic):
+                visit(child)
+
+    visit(expr)
+    return tuple(sorted(names))
+
+
+def _abstract_constants(tree: dict[str, object]) -> dict[str, object]:
+    node_type = str(tree["type"])
+    args = tree.get("args")
+    if isinstance(args, list):
+        return {
+            "type": node_type,
+            "args": [_abstract_constants(child) for child in args],
+        }
+    if node_type in {"Symbol", "BooleanTrue", "BooleanFalse"}:
+        return {"type": node_type, "value": tree.get("value")}
+    return {"type": "Constant"}
+
+
+def build_symbolic_artifact(
+    source: str,
+    *,
+    allowed_variables: Collection[str] | None = None,
+    allowed_functions: Collection[str] | None = None,
+) -> dict[str, object]:
+    """把不可信表达式安全地转换为稳定的 SymPy 证据对象。"""
+
+    if not isinstance(source, str) or not source.strip():
+        raise SymbolicEvidenceError("source 必须是非空字符串")
+    normalized_allowed_variables = (
+        set(allowed_variables) if allowed_variables is not None else None
+    )
+    normalized_allowed_functions = (
+        {_normalize_name(name) for name in allowed_functions}
+        if allowed_functions is not None
+        else None
+    )
+    ctx = _BuildContext(
+        allowed_variables=normalized_allowed_variables,
+        allowed_functions=normalized_allowed_functions,
+        inferred_variables=set(),
+    )
+    try:
+        root, source_kind, inferred_variables = _extract_expression_ast(source)
+        ctx.inferred_variables = inferred_variables
+        if (
+            source_kind == "function_def"
+            and normalized_allowed_variables is not None
+            and not inferred_variables.issubset(normalized_allowed_variables)
+        ):
+            illegal = tuple(sorted(inferred_variables - normalized_allowed_variables))
+            raise SymbolicEvidenceError(f"函数定义包含未授权变量: {illegal}")
+        expr = _convert_node(root, ctx)
+    except SyntaxError:
+        if not _looks_like_prefix_expression(source):
+            raise
+        source_kind = "prefix_expression"
+        expr = _build_prefix_expression(source, ctx)
+    except SymbolicEvidenceError:
+        if _looks_like_prefix_expression(source):
+            source_kind = "prefix_expression"
+            expr = _build_prefix_expression(source, ctx)
+        else:
+            raise
+
+    canonical_expression = sp.sstr(expr, order="lex")
+    canonical_tree = _canonical_tree(expr)
+    constants_abstracted_canonical_tree = _abstract_constants(canonical_tree)
+    variables = tuple(sorted(str(symbol) for symbol in expr.free_symbols))
+    function_set = tuple(sorted(ctx.source_functions))
+    operator_set = _collect_operator_set(expr)
+    artifact_core = {
+        "source_kind": source_kind,
+        "canonical_expression": canonical_expression,
+        "canonical_tree": canonical_tree,
+        "node_count": _count_nodes(expr),
+        "variables": variables,
+        "function_set": function_set,
+        "operator_set": operator_set,
+    }
+    artifact = {
+        "source_kind": source_kind,
+        "source_text": source,
+        "canonical_expression": canonical_expression,
+        "canonical_tree": canonical_tree,
+        "node_count": artifact_core["node_count"],
+        "variables": variables,
+        "function_set": function_set,
+        "operator_set": operator_set,
+        "artifact_sha256": _sha256_text(_canonical_json(artifact_core)),
+        "sympy_expression": expr,
+        "constants_abstracted_canonical_tree": constants_abstracted_canonical_tree,
+        "constants_abstracted_tree_fingerprint": _sha256_text(
+            _canonical_json(constants_abstracted_canonical_tree)
+        ),
+    }
+    return artifact
+
+
+_FrozenTree = tuple[str, str | None, tuple["_FrozenTree", ...]]
+
+
+def _freeze_tree(tree: Mapping[str, object]) -> _FrozenTree:
+    node_type = str(tree["type"])
+    value = str(tree["value"]) if "value" in tree else None
+    raw_args = tree.get("args")
+    if raw_args is None:
+        return (node_type, value, ())
+    if not isinstance(raw_args, list):
+        raise SymbolicEvidenceError("canonical_tree.args 必须是数组")
+    children: list[_FrozenTree] = []
+    for child in raw_args:
+        if not isinstance(child, Mapping):
+            raise SymbolicEvidenceError("canonical_tree.args 只能包含对象节点")
+        children.append(_freeze_tree(child))
+    return (node_type, value, tuple(children))
+
+
+def _node_label(node: _FrozenTree) -> tuple[str, str | None]:
+    return (node[0], node[1])
+
+
+@lru_cache(maxsize=None)
+def _subtree_size(node: _FrozenTree) -> int:
+    return 1 + sum(_subtree_size(child) for child in node[2])
+
+
+@dataclass(frozen=True)
+class _PostorderTree:
+    labels: tuple[tuple[str, str | None] | None, ...]
+    leftmost_leaf: tuple[int, ...]
+    keyroots: tuple[int, ...]
+
+
+def _postorder_tree(root: _FrozenTree) -> _PostorderTree:
+    labels: list[tuple[str, str | None] | None] = [None]
+    leftmost_leaf: list[int] = [0]
+
+    def visit(node: _FrozenTree) -> int:
+        child_indices = [visit(child) for child in node[2]]
+        index = len(labels)
+        labels.append(_node_label(node))
+        leftmost_leaf.append(
+            leftmost_leaf[child_indices[0]] if child_indices else index
+        )
+        return index
+
+    visit(root)
+    # Zhang-Shasha keyroots：每个不同 leftmost-leaf 值取最大的后序索引。
+    last_for_leaf: dict[int, int] = {}
+    for index in range(1, len(labels)):
+        last_for_leaf[leftmost_leaf[index]] = index
+    return _PostorderTree(
+        labels=tuple(labels),
+        leftmost_leaf=tuple(leftmost_leaf),
+        keyroots=tuple(sorted(last_for_leaf.values())),
+    )
+
+
+def _ordered_tree_edit_distance(lhs_root: _FrozenTree, rhs_root: _FrozenTree) -> int:
+    """Zhang-Shasha 有序树编辑距离，三种基本操作的成本均为 1。"""
+
+    lhs = _postorder_tree(lhs_root)
+    rhs = _postorder_tree(rhs_root)
+    lhs_size = len(lhs.labels) - 1
+    rhs_size = len(rhs.labels) - 1
+    tree_distance = [[0] * (rhs_size + 1) for _ in range(lhs_size + 1)]
+
+    for lhs_root_index in lhs.keyroots:
+        lhs_start = lhs.leftmost_leaf[lhs_root_index]
+        for rhs_root_index in rhs.keyroots:
+            rhs_start = rhs.leftmost_leaf[rhs_root_index]
+            forest_rows = lhs_root_index - lhs_start + 2
+            forest_cols = rhs_root_index - rhs_start + 2
+            forest_distance = [[0] * forest_cols for _ in range(forest_rows)]
+            for lhs_index in range(lhs_start, lhs_root_index + 1):
+                row = lhs_index - lhs_start + 1
+                forest_distance[row][0] = forest_distance[row - 1][0] + 1
+            for rhs_index in range(rhs_start, rhs_root_index + 1):
+                col = rhs_index - rhs_start + 1
+                forest_distance[0][col] = forest_distance[0][col - 1] + 1
+
+            for lhs_index in range(lhs_start, lhs_root_index + 1):
+                row = lhs_index - lhs_start + 1
+                for rhs_index in range(rhs_start, rhs_root_index + 1):
+                    col = rhs_index - rhs_start + 1
+                    delete_cost = forest_distance[row - 1][col] + 1
+                    insert_cost = forest_distance[row][col - 1] + 1
+                    if (
+                        lhs.leftmost_leaf[lhs_index] == lhs_start
+                        and rhs.leftmost_leaf[rhs_index] == rhs_start
+                    ):
+                        rename_cost = 0 if lhs.labels[lhs_index] == rhs.labels[rhs_index] else 1
+                        replace_cost = forest_distance[row - 1][col - 1] + rename_cost
+                        value = min(delete_cost, insert_cost, replace_cost)
+                        forest_distance[row][col] = value
+                        tree_distance[lhs_index][rhs_index] = value
+                    else:
+                        prefix_row = lhs.leftmost_leaf[lhs_index] - lhs_start
+                        prefix_col = rhs.leftmost_leaf[rhs_index] - rhs_start
+                        subtree_cost = (
+                            forest_distance[prefix_row][prefix_col]
+                            + tree_distance[lhs_index][rhs_index]
+                        )
+                        forest_distance[row][col] = min(
+                            delete_cost,
+                            insert_cost,
+                            subtree_cost,
+                        )
+    return tree_distance[lhs_size][rhs_size]
+
+
+def normalized_tree_edit_distance(
+    lhs: Mapping[str, object],
+    rhs: Mapping[str, object],
+) -> float:
+    lhs_tree = lhs["canonical_tree"]
+    rhs_tree = rhs["canonical_tree"]
+    if not isinstance(lhs_tree, Mapping) or not isinstance(rhs_tree, Mapping):
+        raise SymbolicEvidenceError("artifact.canonical_tree 缺失或无效")
+    lhs_node = _freeze_tree(lhs_tree)
+    rhs_node = _freeze_tree(rhs_tree)
+    raw_distance = _ordered_tree_edit_distance(lhs_node, rhs_node)
+    denominator = max(_subtree_size(lhs_node) + _subtree_size(rhs_node), 1)
+    return float(raw_distance) / float(denominator)
+
+
+def tree_similarity(lhs: Mapping[str, object], rhs: Mapping[str, object]) -> float:
+    return 1.0 - normalized_tree_edit_distance(lhs, rhs)
+
+
+def variable_f1(lhs: Mapping[str, object], rhs: Mapping[str, object]) -> float:
+    lhs_set = set(lhs["variables"])
+    rhs_set = set(rhs["variables"])
+    if not lhs_set and not rhs_set:
+        return 1.0
+    return 2.0 * len(lhs_set & rhs_set) / (len(lhs_set) + len(rhs_set))
+
+
+def operator_f1(lhs: Mapping[str, object], rhs: Mapping[str, object]) -> float:
+    lhs_set = set(lhs["operator_set"])
+    rhs_set = set(rhs["operator_set"])
+    if not lhs_set and not rhs_set:
+        return 1.0
+    return 2.0 * len(lhs_set & rhs_set) / (len(lhs_set) + len(rhs_set))
+
+
+def _format_real(value: float) -> str:
+    if value == 0:
+        return "0"
+    text = format(float(value), ".17g")
+    return "0" if text == "-0" else text
+
+
+def _sympy_real_to_float(value: sp.Basic) -> float | None:
+    try:
+        numeric = complex(sp.N(value, 50))
+    except Exception:
+        return None
+    if abs(numeric.imag) > 1e-12:
+        return None
+    real = float(numeric.real)
+    if not math.isfinite(real):
+        return None
+    return real
+
+
+def _probe_points(
+    variable_names: tuple[str, ...],
+    seed: int,
+    target_count: int,
+) -> list[dict[str, float]]:
+    rng = random.Random(seed)
+    points: list[dict[str, float]] = []
+    attempts = 0
+    while len(points) < target_count and attempts < max(target_count * 40, 40):
+        attempts += 1
+        values: dict[str, float] = {}
+        for name in variable_names:
+            value = rng.uniform(-2.5, 2.5)
+            if abs(value) < 0.15:
+                value = 0.15 if value >= 0 else -0.15
+            values[name] = value
+        points.append(values)
+    return points
+
+
+def _evaluate_real(expr: sp.Basic, values: Mapping[str, float]) -> float | None:
+    substitutions = {
+        sp.Symbol(name): sp.Float(repr(value))
+        for name, value in values.items()
+    }
+    try:
+        substituted = expr.subs(substitutions)
+    except Exception:
+        return None
+    if substituted.free_symbols:
+        return None
+    return _sympy_real_to_float(substituted)
+
+
+def _format_probe_values(values: Mapping[str, float]) -> dict[str, str]:
+    return {name: _format_real(values[name]) for name in sorted(values)}
+
+
+def _normalize_probe_value(value: object, *, context: str) -> float:
+    if isinstance(value, bool):
+        raise SymbolicEvidenceError(f"{context} 不能是布尔值")
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+    elif isinstance(value, str):
+        try:
+            numeric = float(value)
+        except ValueError as exc:
+            raise SymbolicEvidenceError(f"{context} 不是合法数值: {value!r}") from exc
+    else:
+        raise SymbolicEvidenceError(f"{context} 不是合法数值: {value!r}")
+    if not math.isfinite(numeric):
+        raise SymbolicEvidenceError(f"{context} 必须是有限实数: {value!r}")
+    return numeric
+
+
+def _normalize_external_probe_points(
+    probe_points: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    normalized: list[dict[str, object]] = []
+    for point_index, point in enumerate(probe_points):
+        if not isinstance(point, Mapping):
+            raise SymbolicEvidenceError(f"probe_points[{point_index}] 必须是对象")
+        raw_values = point.get("values")
+        if raw_values is None:
+            raw_values = {
+                key: value
+                for key, value in point.items()
+                if key not in {"split", "row_index"}
+            }
+        if not isinstance(raw_values, Mapping):
+            raise SymbolicEvidenceError(f"probe_points[{point_index}].values 必须是对象")
+        values: dict[str, float] = {}
+        for name, value in raw_values.items():
+            if not isinstance(name, str) or not name:
+                raise SymbolicEvidenceError(
+                    f"probe_points[{point_index}] 含非法变量名: {name!r}"
+                )
+            values[name] = _normalize_probe_value(
+                value,
+                context=f"probe_points[{point_index}].values[{name!r}]",
+            )
+        normalized_point: dict[str, object] = {"values": values}
+        split = point.get("split")
+        if split is not None:
+            if not isinstance(split, str) or not split:
+                raise SymbolicEvidenceError(f"probe_points[{point_index}].split 必须是非空字符串")
+            normalized_point["split"] = split
+        row_index = point.get("row_index")
+        if row_index is not None:
+            if not isinstance(row_index, int) or row_index < 0:
+                raise SymbolicEvidenceError(
+                    f"probe_points[{point_index}].row_index 必须是非负整数"
+                )
+            normalized_point["row_index"] = row_index
+        normalized.append(normalized_point)
+    return normalized
+
+
+def _probe_point_signature(point: Mapping[str, object]) -> dict[str, object]:
+    signature: dict[str, object] = {
+        "values": _format_probe_values(point["values"]),  # type: ignore[arg-type]
+    }
+    split = point.get("split")
+    if isinstance(split, str):
+        signature["split"] = split
+    row_index = point.get("row_index")
+    if isinstance(row_index, int):
+        signature["row_index"] = row_index
+    return signature
+
+
+def _probe_sample_sha256(points: Sequence[Mapping[str, object]]) -> str:
+    return _sha256_text(_canonical_json([_probe_point_signature(point) for point in points]))
+
+
+def _probe_record(
+    *,
+    values: Mapping[str, float],
+    original_value: float,
+    simplified_value: float,
+    abs_error: float,
+    rel_error: float,
+    tolerance: float,
+    split: str | None = None,
+    row_index: int | None = None,
+) -> dict[str, object]:
+    record: dict[str, object] = {
+        "values": {name: _format_real(value) for name, value in values.items()},
+        "original": _format_real(original_value),
+        "simplified": _format_real(simplified_value),
+        "abs_error": _format_real(abs_error),
+        "rel_error": _format_real(rel_error),
+        "tolerance": _format_real(tolerance),
+    }
+    if split is not None:
+        record["split"] = split
+    if row_index is not None:
+        record["row_index"] = row_index
+    return record
+
+
+def _skipped_probe_record(
+    *,
+    point: Mapping[str, object],
+    reason: str,
+    missing_variables: Sequence[str] | None = None,
+) -> dict[str, object]:
+    record: dict[str, object] = {
+        "reason": reason,
+        "values": _format_probe_values(point["values"]),  # type: ignore[arg-type]
+    }
+    split = point.get("split")
+    if isinstance(split, str):
+        record["split"] = split
+    row_index = point.get("row_index")
+    if isinstance(row_index, int):
+        record["row_index"] = row_index
+    if missing_variables:
+        record["missing_variables"] = list(missing_variables)
+    return record
+
+
+def _max_metric(records: list[dict[str, object]], key: str) -> str:
+    return _format_real(max((float(record[key]) for record in records), default=0.0))
+
+
+def _proof_guard_triggered(
+    original_artifact: Mapping[str, object],
+    simplified_artifact: Mapping[str, object],
+) -> bool:
+    return max(
+        int(original_artifact["node_count"]),
+        int(simplified_artifact["node_count"]),
+    ) > SYMBOLIC_PROOF_NODE_LIMIT
+
+
+def _equivalence_core(
+    original_artifact: Mapping[str, object],
+    simplified_artifact: Mapping[str, object],
+    *,
+    seed: int,
+    probe_target: int,
+    abs_tolerance: float,
+    rel_tolerance: float,
+    probe_points: Sequence[Mapping[str, object]] | None = None,
+    probe_source: str | None = None,
+    probe_sample_sha256: str | None = None,
+) -> dict[str, object]:
+    original_expr = original_artifact["sympy_expression"]
+    simplified_expr = simplified_artifact["sympy_expression"]
+    if not isinstance(original_expr, sp.Basic) or not isinstance(simplified_expr, sp.Basic):
+        raise SymbolicEvidenceError("内部错误：SymPy 表达式构造失败")
+
+    assumptions: list[str] = []
+    has_opaque_function = bool(
+        (set(original_artifact["function_set"]) | set(simplified_artifact["function_set"]))
+        & OPAQUE_FUNCTIONS
+    )
+    complexity_guard = _proof_guard_triggered(original_artifact, simplified_artifact)
+    proof_basis = "none"
+
+    if original_artifact["artifact_sha256"] == simplified_artifact["artifact_sha256"]:
+        symbolic_decision = "equivalent"
+        proof_basis = "artifact_identity"
+    elif has_opaque_function:
+        symbolic_decision = "undetermined"
+        assumptions.append("存在不透明函数，符号证明被禁用，只做数值探针排错。")
+    elif complexity_guard:
+        symbolic_decision = "undetermined"
+        assumptions.append(
+            f"表达式复杂度超过符号证明阈值 {SYMBOLIC_PROOF_NODE_LIMIT}，跳过高风险 simplify。"
+        )
+    else:
+        difference = sp.simplify(sp.together(original_expr - simplified_expr))
+        difference_is_zero = difference == 0
+        equals_result = difference.equals(0)
+        difference_equals_zero = equals_result is True
+        if difference_is_zero or difference_equals_zero:
+            symbolic_decision = "equivalent"
+            proof_basis = "symbolic_difference_zero"
+        elif (
+            bool(getattr(difference, "is_number", False))
+            and bool(getattr(difference, "is_finite", False))
+            and difference != 0
+        ):
+            symbolic_decision = "not_equivalent"
+            proof_basis = "symbolic_nonzero_constant_difference"
+        else:
+            symbolic_decision = "undetermined"
+
+    probe_records: list[dict[str, object]] = []
+    skipped_probe_records: list[dict[str, object]] = []
+    variable_names = tuple(
+        sorted(set(original_artifact["variables"]) | set(simplified_artifact["variables"]))
+    )
+    if has_opaque_function and proof_basis == "artifact_identity":
+        variable_names = ()
+    effective_probe_source = probe_source or ("external" if probe_points is not None else "random")
+    if probe_points is None:
+        candidate_points = [
+            {"values": values}
+            for values in _probe_points(variable_names, seed, probe_target)
+        ]
+        normalized_probe_points_sha256 = _probe_sample_sha256(candidate_points)
+        effective_probe_sample_sha256 = normalized_probe_points_sha256
+    else:
+        candidate_points = _normalize_external_probe_points(probe_points)
+        normalized_probe_points_sha256 = _probe_sample_sha256(candidate_points)
+        effective_probe_sample_sha256 = (
+            probe_sample_sha256 or normalized_probe_points_sha256
+        )
+    if has_opaque_function and proof_basis != "artifact_identity" and probe_points is None:
+        assumptions.append("不透明函数无法稳定数值化，跳过随机探针。")
+    else:
+        if has_opaque_function and proof_basis != "artifact_identity" and probe_points is not None:
+            assumptions.append("存在不透明函数，外部探针仅用于有限实数对比。")
+        for point in candidate_points:
+            values = point["values"]
+            assert isinstance(values, Mapping)
+            missing_variables = tuple(sorted(set(variable_names) - set(values)))
+            if missing_variables:
+                skipped_probe_records.append(
+                    _skipped_probe_record(
+                        point=point,
+                        reason="missing_variables",
+                        missing_variables=missing_variables,
+                    )
+                )
+                continue
+            original_value = _evaluate_real(original_expr, values)
+            simplified_value = _evaluate_real(simplified_expr, values)
+            if original_value is None or simplified_value is None:
+                if original_value is None and simplified_value is None:
+                    reason = "both_nonfinite"
+                elif original_value is None:
+                    reason = "original_nonfinite"
+                else:
+                    reason = "simplified_nonfinite"
+                skipped_probe_records.append(
+                    _skipped_probe_record(
+                        point=point,
+                        reason=reason,
+                    )
+                )
+                continue
+            abs_error = abs(original_value - simplified_value)
+            scale = max(abs(original_value), abs(simplified_value))
+            rel_error = 0.0 if scale == 0.0 else abs_error / scale
+            tolerance = abs_tolerance + rel_tolerance * scale
+            record = _probe_record(
+                values=values,
+                original_value=original_value,
+                simplified_value=simplified_value,
+                abs_error=abs_error,
+                rel_error=rel_error,
+                tolerance=tolerance,
+                split=point.get("split") if isinstance(point.get("split"), str) else None,
+                row_index=point.get("row_index") if isinstance(point.get("row_index"), int) else None,
+            )
+            probe_records.append(record)
+            if abs_error > tolerance:
+                return {
+                    "symbolic_decision": "not_equivalent",
+                    "probe_records": probe_records,
+                    "skipped_probe_records": skipped_probe_records,
+                    "counterexample": record,
+                    "assumptions": assumptions,
+                    "proof_basis": proof_basis,
+                    "probe_source": effective_probe_source,
+                    "probe_sample_sha256": effective_probe_sample_sha256,
+                    "normalized_probe_points_sha256": normalized_probe_points_sha256,
+                }
+    if symbolic_decision == "equivalent" and proof_basis != "artifact_identity" and not probe_records:
+        if probe_points is None:
+            assumptions.append("符号差分为零，但没有收集到有限随机探针。")
+        else:
+            assumptions.append("符号差分为零，但外部探针未产生有限实数对比点。")
+    return {
+        "symbolic_decision": symbolic_decision,
+        "probe_records": probe_records,
+        "skipped_probe_records": skipped_probe_records,
+        "counterexample": None,
+        "assumptions": assumptions,
+        "proof_basis": proof_basis,
+        "probe_source": effective_probe_source,
+        "probe_sample_sha256": effective_probe_sample_sha256,
+        "normalized_probe_points_sha256": normalized_probe_points_sha256,
+    }
+
+
+def build_pair_evidence(
+    lhs: str,
+    rhs: str,
+    allowed_variables: Collection[str] | None = None,
+    allowed_functions: Collection[str] | None = None,
+    *,
+    seed: int,
+    probe_target: int = 12,
+    tolerance: float = 1e-9,
+    rel_tolerance: float = 1e-9,
+    probe_points: Sequence[Mapping[str, object]] | None = None,
+    probe_source: str | None = None,
+    probe_sample_sha256: str | None = None,
+) -> dict[str, object]:
+    lhs_artifact = build_symbolic_artifact(
+        lhs,
+        allowed_variables=allowed_variables,
+        allowed_functions=allowed_functions,
+    )
+    rhs_artifact = build_symbolic_artifact(
+        rhs,
+        allowed_variables=allowed_variables,
+        allowed_functions=allowed_functions,
+    )
+    core = _equivalence_core(
+        lhs_artifact,
+        rhs_artifact,
+        seed=seed,
+        probe_target=probe_target,
+        abs_tolerance=tolerance,
+        rel_tolerance=rel_tolerance,
+        probe_points=probe_points,
+        probe_source=probe_source,
+        probe_sample_sha256=probe_sample_sha256,
+    )
+    decision = core["symbolic_decision"]
+    probe_hash = _sha256_text(_canonical_json(core["probe_records"]))
+    skipped_probe_records = list(core["skipped_probe_records"])
+    skipped_probe_reasons = dict(
+        sorted(Counter(record["reason"] for record in skipped_probe_records).items())
+    )
+    payload = {
+        "decision": decision,
+        "lhs_artifact": {key: value for key, value in lhs_artifact.items() if key != "sympy_expression"},
+        "rhs_artifact": {key: value for key, value in rhs_artifact.items() if key != "sympy_expression"},
+        "symbolic_difference": {
+            "decision": core["symbolic_decision"],
+            "proof_basis": core["proof_basis"],
+            "counterexample": core["counterexample"],
+            "numeric_probes": list(core["probe_records"]),
+            "probe_hash": probe_hash,
+            "probe_source": core["probe_source"],
+            "probe_sample_sha256": core["probe_sample_sha256"],
+            "normalized_probe_points_sha256": core[
+                "normalized_probe_points_sha256"
+            ],
+            "skipped_probe_count": len(skipped_probe_records),
+            "skipped_probe_reasons": skipped_probe_reasons,
+            "skipped_probes": skipped_probe_records,
+            "max_abs_error": _max_metric(core["probe_records"], "abs_error"),
+            "max_rel_error": _max_metric(core["probe_records"], "rel_error"),
+            "max_tolerance": _max_metric(core["probe_records"], "tolerance"),
+            "assumptions": list(core["assumptions"]),
+        },
+        "tree": {
+            "normalized_edit_distance": normalized_tree_edit_distance(lhs_artifact, rhs_artifact),
+            "tree_similarity": tree_similarity(lhs_artifact, rhs_artifact),
+        },
+        "variable": {"f1": variable_f1(lhs_artifact, rhs_artifact)},
+        "operator": {"f1": operator_f1(lhs_artifact, rhs_artifact)},
+        "probe_seed": seed,
+        "probe_source": core["probe_source"],
+        "probe_sample_sha256": core["probe_sample_sha256"],
+        "normalized_probe_points_sha256": core[
+            "normalized_probe_points_sha256"
+        ],
+        "probe_count": len(core["probe_records"]),
+        "skipped_probe_count": len(skipped_probe_records),
+        "skipped_probe_reasons": skipped_probe_reasons,
+        "skipped_probes": skipped_probe_records,
+        "numeric_probes": list(core["probe_records"]),
+        "probe_hash": probe_hash,
+        "max_abs_error": _max_metric(core["probe_records"], "abs_error"),
+        "max_rel_error": _max_metric(core["probe_records"], "rel_error"),
+        "max_tolerance": _max_metric(core["probe_records"], "tolerance"),
+    }
+    payload["evidence_sha256"] = _sha256_text(
+        _canonical_json({key: value for key, value in payload.items() if key != "evidence_sha256"})
+    )
+    return payload
+
+
+def validate_simplification(
+    original: str,
+    simplified: str,
+    allowed_variables: Collection[str],
+    allowed_functions: Collection[str],
+    seed: int,
+    *,
+    probe_target: int = 12,
+    tolerance: float = 1e-9,
+    rel_tolerance: float = 1e-9,
+    probe_points: Sequence[Mapping[str, object]] | None = None,
+    probe_source: str | None = None,
+    probe_sample_sha256: str | None = None,
+) -> dict[str, object]:
+    """验证化简是否保持等价，并返回可冻结的确定性证据。"""
+
+    original_artifact = build_symbolic_artifact(
+        original,
+        allowed_variables=allowed_variables,
+        allowed_functions=allowed_functions,
+    )
+    simplified_artifact = build_symbolic_artifact(
+        simplified,
+        allowed_variables=allowed_variables,
+        allowed_functions=allowed_functions,
+    )
+    original_variables = set(original_artifact["variables"])
+    simplified_variables = set(simplified_artifact["variables"])
+    if not simplified_variables.issubset(original_variables):
+        raise SymbolicEvidenceError(
+            f"化简结果引入了新变量: {tuple(sorted(simplified_variables - original_variables))}"
+        )
+    original_functions = set(original_artifact["function_set"])
+    simplified_functions = set(simplified_artifact["function_set"])
+    if not simplified_functions.issubset(original_functions | set(allowed_functions)):
+        raise SymbolicEvidenceError(
+            f"化简结果引入了新函数: {tuple(sorted(simplified_functions - original_functions))}"
+        )
+
+    core = _equivalence_core(
+        original_artifact,
+        simplified_artifact,
+        seed=seed,
+        probe_target=probe_target,
+        abs_tolerance=tolerance,
+        rel_tolerance=rel_tolerance,
+        probe_points=probe_points,
+        probe_source=probe_source,
+        probe_sample_sha256=probe_sample_sha256,
+    )
+    probe_hash = _sha256_text(_canonical_json(core["probe_records"]))
+    skipped_probe_records = list(core["skipped_probe_records"])
+    skipped_probe_reasons = dict(
+        sorted(Counter(record["reason"] for record in skipped_probe_records).items())
+    )
+    max_abs_error = _max_metric(core["probe_records"], "abs_error")
+    max_rel_error = _max_metric(core["probe_records"], "rel_error")
+    max_tolerance = _max_metric(core["probe_records"], "tolerance")
+    if core["counterexample"] is not None:
+        evidence = {
+            "decision": "contract_error",
+            "symbolic_decision": "not_equivalent",
+            "proof_basis": core["proof_basis"],
+            "probe_seed": seed,
+            "probe_source": core["probe_source"],
+            "probe_sample_sha256": core["probe_sample_sha256"],
+            "normalized_probe_points_sha256": core[
+                "normalized_probe_points_sha256"
+            ],
+            "probe_count": len(core["probe_records"]),
+            "skipped_probe_count": len(skipped_probe_records),
+            "skipped_probe_reasons": skipped_probe_reasons,
+            "skipped_probes": skipped_probe_records,
+            "probe_hash": probe_hash,
+            "max_abs_error": max_abs_error,
+            "max_rel_error": max_rel_error,
+            "max_tolerance": max_tolerance,
+            "numeric_probes": list(core["probe_records"]),
+            "counterexample": core["counterexample"],
+            "assumptions": list(core["assumptions"]),
+            "original_sha256": original_artifact["artifact_sha256"],
+            "simplified_sha256": simplified_artifact["artifact_sha256"],
+        }
+        raise SimplificationContractError("化简结果存在确定性数值反例", evidence=evidence)
+    if core["symbolic_decision"] == "not_equivalent":
+        evidence = {
+            "decision": "contract_error",
+            "symbolic_decision": "not_equivalent",
+            "proof_basis": core["proof_basis"],
+            "probe_seed": seed,
+            "probe_source": core["probe_source"],
+            "probe_sample_sha256": core["probe_sample_sha256"],
+            "normalized_probe_points_sha256": core[
+                "normalized_probe_points_sha256"
+            ],
+            "probe_count": len(core["probe_records"]),
+            "skipped_probe_count": len(skipped_probe_records),
+            "skipped_probe_reasons": skipped_probe_reasons,
+            "skipped_probes": skipped_probe_records,
+            "probe_hash": probe_hash,
+            "max_abs_error": max_abs_error,
+            "max_rel_error": max_rel_error,
+            "max_tolerance": max_tolerance,
+            "numeric_probes": list(core["probe_records"]),
+            "counterexample": core["probe_records"][-1] if core["probe_records"] else None,
+            "assumptions": list(core["assumptions"]),
+            "original_sha256": original_artifact["artifact_sha256"],
+            "simplified_sha256": simplified_artifact["artifact_sha256"],
+        }
+        raise SimplificationContractError("化简结果与原式不等价", evidence=evidence)
+    return {
+        "decision": "equivalent" if core["symbolic_decision"] == "equivalent" else "undetermined",
+        "symbolic_decision": core["symbolic_decision"],
+        "proof_basis": core["proof_basis"],
+        "probe_seed": seed,
+        "probe_source": core["probe_source"],
+        "probe_sample_sha256": core["probe_sample_sha256"],
+        "normalized_probe_points_sha256": core[
+            "normalized_probe_points_sha256"
+        ],
+        "probe_count": len(core["probe_records"]),
+        "skipped_probe_count": len(skipped_probe_records),
+        "skipped_probe_reasons": skipped_probe_reasons,
+        "skipped_probes": skipped_probe_records,
+        "probe_hash": probe_hash,
+        "max_abs_error": max_abs_error,
+        "max_rel_error": max_rel_error,
+        "max_tolerance": max_tolerance,
+        "numeric_probes": list(core["probe_records"]),
+        "assumptions": list(core["assumptions"]),
+        "original_sha256": original_artifact["artifact_sha256"],
+        "simplified_sha256": simplified_artifact["artifact_sha256"],
+    }
+
+__all__ = [
+    "NUMPY_ATTRIBUTE_WHITELIST",
+    "OPAQUE_FUNCTIONS",
+    "SimplificationContractError",
+    "SymbolicEvidenceError",
+    "build_pair_evidence",
+    "build_symbolic_artifact",
+    "normalized_tree_edit_distance",
+    "operator_f1",
+    "tree_similarity",
+    "validate_simplification",
+    "variable_f1",
+]

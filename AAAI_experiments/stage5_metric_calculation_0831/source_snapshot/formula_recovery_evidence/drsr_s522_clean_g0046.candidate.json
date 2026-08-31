@@ -1,0 +1,20 @@
+{
+  "iteration": 194,
+  "sample_order": 773,
+  "nmse": 0.09356465384178765,
+  "mse": 1.2855238767702685e-11,
+  "score": -1.2855238767702685e-11,
+  "function": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Radiant energy given Electric charge, Magnitude of direction vector\n\n    Variables:\n    - Independents:\n  - x0: q, Electric charge\n  - x1: a, Magnitude of direction vector\n- Dependent:\n  - y: P, Radiant energy\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] * x0**2 * np.maximum(x1, 1e-6) + params[1] * np.maximum(x0, 1e-6) + params[2] * x0 * np.maximum(x1, 1e-6)\n\n",
+  "params": [
+    1.5505975255804682e-09,
+    -8.039761257313136e-05,
+    7.69310272070962e-12,
+    0.2717414072095714,
+    -0.3679078156701492,
+    0.9187701798746419,
+    -0.4768388809201789,
+    0.6679277876046055,
+    -0.6502030412909552,
+    0.6906862390431387
+  ]
+}

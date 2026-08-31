@@ -1,0 +1,20 @@
+{
+  "iteration": 323,
+  "sample_order": 1289,
+  "nmse": 7.819367280141056e-22,
+  "mse": 1.8715778020003625e-21,
+  "score": -1.8715778020003625e-21,
+  "function": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    This formula is about Predator dynamics based on prey availability. Calculate the Rate of change of predator population (dy/dt) given Prey population size and Predator population size\n\n    Variables:\n    - Independents:\n  - x0: Prey population size\n  - x1: Predator population size\n- Dependent:\n  - y: Rate of change of predator population (dy/dt)\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * (x0**2) + params[2] * (x0) + params[3] * (x1**2) + params[4] * (x1) + params[5] * (x0 * x1) / (params[6] + np.maximum(x0, 1e-6)) - params[7] * (x1**2)\n\n",
+  "params": [
+    -7.348734828380775e-11,
+    1.498685691331458e-11,
+    -9.026639649285846e-11,
+    -0.549420506779987,
+    2.972570923845139e-11,
+    1.0000000000121003,
+    0.9999999998262019,
+    -0.47442050677447745,
+    -0.4192284708387748,
+    -0.3067153792248143
+  ]
+}

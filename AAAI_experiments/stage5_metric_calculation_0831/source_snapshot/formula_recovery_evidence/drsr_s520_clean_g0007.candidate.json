@@ -1,0 +1,20 @@
+{
+  "iteration": 94,
+  "sample_order": 373,
+  "nmse": 1.5031728748742145e-07,
+  "mse": 4.7497579562932413e-08,
+  "score": -4.7497579562932413e-08,
+  "function": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate Population growth rate given Time and Population at time t\n\n    Variables:\n    - Independents:\n  - x0: Time\n  - x1: Population at time t\n- Dependent:\n  - y: Population growth rate\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return params[0] + params[1] * (x0 ** 1.5) + params[2] * (x1 ** 2) + params[3] * np.sqrt(np.maximum(x0, 0)) + params[4] * np.log(np.maximum(x1, 1)) + params[5] * (x0 * x1) + params[6] * (x0 ** 2) + params[7] * (x1 ** 3)\n\n",
+  "params": [
+    0.01353668875118552,
+    -0.00048437032927769026,
+    0.1761115292026437,
+    -0.010034019502419647,
+    0.023292234652753173,
+    0.00031328248290870934,
+    2.4756446952286357e-05,
+    -0.016273916941570387,
+    -0.24831411959034222,
+    0.20085196708770714
+  ]
+}

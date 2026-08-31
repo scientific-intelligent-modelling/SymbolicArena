@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 import re
 import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -24,6 +25,11 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import (
     StateContractError,
     TaskSpec,
     TaskStateStore,
+)
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_evidence import (
+    SimplificationContractError,
+    SymbolicEvidenceError,
+    validate_simplification,
 )
 
 
@@ -51,6 +57,7 @@ _CIRCUIT_BREAK_PATTERNS = (
     "task definition",
     "frozen result",
 )
+SEMANTIC_VALIDATOR_VERSION = "symbolic_evidence.v1"
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -160,6 +167,133 @@ def _is_circuit_break_violation(exc: Exception) -> bool:
         return False
     message = str(exc)
     return any(pattern in message for pattern in _CIRCUIT_BREAK_PATTERNS)
+
+
+def _semantic_seed(evaluation_key: str) -> int:
+    digest = hashlib.sha256(evaluation_key.encode("utf-8")).hexdigest()
+    return int(digest[:16], 16)
+
+
+def _validated_probe_contract(
+    request: Mapping[str, object],
+) -> tuple[Sequence[Mapping[str, object]] | None, str | None, str | None]:
+    present = {
+        key
+        for key in (
+            "probe_points",
+            "probe_source",
+            "probe_sample_sha256",
+            "dataset_probe_evidence",
+        )
+        if request.get(key) is not None
+    }
+    if not present:
+        return None, None, None
+    required = {
+        "probe_points",
+        "probe_source",
+        "probe_sample_sha256",
+        "dataset_probe_evidence",
+    }
+    if present != required:
+        raise SymbolicEvidenceError(
+            f"dataset probe 请求字段不完整: 缺少 {sorted(required - present)}"
+        )
+    points = request.get("probe_points")
+    source = request.get("probe_source")
+    sample_sha256 = request.get("probe_sample_sha256")
+    probe_raw = request.get("dataset_probe_evidence")
+    if not isinstance(points, list) or not all(isinstance(item, Mapping) for item in points):
+        raise SymbolicEvidenceError("probe_points 必须是对象数组")
+    if not isinstance(source, str) or not source:
+        raise SymbolicEvidenceError("probe_source 必须是非空字符串")
+    if not isinstance(sample_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", sample_sha256):
+        raise SymbolicEvidenceError("probe_sample_sha256 非法")
+    if not isinstance(probe_raw, Mapping):
+        raise SymbolicEvidenceError("dataset_probe_evidence 必须是对象")
+    probe = dict(probe_raw)
+    if probe.get("schema_version") != source:
+        raise SymbolicEvidenceError("probe_source 与 dataset_probe_evidence 不一致")
+    if probe.get("points") != points:
+        raise SymbolicEvidenceError("probe_points 与 dataset_probe_evidence 不一致")
+    if probe.get("sample_sha256") != sample_sha256:
+        raise SymbolicEvidenceError("probe_sample_sha256 与 dataset_probe_evidence 不一致")
+    variables = request.get("variables")
+    if probe.get("variables") != variables:
+        raise SymbolicEvidenceError("probe variables 与 simplify request.variables 不一致")
+    dataset_id = request.get("dataset_id")
+    if probe.get("dataset_name") != dataset_id:
+        raise SymbolicEvidenceError("probe dataset_name 与 simplify request.dataset_id 不一致")
+    sample_payload = {
+        "schema_version": probe.get("schema_version"),
+        "dataset_name": probe.get("dataset_name"),
+        "variables": probe.get("variables"),
+        "points": probe.get("points"),
+    }
+    if _sha256_text(canonical_json(sample_payload)) != sample_sha256:
+        raise SymbolicEvidenceError("dataset probe sample_sha256 校验失败")
+    evidence_sha256 = probe.get("evidence_sha256")
+    evidence_payload = {
+        key: value for key, value in probe.items() if key != "evidence_sha256"
+    }
+    if not isinstance(evidence_sha256, str) or _sha256_text(
+        canonical_json(evidence_payload)
+    ) != evidence_sha256:
+        raise SymbolicEvidenceError("dataset probe evidence_sha256 校验失败")
+    return points, source, sample_sha256
+
+
+def _validate_simplify_semantics(
+    definition: "TaskDefinition",
+    structured_output: Mapping[str, object],
+) -> JsonDict:
+    outcome = structured_output.get("outcome")
+    if outcome == "unable":
+        return {"decision": "not_applicable", "reason": "outcome_unable"}
+
+    original = definition.request.get("expression")
+    simplified = structured_output.get("simplified_expression")
+    variables = definition.request.get("variables")
+    functions = definition.request.get("allowed_functions")
+    if not isinstance(original, str) or not original.strip():
+        raise SymbolicEvidenceError("simplify request.expression 缺失或无效")
+    if not isinstance(simplified, str) or not simplified.strip():
+        raise SymbolicEvidenceError("simplified_expression 缺失或无效")
+    if not isinstance(variables, list) or not all(
+        isinstance(item, str) and item for item in variables
+    ):
+        raise SymbolicEvidenceError("simplify request.variables 缺失或无效")
+    if not isinstance(functions, list) or not all(
+        isinstance(item, str) and item for item in functions
+    ):
+        raise SymbolicEvidenceError("simplify request.allowed_functions 缺失或无效")
+    probe_points, probe_source, probe_sample_sha256 = _validated_probe_contract(
+        definition.request
+    )
+    evidence = validate_simplification(
+        original=original,
+        simplified=simplified,
+        allowed_variables=variables,
+        allowed_functions=functions,
+        seed=_semantic_seed(definition.task_spec.evaluation_key),
+        probe_points=probe_points,
+        probe_source=probe_source,
+        probe_sample_sha256=probe_sample_sha256,
+    )
+    deterministic = definition.request.get("deterministic_evidence")
+    if deterministic is not None:
+        if not isinstance(deterministic, Mapping):
+            raise SymbolicEvidenceError("deterministic_evidence 必须是对象")
+        artifact = deterministic.get("symbolic_artifact")
+        if not isinstance(artifact, Mapping):
+            raise SymbolicEvidenceError("deterministic_evidence.symbolic_artifact 缺失")
+        if artifact.get("artifact_sha256") != evidence.get("original_sha256"):
+            raise SymbolicEvidenceError("请求中的 symbolic artifact 与原公式不一致")
+        if list(artifact.get("variables", [])) != sorted(
+            set(str(item) for item in artifact.get("variables", []))
+        ):
+            raise SymbolicEvidenceError("请求中的 symbolic artifact variables 未规范化")
+    return evidence
 
 
 def _enforce_runtime_envelope_contract(envelope: Mapping[str, object]) -> None:
@@ -279,12 +413,17 @@ class ClaudeRunner:
         sleep_fn: Callable[[float], None] = time.sleep,
         allow_non_claude_executable: bool = False,
         backoff_schedule_seconds: Sequence[float] = (1.0, 2.0),
+        backoff_jitter_ratio: float = 0.2,
+        uniform_fn: Callable[[float, float], float] = random.uniform,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds 必须为正数")
+        if not 0.0 <= backoff_jitter_ratio <= 1.0:
+            raise ValueError("backoff_jitter_ratio 必须位于 [0, 1]")
         self.store = store
         self.attempts_dir = Path(attempts_dir)
         self.frozen_dir = Path(frozen_dir)
+        self.scratch_dir = self.attempts_dir.parent / "scratch"
         self.timeout_seconds = float(timeout_seconds)
         self.lease_seconds = float(lease_seconds) if lease_seconds is not None else float(timeout_seconds) + 60.0
         self.command_builder = command_builder
@@ -295,6 +434,8 @@ class ClaudeRunner:
         self.sleep_fn = sleep_fn
         self.allow_non_claude_executable = bool(allow_non_claude_executable)
         self.backoff_schedule_seconds = tuple(float(item) for item in backoff_schedule_seconds)
+        self.backoff_jitter_ratio = float(backoff_jitter_ratio)
+        self.uniform_fn = uniform_fn
 
     def execute(self, definition: TaskDefinition) -> ClaudeRunResult:
         self.store.register_task(definition.task_spec)
@@ -306,6 +447,8 @@ class ClaudeRunner:
         prompt_sha256, schema_sha256 = self._verify_task_definition(definition)
         prompt = render_prompt(definition.prompt_template, definition.request)
         command = self._build_and_validate_command(definition.schema)
+        cumulative_cost_usd = 0.0
+        has_cost = False
 
         while True:
             cached = self._load_existing_frozen(definition.task_spec.evaluation_key)
@@ -328,11 +471,16 @@ class ClaudeRunner:
                 attempt_number=lease.attempt_number,
                 lease_expires_at=lease.lease_expires_at,
             )
+            if result.total_cost_usd is not None:
+                cumulative_cost_usd += float(result.total_cost_usd)
+                has_cost = True
             if result.state == "retry_wait":
                 delay = self._backoff_delay(lease.attempt_number)
                 if delay > 0:
                     self.sleep_fn(delay)
                 continue
+            if has_cost:
+                return replace(result, total_cost_usd=cumulative_cost_usd)
             return result
 
     def _verify_task_definition(self, definition: TaskDefinition) -> tuple[str, str]:
@@ -444,8 +592,10 @@ class ClaudeRunner:
         total_cost_usd: float | None = None
         usage: JsonDict | None = None
         structured_output: JsonDict | None = None
+        scratch_path = self.scratch_dir / attempt_id
 
         try:
+            scratch_path.mkdir(parents=True, exist_ok=False)
             request_text = canonical_json(definition.request)
             rendered_prompt_sha256 = _sha256_text(prompt)
             completed = self.subprocess_run(
@@ -454,6 +604,7 @@ class ClaudeRunner:
                 text=True,
                 capture_output=True,
                 check=False,
+                cwd=str(scratch_path),
                 timeout=self.timeout_seconds,
             )
             returncode = int(completed.returncode)
@@ -497,6 +648,9 @@ class ClaudeRunner:
                         }
                     else:
                         envelope = parsed
+                        usage_raw = envelope.get("usage")
+                        usage = dict(usage_raw) if isinstance(usage_raw, Mapping) else None
+                        total_cost_usd = _parse_total_cost_usd(envelope)
                         try:
                             _enforce_runtime_envelope_contract(envelope)
                             structured_output = validate_claude_envelope(envelope, task_kind=task_kind)
@@ -511,15 +665,63 @@ class ClaudeRunner:
                                 "structured_output": None,
                             }
                         else:
-                            usage_raw = envelope.get("usage")
-                            usage = dict(usage_raw) if isinstance(usage_raw, Mapping) else None
-                            total_cost_usd = _parse_total_cost_usd(envelope)
-                            validation = {
-                                "ok": True,
-                                "error_class": None,
-                                "error_message": None,
-                                "structured_output": structured_output,
-                            }
+                            semantic_evidence: JsonDict | None = None
+                            if task_kind == "simplify":
+                                try:
+                                    semantic_evidence = _validate_simplify_semantics(
+                                        definition,
+                                        structured_output,
+                                    )
+                                except SimplificationContractError as exc:
+                                    error_class = "validation_failed"
+                                    retryable = True
+                                    semantic_evidence = dict(exc.evidence)
+                                    validation = {
+                                        "ok": False,
+                                        "error_class": error_class,
+                                        "error_message": str(exc),
+                                        "structured_output": structured_output,
+                                        "semantic_evidence": semantic_evidence,
+                                    }
+                                except SymbolicEvidenceError as exc:
+                                    error_class = "validation_failed"
+                                    retryable = True
+                                    semantic_evidence = {
+                                        "decision": "contract_error",
+                                        "error_type": type(exc).__name__,
+                                        "error_message": str(exc),
+                                    }
+                                    validation = {
+                                        "ok": False,
+                                        "error_class": error_class,
+                                        "error_message": str(exc),
+                                        "structured_output": structured_output,
+                                        "semantic_evidence": semantic_evidence,
+                                    }
+                                except Exception as exc:  # pragma: no cover - 符号库异常兜底
+                                    error_class = "semantic_validator_error"
+                                    retryable = True
+                                    semantic_evidence = {
+                                        "decision": "validator_error",
+                                        "error_type": type(exc).__name__,
+                                        "error_message": str(exc),
+                                    }
+                                    validation = {
+                                        "ok": False,
+                                        "error_class": error_class,
+                                        "error_message": str(exc),
+                                        "structured_output": structured_output,
+                                        "semantic_evidence": semantic_evidence,
+                                    }
+                            if error_class is None:
+                                validation = {
+                                    "ok": True,
+                                    "error_class": None,
+                                    "error_message": None,
+                                    "structured_output": structured_output,
+                                }
+                                if semantic_evidence is not None:
+                                    validation["semantic_evidence"] = semantic_evidence
         except subprocess.TimeoutExpired as exc:
             timed_out = True
             request_text = canonical_json(definition.request)
@@ -527,6 +729,16 @@ class ClaudeRunner:
             stdout = _normalize_text_output(exc.stdout)
             stderr = _normalize_text_output(exc.stderr)
             error_class, retryable = ("timeout", True)
+            validation = {
+                "ok": False,
+                "error_class": error_class,
+                "error_message": str(exc),
+                "structured_output": None,
+            }
+        except OSError as exc:
+            request_text = canonical_json(definition.request)
+            rendered_prompt_sha256 = _sha256_text(prompt)
+            error_class, retryable = ("local_io_error", True)
             validation = {
                 "ok": False,
                 "error_class": error_class,
@@ -553,6 +765,10 @@ class ClaudeRunner:
             "rendered_prompt_sha256": rendered_prompt_sha256,
             "schema_path": str(definition.schema_path),
             "schema_sha256": schema_sha256,
+            "semantic_validator_version": SEMANTIC_VALIDATOR_VERSION,
+            "semantic_validator_sha256": _sha256_file(
+                Path(__file__).with_name("symbolic_evidence.py")
+            ),
             "request_sha256": _sha256_text(request_text),
             "stdout_sha256": _sha256_text(stdout),
             "stderr_sha256": _sha256_text(stderr),
@@ -561,6 +777,7 @@ class ClaudeRunner:
             "finished_at": finished_at,
             "wall_latency_seconds": wall_latency_seconds,
             "timeout_seconds": self.timeout_seconds,
+            "scratch_dir": str(scratch_path),
             "returncode": returncode,
             "timed_out": timed_out,
             "claude_version": claude_version,
@@ -732,5 +949,17 @@ class ClaudeRunner:
     def _backoff_delay(self, attempt_number: int) -> float:
         index = max(0, attempt_number - 1)
         if index >= len(self.backoff_schedule_seconds):
-            return 0.0 if not self.backoff_schedule_seconds else self.backoff_schedule_seconds[-1]
-        return self.backoff_schedule_seconds[index]
+            base_delay = (
+                0.0
+                if not self.backoff_schedule_seconds
+                else self.backoff_schedule_seconds[-1]
+            )
+        else:
+            base_delay = self.backoff_schedule_seconds[index]
+        if base_delay <= 0.0 or self.backoff_jitter_ratio == 0.0:
+            return max(0.0, base_delay)
+        jitter = self.uniform_fn(
+            -self.backoff_jitter_ratio,
+            self.backoff_jitter_ratio,
+        )
+        return max(0.0, base_delay * (1.0 + jitter))

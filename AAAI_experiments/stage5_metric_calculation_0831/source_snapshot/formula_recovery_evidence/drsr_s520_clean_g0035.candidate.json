@@ -1,0 +1,20 @@
+{
+  "iteration": 244,
+  "sample_order": 974,
+  "nmse": 0.5849434740733299,
+  "mse": 5.5165058198533325e+19,
+  "score": -5.5165058198533325e+19,
+  "function": "def equation(x0: np.ndarray, x1: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the Electric potential given Electric charge, Vacuum permittivity\n\n    Variables:\n    - Independents:\n  - x0: q, Electric charge\n  - x1: epsilon, Vacuum permittivity\n- Dependent:\n  - y: phi, Electric potential\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1\n    \"\"\"\n    return 4 * np.pi * params[0] * x0 / (np.maximum(params[1] * x1, 1e-12))\n\n",
+  "params": [
+    0.014947423393486165,
+    -0.6427219306124214,
+    -0.9324179227561091,
+    -0.9460424156988687,
+    0.37796936575227535,
+    -0.014227947961743537,
+    -0.08231223527162879,
+    -0.14699729717484344,
+    0.2594881660712378,
+    0.540683999674693
+  ]
+}

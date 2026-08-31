@@ -1,0 +1,20 @@
+{
+  "iteration": 188,
+  "sample_order": 749,
+  "nmse": 0.002652971012879521,
+  "mse": 0.00423341630975114,
+  "score": -0.00423341630975114,
+  "function": "def equation(x0: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, params: np.ndarray) -> np.ndarray:\n    \"\"\"Equation to be evolved.\n\n    Background:\n    Calculate the observed frequency given the speed of light, velocity, source frequency, and angle.\n\n    Variables:\n    - Independents:\n  - x0: Speed of light\n  - x1: Velocity\n  - x2: Frequency\n  - x3: Angle\n- Dependent:\n  - y: Frequency\n\n    Parameters:\n    - params (np.ndarray): Trainable coefficients used by the equation skeleton.\n\n    Output requirement:\n    - Write the final formula as a single-line return statement.\n    - Do not split the final formula across multiple lines.\n    - Example: return params[0] + params[1] * x0 + params[2] * x1 + params[3] * x2 + params[4] * x3\n    \"\"\"\n    return params[0] * x2 * (1 - (x1 / np.maximum(x0, 1e-6)) * np.cos(x3)) + params[1] * x2 * np.sin(x3)**2\n\n",
+  "params": [
+    1.0234941626986085,
+    -0.04630485414501373,
+    0.143597125793945,
+    -0.38000395915905516,
+    -0.8264531180992694,
+    0.7200758451435432,
+    -0.8931252672674834,
+    -0.914967647155702,
+    0.3524595883962587,
+    0.15716969329588526
+  ]
+}

@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import ast
+from functools import lru_cache
 import glob
 import gzip
 import hashlib
 import json
+import keyword
+import math
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -15,11 +19,16 @@ from typing import Any, Iterable, Mapping, Sequence
 from .claude_runner import TaskDefinition as RunnerTaskDefinition
 from .claude_contract import evaluation_key, render_prompt
 from .state import TaskSpec
+from .symbolic_evidence import SymbolicEvidenceError, build_symbolic_artifact
 from .trajectories import canonical_expression
 
 
 STAGE_ROOT_RELATIVE = Path("AAAI_experiments/stage5_metric_calculation_0831")
 DEFAULT_GROUND_TRUTH_JSONL = STAGE_ROOT_RELATIVE / "reports/ground_truth_extract.jsonl"
+DEFAULT_FORMULA_RECOVERY_JSON = (
+    STAGE_ROOT_RELATIVE / "manifests/formula_recovery.v1.json"
+)
+DEFAULT_DATASET_PROBES_JSONL = STAGE_ROOT_RELATIVE / "reports/dataset_probes.jsonl"
 DEFAULT_FREEZE_GLOB = str(
     STAGE_ROOT_RELATIVE / "source_snapshot/trajectory_freeze/clean_freeze_*.jsonl.gz"
 )
@@ -39,10 +48,24 @@ TASK_ID_PATTERN = re.compile(
     r"^(?P<algorithm_slug>[a-z0-9]+)_s(?P<seed>\d+)_clean_g(?P<dataset_index>\d{4})$"
 )
 CANONICAL_VARIABLE_PATTERN = re.compile(r"\bx\d+\b")
+INDEXED_VARIABLE_PATTERN = re.compile(r"\b(?:x|X|col)(\d+)\b")
+PARAMETER_REFERENCE_PATTERN = re.compile(r"\bparams\s*\[\s*(-?\d+)\s*\]")
+PARAMETER_REFERENCE_START_PATTERN = re.compile(r"\bparams\s*\[")
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+DATASET_PROBE_SCHEMA_VERSION = "dataset_probes_v1"
 
 
 class CleanTaskBuilderError(ValueError):
     """输入冻结、契约或规划结构不合法。"""
+
+
+@dataclass(frozen=True)
+class FormulaResolution:
+    semantic_expression: str
+    expression_body: str
+    variable_mapping: dict[str, str]
+    status: str
+    manifest_entry: dict[str, Any] | None
 
 
 @dataclass(frozen=True)
@@ -129,6 +152,79 @@ def _sha256_text(text: str) -> str:
 
 def _sha256_json(value: object) -> str:
     return _sha256_text(_canonical_json(value))
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _public_recovery_entry(entry: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if entry is None:
+        return None
+    return {key: value for key, value in entry.items() if not key.startswith("_")}
+
+
+def _serializable_symbolic_artifact(
+    expression: str,
+    variables: Sequence[str],
+    allowed_functions: Sequence[str],
+) -> dict[str, Any]:
+    return json.loads(
+        _cached_symbolic_artifact(
+            expression,
+            tuple(variables),
+            tuple(sorted(set(allowed_functions))),
+        )
+    )
+
+
+@lru_cache(maxsize=4096)
+def _cached_symbolic_artifact(
+    expression: str,
+    variables: tuple[str, ...],
+    allowed_functions: tuple[str, ...],
+) -> str:
+    try:
+        artifact = build_symbolic_artifact(
+            expression,
+            allowed_variables=variables,
+            allowed_functions=allowed_functions,
+        )
+    except (SyntaxError, SymbolicEvidenceError) as exc:
+        raise CleanTaskBuilderError(f"符号证据构建失败: {exc}") from exc
+    frozen = {
+        key: value
+        for key, value in artifact.items()
+        if key != "sympy_expression"
+    }
+    return _canonical_json(frozen)
+
+
+def _domain_assumptions(expression: str) -> dict[str, Any]:
+    protected_literals = sorted(
+        name
+        for name in ("maximum", "minimum", "clip", "where")
+        if re.search(rf"\b(?:np\.)?{name}\s*\(", expression)
+    )
+    return {
+        "number_system": "real",
+        "equivalence_domain": (
+            "Compare expressions on their common real-valued domain where both sides "
+            "are defined and finite."
+        ),
+        "implicit_protected_operators": "none",
+        "literal_protected_operators": protected_literals,
+        "operator_semantics": [
+            "Division is ordinary real division; zero denominators are outside the common domain.",
+            "log, sqrt, and non-integer powers use ordinary real-domain semantics.",
+            "maximum, minimum, clip, and where are literal functions only when written in the expression.",
+            "Do not infer hidden clipping, epsilon guards, or fitted constants beyond the frozen expression.",
+        ],
+    }
 
 
 def _write_jsonl(path: Path, rows: Sequence[dict[str, Any]]) -> None:
@@ -245,6 +341,332 @@ def _extract_function_names(expression: str, variables: Sequence[str]) -> list[s
 
 def _expression_canonical_variables(expression: str) -> list[str]:
     return sorted(set(CANONICAL_VARIABLE_PATTERN.findall(expression)))
+
+
+def map_indexed_variables(
+    expression: str,
+    feature_names: Sequence[str],
+) -> tuple[str, dict[str, str]]:
+    """把算法内部的零基变量名原子映射为数据集真实特征名。"""
+
+    if not isinstance(expression, str):
+        raise CleanTaskBuilderError("expression 必须是字符串")
+    normalized_feature_names = list(feature_names)
+    if not normalized_feature_names:
+        raise CleanTaskBuilderError("feature_names 不能为空")
+    if len(set(normalized_feature_names)) != len(normalized_feature_names):
+        raise CleanTaskBuilderError("feature_names 必须唯一")
+    for name in normalized_feature_names:
+        if (
+            not isinstance(name, str)
+            or not name.isidentifier()
+            or keyword.iskeyword(name)
+        ):
+            raise CleanTaskBuilderError(f"feature_names 包含非法标识符: {name!r}")
+
+    mapping: dict[str, str] = {}
+
+    def replace(match: re.Match[str]) -> str:
+        token = match.group(0)
+        index = int(match.group(1))
+        if index >= len(normalized_feature_names):
+            raise CleanTaskBuilderError(
+                f"索引变量 {token!r} 超出 feature_names 范围 "
+                f"[0, {len(normalized_feature_names) - 1}]"
+            )
+        mapped = normalized_feature_names[index]
+        mapping[token] = mapped
+        return mapped
+
+    return INDEXED_VARIABLE_PATTERN.sub(replace, expression), dict(sorted(mapping.items()))
+
+
+def _validated_feature_names(payload: Mapping[str, Any], *, task_id: str) -> list[str]:
+    feature_names = payload.get("feature_names")
+    if not isinstance(feature_names, list) or not feature_names:
+        raise CleanTaskBuilderError(f"{task_id}: feature_names 缺失或为空")
+    if not all(isinstance(item, str) for item in feature_names):
+        raise CleanTaskBuilderError(f"{task_id}: feature_names 包含非字符串")
+    # 复用映射函数的唯一性和标识符契约，但不要求表达式实际引用索引变量。
+    map_indexed_variables("", feature_names)
+    return list(feature_names)
+
+
+def extract_expression_body(source: str) -> str:
+    """从单个表达式或单个 Python 函数中提取唯一 return 表达式。"""
+
+    if not isinstance(source, str) or not source.strip():
+        return ""
+    stripped = source.strip()
+    try:
+        ast.parse(stripped, mode="eval")
+        return stripped
+    except SyntaxError:
+        if not stripped.startswith("def ") and re.match(
+            r"^[A-Za-z_][A-Za-z0-9_]*\(",
+            stripped,
+        ):
+            # 超深 prefix tree 会触发 CPython parser 的嵌套上限；后续由
+            # symbolic_evidence 的迭代 token parser 完成严格校验。
+            return stripped
+    try:
+        module = ast.parse(source, mode="exec")
+    except SyntaxError as exc:
+        raise CleanTaskBuilderError(f"最终公式 Python AST 解析失败: {exc}") from exc
+    if len(module.body) != 1 or not isinstance(module.body[0], ast.FunctionDef):
+        raise CleanTaskBuilderError("最终公式必须是单个表达式或单个函数定义")
+    statements = list(module.body[0].body)
+    while statements:
+        first = statements[0]
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            statements.pop(0)
+            continue
+        break
+    if len(statements) != 1 or not isinstance(statements[0], ast.Return):
+        raise CleanTaskBuilderError("最终公式函数必须只包含文档字符串和一个 return")
+    if statements[0].value is None:
+        raise CleanTaskBuilderError("最终公式函数的 return 不能为空")
+    return ast.unparse(statements[0].value)
+
+
+def instantiate_parameters(expression: str, parameter_values: Sequence[object]) -> str:
+    """按 Python 下标语义把 `params[i]` 替换为冻结的有限浮点常数。"""
+
+    values: list[float] = []
+    for raw_value in parameter_values:
+        if isinstance(raw_value, bool):
+            raise CleanTaskBuilderError("拟合参数不能是布尔值")
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError) as exc:
+            raise CleanTaskBuilderError(f"拟合参数不是数值: {raw_value!r}") from exc
+        if not math.isfinite(value):
+            raise CleanTaskBuilderError(f"拟合参数不是有限值: {raw_value!r}")
+        values.append(value)
+    if not values:
+        raise CleanTaskBuilderError("拟合参数数组不能为空")
+
+    referenced = False
+
+    def replace(match: re.Match[str]) -> str:
+        nonlocal referenced
+        referenced = True
+        original_index = int(match.group(1))
+        index = original_index if original_index >= 0 else len(values) + original_index
+        if index < 0 or index >= len(values):
+            raise CleanTaskBuilderError(
+                f"参数下标 params[{original_index}] 超出长度 {len(values)}"
+            )
+        return f"({repr(values[index])})"
+
+    instantiated = PARAMETER_REFERENCE_PATTERN.sub(replace, expression)
+    if PARAMETER_REFERENCE_START_PATTERN.search(instantiated):
+        raise CleanTaskBuilderError("存在无法静态实例化的 params 下标")
+    if not referenced:
+        raise CleanTaskBuilderError("公式未引用 params，拒绝套用参数恢复记录")
+    return instantiated
+
+
+def _canonical_mapped_ast(expression: str, feature_names: Sequence[str]) -> str:
+    mapped, _ = map_indexed_variables(expression, feature_names)
+    try:
+        parsed = ast.parse(mapped, mode="eval")
+    except SyntaxError as exc:
+        raise CleanTaskBuilderError(f"恢复公式 AST 解析失败: {exc}") from exc
+    return ast.dump(parsed, annotate_fields=True, include_attributes=False)
+
+
+def load_dataset_probes(path: Path) -> tuple[dict[str, dict[str, Any]], str]:
+    raw_bytes = path.read_bytes()
+    rows = _read_jsonl(path)
+    by_dataset: dict[str, dict[str, Any]] = {}
+    for index, row in enumerate(rows):
+        context = f"dataset_probes[{index}]"
+        if row.get("schema_version") != DATASET_PROBE_SCHEMA_VERSION:
+            raise CleanTaskBuilderError(f"{context}: schema_version 不匹配")
+        dataset_id = row.get("dataset_name")
+        if not isinstance(dataset_id, str) or not dataset_id:
+            raise CleanTaskBuilderError(f"{context}: dataset_name 非法")
+        if dataset_id in by_dataset:
+            raise CleanTaskBuilderError(f"dataset probes 出现重复 dataset_name: {dataset_id}")
+        variables = row.get("variables")
+        points = row.get("points")
+        if not isinstance(variables, list) or not all(
+            isinstance(item, str) and item for item in variables
+        ):
+            raise CleanTaskBuilderError(f"{dataset_id}: probe variables 非法")
+        if not isinstance(points, list) or not points:
+            raise CleanTaskBuilderError(f"{dataset_id}: probe points 缺失")
+        if row.get("point_count") != len(points):
+            raise CleanTaskBuilderError(f"{dataset_id}: probe point_count 不匹配")
+        sample_payload = {
+            "schema_version": row["schema_version"],
+            "dataset_name": dataset_id,
+            "variables": variables,
+            "points": points,
+        }
+        if row.get("sample_sha256") != _sha256_json(sample_payload):
+            raise CleanTaskBuilderError(f"{dataset_id}: probe sample_sha256 漂移")
+        evidence_payload = {
+            key: value for key, value in row.items() if key != "evidence_sha256"
+        }
+        if row.get("evidence_sha256") != _sha256_json(evidence_payload):
+            raise CleanTaskBuilderError(f"{dataset_id}: probe evidence_sha256 漂移")
+        by_dataset[dataset_id] = row
+    return by_dataset, _sha256_bytes(raw_bytes)
+
+
+def load_formula_recovery_manifest(path: Path) -> tuple[dict[str, dict[str, Any]], str]:
+    raw_bytes = path.read_bytes()
+    try:
+        payload = json.loads(raw_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise CleanTaskBuilderError(f"公式恢复 manifest 解析失败: {path}: {exc}") from exc
+    root = _require_mapping(payload, context=str(path))
+    if root.get("schema_version") != "formula_recovery.v1":
+        raise CleanTaskBuilderError("公式恢复 manifest schema_version 不匹配")
+    if root.get("condition") != CONDITION:
+        raise CleanTaskBuilderError("公式恢复 manifest condition 不是 clean")
+    entries = root.get("entries")
+    if not isinstance(entries, list):
+        raise CleanTaskBuilderError("公式恢复 manifest.entries 不是数组")
+
+    by_task_id: dict[str, dict[str, Any]] = {}
+    for index, raw_entry in enumerate(entries):
+        entry = dict(_require_mapping(raw_entry, context=f"manifest.entries[{index}]"))
+        task_id = entry.get("task_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise CleanTaskBuilderError(f"公式恢复 entry.task_id 非法: {task_id!r}")
+        if task_id in by_task_id:
+            raise CleanTaskBuilderError(f"公式恢复 manifest 存在重复 task_id: {task_id}")
+        resolution = entry.get("resolution")
+        if resolution not in {"recovered_params", "unavailable"}:
+            raise CleanTaskBuilderError(f"{task_id}: 未知公式恢复 resolution={resolution!r}")
+        for field_name in ("frozen_result_sha256", "equation_sha256"):
+            value = entry.get(field_name)
+            if not isinstance(value, str) or SHA256_PATTERN.fullmatch(value) is None:
+                raise CleanTaskBuilderError(f"{task_id}: {field_name} 非法")
+        if resolution == "recovered_params":
+            params = entry.get("params")
+            if not isinstance(params, list):
+                raise CleanTaskBuilderError(f"{task_id}: recovered_params 缺少 params 数组")
+            # 仅做数值与范围校验；实际下标契约在实例化时核验。
+            for raw_value in params:
+                if isinstance(raw_value, bool):
+                    raise CleanTaskBuilderError(f"{task_id}: params 包含布尔值")
+                try:
+                    value = float(raw_value)
+                except (TypeError, ValueError) as exc:
+                    raise CleanTaskBuilderError(f"{task_id}: params 包含非数值") from exc
+                if not math.isfinite(value):
+                    raise CleanTaskBuilderError(f"{task_id}: params 包含非有限值")
+            source_evidence = _require_mapping(
+                entry.get("source_evidence"),
+                context=f"{task_id}.source_evidence",
+            )
+            candidate_path_raw = source_evidence.get("candidate_path")
+            candidate_sha256 = source_evidence.get("candidate_sha256")
+            params_sha256 = source_evidence.get("params_sha256")
+            if not isinstance(candidate_path_raw, str) or not candidate_path_raw:
+                raise CleanTaskBuilderError(f"{task_id}: candidate_path 缺失")
+            if not isinstance(candidate_sha256, str) or SHA256_PATTERN.fullmatch(candidate_sha256) is None:
+                raise CleanTaskBuilderError(f"{task_id}: candidate_sha256 非法")
+            if not isinstance(params_sha256, str) or SHA256_PATTERN.fullmatch(params_sha256) is None:
+                raise CleanTaskBuilderError(f"{task_id}: params_sha256 非法")
+            candidate_path = Path(candidate_path_raw)
+            if not candidate_path.is_absolute():
+                candidate_path = (_repo_root() / candidate_path).resolve()
+            if not candidate_path.is_file():
+                raise CleanTaskBuilderError(f"{task_id}: candidate 文件不存在: {candidate_path}")
+            if _sha256_file(candidate_path) != candidate_sha256:
+                raise CleanTaskBuilderError(f"{task_id}: candidate 文件 SHA 漂移")
+            try:
+                candidate_payload = json.loads(candidate_path.read_text(encoding="utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise CleanTaskBuilderError(f"{task_id}: candidate JSON 解析失败") from exc
+            candidate = _require_mapping(candidate_payload, context=f"{task_id}.candidate")
+            if candidate.get("params") != params:
+                raise CleanTaskBuilderError(f"{task_id}: manifest params 与 candidate 不一致")
+            if _sha256_json(params) != params_sha256:
+                raise CleanTaskBuilderError(f"{task_id}: params_sha256 漂移")
+            candidate_function = candidate.get("function")
+            if not isinstance(candidate_function, str) or not candidate_function.strip():
+                raise CleanTaskBuilderError(f"{task_id}: candidate.function 缺失")
+            entry["_candidate_function"] = candidate_function
+            entry["_candidate_file_sha256"] = candidate_sha256
+        else:
+            if not isinstance(entry.get("reason"), str) or not entry["reason"]:
+                raise CleanTaskBuilderError(f"{task_id}: unavailable 缺少 reason")
+        by_task_id[task_id] = entry
+    return by_task_id, _sha256_bytes(raw_bytes)
+
+
+def _resolve_prediction_formula(
+    *,
+    task_id: str,
+    selected_expression: str,
+    frozen_result_sha256: str,
+    frozen_equation_sha256: str | None,
+    feature_names: Sequence[str],
+    recovery_entries: Mapping[str, Mapping[str, Any]],
+) -> FormulaResolution:
+    if not selected_expression:
+        return FormulaResolution("", "", {}, "missing", None)
+    expression_body = extract_expression_body(selected_expression)
+    entry_raw = recovery_entries.get(task_id)
+    entry = dict(entry_raw) if entry_raw is not None else None
+    has_parameter_reference = bool(PARAMETER_REFERENCE_START_PATTERN.search(expression_body))
+
+    if entry is not None:
+        if entry["frozen_result_sha256"] != frozen_result_sha256:
+            raise CleanTaskBuilderError(f"{task_id}: 公式恢复记录的 result SHA 漂移")
+        if entry["equation_sha256"] != frozen_equation_sha256:
+            raise CleanTaskBuilderError(f"{task_id}: 公式恢复记录的 equation SHA 漂移")
+
+    if has_parameter_reference:
+        if entry is None:
+            raise CleanTaskBuilderError(f"{task_id}: 未实例化 params 公式缺少恢复记录")
+        if entry["resolution"] == "unavailable":
+            return FormulaResolution(
+                "",
+                expression_body,
+                {},
+                "unavailable",
+                _public_recovery_entry(entry),
+            )
+        candidate_function = entry.get("_candidate_function")
+        if not isinstance(candidate_function, str):
+            raise CleanTaskBuilderError(f"{task_id}: 恢复 candidate.function 未通过预检")
+        candidate_body = extract_expression_body(candidate_function)
+        if _canonical_mapped_ast(candidate_body, feature_names) != _canonical_mapped_ast(
+            expression_body,
+            feature_names,
+        ):
+            raise CleanTaskBuilderError(
+                f"{task_id}: candidate 公式骨架与 frozen 最终公式不一致"
+            )
+        expression_body = instantiate_parameters(expression_body, entry["params"])
+        status = "recovered_params"
+    else:
+        if entry is not None:
+            raise CleanTaskBuilderError(f"{task_id}: 恢复记录存在，但公式没有 params 引用")
+        status = "source_instantiated"
+
+    semantic_expression, variable_mapping = map_indexed_variables(
+        expression_body,
+        feature_names,
+    )
+    return FormulaResolution(
+        semantic_expression=semantic_expression,
+        expression_body=expression_body,
+        variable_mapping=variable_mapping,
+        status=status,
+        manifest_entry=_public_recovery_entry(entry),
+    )
 
 
 def _resolve_request_variables(
@@ -438,11 +860,53 @@ def _no_call_record(
     }
 
 
+def _validated_dataset_probe(
+    *,
+    dataset_id: str,
+    variables: Sequence[str],
+    target_name: object,
+    dataset_probes: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    raw_probe = dataset_probes.get(dataset_id)
+    if raw_probe is None:
+        raise CleanTaskBuilderError(f"{dataset_id}: 缺少冻结 dataset probe")
+    probe = dict(raw_probe)
+    if probe.get("variables") != list(variables):
+        raise CleanTaskBuilderError(
+            f"{dataset_id}: probe variables 与公式变量顺序不一致"
+        )
+    if probe.get("target_name") != target_name:
+        raise CleanTaskBuilderError(f"{dataset_id}: probe target_name 不一致")
+    return probe
+
+
+def _build_symbolic_request_evidence(
+    *,
+    expression: str,
+    variables: Sequence[str],
+    probe: Mapping[str, Any],
+) -> tuple[list[str], dict[str, Any], dict[str, Any]]:
+    allowed_functions = _extract_function_names(expression, variables)
+    artifact = _serializable_symbolic_artifact(
+        expression,
+        variables,
+        allowed_functions,
+    )
+    assumptions = _domain_assumptions(expression)
+    deterministic_evidence = {
+        "symbolic_artifact": artifact,
+        "dataset_probe": dict(probe),
+        "domain_assumptions": assumptions,
+    }
+    return allowed_functions, assumptions, deterministic_evidence
+
+
 def _build_gt_task(
     row: Mapping[str, Any],
     *,
     index: int,
     contract: PromptSchemaBundle,
+    dataset_probes: Mapping[str, Mapping[str, Any]],
 ) -> tuple[PlannedTask | None, dict[str, Any] | None]:
     dataset_id = row.get("dataset_id")
     if not isinstance(dataset_id, str) or not dataset_id:
@@ -453,23 +917,56 @@ def _build_gt_task(
     expression = row.get("normalized_expression_input")
     original_expression = row.get("return_source")
     logical_id = _gt_logical_id(dataset_id)
-    evidence_hash = row.get("evidence_sha256")
-    if not isinstance(evidence_hash, str) or not evidence_hash:
+    source_evidence_hash = row.get("evidence_sha256")
+    if not isinstance(source_evidence_hash, str) or not source_evidence_hash:
         raise CleanTaskBuilderError(f"{dataset_id}: evidence_sha256 缺失")
+    semantic_expression = expression if isinstance(expression, str) and expression.strip() else ""
+    probe = _validated_dataset_probe(
+        dataset_id=dataset_id,
+        variables=variables,
+        target_name=row.get("target"),
+        dataset_probes=dataset_probes,
+    )
+    allowed_functions: list[str] = []
+    domain_assumptions: dict[str, Any] = {}
+    deterministic_evidence: dict[str, Any] = {"dataset_probe": probe}
+    if semantic_expression:
+        allowed_functions, domain_assumptions, deterministic_evidence = (
+            _build_symbolic_request_evidence(
+                expression=semantic_expression,
+                variables=variables,
+                probe=probe,
+            )
+        )
+    evidence_hash = _sha256_json(
+        {
+            "ground_truth_source_evidence_sha256": source_evidence_hash,
+            "deterministic_evidence": deterministic_evidence,
+        }
+    )
     request_context = {
         "dataset_id": dataset_id,
         "target_name": row.get("target"),
         "variables": variables,
-        "allowed_functions": _extract_function_names(str(expression or ""), variables),
-        "expression": expression if isinstance(expression, str) and expression.strip() else None,
-        "original_expression": original_expression
-        if isinstance(original_expression, str) and original_expression.strip()
-        else None,
+        "allowed_functions": allowed_functions,
+        "expression": semantic_expression or None,
+        "original_expression": semantic_expression or None,
+        "domain_assumptions": domain_assumptions,
+        "probe_points": probe["points"],
+        "probe_source": probe["schema_version"],
+        "probe_sample_sha256": probe["sample_sha256"],
+        "dataset_probe_evidence": probe,
+        "deterministic_evidence": deterministic_evidence,
         "ast_source_evidence": {
             "return_ast_dump": row.get("return_ast_dump"),
             "return_source": row.get("return_source"),
             "selection_reason": row.get("selection_reason"),
             "source_checksums": row.get("source_checksums"),
+            "ground_truth_source_evidence_sha256": source_evidence_hash,
+            "normalized_expression_input": semantic_expression or None,
+            "raw_return_source": original_expression
+            if isinstance(original_expression, str) and original_expression.strip()
+            else None,
         },
         "evidence_hash": evidence_hash,
     }
@@ -499,6 +996,10 @@ def _build_pred_task(
     freeze_row: Mapping[str, Any],
     *,
     contract: PromptSchemaBundle,
+    ground_truth_variables: Mapping[str, Sequence[str]],
+    ground_truth_targets: Mapping[str, str],
+    recovery_entries: Mapping[str, Mapping[str, Any]],
+    dataset_probes: Mapping[str, Mapping[str, Any]],
 ) -> tuple[PlannedTask | None, dict[str, Any] | None]:
     source = _require_mapping(freeze_row.get("source"), context="freeze source")
     identity = _parse_task_identity(source)
@@ -516,12 +1017,59 @@ def _build_pred_task(
     artifact = payload.get("canonical_artifact")
     if not isinstance(artifact, Mapping):
         artifact = {}
-    expression, expression_source = select_formula_with_source(payload)
-    variables = _resolve_request_variables(
-        expression=expression or str(payload.get("equation") or ""),
-        artifact=artifact,
-        payload=payload,
+    selected_expression, expression_source = select_formula_with_source(payload)
+    feature_names = _validated_feature_names(payload, task_id=identity["task_id"])
+    dataset_id = source.get("dataset_id")
+    if not isinstance(dataset_id, str) or dataset_id not in ground_truth_variables:
+        raise CleanTaskBuilderError(
+            f"{identity['task_id']}: dataset_id 未命中 Ground Truth: {dataset_id!r}"
+        )
+    expected_variables = list(ground_truth_variables[dataset_id])
+    if feature_names != expected_variables:
+        raise CleanTaskBuilderError(
+            f"{identity['task_id']}: feature_names 与 Ground Truth 变量顺序不一致: "
+            f"{feature_names!r} != {expected_variables!r}"
+        )
+    target_name = payload.get("target_name")
+    if target_name != ground_truth_targets[dataset_id]:
+        raise CleanTaskBuilderError(
+            f"{identity['task_id']}: target_name 与 Ground Truth 不一致: "
+            f"{target_name!r} != {ground_truth_targets[dataset_id]!r}"
+        )
+    formula_resolution = _resolve_prediction_formula(
+        task_id=identity["task_id"],
+        selected_expression=selected_expression,
+        frozen_result_sha256=raw_sha256,
+        frozen_equation_sha256=(
+            _sha256_text(payload["equation"])
+            if isinstance(payload.get("equation"), str)
+            else None
+        ),
+        feature_names=feature_names,
+        recovery_entries=recovery_entries,
     )
+    expression = formula_resolution.semantic_expression
+    variable_mapping = formula_resolution.variable_mapping
+    variables = feature_names
+    probe = _validated_dataset_probe(
+        dataset_id=dataset_id,
+        variables=variables,
+        target_name=target_name,
+        dataset_probes=dataset_probes,
+    )
+    allowed_functions: list[str] = []
+    domain_assumptions: dict[str, Any] = {}
+    deterministic_symbolic_evidence: dict[str, Any] = {"dataset_probe": probe}
+    if expression:
+        (
+            allowed_functions,
+            domain_assumptions,
+            deterministic_symbolic_evidence,
+        ) = _build_symbolic_request_evidence(
+            expression=expression,
+            variables=variables,
+            probe=probe,
+        )
     evidence_payload = {
         "source": {
             "algorithm": source.get("algorithm"),
@@ -540,6 +1088,15 @@ def _build_pred_task(
             "raw_sha256": raw_sha256,
             "status": payload.get("status"),
             "equation": payload.get("equation"),
+            "selected_expression": selected_expression or None,
+            "semantic_expression": expression or None,
+            "feature_names": feature_names,
+            "variable_mapping": variable_mapping,
+            "formula_resolution": {
+                "status": formula_resolution.status,
+                "expression_body": formula_resolution.expression_body or None,
+                "manifest_entry": formula_resolution.manifest_entry,
+            },
             "canonical_artifact": {
                 "instantiated_expression": artifact.get("instantiated_expression"),
                 "normalized_expression": artifact.get("normalized_expression"),
@@ -553,6 +1110,7 @@ def _build_pred_task(
                 "normalization_mode": artifact.get("normalization_mode"),
                 "normalization_notes": artifact.get("normalization_notes"),
             },
+            "deterministic_symbolic_evidence": deterministic_symbolic_evidence,
         },
     }
     evidence_hash = _sha256_json(evidence_payload)
@@ -566,13 +1124,26 @@ def _build_pred_task(
         "noise_tag": CONDITION,
         "task_id": identity["task_id"],
         "variables": variables,
-        "allowed_functions": _extract_function_names(expression or str(payload.get("equation") or ""), variables),
+        "allowed_functions": allowed_functions,
         "expression": expression or None,
-        "original_expression": payload.get("equation")
-        if isinstance(payload.get("equation"), str) and payload.get("equation", "").strip()
-        else None,
+        "original_expression": expression or None,
+        "domain_assumptions": domain_assumptions,
+        "probe_points": probe["points"],
+        "probe_source": probe["schema_version"],
+        "probe_sample_sha256": probe["sample_sha256"],
+        "dataset_probe_evidence": probe,
+        "deterministic_evidence": deterministic_symbolic_evidence,
         "ast_source_evidence": {
             "selected_expression_source": expression_source or None,
+            "selected_expression_before_variable_mapping": selected_expression or None,
+            "extracted_expression_body": formula_resolution.expression_body or None,
+            "semantic_expression_after_variable_mapping": expression or None,
+            "feature_names": feature_names,
+            "variable_mapping": variable_mapping,
+            "formula_resolution": {
+                "status": formula_resolution.status,
+                "manifest_entry": formula_resolution.manifest_entry,
+            },
             "formula_candidates": {
                 "instantiated_expression": artifact.get("instantiated_expression"),
                 "normalized_expression": artifact.get("normalized_expression"),
@@ -588,11 +1159,16 @@ def _build_pred_task(
         "evidence_hash": evidence_hash,
     }
     if not expression:
+        no_call_reason = (
+            "unresolved_parameter_values"
+            if formula_resolution.status == "unavailable"
+            else "missing_final_expression"
+        )
         no_call = _no_call_record(
             logical_id=logical_id,
             task_type=PRED_TASK_TYPE,
             phase="pred",
-            reason="missing_final_expression",
+            reason=no_call_reason,
             request_context=request_context,
             evidence_hash=evidence_hash,
             contract=contract,
@@ -695,6 +1271,8 @@ def build_clean_task_plan(
     *,
     phase: str = "all",
     ground_truth_jsonl: Path | None = None,
+    formula_recovery_json: Path | None = None,
+    dataset_probes_jsonl: Path | None = None,
     freeze_glob: str | None = None,
     expected_gt_count: int | None = 50,
     expected_pred_count: int | None = 2250,
@@ -705,6 +1283,12 @@ def build_clean_task_plan(
     repo_root = repo_root or _repo_root()
     contract = _load_prompt_schema(repo_root)
     gt_path = (ground_truth_jsonl or (repo_root / DEFAULT_GROUND_TRUTH_JSONL)).resolve()
+    recovery_path = (
+        formula_recovery_json or (repo_root / DEFAULT_FORMULA_RECOVERY_JSON)
+    ).resolve()
+    probes_path = (
+        dataset_probes_jsonl or (repo_root / DEFAULT_DATASET_PROBES_JSONL)
+    ).resolve()
     pred_glob = freeze_glob or DEFAULT_FREEZE_GLOB
 
     gt_rows = _read_jsonl(gt_path)
@@ -712,29 +1296,80 @@ def build_clean_task_plan(
         raise CleanTaskBuilderError(
             f"ground_truth_extract 行数不符: 期望 {expected_gt_count}，实际 {len(gt_rows)}"
         )
-    pred_rows, pred_validation = _load_pred_freeze_rows(
-        pred_glob,
-        expected_pred_count=expected_pred_count,
-        repo_root=repo_root,
-    )
+    dataset_probes, dataset_probes_sha256 = load_dataset_probes(probes_path)
+    if expected_gt_count is not None and len(dataset_probes) != expected_gt_count:
+        raise CleanTaskBuilderError(
+            f"dataset probes 行数不符: 期望 {expected_gt_count}，实际 {len(dataset_probes)}"
+        )
+    ground_truth_variables: dict[str, list[str]] = {}
+    ground_truth_targets: dict[str, str] = {}
+    for row in gt_rows:
+        dataset_id = row.get("dataset_id")
+        variables = row.get("ordered_variables")
+        if not isinstance(dataset_id, str) or not dataset_id:
+            raise CleanTaskBuilderError("Ground Truth dataset_id 缺失")
+        if dataset_id in ground_truth_variables:
+            raise CleanTaskBuilderError(f"Ground Truth dataset_id 重复: {dataset_id}")
+        if not isinstance(variables, list) or not all(
+            isinstance(item, str) and item for item in variables
+        ):
+            raise CleanTaskBuilderError(f"{dataset_id}: ordered_variables 非法")
+        ground_truth_variables[dataset_id] = list(variables)
+        target = row.get("target")
+        if not isinstance(target, str) or not target:
+            raise CleanTaskBuilderError(f"{dataset_id}: Ground Truth target 非法")
+        ground_truth_targets[dataset_id] = target
+
+    needs_pred = phase in {"pred", "all"}
+    if needs_pred:
+        recovery_entries, recovery_manifest_sha256 = load_formula_recovery_manifest(
+            recovery_path
+        )
+        pred_rows, pred_validation = _load_pred_freeze_rows(
+            pred_glob,
+            expected_pred_count=expected_pred_count,
+            repo_root=repo_root,
+        )
+    else:
+        recovery_entries = {}
+        recovery_manifest_sha256 = None
+        pred_rows = []
+        pred_validation = {
+            "skipped": True,
+            "reason": "phase_gt_does_not_touch_prediction_sources",
+            "row_count": 0,
+        }
 
     gt_tasks: list[PlannedTask] = []
     pred_tasks: list[PlannedTask] = []
     no_call_records: list[dict[str, Any]] = []
 
     for index, row in enumerate(gt_rows, start=1):
-        task, no_call = _build_gt_task(row, index=index, contract=contract)
+        task, no_call = _build_gt_task(
+            row,
+            index=index,
+            contract=contract,
+            dataset_probes=dataset_probes,
+        )
         if task is not None:
             gt_tasks.append(task)
         if no_call is not None:
             no_call_records.append(no_call)
 
-    for row in pred_rows:
-        task, no_call = _build_pred_task(row, contract=contract)
-        if task is not None:
-            pred_tasks.append(task)
-        if no_call is not None:
-            no_call_records.append(no_call)
+    if needs_pred:
+        for row in pred_rows:
+            task, no_call = _build_pred_task(
+                row,
+                contract=contract,
+                ground_truth_variables=ground_truth_variables,
+                ground_truth_targets=ground_truth_targets,
+                recovery_entries=recovery_entries,
+                dataset_probes=dataset_probes,
+            )
+            if task is not None:
+                pred_tasks.append(task)
+            if no_call is not None:
+                no_call_records.append(no_call)
 
     if phase == "gt":
         selected_tasks = list(gt_tasks)
@@ -746,11 +1381,34 @@ def build_clean_task_plan(
     no_call_records.sort(key=lambda item: (item["phase"], item["logical_id"]))
     gt_no_call_count = sum(1 for item in no_call_records if item["phase"] == "gt")
     pred_no_call_count = sum(1 for item in no_call_records if item["phase"] == "pred")
+    pred_request_contexts = [task.request for task in pred_tasks]
+    pred_request_contexts.extend(
+        item["request_context"]
+        for item in no_call_records
+        if item["phase"] == "pred"
+    )
+    used_recovery_ids = sorted(
+        context["task_id"]
+        for context in pred_request_contexts
+        if context.get("ast_source_evidence", {})
+        .get("formula_resolution", {})
+        .get("manifest_entry")
+        is not None
+    )
+    if len(used_recovery_ids) != len(set(used_recovery_ids)):
+        raise CleanTaskBuilderError("公式恢复记录被同一 task_id 重复消费")
+    unused_recovery_ids = sorted(set(recovery_entries) - set(used_recovery_ids))
+    if needs_pred and expected_pred_count == 2250 and unused_recovery_ids:
+        raise CleanTaskBuilderError(
+            f"全量 clean 构建存在未消费公式恢复记录: {unused_recovery_ids}"
+        )
 
     report = {
         "phase": phase,
         "inputs": {
             "ground_truth_jsonl": str(gt_path),
+            "formula_recovery_json": str(recovery_path),
+            "dataset_probes_jsonl": str(probes_path),
             "freeze_glob": pred_glob,
         },
         "contract": {
@@ -764,6 +1422,18 @@ def build_clean_task_plan(
         "validation": {
             "ground_truth_row_count": len(gt_rows),
             "pred_freeze": pred_validation,
+            "formula_recovery": {
+                "manifest_sha256": recovery_manifest_sha256,
+                "entry_count": len(recovery_entries),
+                "used_entry_count": len(used_recovery_ids),
+                "used_task_ids": used_recovery_ids,
+                "unused_task_ids": unused_recovery_ids,
+            },
+            "dataset_probes": {
+                "jsonl_sha256": dataset_probes_sha256,
+                "dataset_count": len(dataset_probes),
+                "schema_version": DATASET_PROBE_SCHEMA_VERSION,
+            },
             "noise_condition": CONDITION,
         },
         "planning_counts": {
@@ -794,6 +1464,16 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--ground-truth-jsonl",
         type=Path,
         default=repo_root / DEFAULT_GROUND_TRUTH_JSONL,
+    )
+    parser.add_argument(
+        "--formula-recovery-json",
+        type=Path,
+        default=repo_root / DEFAULT_FORMULA_RECOVERY_JSON,
+    )
+    parser.add_argument(
+        "--dataset-probes-jsonl",
+        type=Path,
+        default=repo_root / DEFAULT_DATASET_PROBES_JSONL,
     )
     parser.add_argument(
         "--freeze-glob",
@@ -827,6 +1507,8 @@ def main(argv: list[str] | None = None) -> int:
     tasks, report = build_clean_task_plan(
         phase=args.phase,
         ground_truth_jsonl=args.ground_truth_jsonl,
+        formula_recovery_json=args.formula_recovery_json,
+        dataset_probes_jsonl=args.dataset_probes_jsonl,
         freeze_glob=args.freeze_glob,
         expected_gt_count=args.expected_gt_count,
         expected_pred_count=args.expected_pred_count,
