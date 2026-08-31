@@ -123,6 +123,29 @@ def _valid_envelope() -> dict[str, object]:
     }
 
 
+def _empty_response_envelope() -> dict[str, object]:
+    envelope = _valid_envelope()
+    envelope.update(
+        {
+            "result": "",
+            "stop_reason": None,
+            "total_cost_usd": 0,
+            "modelUsage": {},
+        }
+    )
+    envelope["usage"] = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens_details": {"thinking_tokens": 0},
+        "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0},
+        "cache_creation": {"ephemeral_1h_input_tokens": 0, "ephemeral_5m_input_tokens": 0},
+        "total_cost_usd": 0,
+    }
+    return envelope
+
+
 def _simplify_task_definition(tmp_path: Path, key: str) -> TaskDefinition:
     prompt_template = "Simplify this expression.\n{{REQUEST_JSON}}\n"
     schema = {
@@ -967,4 +990,97 @@ def test_server_tool_or_model_drift_takes_precedence_over_turn_contract_violatio
     )
     assert attempt_audit["validation"]["error_class"] == "contract_drift"
     assert attempt_audit["metadata"]["retryable"] is False
+    assert len(fake_run.calls) == 1
+
+
+def test_strict_empty_response_is_retryable_without_circuit_break(tmp_path: Path) -> None:
+    definition = _task_definition(tmp_path, "ek-empty-response")
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_empty_response_envelope(), ensure_ascii=False),
+                stderr="",
+            ),
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_valid_envelope(), ensure_ascii=False),
+                stderr="",
+            ),
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    assert store.attempts_reserved() == 2
+    first_attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert first_attempt["validation"]["error_class"] == "empty_response"
+    assert first_attempt["metadata"]["retryable"] is True
+    assert len(fake_run.calls) == 2
+
+
+@pytest.mark.parametrize(
+    ("mutator", "label"),
+    [
+        (lambda envelope: envelope["usage"].__setitem__("input_tokens", 1), "nonzero-usage"),
+        (
+            lambda envelope: envelope["usage"]["server_tool_use"].__setitem__("web_search_requests", 1),
+            "server-tool",
+        ),
+        (
+            lambda envelope: envelope.__setitem__(
+                "modelUsage",
+                {"claude-sonnet": {"canonicalModel": "claude-sonnet"}},
+            ),
+            "wrong-model-key",
+        ),
+        (lambda envelope: envelope.__setitem__("result", "{\"decision\":\"equivalent\"}"), "nonempty-result"),
+        (
+            lambda envelope: envelope["usage"]["cache_creation"].pop(
+                "ephemeral_5m_input_tokens"
+            ),
+            "incomplete-zero-usage",
+        ),
+    ],
+)
+def test_empty_response_guard_is_strict_and_other_drift_keeps_original_behavior(
+    tmp_path: Path,
+    mutator: object,
+    label: str,
+) -> None:
+    definition = _task_definition(tmp_path, f"ek-empty-response-negative-{label}")
+    drifted = _empty_response_envelope()
+    mutator(drifted)  # type: ignore[misc]
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(drifted, ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    with pytest.raises(ClaudeRunnerCircuitBreaker, match="Claude 全局熔断"):
+        _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert store.attempts_reserved() == 1
+    assert store.task_state(definition.task_spec.evaluation_key) == "exhausted"
+    attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert attempt["validation"]["error_class"] == "contract_drift"
+    assert attempt["metadata"]["retryable"] is False
     assert len(fake_run.calls) == 1

@@ -363,6 +363,7 @@ def prepare_clean_numeric(
     _write_csv(algorithm_csv, algorithm_fields, algorithm_rows)
     validity = Counter(row["valid_output"] for row in run_rows)
     report: dict[str, Any] = {
+        "status": "ok",
         "contract_ok": True,
         "metric_definition": "phi-per-task-seed-then-empirical-mean",
         "counts": {
@@ -381,8 +382,10 @@ def prepare_clean_numeric(
         "outputs": {
             "run_csv": str(run_csv.resolve()),
             "run_csv_sha256": _sha256_file(run_csv),
+            "run_csv_row_count": len(run_rows),
             "algorithm_csv": str(algorithm_csv.resolve()),
             "algorithm_csv_sha256": _sha256_file(algorithm_csv),
+            "algorithm_csv_row_count": len(algorithm_rows),
         },
         "algorithm_scores": algorithm_rows,
     }

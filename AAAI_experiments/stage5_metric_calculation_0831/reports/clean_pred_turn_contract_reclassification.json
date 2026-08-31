@@ -1,0 +1,46 @@
+{
+  "schema_version": "turn_contract_reclassification.v1",
+  "status": "applied",
+  "model_invoked": false,
+  "applied_at": "2026-09-01T06:48:07+08:00",
+  "implementation_commit": "ddf8b127e6db3d81016b40938f7930a41b761ffb",
+  "attempt": {
+    "attempt_id": "26615917f767d13732cec812c3cf79abfb31e8acbeb91e1b07399deef4d156a2.a01",
+    "evaluation_key": "26615917f767d13732cec812c3cf79abfb31e8acbeb91e1b07399deef4d156a2",
+    "logical_id": "pred_simplify::drsr::g0003::s520::clean",
+    "audit_path": "AAAI_experiments/stage5_metric_calculation_0831/llm/attempts_v2/26615917f767d13732cec812c3cf79abfb31e8acbeb91e1b07399deef4d156a2.a01.json",
+    "audit_sha256": "2dc928da847467491001eb212ad6cbe7eb0a2b8063aba35c70446cd529845ab6",
+    "returncode": 0,
+    "requested_model": "claude-opus-5[1m]",
+    "canonical_model": "claude-opus-5",
+    "requested_effort": "xhigh",
+    "server_tool_use_total": 0,
+    "model_usage_key_count": 1,
+    "num_turns": 2,
+    "stop_reason": "end_turn"
+  },
+  "classification": {
+    "original_error_class": "contract_drift",
+    "reclassified_error_class": "turn_contract_violation",
+    "retryable": true,
+    "global_circuit_breaker_preserved": true,
+    "reason": "模型、工具和命令契约均正确；仅 Claude Code 运行时返回隔离的 num_turns=2/end_turn，因此保留全局熔断，但不应永久耗尽尚有任务级尝试额度的任务。"
+  },
+  "state_transition": {
+    "event_id": 2468,
+    "event_type": "failed_attempt_reopened",
+    "before_state": "exhausted",
+    "after_state": "retry_wait",
+    "attempt_count": 1,
+    "max_attempts_per_task": 3,
+    "remaining_task_attempts": 2,
+    "new_physical_attempt_created": false
+  },
+  "budget_binding": {
+    "predecessor_attempt_manifest": "AAAI_experiments/stage5_metric_calculation_0831/manifests/predecessor_attempts_v1.json",
+    "predecessor_attempt_manifest_sha256": "8fb6cf1deb4ac3df9c1fd1295b363e1c68e94e94a129c336f3caaf73e5dca005",
+    "predecessor_attempt_count": 12,
+    "logical_task_limit": 15800,
+    "physical_attempt_limit": 23700
+  }
+}

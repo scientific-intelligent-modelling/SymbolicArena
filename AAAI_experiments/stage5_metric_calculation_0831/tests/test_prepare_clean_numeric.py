@@ -142,8 +142,11 @@ def test_prepare_clean_numeric_maps_each_run_before_aggregation(tmp_path: Path) 
         algorithm_rows = list(csv.DictReader(handle))
 
     assert report["contract_ok"] is True
+    assert report["status"] == "ok"
     assert report["counts"]["valid_outputs"] == 1
     assert report["counts"]["invalid_outputs"] == 1
+    assert report["outputs"]["run_csv_row_count"] == 2
+    assert report["outputs"]["algorithm_csv_row_count"] == 1
     assert [float(row["id_quality"]) for row in run_rows] == [1.0, 0.0]
     assert float(algorithm_rows[0]["ID"]) == pytest.approx(50.0)
     assert float(algorithm_rows[0]["OOD"]) == pytest.approx(50.0)

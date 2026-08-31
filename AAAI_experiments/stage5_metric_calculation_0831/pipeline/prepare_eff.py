@@ -628,9 +628,25 @@ def main(argv: Iterable[str] | None = None) -> int:
             expected_checkpoint_normalization_points=args.expected_checkpoint_normalization_points,
             limit_runs=args.limit_runs,
         )
-        _write_jsonl(args.output_jsonl.resolve(), rows)
-        _write_csv(args.output_csv.resolve(), rows)
-        _write_json(args.output_report.resolve(), report)
+        output_jsonl = args.output_jsonl.resolve()
+        output_csv = args.output_csv.resolve()
+        output_report = args.output_report.resolve()
+        _write_jsonl(output_jsonl, rows)
+        _write_csv(output_csv, rows)
+        report = {
+            **report,
+            "status": "ok",
+            "contract_ok": len(report["unresolved"]) == 0,
+            "outputs": {
+                "eff_jsonl": str(output_jsonl),
+                "eff_jsonl_sha256": sha256_file(output_jsonl),
+                "eff_jsonl_row_count": len(rows),
+                "eff_csv": str(output_csv),
+                "eff_csv_sha256": sha256_file(output_csv),
+                "eff_csv_row_count": len(rows),
+            },
+        }
+        _write_json(output_report, report)
     except (
         EffPreparationContractError,
         FreezeBindingContractError,
@@ -642,6 +658,8 @@ def main(argv: Iterable[str] | None = None) -> int:
             "condition": NOISE_TAG,
             "horizon": HORIZON,
             "fatal_error": str(exc),
+            "status": "error",
+            "contract_ok": False,
             "summary": {
                 "processed_run_count": 0,
                 "success_count": 0,

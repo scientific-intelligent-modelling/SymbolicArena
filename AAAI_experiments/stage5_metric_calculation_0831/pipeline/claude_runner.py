@@ -163,6 +163,70 @@ def _parse_total_cost_usd(envelope: Mapping[str, object]) -> float | None:
     return None
 
 
+def _is_zero_number(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, (int, float)):
+        return float(value) == 0.0
+    return False
+
+
+def _is_strict_empty_response(
+    envelope: Mapping[str, object],
+    usage: Mapping[str, object],
+    server_tool_use: Mapping[str, object],
+    model_usage: Mapping[str, object],
+) -> bool:
+    required_server_tool_keys = {"web_search_requests", "web_fetch_requests"}
+    if not required_server_tool_keys.issubset(server_tool_use):
+        return False
+    if envelope.get("num_turns") != 1:
+        return False
+    if envelope.get("stop_reason") not in {None, ""}:
+        return False
+    result_text = envelope.get("result")
+    if result_text != "":
+        return False
+    if model_usage:
+        return False
+    total_cost_usd = _parse_total_cost_usd(envelope)
+    if total_cost_usd != 0.0:
+        return False
+    if any(not _is_zero_number(value) for value in server_tool_use.values()):
+        return False
+
+    zero_usage_keys = (
+        "input_tokens",
+        "output_tokens",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+    )
+    if any(not _is_zero_number(usage.get(key)) for key in zero_usage_keys):
+        return False
+
+    output_tokens_details = usage.get("output_tokens_details")
+    if not isinstance(output_tokens_details, Mapping):
+        return False
+    if "thinking_tokens" not in output_tokens_details:
+        return False
+    if any(not _is_zero_number(value) for value in output_tokens_details.values()):
+        return False
+
+    cache_creation = usage.get("cache_creation")
+    if not isinstance(cache_creation, Mapping):
+        return False
+    required_cache_creation_keys = {
+        "ephemeral_1h_input_tokens",
+        "ephemeral_5m_input_tokens",
+    }
+    if not required_cache_creation_keys.issubset(cache_creation):
+        return False
+    if any(not _is_zero_number(value) for value in cache_creation.values()):
+        return False
+
+    return True
+
+
 def _normalize_text_output(value: object) -> str:
     if value is None:
         return ""
@@ -360,6 +424,8 @@ def _enforce_runtime_envelope_contract(envelope: Mapping[str, object]) -> None:
     model_usage = envelope.get("modelUsage")
     if not isinstance(model_usage, Mapping):
         raise ContractViolation("modelUsage 元数据缺失或无效")
+    if _is_strict_empty_response(envelope, usage, server_tool_use, model_usage):
+        raise EmptyClaudeResponse("Claude 返回全零空响应")
     if set(model_usage) != {CONTRACT_MODEL}:
         raise ContractViolation(f"Claude 模型契约不符: {list(model_usage)!r}")
 
@@ -442,6 +508,10 @@ class ClaudeRunnerCircuitBreaker(RuntimeError):
 
 class TurnContractViolation(ContractViolation):
     """turn 数与 stop_reason 未命中约定的单轮调用契约。"""
+
+
+class EmptyClaudeResponse(ContractViolation):
+    """Claude 返回了可审计但不可接受的全零空响应。"""
 
 
 class ClaudeRunner:
@@ -724,6 +794,16 @@ class ClaudeRunner:
                             task_kind=task_kind,
                             schema=definition.schema,
                         )
+                    except EmptyClaudeResponse as exc:
+                        error_class = "empty_response"
+                        retryable = True
+                        circuit_break = False
+                        validation = {
+                            "ok": False,
+                            "error_class": error_class,
+                            "error_message": str(exc),
+                            "structured_output": None,
+                        }
                     except TurnContractViolation as exc:
                         error_class = "turn_contract_violation"
                         retryable = True

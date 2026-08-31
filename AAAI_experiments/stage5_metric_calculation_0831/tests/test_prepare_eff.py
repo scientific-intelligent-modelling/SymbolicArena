@@ -537,7 +537,13 @@ def test_cli_writes_jsonl_csv_and_report(tmp_path: Path) -> None:
     )
 
     report = json.loads(completed.stdout)
+    assert report["status"] == "ok"
+    assert report["contract_ok"] is True
     assert report["summary"]["success_count"] == 3
+    assert report["outputs"]["eff_jsonl"] == str(output_jsonl.resolve())
+    assert report["outputs"]["eff_jsonl_row_count"] == 3
+    assert report["outputs"]["eff_csv"] == str(output_csv.resolve())
+    assert report["outputs"]["eff_csv_row_count"] == 3
     assert output_jsonl.exists()
     assert output_csv.exists()
     assert output_report.exists()
