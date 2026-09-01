@@ -17,6 +17,10 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     evaluation_key,
     render_prompt,
 )
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import (
+    LLM_SIMPLIFIED_EXPRESSION,
+    ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+)
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskSpec
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_evidence import (
     SymbolicEvidenceError,
@@ -121,6 +125,8 @@ class FrozenSimplifyRecord:
     state: str
     simplified_status: str
     simplified_expression: str | None
+    effective_expression: str | None
+    expression_resolution: str | None
     structured_output: dict[str, Any] | None
     non_applicable: dict[str, Any] | None
     result_sha256: str | None
@@ -513,6 +519,52 @@ def _validate_frozen_summary(
     return plan_sha256
 
 
+def _validate_effective_expression_binding(
+    *,
+    row: Mapping[str, Any],
+    plan_request: Mapping[str, Any],
+    logical_id: str,
+    simplified_status: str,
+    simplified_expression: str | None,
+) -> tuple[str, str]:
+    effective_expression = _require_string(
+        row.get("effective_expression"),
+        context=f"{logical_id}.effective_expression",
+    )
+    expression_resolution = _require_string(
+        row.get("expression_resolution"),
+        context=f"{logical_id}.expression_resolution",
+    )
+    if simplified_status in {"simplified", "unchanged"}:
+        if simplified_expression is None:
+            raise SymbolicTaskBuilderError(f"{logical_id} 缺少模型 simplified_expression")
+        if expression_resolution != LLM_SIMPLIFIED_EXPRESSION:
+            raise SymbolicTaskBuilderError(
+                f"{logical_id}.expression_resolution 必须为 {LLM_SIMPLIFIED_EXPRESSION}"
+            )
+        if effective_expression != simplified_expression:
+            raise SymbolicTaskBuilderError(
+                f"{logical_id}.effective_expression 必须与模型 simplified_expression 一致"
+            )
+        return effective_expression, expression_resolution
+    if simplified_status != "unable":
+        raise SymbolicTaskBuilderError(f"{logical_id}.simplified_status 非法: {simplified_status!r}")
+    if expression_resolution != ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE:
+        raise SymbolicTaskBuilderError(
+            f"{logical_id}.expression_resolution 必须为 "
+            f"{ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE}"
+        )
+    original_expression = _require_string(
+        plan_request.get("original_expression"),
+        context=f"{logical_id}.plan_request.original_expression",
+    )
+    if effective_expression != original_expression:
+        raise SymbolicTaskBuilderError(
+            f"{logical_id}.effective_expression 必须回退到 plan request.original_expression"
+        )
+    return effective_expression, expression_resolution
+
+
 def _load_frozen_index(
     path: Path,
     *,
@@ -554,6 +606,8 @@ def _load_frozen_index(
             raise SymbolicTaskBuilderError(f"{logical_id} frozen index state 非法: {state}")
         simplified_status = state
         simplified_expression: str | None = None
+        effective_expression: str | None = None
+        expression_resolution: str | None = None
         structured_output = None
         non_applicable = None
         result_sha256 = None
@@ -575,11 +629,26 @@ def _load_frozen_index(
                 raise SymbolicTaskBuilderError(
                     f"{logical_id} outcome=unable 时 simplified_expression 必须为 null"
                 )
+            effective_expression, expression_resolution = _validate_effective_expression_binding(
+                row=row,
+                plan_request=plan_record.request,
+                logical_id=logical_id,
+                simplified_status=simplified_status,
+                simplified_expression=simplified_expression,
+            )
             result_sha256 = _require_sha256(
                 row.get("result_sha256"),
                 context=f"{logical_id}.result_sha256",
             )
         else:
+            if row.get("effective_expression") is not None:
+                raise SymbolicTaskBuilderError(
+                    f"{logical_id} state={state} 时 effective_expression 必须为 null"
+                )
+            if row.get("expression_resolution") is not None:
+                raise SymbolicTaskBuilderError(
+                    f"{logical_id} state={state} 时 expression_resolution 必须为 null"
+                )
             non_applicable = dict(
                 _require_mapping(row.get("non_applicable"), context=f"{logical_id}.non_applicable")
             )
@@ -591,6 +660,8 @@ def _load_frozen_index(
             state=state,
             simplified_status=simplified_status,
             simplified_expression=simplified_expression,
+            effective_expression=effective_expression,
+            expression_resolution=expression_resolution,
             structured_output=structured_output,
             non_applicable=non_applicable,
             result_sha256=result_sha256,
@@ -742,8 +813,14 @@ def _task_json_record(task: PlannedTask) -> dict[str, Any]:
 
 
 def _has_callable_expression(record: FrozenSimplifyRecord) -> bool:
-    return record.state == "frozen" and record.simplified_status in {"simplified", "unchanged"} and bool(
-        record.simplified_expression
+    return (
+        record.state == "frozen"
+        and bool(record.effective_expression)
+        and record.expression_resolution
+        in {
+            LLM_SIMPLIFIED_EXPRESSION,
+            ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+        }
     )
 
 
@@ -954,6 +1031,8 @@ def _upstream_binding(
         "frozen_state": frozen_record.state,
         "frozen_simplified_status": frozen_record.simplified_status,
         "frozen_simplified_expression": frozen_record.simplified_expression,
+        "frozen_effective_expression": frozen_record.effective_expression,
+        "frozen_expression_resolution": frozen_record.expression_resolution,
         "frozen_structured_output_sha256": (
             _sha256_json(frozen_record.structured_output)
             if frozen_record.structured_output is not None
@@ -974,8 +1053,8 @@ def _build_full_pair_evidence(
     pair_seed: int,
     pair_request_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    lhs = _require_string(left_frozen.simplified_expression, context=f"{logical_id}.lhs_expression")
-    rhs = _require_string(right_frozen.simplified_expression, context=f"{logical_id}.rhs_expression")
+    lhs = _require_string(left_frozen.effective_expression, context=f"{logical_id}.lhs_expression")
+    rhs = _require_string(right_frozen.effective_expression, context=f"{logical_id}.rhs_expression")
     shared_probe = _shared_probe_bundle(left_plan.request, right_plan.request, context=logical_id)
     variables = shared_probe["variables"]
     allowed_functions = sorted(
@@ -1393,12 +1472,16 @@ def build_symbolic_task_plan(
             "ground_truth_frozen_evaluation_key": gt_record.evaluation_key,
             "ground_truth_simplify_status": gt_record.simplified_status,
             "simplified_ground_truth_expression": gt_record.simplified_expression,
+            "effective_ground_truth_expression": gt_record.effective_expression,
+            "ground_truth_expression_resolution": gt_record.expression_resolution,
             "prediction_logical_id": pred_plan.logical_id,
             "prediction_plan_evaluation_key": pred_plan.evaluation_key,
             "prediction_frozen_plan_sha256": pred_record.plan_sha256,
             "prediction_frozen_evaluation_key": pred_record.evaluation_key,
             "prediction_simplify_status": pred_record.simplified_status,
             "simplified_prediction_expression": pred_record.simplified_expression,
+            "effective_prediction_expression": pred_record.effective_expression,
+            "prediction_expression_resolution": pred_record.expression_resolution,
             "prediction_task_id": numeric_record.task_id,
             "prediction_valid_output": numeric_record.valid_output,
             "prediction_result_sha256": numeric_record.result_sha256,
@@ -1476,6 +1559,8 @@ def build_symbolic_task_plan(
             "prediction_a_frozen_evaluation_key": pred_record_a.evaluation_key,
             "prediction_a_simplify_status": pred_record_a.simplified_status,
             "simplified_prediction_a_expression": pred_record_a.simplified_expression,
+            "effective_prediction_a_expression": pred_record_a.effective_expression,
+            "prediction_a_expression_resolution": pred_record_a.expression_resolution,
             "prediction_a_task_id": numeric_a.task_id,
             "prediction_a_valid_output": numeric_a.valid_output,
             "prediction_a_result_sha256": numeric_a.result_sha256,
@@ -1485,6 +1570,8 @@ def build_symbolic_task_plan(
             "prediction_b_frozen_evaluation_key": pred_record_b.evaluation_key,
             "prediction_b_simplify_status": pred_record_b.simplified_status,
             "simplified_prediction_b_expression": pred_record_b.simplified_expression,
+            "effective_prediction_b_expression": pred_record_b.effective_expression,
+            "prediction_b_expression_resolution": pred_record_b.expression_resolution,
             "prediction_b_task_id": numeric_b.task_id,
             "prediction_b_valid_output": numeric_b.valid_output,
             "prediction_b_result_sha256": numeric_b.result_sha256,

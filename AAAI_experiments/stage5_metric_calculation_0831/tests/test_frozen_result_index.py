@@ -20,6 +20,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import (  # noqa: E402
     FrozenResultIndexError,
+    ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
     build_frozen_result_index,
     main,
 )
@@ -492,6 +493,112 @@ def test_build_frozen_result_index_accepts_pred_exhausted_with_attempt_audit(
         for item in expected_attempts
     ]
     assert summary["state_counts"] == {"frozen": 0, "non_applicable": 0, "exhausted": 1}
+
+
+def test_build_frozen_result_index_materializes_unable_original_identity_fallback(
+    tmp_path: Path,
+) -> None:
+    request = {
+        "dataset_id": "demo",
+        "dataset_index": "g0001",
+        "algorithm": "Algo",
+        "algorithm_slug": "algo",
+        "seed": 520,
+        "noise_tag": "clean",
+        "task_id": "algo_s520_clean_g0001",
+        "expression": "x0 + x1",
+        "original_expression": "x0 + x1 + 0",
+        "evidence_hash": _sha256_text("evidence::unable"),
+    }
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::algo::g0001::s520::clean",
+        task_type="pred_simplify",
+        request=request,
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    result_path = tmp_path / "frozen" / "unable.json"
+    _freeze_task(
+        store,
+        row,
+        result_path,
+        structured_output={
+            "outcome": "unable",
+            "simplified_expression": None,
+            "equivalence_assessment": "undetermined",
+            "assumptions": [],
+            "confidence": 0.1,
+            "brief_reason": "fixture unable",
+        },
+    )
+
+    output_jsonl = tmp_path / "frozen_index.jsonl"
+    summary_json = tmp_path / "frozen_index.summary.json"
+    build_frozen_result_index(
+        plan_jsonl=plan_path,
+        state_db=state_db,
+        output_jsonl=output_jsonl,
+        summary_json=summary_json,
+    )
+
+    output_row = json.loads(output_jsonl.read_text(encoding="utf-8").splitlines()[0])
+    assert output_row["structured_output"]["outcome"] == "unable"
+    assert output_row["structured_output"]["simplified_expression"] is None
+    assert output_row["effective_expression"] == "x0 + x1 + 0"
+    assert (
+        output_row["expression_resolution"]
+        == ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE
+    )
+
+
+def test_build_frozen_result_index_rejects_unable_without_original_expression(
+    tmp_path: Path,
+) -> None:
+    request = {
+        "dataset_id": "demo",
+        "dataset_index": "g0001",
+        "algorithm": "Algo",
+        "algorithm_slug": "algo",
+        "seed": 520,
+        "noise_tag": "clean",
+        "task_id": "algo_s520_clean_g0001",
+        "expression": "x0 + x1",
+        "evidence_hash": _sha256_text("evidence::missing-original"),
+    }
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::algo::g0001::s520::clean",
+        task_type="pred_simplify",
+        request=request,
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _freeze_task(
+        store,
+        row,
+        tmp_path / "frozen" / "unable.json",
+        structured_output={
+            "outcome": "unable",
+            "simplified_expression": None,
+            "equivalence_assessment": "undetermined",
+            "assumptions": [],
+            "confidence": 0.1,
+            "brief_reason": "fixture unable",
+        },
+    )
+
+    with pytest.raises(FrozenResultIndexError, match="original_expression"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
 
 
 def test_pred_exhausted_requires_explicit_allow_flag(tmp_path: Path) -> None:

@@ -18,6 +18,10 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     evaluation_key,
     render_prompt,
 )
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import (  # noqa: E402
+    LLM_SIMPLIFIED_EXPRESSION,
+    ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+)
 
 
 SEEDS = (520, 521, 522)
@@ -334,7 +338,14 @@ def _frozen_index_row(
     structured_output: dict[str, Any] | None = None,
     reason: str | None = None,
     result_sha256: str | None = None,
+    effective_expression: str | None = None,
+    expression_resolution: str | None = None,
 ) -> dict[str, Any]:
+    if state == "frozen" and structured_output is not None and effective_expression is None:
+        outcome = structured_output.get("outcome")
+        if outcome in {"simplified", "unchanged"}:
+            effective_expression = structured_output.get("simplified_expression")
+            expression_resolution = LLM_SIMPLIFIED_EXPRESSION
     payload = {
         "plan_sha256": plan_sha256,
         "evaluation_key": evaluation_key_value,
@@ -348,6 +359,8 @@ def _frozen_index_row(
         "result_path": None,
         "result_sha256": result_sha256,
         "structured_output": structured_output,
+        "effective_expression": effective_expression,
+        "expression_resolution": expression_resolution,
         "non_applicable": None,
     }
     if state == "non_applicable":
@@ -515,6 +528,16 @@ def _make_fixture(
             simplified_expression = override.get("simplified_expression")
             if simplified_expression is None:
                 simplified_expression = None if outcome == "unable" else f"x0 + x1 + {request['seed'] - 520}"
+            effective_expression = (
+                request["original_expression"]
+                if outcome == "unable"
+                else simplified_expression
+            )
+            expression_resolution = (
+                ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE
+                if outcome == "unable"
+                else LLM_SIMPLIFIED_EXPRESSION
+            )
             pred_frozen_rows.append(
                 _frozen_index_row(
                     plan_sha256=pred_plan_sha256,
@@ -524,6 +547,8 @@ def _make_fixture(
                     priority=20,
                     state="frozen",
                     result_sha256=result_sha256,
+                    effective_expression=effective_expression,
+                    expression_resolution=expression_resolution,
                     structured_output={
                         "outcome": outcome,
                         "simplified_expression": simplified_expression,
@@ -639,10 +664,10 @@ def test_full_plan_uses_numeric_validity_and_closes_2250_per_phase(tmp_path: Pat
 
     equivalence_tasks = [task for task in tasks if task.task_type == "equivalence"]
     structure_tasks = [task for task in tasks if task.task_type == "stab_structure"]
-    assert len(equivalence_tasks) == 2249
-    assert len(structure_tasks) == 2246
-    assert report["planning_counts"]["equivalence_no_call_count"] == 1
-    assert report["planning_counts"]["structure_no_call_count"] == 4
+    assert len(equivalence_tasks) == 2250
+    assert len(structure_tasks) == 2248
+    assert report["planning_counts"]["equivalence_no_call_count"] == 0
+    assert report["planning_counts"]["structure_no_call_count"] == 2
     assert report["planning_counts"]["equivalence_closed_total"] == 2250
     assert report["planning_counts"]["structure_closed_total"] == 2250
     assert report["validation"]["clean_run_metrics"]["sha256"] == _sha256_file(fixture["clean_run_metrics_csv"])
@@ -656,17 +681,38 @@ def test_full_plan_uses_numeric_validity_and_closes_2250_per_phase(tmp_path: Pat
     assert eq_evidence["pair_evidence"]["symbolic_difference"]["numeric_probes"]
     assert eq_evidence["evidence_sha256"] == eq_task.request["evidence_hash"]
 
+    unable_eq_task = next(
+        task for task in equivalence_tasks if task.logical_id == "equivalence::alg00::g0001::s521::clean"
+    )
+    assert unable_eq_task.request["prediction_simplify_status"] == "unable"
+    assert unable_eq_task.request["simplified_prediction_expression"] is None
+    assert unable_eq_task.request["effective_prediction_expression"] == "x0 + x1 + 0"
+    assert (
+        unable_eq_task.request["prediction_expression_resolution"]
+        == ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE
+    )
+    assert (
+        unable_eq_task.request["deterministic_evidence"]["rhs_binding"]["frozen_effective_expression"]
+        == "x0 + x1 + 0"
+    )
+    assert (
+        unable_eq_task.request["deterministic_evidence"]["rhs_binding"]["frozen_expression_resolution"]
+        == ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE
+    )
+
     structure_task = next(task for task in structure_tasks if task.logical_id == "stab_structure::alg00::g0001::s520-s522")
     structure_evidence = structure_task.request["deterministic_pair_evidence"]
     assert structure_evidence["lhs_binding"]["frozen_result_sha256"] == _result_sha(520, 1)
     assert structure_evidence["rhs_binding"]["frozen_result_sha256"]
     assert structure_evidence["pair_evidence"]["probe_count"] >= 1
+    structure_unable_pair = next(
+        task for task in structure_tasks if task.logical_id == "stab_structure::alg00::g0001::s521-s522"
+    )
+    assert structure_unable_pair.request["prediction_a_simplify_status"] == "unable"
+    assert structure_unable_pair.request["effective_prediction_a_expression"] == "x0 + x1 + 0"
 
     no_call_records = report["no_call_records"]
-    assert {row["reason"] for row in no_call_records} == {
-        "upstream_pred_unavailable",
-        "invalid_seed_or_expression",
-    }
+    assert {row["reason"] for row in no_call_records} == {"invalid_seed_or_expression"}
     for row in no_call_records:
         evidence_path = Path(row["evidence_path"])
         assert evidence_path.exists()
@@ -1065,8 +1111,8 @@ def test_cli_materializes_phase_specific_callable_no_call_and_full_plans(tmp_pat
     all_non_applicable_rows = [
         json.loads(line) for line in all_non_applicable_jsonl.read_text(encoding="utf-8").splitlines()
     ]
-    assert len(all_callable_rows) == 3
-    assert len(all_non_applicable_rows) == 3
+    assert len(all_callable_rows) == 6
+    assert len(all_non_applicable_rows) == 0
 
     eq_callable_rows = [json.loads(line) for line in eq_callable_jsonl.read_text(encoding="utf-8").splitlines()]
     eq_non_applicable_rows = [
@@ -1079,19 +1125,17 @@ def test_cli_materializes_phase_specific_callable_no_call_and_full_plans(tmp_pat
         json.loads(line)
         for line in structure_non_applicable_jsonl.read_text(encoding="utf-8").splitlines()
     ]
-    assert len(eq_callable_rows) == 2
-    assert len(eq_non_applicable_rows) == 1
-    assert len(structure_callable_rows) == 1
-    assert len(structure_non_applicable_rows) == 2
-    assert {row["phase"] for row in eq_non_applicable_rows} == {"equivalence"}
-    assert {row["phase"] for row in structure_non_applicable_rows} == {"structure"}
+    assert len(eq_callable_rows) == 3
+    assert len(eq_non_applicable_rows) == 0
+    assert len(structure_callable_rows) == 3
+    assert len(structure_non_applicable_rows) == 0
 
     assert len(load_plan_jsonl(eq_full_plan_jsonl).entries) == 3
     assert len(load_plan_jsonl(structure_full_plan_jsonl).entries) == 3
 
     report = json.loads(report_json.read_text(encoding="utf-8"))
-    assert report["phase_outputs"]["equivalence"]["callable_task_count"] == 2
-    assert report["phase_outputs"]["equivalence"]["non_applicable_count"] == 1
+    assert report["phase_outputs"]["equivalence"]["callable_task_count"] == 3
+    assert report["phase_outputs"]["equivalence"]["non_applicable_count"] == 0
     assert report["phase_outputs"]["equivalence"]["full_plan_count"] == 3
     assert report["phase_outputs"]["equivalence"]["callable_output_sha256"] == hashlib.sha256(
         eq_callable_jsonl.read_bytes()
@@ -1102,8 +1146,8 @@ def test_cli_materializes_phase_specific_callable_no_call_and_full_plans(tmp_pat
     assert report["phase_outputs"]["equivalence"]["full_plan_sha256"] == hashlib.sha256(
         eq_full_plan_jsonl.read_bytes()
     ).hexdigest()
-    assert report["phase_outputs"]["structure"]["callable_task_count"] == 1
-    assert report["phase_outputs"]["structure"]["non_applicable_count"] == 2
+    assert report["phase_outputs"]["structure"]["callable_task_count"] == 3
+    assert report["phase_outputs"]["structure"]["non_applicable_count"] == 0
     assert report["phase_outputs"]["structure"]["full_plan_count"] == 3
 
 
@@ -1192,6 +1236,5 @@ def test_cli_selected_phase_filters_standard_non_applicable_index(tmp_path: Path
     assert exit_code == 0
     callable_rows = [json.loads(line) for line in output_jsonl.read_text(encoding="utf-8").splitlines()]
     non_applicable_rows = [json.loads(line) for line in non_applicable_jsonl.read_text(encoding="utf-8").splitlines()]
-    assert len(callable_rows) == 2
-    assert len(non_applicable_rows) == 1
-    assert {row["phase"] for row in non_applicable_rows} == {"equivalence"}
+    assert len(callable_rows) == 3
+    assert len(non_applicable_rows) == 0

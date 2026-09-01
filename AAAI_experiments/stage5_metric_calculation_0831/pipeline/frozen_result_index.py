@@ -27,6 +27,8 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan im
 
 
 JsonDict = dict[str, object]
+LLM_SIMPLIFIED_EXPRESSION = "llm_simplified_expression"
+ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE = "original_identity_fallback_after_llm_unable"
 
 
 class FrozenResultIndexError(RuntimeError):
@@ -64,6 +66,14 @@ def _require_string(value: object, *, context: str) -> str:
 def _require_mapping(value: object, *, context: str) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
         raise FrozenResultIndexError(f"{context} 必须是 JSON object")
+    return value
+
+
+def _optional_string(value: object, *, context: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise FrozenResultIndexError(f"{context} 必须是非空字符串或 null")
     return value
 
 
@@ -295,6 +305,32 @@ def _require_sqlite_bool(value: object, *, context: str) -> bool:
     return bool(integer)
 
 
+def _resolve_simplify_effective_expression(
+    *,
+    request: Mapping[str, object],
+    structured_output: Mapping[str, object],
+    context: str,
+) -> tuple[str, str]:
+    outcome = _require_string(structured_output.get("outcome"), context=f"{context}.outcome")
+    if outcome in {"simplified", "unchanged"}:
+        simplified_expression = _require_string(
+            structured_output.get("simplified_expression"),
+            context=f"{context}.simplified_expression",
+        )
+        return simplified_expression, LLM_SIMPLIFIED_EXPRESSION
+    if outcome != "unable":
+        raise FrozenResultIndexError(f"{context}.outcome 非法: {outcome!r}")
+    original_expression = _optional_string(
+        request.get("original_expression"),
+        context=f"{context}.plan_request.original_expression",
+    )
+    if original_expression is None:
+        raise FrozenResultIndexError(
+            f"{context} outcome=unable 时 plan request.original_expression 必须存在"
+        )
+    return original_expression, ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE
+
+
 def _build_frozen_row(
     *,
     connection: sqlite3.Connection,
@@ -361,6 +397,18 @@ def _build_frozen_row(
     except Exception as exc:
         raise FrozenResultIndexError(f"{context} structured_output 非法: {exc}") from exc
 
+    effective_expression = None
+    expression_resolution = None
+    if task_kind == "simplify":
+        effective_expression, expression_resolution = _resolve_simplify_effective_expression(
+            request=_require_mapping(
+                entry.definition.request,
+                context=f"{context}.plan_request",
+            ),
+            structured_output=validated_structured_output,
+            context=context,
+        )
+
     return {
         "plan_sha256": plan_sha256,
         "evaluation_key": entry.evaluation_key,
@@ -374,6 +422,8 @@ def _build_frozen_row(
         "result_path": str(result_path),
         "result_sha256": expected_sha256,
         "structured_output": validated_structured_output,
+        "effective_expression": effective_expression,
+        "expression_resolution": expression_resolution,
         "non_applicable": None,
         "exhausted": None,
     }
@@ -450,6 +500,8 @@ def _build_non_applicable_row(
         "result_path": None,
         "result_sha256": None,
         "structured_output": None,
+        "effective_expression": None,
+        "expression_resolution": None,
         "non_applicable": {
             "reason": reason,
             "evidence_path": str(evidence_path_obj),
@@ -658,6 +710,8 @@ def _build_exhausted_row(
         "result_path": None,
         "result_sha256": None,
         "structured_output": None,
+        "effective_expression": None,
+        "expression_resolution": None,
         "non_applicable": None,
         "exhausted": {
             "attempt_count": 3,

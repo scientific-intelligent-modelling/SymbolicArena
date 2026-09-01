@@ -13,6 +13,10 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from .metrics import RunQuality, minimality_score, stability_score, symbolic_fidelity_score
 from .metrics import efficiency_from_qualities
+from .frozen_result_index import (
+    LLM_SIMPLIFIED_EXPRESSION,
+    ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+)
 from .run_claude_plan import PlanContractError, load_plan_jsonl
 from .symbolic_evidence import (
     SymbolicEvidenceError,
@@ -240,6 +244,7 @@ def _validate_simplify_structured_output(
     row: Mapping[str, Any],
     *,
     logical_id: str,
+    plan_request: Mapping[str, Any] | None,
     allow_missing: bool,
 ) -> tuple[str | None, str]:
     structured_output = row.get("structured_output")
@@ -260,14 +265,47 @@ def _validate_simplify_structured_output(
             _raise(f"{logical_id} outcome={outcome} 时 equivalence_assessment 必须为 preserved")
         if simplified is None:
             _raise(f"{logical_id} 缺少可用 simplified_expression")
-        return simplified, "frozen"
+        effective_expression = _string(
+            row.get("effective_expression"),
+            context=f"{logical_id}.effective_expression",
+        )
+        expression_resolution = _string(
+            row.get("expression_resolution"),
+            context=f"{logical_id}.expression_resolution",
+        )
+        if expression_resolution != LLM_SIMPLIFIED_EXPRESSION:
+            _raise(
+                f"{logical_id}.expression_resolution 必须为 {LLM_SIMPLIFIED_EXPRESSION}"
+            )
+        if effective_expression != simplified:
+            _raise(f"{logical_id}.effective_expression 必须与 simplified_expression 一致")
+        return effective_expression, "frozen"
     if assessment != "undetermined":
         _raise(f"{logical_id} outcome=unable 时 equivalence_assessment 必须为 undetermined")
     if structured_output.get("simplified_expression") is not None:
         _raise(f"{logical_id} outcome=unable 时 simplified_expression 必须为 null")
-    if not allow_missing:
-        _raise(f"{logical_id} 不允许 unable")
-    return None, "frozen"
+    effective_expression = _string(
+        row.get("effective_expression"),
+        context=f"{logical_id}.effective_expression",
+    )
+    expression_resolution = _string(
+        row.get("expression_resolution"),
+        context=f"{logical_id}.expression_resolution",
+    )
+    if expression_resolution != ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE:
+        _raise(
+            f"{logical_id}.expression_resolution 必须为 "
+            f"{ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE}"
+        )
+    if plan_request is None:
+        _raise(f"{logical_id} 缺少上游 plan request，无法校验 unable fallback 来源")
+    original_expression = _string(
+        plan_request.get("original_expression"),
+        context=f"{logical_id}.plan_request.original_expression",
+    )
+    if effective_expression != original_expression:
+        _raise(f"{logical_id}.effective_expression 必须回退到 plan request.original_expression")
+    return effective_expression, "frozen"
 
 
 def _resolve_pred_identity(
@@ -766,6 +804,18 @@ def _load_frozen_index_rows(
                 structured_output=structured_output,
                 label=label,
             )
+            if task_type in {"gt_simplify", "pred_simplify"}:
+                _validate_simplify_structured_output(
+                    row,
+                    logical_id=logical_id,
+                    plan_request=plan_entry.definition.request,
+                    allow_missing=(task_type == "pred_simplify"),
+                )
+            else:
+                if row.get("effective_expression") is not None:
+                    _raise(f"{label} {logical_id} 非 simplify frozen 行的 effective_expression 必须为 null")
+                if row.get("expression_resolution") is not None:
+                    _raise(f"{label} {logical_id} 非 simplify frozen 行的 expression_resolution 必须为 null")
         elif state == "non_applicable":
             if row.get("structured_output") is not None:
                 _raise(f"{label} {logical_id} non_applicable 时 structured_output 必须为 null")
@@ -773,6 +823,10 @@ def _load_frozen_index_rows(
                 _raise(f"{label} {logical_id} non_applicable 时 result 绑定必须为 null")
             if row.get("exhausted") is not None:
                 _raise(f"{label} {logical_id} non_applicable 时 exhausted 必须为 null")
+            if row.get("effective_expression") is not None:
+                _raise(f"{label} {logical_id} non_applicable 时 effective_expression 必须为 null")
+            if row.get("expression_resolution") is not None:
+                _raise(f"{label} {logical_id} non_applicable 时 expression_resolution 必须为 null")
             non_applicable = row.get("non_applicable")
             if not isinstance(non_applicable, Mapping):
                 _raise(f"{label} {logical_id}.non_applicable 缺失")
@@ -807,6 +861,10 @@ def _load_frozen_index_rows(
                 _raise(f"{label} {logical_id}.state 非法: {state!r}")
             if task_type != "pred_simplify":
                 _raise(f"{label} {logical_id} 仅 pred_simplify 允许 exhausted")
+            if row.get("effective_expression") is not None:
+                _raise(f"{label} {logical_id} exhausted 时 effective_expression 必须为 null")
+            if row.get("expression_resolution") is not None:
+                _raise(f"{label} {logical_id} exhausted 时 expression_resolution 必须为 null")
             _validate_exhausted_payload(
                 row,
                 logical_id=logical_id,
@@ -840,6 +898,9 @@ def _load_frozen_index_rows(
             "sha256": summary_info["plan_sha256"],
             "row_count": summary_info["plan_row_count"],
         },
+        "plan_requests_by_logical_id": {
+            entry.logical_id: dict(entry.definition.request) for entry in plan.entries
+        },
     }
 
 
@@ -847,10 +908,13 @@ def _select_simplified_expression(
     row: Mapping[str, Any],
     *,
     logical_id: str,
+    plan_request: Mapping[str, Any] | None,
     allow_missing: bool,
 ) -> tuple[str | None, str]:
     state = _string(row.get("state"), context=f"{logical_id}.state")
     if state == "exhausted":
+        if row.get("effective_expression") is not None or row.get("expression_resolution") is not None:
+            _raise(f"{logical_id} exhausted 时 effective_expression/expression_resolution 必须为 null")
         if not allow_missing:
             _raise(f"{logical_id} 不允许 exhausted")
         _validate_exhausted_payload(
@@ -862,6 +926,8 @@ def _select_simplified_expression(
         )
         return None, state
     if state == "non_applicable":
+        if row.get("effective_expression") is not None or row.get("expression_resolution") is not None:
+            _raise(f"{logical_id} non_applicable 时 effective_expression/expression_resolution 必须为 null")
         _validate_non_applicable(
             row,
             logical_id=logical_id,
@@ -872,7 +938,12 @@ def _select_simplified_expression(
         return None, state
     if state != "frozen":
         _raise(f"{logical_id} state 必须是 frozen/non_applicable/exhausted")
-    return _validate_simplify_structured_output(row, logical_id=logical_id, allow_missing=allow_missing)
+    return _validate_simplify_structured_output(
+        row,
+        logical_id=logical_id,
+        plan_request=plan_request,
+        allow_missing=allow_missing,
+    )
 
 
 def _load_pred_simplify_identity_map(
@@ -921,6 +992,7 @@ def _load_pred_simplify_identity_map(
             "dataset_index": dataset_index,
             "seed": seed,
             "numeric_logical_key": _logical_key(algorithm, dataset_id, seed),
+            "plan_request": dict(request),
         }
         pred_count += 1
     if pred_count != expected_runs:
@@ -935,6 +1007,7 @@ def _load_pred_simplify_identity_map(
 def _build_gt_index(
     rows: Sequence[Mapping[str, Any]],
     *,
+    gt_plan_requests_by_logical_id: Mapping[str, Mapping[str, Any]],
     expected_datasets: int,
 ) -> dict[str, dict[str, Any]]:
     gt_map: dict[str, dict[str, Any]] = {}
@@ -943,7 +1016,21 @@ def _build_gt_index(
         dataset_id = _parse_gt_logical_id(logical_id)
         if row.get("condition") != NOISE_TAG:
             _raise(f"{logical_id} condition 不是 clean")
-        expression, state = _select_simplified_expression(row, logical_id=logical_id, allow_missing=False)
+        plan_request = gt_plan_requests_by_logical_id.get(logical_id)
+        if plan_request is None:
+            _raise(f"{logical_id} 缺少 GT plan request 绑定")
+        plan_dataset_id = _string(
+            plan_request.get("dataset_id"),
+            context=f"{logical_id}.plan_request.dataset_id",
+        )
+        if plan_dataset_id != dataset_id:
+            _raise(f"{logical_id}.plan_request.dataset_id 与 logical_id 不一致")
+        expression, state = _select_simplified_expression(
+            row,
+            logical_id=logical_id,
+            plan_request=plan_request,
+            allow_missing=False,
+        )
         assert expression is not None
         try:
             artifact = build_symbolic_artifact(expression)
@@ -987,7 +1074,12 @@ def _build_pred_index(
             seed=seed,
             logical_id=logical_id,
         )
-        expression, state = _select_simplified_expression(row, logical_id=logical_id, allow_missing=True)
+        expression, state = _select_simplified_expression(
+            row,
+            logical_id=logical_id,
+            plan_request=identity["plan_request"],
+            allow_missing=True,
+        )
         artifact = None
         if expression is not None:
             try:
@@ -1680,6 +1772,7 @@ def aggregate_clean_metrics(
     )
     gt_rows = _build_gt_index(
         gt_index_rows,
+        gt_plan_requests_by_logical_id=gt_info["plan_requests_by_logical_id"],
         expected_datasets=expected_datasets,
     )
     pred_index_rows, pred_info = _load_frozen_index_rows(

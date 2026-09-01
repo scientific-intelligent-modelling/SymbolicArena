@@ -36,11 +36,14 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_evidence 
     variable_f1,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import (
+    LLM_SIMPLIFIED_EXPRESSION,
+    ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
     build_frozen_result_index,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskStateStore
 from AAAI_experiments.stage5_metric_calculation_0831.tests.test_frozen_result_index import (
     _build_plan_row,
+    _freeze_task,
     _exhaust_task,
     _write_plan_jsonl,
 )
@@ -134,6 +137,8 @@ def _pred_plan_row(seed: int) -> dict[str, object]:
             "dataset_index": "g0001",
             "noise_tag": "clean",
             "seed": seed,
+            "expression": "x0 + x1",
+            "original_expression": "x0 + x1 + 0",
         },
     }
 
@@ -144,8 +149,8 @@ def _evidence_row(
     pred_logical_id: str,
     pred_expression: str,
     gt_logical_id: str = "gt_simplify::demo_ds",
+    gt_expression: str = "x0 + x1",
 ) -> dict[str, object]:
-    gt_expression = "x0 + x1"
     gt_artifact = build_symbolic_artifact(gt_expression)
     pred_artifact = build_symbolic_artifact(pred_expression)
     return {
@@ -292,6 +297,8 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 "simplified_expression": "x0 + x1",
                 "equivalence_assessment": "preserved",
             },
+            "effective_expression": "x0 + x1",
+            "expression_resolution": LLM_SIMPLIFIED_EXPRESSION,
             "non_applicable": None,
         }
     ]
@@ -310,6 +317,8 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 "simplified_expression": "x0 + x1",
                 "equivalence_assessment": "preserved",
             },
+            "effective_expression": "x0 + x1",
+            "expression_resolution": LLM_SIMPLIFIED_EXPRESSION,
             "non_applicable": None,
         },
         {
@@ -324,6 +333,8 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 "simplified_expression": "x0 + x1 + x2",
                 "equivalence_assessment": "preserved",
             },
+            "effective_expression": "x0 + x1 + x2",
+            "expression_resolution": LLM_SIMPLIFIED_EXPRESSION,
             "non_applicable": None,
         },
         {
@@ -334,6 +345,8 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
             "state": "non_applicable",
             "result_sha256": None,
             "structured_output": None,
+            "effective_expression": None,
+            "expression_resolution": None,
             "non_applicable": {
                 "reason": "missing_final_expression",
                 "evidence_path": "audit/non_applicable_pred.json",
@@ -468,15 +481,31 @@ def _patch_fixture_contract(
             for line in paths["structure_index_jsonl"].read_text(encoding="utf-8").splitlines()
         ],
     }
-    state_counts = {
-        "gt_simplify": {"frozen": 1, "non_applicable": 0},
-        "pred_simplify": {"frozen": 2, "non_applicable": 1},
-        "equivalence": {"frozen": 2, "non_applicable": 1},
-        "stab_structure": {"frozen": 1, "non_applicable": 2},
-    }
+    state_counts: dict[str, dict[str, int]] = {}
+    for task_type, rows in rows_by_type.items():
+        counts = {"frozen": 0, "non_applicable": 0}
+        for row in rows:
+            counts[str(row["state"])] += 1
+        state_counts[task_type] = counts
 
     def fake_load_frozen_index_rows(*, expected_task_type: str, **_: object):
         rows = rows_by_type[expected_task_type]
+        plan_requests_by_logical_id: dict[str, dict[str, object]] = {}
+        for row in rows_by_type["gt_simplify"]:
+            logical_id = str(row["logical_id"])
+            plan_requests_by_logical_id[logical_id] = {
+                "dataset_id": "demo_ds",
+                "expression": "x0 + x1",
+                "original_expression": "x0 + x1 + 0",
+            }
+        for seed in (520, 521, 522):
+            plan_requests_by_logical_id[f"pred_simplify::algoa::g0001::s{seed}::clean"] = {
+                "dataset_id": "demo_ds",
+                "dataset_index": "g0001",
+                "seed": seed,
+                "expression": "x0 + x1",
+                "original_expression": "x0 + x1 + 0",
+            }
         info = {
             "index_jsonl": {
                 "path": str(tmp_path / f"{expected_task_type}.index.jsonl"),
@@ -494,6 +523,7 @@ def _patch_fixture_contract(
                 "sha256": _fake_sha(f"{expected_task_type}-plan"),
                 "row_count": len(rows),
             },
+            "plan_requests_by_logical_id": plan_requests_by_logical_id,
         }
         return rows, info
 
@@ -679,6 +709,211 @@ def test_aggregate_clean_metrics_accepts_gt_v2_logical_id(
     assert {row["gt_logical_id"] for row in run_rows} == {"gt_simplify::demo_ds::v2"}
 
 
+def test_aggregate_clean_metrics_accepts_gt_unable_with_original_identity_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    gt_rows = [json.loads(line) for line in paths["gt_index_jsonl"].read_text(encoding="utf-8").splitlines()]
+    gt_rows[0] = {
+        **gt_rows[0],
+        "logical_id": "gt_simplify::demo_ds::v2",
+        "structured_output": {
+            "outcome": "unable",
+            "simplified_expression": None,
+            "equivalence_assessment": "undetermined",
+        },
+        "effective_expression": "x0 + x1 + 0",
+        "expression_resolution": ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+    }
+    _write_jsonl(paths["gt_index_jsonl"], gt_rows)
+
+    evidence_rows = [
+        _evidence_row(
+            logical_key="AlgoA::demo_ds::s520::clean",
+            pred_logical_id="pred_simplify::algoa::g0001::s520::clean",
+            pred_expression="x0 + x1",
+            gt_logical_id="gt_simplify::demo_ds::v2",
+            gt_expression="x0 + x1 + 0",
+        ),
+        _evidence_row(
+            logical_key="AlgoA::demo_ds::s521::clean",
+            pred_logical_id="pred_simplify::algoa::g0001::s521::clean",
+            pred_expression="x0 + x1 + x2",
+            gt_logical_id="gt_simplify::demo_ds::v2",
+            gt_expression="x0 + x1 + 0",
+        ),
+    ]
+    _write_jsonl(paths["evidence_jsonl"], evidence_rows)
+
+    def _fake_load_frozen_index_rows(*, expected_task_type: str, **_: object):
+        rows_by_type = {
+            "gt_simplify": [
+                json.loads(line) for line in paths["gt_index_jsonl"].read_text(encoding="utf-8").splitlines()
+            ],
+            "pred_simplify": [
+                json.loads(line) for line in paths["pred_index_jsonl"].read_text(encoding="utf-8").splitlines()
+            ],
+            "equivalence": [
+                json.loads(line)
+                for line in paths["equivalence_index_jsonl"].read_text(encoding="utf-8").splitlines()
+            ],
+            "stab_structure": [
+                json.loads(line) for line in paths["structure_index_jsonl"].read_text(encoding="utf-8").splitlines()
+            ],
+        }
+        rows = rows_by_type[expected_task_type]
+        counts = {"frozen": 0, "non_applicable": 0}
+        for row in rows:
+            counts[str(row["state"])] += 1
+        return rows, {
+            "index_jsonl": {
+                "path": str(tmp_path / f"{expected_task_type}.index.jsonl"),
+                "sha256": _fake_sha(f"{expected_task_type}-index"),
+                "row_count": len(rows),
+            },
+            "summary_json": {
+                "path": str(tmp_path / f"{expected_task_type}.summary.json"),
+                "sha256": _fake_sha(f"{expected_task_type}-summary"),
+                "status": "ok",
+                "state_counts": counts,
+            },
+            "plan_jsonl": {
+                "path": str(tmp_path / f"{expected_task_type}.plan.jsonl"),
+                "sha256": _fake_sha(f"{expected_task_type}-plan"),
+                "row_count": len(rows),
+            },
+            "plan_requests_by_logical_id": {
+                "gt_simplify::demo_ds::v2": {
+                    "dataset_id": "demo_ds",
+                    "expression": "x0 + x1",
+                    "original_expression": "x0 + x1 + 0",
+                }
+            },
+        }
+
+    monkeypatch.setattr(
+        aggregate_module,
+        "_validate_clean_numeric_preparation_report",
+        lambda *args, **kwargs: {
+            "path": str(tmp_path / "numeric_preparation.json"),
+            "sha256": _fake_sha("numeric-preparation"),
+            "row_count": 3,
+        },
+    )
+    monkeypatch.setattr(
+        aggregate_module,
+        "_validate_eff_preparation_report",
+        lambda *args, **kwargs: {
+            "path": str(paths["eff_preparation_report_json"]),
+            "sha256": _fake_sha("eff-preparation"),
+            "row_count": 3,
+        },
+    )
+    monkeypatch.setattr(aggregate_module, "_load_frozen_index_rows", _fake_load_frozen_index_rows)
+
+    kwargs = _aggregate_kwargs(paths, tmp_path)
+    aggregate_clean_metrics(**kwargs)
+
+    with Path(kwargs["clean_run_csv"]).open("r", encoding="utf-8", newline="") as handle:
+        run_rows = list(csv.DictReader(handle))
+    assert {row["gt_logical_id"] for row in run_rows} == {"gt_simplify::demo_ds::v2"}
+    assert {int(row["reference_complexity"]) for row in run_rows} == {3}
+
+
+def test_aggregate_clean_metrics_rejects_tampered_gt_unable_identity_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    gt_rows = [json.loads(line) for line in paths["gt_index_jsonl"].read_text(encoding="utf-8").splitlines()]
+    gt_rows[0] = {
+        **gt_rows[0],
+        "structured_output": {
+            "outcome": "unable",
+            "simplified_expression": None,
+            "equivalence_assessment": "undetermined",
+        },
+        "effective_expression": "x0 + x1",
+        "expression_resolution": ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+    }
+    _write_jsonl(paths["gt_index_jsonl"], gt_rows)
+    _patch_fixture_contract(monkeypatch, paths, tmp_path)
+
+    with pytest.raises(AggregateCleanMetricsError, match="effective_expression"):
+        aggregate_clean_metrics(**_aggregate_kwargs(paths, tmp_path))
+
+
+def test_aggregate_clean_metrics_treats_unable_as_original_identity_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    pred_rows = [json.loads(line) for line in paths["pred_index_jsonl"].read_text(encoding="utf-8").splitlines()]
+    pred_rows[2] = {
+        **pred_rows[2],
+        "state": "frozen",
+        "result_sha256": _fake_sha("pred-522"),
+        "structured_output": {
+            "outcome": "unable",
+            "simplified_expression": None,
+            "equivalence_assessment": "undetermined",
+        },
+        "effective_expression": "x0 + x1 + 0",
+        "expression_resolution": ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+        "non_applicable": None,
+    }
+    _write_jsonl(paths["pred_index_jsonl"], pred_rows)
+
+    equivalence_rows = [
+        json.loads(line) for line in paths["equivalence_index_jsonl"].read_text(encoding="utf-8").splitlines()
+    ]
+    equivalence_rows[2] = {
+        **equivalence_rows[2],
+        "state": "frozen",
+        "result_sha256": _fake_sha("eq-522"),
+        "structured_output": {
+            "decision": "equivalent",
+            "evidence_basis": "mixed",
+        },
+        "non_applicable": None,
+    }
+    _write_jsonl(paths["equivalence_index_jsonl"], equivalence_rows)
+
+    evidence_rows = [
+        _evidence_row(
+            logical_key="AlgoA::demo_ds::s520::clean",
+            pred_logical_id="pred_simplify::algoa::g0001::s520::clean",
+            pred_expression="x0 + x1",
+        ),
+        _evidence_row(
+            logical_key="AlgoA::demo_ds::s521::clean",
+            pred_logical_id="pred_simplify::algoa::g0001::s521::clean",
+            pred_expression="x0 + x1 + x2",
+        ),
+        _evidence_row(
+            logical_key="AlgoA::demo_ds::s522::clean",
+            pred_logical_id="pred_simplify::algoa::g0001::s522::clean",
+            pred_expression="x0 + x1 + 0",
+        ),
+    ]
+    _write_jsonl(paths["evidence_jsonl"], evidence_rows)
+    _patch_fixture_contract(monkeypatch, paths, tmp_path)
+
+    kwargs = _aggregate_kwargs(paths, tmp_path)
+    aggregate_clean_metrics(**kwargs)
+
+    with Path(kwargs["clean_run_csv"]).open("r", encoding="utf-8", newline="") as handle:
+        run_rows = list(csv.DictReader(handle))
+    run_522 = next(row for row in run_rows if row["seed"] == "522")
+    assert run_522["pred_state"] == "frozen"
+    assert run_522["equivalence_state"] == "frozen"
+    assert run_522["equivalence_decision"] == "equivalent"
+    assert int(run_522["predicted_complexity"]) > 0
+    assert float(run_522["m_sym"]) == pytest.approx(1.0)
+    assert float(run_522["m_min"]) > 0.0
+
+
 def test_aggregate_clean_metrics_hard_fails_when_valid_run_lacks_deterministic_evidence(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -817,6 +1052,74 @@ def test_load_frozen_index_rows_accepts_pred_exhausted_and_revalidates_attempts(
     assert info["summary_json"]["state_counts"]["exhausted"] == 1
 
 
+def test_load_frozen_index_rows_rejects_tampered_unable_identity_fallback(
+    tmp_path: Path,
+) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0001::s520::clean",
+        task_type="pred_simplify",
+        request={
+            "dataset_id": "demo_ds",
+            "dataset_index": "g0001",
+            "algorithm": "AlgoA",
+            "algorithm_slug": "fixture",
+            "seed": 520,
+            "noise_tag": "clean",
+            "task_id": "fixture_s520_clean_g0001",
+            "expression": "x0 + x1",
+            "original_expression": "x0 + x1 + 0",
+            "evidence_hash": _fake_sha("unable-plan"),
+        },
+    )
+    plan_path = tmp_path / "pred_plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    result_path = tmp_path / "frozen" / "unable.json"
+    _freeze_task(
+        store,
+        row,
+        result_path,
+        structured_output={
+            "outcome": "unable",
+            "simplified_expression": None,
+            "equivalence_assessment": "undetermined",
+            "assumptions": [],
+            "confidence": 0.2,
+            "brief_reason": "fixture unable",
+        },
+    )
+
+    output_jsonl = tmp_path / "pred_frozen_index.jsonl"
+    summary_json = tmp_path / "pred_frozen_index.summary.json"
+    build_frozen_result_index(
+        plan_jsonl=plan_path,
+        state_db=state_db,
+        output_jsonl=output_jsonl,
+        summary_json=summary_json,
+    )
+
+    output_row = json.loads(output_jsonl.read_text(encoding="utf-8").splitlines()[0])
+    output_row["effective_expression"] = "x0 + x1"
+    _write_jsonl(output_jsonl, [output_row])
+    summary_payload = json.loads(summary_json.read_text(encoding="utf-8"))
+    summary_payload["output_sha256"] = hashlib.sha256(output_jsonl.read_bytes()).hexdigest()
+    summary_json.write_text(
+        json.dumps(summary_payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AggregateCleanMetricsError, match="effective_expression"):
+        _load_frozen_index_rows(
+            index_path=output_jsonl,
+            summary_path=summary_json,
+            plan_path=plan_path,
+            expected_task_type="pred_simplify",
+            label="pred_frozen_index",
+        )
+
+
 def test_load_frozen_index_rows_rejects_tampered_exhausted_attempt_artifact(
     tmp_path: Path,
 ) -> None:
@@ -876,6 +1179,13 @@ def test_aggregate_clean_metrics_rejects_exhausted_clean_judge_tasks(
         "index_jsonl": {"path": str(tmp_path / "dummy.jsonl"), "sha256": _fake_sha("idx"), "row_count": 1},
         "summary_json": {"path": str(tmp_path / "dummy.summary.json"), "sha256": _fake_sha("sum"), "status": "ok", "state_counts": {"frozen": 1, "non_applicable": 0}},
         "plan_jsonl": {"path": str(tmp_path / "dummy.plan.jsonl"), "sha256": _fake_sha("plan"), "row_count": 1},
+        "plan_requests_by_logical_id": {
+            "gt_simplify::demo_ds": {
+                "dataset_id": "demo_ds",
+                "expression": "x0 + x1",
+                "original_expression": "x0 + x1 + 0",
+            }
+        },
     }
 
     gt_rows = [
@@ -889,6 +1199,8 @@ def test_aggregate_clean_metrics_rejects_exhausted_clean_judge_tasks(
                 "simplified_expression": "x0 + x1",
                 "equivalence_assessment": "preserved",
             },
+            "effective_expression": "x0 + x1",
+            "expression_resolution": LLM_SIMPLIFIED_EXPRESSION,
             "non_applicable": None,
         }
     ]
@@ -903,6 +1215,8 @@ def test_aggregate_clean_metrics_rejects_exhausted_clean_judge_tasks(
                 "simplified_expression": "x0 + x1",
                 "equivalence_assessment": "preserved",
             },
+            "effective_expression": "x0 + x1",
+            "expression_resolution": LLM_SIMPLIFIED_EXPRESSION,
             "non_applicable": None,
         },
         {
@@ -915,6 +1229,8 @@ def test_aggregate_clean_metrics_rejects_exhausted_clean_judge_tasks(
                 "simplified_expression": "x0 + x1 + x2",
                 "equivalence_assessment": "preserved",
             },
+            "effective_expression": "x0 + x1 + x2",
+            "expression_resolution": LLM_SIMPLIFIED_EXPRESSION,
             "non_applicable": None,
         },
         {
@@ -923,6 +1239,8 @@ def test_aggregate_clean_metrics_rejects_exhausted_clean_judge_tasks(
             "condition": "clean",
             "state": "exhausted",
             "structured_output": None,
+            "effective_expression": None,
+            "expression_resolution": None,
             "non_applicable": None,
             "exhausted": {
                 "attempt_count": 3,
