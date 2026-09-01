@@ -21,6 +21,8 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     canonical_json,
     render_prompt,
     validate_claude_envelope,
+    validate_claude_execution_metadata,
+    validate_claude_model_metadata,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import (
     StateContractError,
@@ -61,6 +63,8 @@ _CIRCUIT_BREAK_PATTERNS = (
     "command contract",
     "task definition",
     "frozen result",
+    "外层输出",
+    "未正常完成",
 )
 _CLI_UNKNOWN_OPTION_PATTERN = re.compile(
     r"""
@@ -407,27 +411,17 @@ def _validate_simplify_semantics(
 
 
 def _enforce_runtime_envelope_contract(envelope: Mapping[str, object]) -> None:
+    validate_claude_execution_metadata(envelope)
     usage = envelope.get("usage")
-    if not isinstance(usage, Mapping):
-        raise ContractViolation("usage 元数据缺失或无效")
-
+    assert isinstance(usage, Mapping)
     server_tool_use = usage.get("server_tool_use")
-    if not isinstance(server_tool_use, Mapping):
-        raise ContractViolation("server_tool_use 元数据缺失或无效")
-    try:
-        used_server_tool = any(int(value or 0) != 0 for value in server_tool_use.values())
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise ContractViolation("server_tool_use 元数据不是合法整数") from exc
-    if used_server_tool:
-        raise ContractViolation("server_tool_use 非零，出现外部工具调用")
-
+    assert isinstance(server_tool_use, Mapping)
     model_usage = envelope.get("modelUsage")
     if not isinstance(model_usage, Mapping):
         raise ContractViolation("modelUsage 元数据缺失或无效")
     if _is_strict_empty_response(envelope, usage, server_tool_use, model_usage):
         raise EmptyClaudeResponse("Claude 返回全零空响应")
-    if set(model_usage) != {CONTRACT_MODEL}:
-        raise ContractViolation(f"Claude 模型契约不符: {list(model_usage)!r}")
+    validate_claude_model_metadata(envelope)
 
     stop_reason = envelope.get("stop_reason")
     num_turns = envelope.get("num_turns")

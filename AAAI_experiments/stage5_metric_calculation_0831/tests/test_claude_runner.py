@@ -986,9 +986,18 @@ def test_repeated_turn_contract_violation_stops_at_task_attempt_cap(tmp_path: Pa
     [
         (lambda envelope: envelope["usage"]["server_tool_use"].__setitem__("web_search_requests", 1), "server-tool"),
         (lambda envelope: envelope.__setitem__("modelUsage", {"claude-sonnet": {"canonicalModel": "claude-sonnet"}}), "model"),
+        (
+            lambda envelope: envelope["modelUsage"][CONTRACT_MODEL].__setitem__(
+                "canonicalModel", "claude-sonnet"
+            ),
+            "canonical-model",
+        ),
+        (lambda envelope: envelope.__setitem__("permission_denials", ["tool"]), "permission"),
+        (lambda envelope: envelope["subagent_stats"].__setitem__("spawned", 1), "subagent"),
+        (lambda envelope: envelope.__setitem__("terminal_reason", "error"), "terminal-status"),
     ],
 )
-def test_server_tool_or_model_drift_takes_precedence_over_turn_contract_violation(
+def test_non_turn_contract_drift_takes_precedence_over_turn_contract_violation(
     tmp_path: Path,
     mutator: object,
     label: str,

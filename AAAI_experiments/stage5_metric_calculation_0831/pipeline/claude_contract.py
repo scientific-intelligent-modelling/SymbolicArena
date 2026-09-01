@@ -473,13 +473,8 @@ def validate_structured_output(
     return dict(output)
 
 
-def validate_claude_envelope(
-    envelope: Mapping[str, object],
-    *,
-    task_kind: str,
-    schema: Mapping[str, object] | None = None,
-) -> dict[str, object]:
-    """校验单轮纯 JSON envelope、模型、零工具和本地输出 schema。"""
+def validate_claude_execution_metadata(envelope: Mapping[str, object]) -> None:
+    """校验与 turn 数无关的成功状态、权限和零工具元数据。"""
 
     if not isinstance(envelope, Mapping):
         raise ContractViolation("Claude 外层输出不是 JSON object")
@@ -487,25 +482,6 @@ def validate_claude_envelope(
         raise ContractViolation("Claude 外层输出不是成功 result")
     if envelope.get("is_error") is not False or envelope.get("terminal_reason") != "completed":
         raise ContractViolation("Claude 调用未正常完成")
-    turns = envelope.get("num_turns")
-    if turns != 1:
-        raise ContractViolation(f"单轮调用出现异常 num_turns={turns!r}")
-    stop_reason = envelope.get("stop_reason")
-    if stop_reason != "end_turn":
-        raise ContractViolation(
-            f"单轮 stop_reason 不匹配: {stop_reason!r}，期望 'end_turn'"
-        )
-
-    model_usage = envelope.get("modelUsage")
-    if not isinstance(model_usage, Mapping) or set(model_usage) != {CONTRACT_MODEL}:
-        raise ContractViolation(f"Claude 模型契约不符: {list(model_usage or {})!r}")
-    model_record = model_usage[CONTRACT_MODEL]
-    if not isinstance(model_record, Mapping):
-        raise ContractViolation("Claude modelUsage 记录无效")
-    if model_record.get("canonicalModel") != CONTRACT_CANONICAL_MODEL:
-        raise ContractViolation(
-            f"Claude 实际模型不符: {model_record.get('canonicalModel')!r}"
-        )
 
     permission_denials = envelope.get("permission_denials")
     if permission_denials != []:
@@ -525,6 +501,41 @@ def validate_claude_envelope(
         raise ContractViolation("Claude 响应缺少可审计的 subagent_stats")
     if int(subagents.get("spawned") or 0) != 0:
         raise ContractViolation("Claude 使用了被禁止的 subagent 工具")
+
+
+def validate_claude_model_metadata(envelope: Mapping[str, object]) -> None:
+    """校验请求模型键及服务端返回的 canonical model。"""
+
+    model_usage = envelope.get("modelUsage")
+    if not isinstance(model_usage, Mapping) or set(model_usage) != {CONTRACT_MODEL}:
+        raise ContractViolation(f"Claude 模型契约不符: {list(model_usage or {})!r}")
+    model_record = model_usage[CONTRACT_MODEL]
+    if not isinstance(model_record, Mapping):
+        raise ContractViolation("Claude modelUsage 记录无效")
+    if model_record.get("canonicalModel") != CONTRACT_CANONICAL_MODEL:
+        raise ContractViolation(
+            f"Claude 实际模型不符: {model_record.get('canonicalModel')!r}"
+        )
+
+
+def validate_claude_envelope(
+    envelope: Mapping[str, object],
+    *,
+    task_kind: str,
+    schema: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    """校验单轮纯 JSON envelope、模型、零工具和本地输出 schema。"""
+
+    validate_claude_execution_metadata(envelope)
+    validate_claude_model_metadata(envelope)
+    turns = envelope.get("num_turns")
+    if turns != 1:
+        raise ContractViolation(f"单轮调用出现异常 num_turns={turns!r}")
+    stop_reason = envelope.get("stop_reason")
+    if stop_reason != "end_turn":
+        raise ContractViolation(
+            f"单轮 stop_reason 不匹配: {stop_reason!r}，期望 'end_turn'"
+        )
 
     result_text = envelope.get("result")
     if not isinstance(result_text, str) or not result_text.strip():
