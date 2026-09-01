@@ -25,6 +25,10 @@ class ContractViolation(ValueError):
     """Claude 请求或响应违反冻结契约。"""
 
 
+class StructuredOutputViolation(ContractViolation):
+    """单条模型结构化输出无效，但不代表全局调用契约漂移。"""
+
+
 def canonical_json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
@@ -372,9 +376,9 @@ def _parse_single_json_result(result_text: str) -> Mapping[str, object]:
     try:
         structured = json.loads(candidate)
     except json.JSONDecodeError as exc:
-        raise ContractViolation(f"Claude result 不是合法 JSON: {exc}") from exc
+        raise StructuredOutputViolation(f"Claude result 不是合法 JSON: {exc}") from exc
     if not isinstance(structured, Mapping):
-        raise ContractViolation("Claude result 必须是 JSON object")
+        raise StructuredOutputViolation("Claude result 必须是 JSON object")
     return structured
 
 
@@ -548,5 +552,12 @@ def validate_claude_envelope(
         except SchemaError as exc:
             raise ContractViolation(f"输出 schema 不是合法 Draft-07: {exc.message}") from exc
         except ValidationError as exc:
-            raise ContractViolation(f"Claude result 未通过 Draft-07 schema: {exc.message}") from exc
-    return validate_structured_output(task_kind, structured)
+            raise StructuredOutputViolation(
+                f"Claude result 未通过 Draft-07 schema: {exc.message}"
+            ) from exc
+    try:
+        return validate_structured_output(task_kind, structured)
+    except StructuredOutputViolation:
+        raise
+    except ContractViolation as exc:
+        raise StructuredOutputViolation(str(exc)) from exc

@@ -20,6 +20,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     CONTRACT_MODEL,
     CONTRACT_TRANSPORT_VERSION,
     ContractViolation,
+    StructuredOutputViolation,
     build_claude_command,
     canonical_json,
     render_prompt,
@@ -717,6 +718,16 @@ class ClaudeRunner:
                         }
                     except TurnContractViolation as exc:
                         error_class = "turn_contract_violation"
+                        retryable = True
+                        circuit_break = False
+                        validation = {
+                            "ok": False,
+                            "error_class": error_class,
+                            "error_message": str(exc),
+                            "structured_output": None,
+                        }
+                    except StructuredOutputViolation as exc:
+                        error_class = "validation_failed"
                         retryable = True
                         circuit_break = False
                         validation = {

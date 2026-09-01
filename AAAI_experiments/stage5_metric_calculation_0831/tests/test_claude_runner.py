@@ -924,6 +924,60 @@ def test_cli_rejected_schema_triggers_immediate_circuit_breaker(tmp_path: Path) 
     assert len(fake_run.calls) == 1
 
 
+def test_structured_output_schema_violation_retries_without_global_breaker(
+    tmp_path: Path,
+) -> None:
+    definition = _task_definition(tmp_path, "ek-result-schema-invalid")
+    schema = json.loads(json.dumps(definition.schema, ensure_ascii=False))
+    schema["properties"]["brief_reason"]["maxLength"] = 1000
+    definition.schema_path.write_text(
+        json.dumps(schema, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    definition = replace(
+        definition,
+        schema=schema,
+        schema_sha256=_sha256_text(definition.schema_path.read_text(encoding="utf-8")),
+    )
+    invalid = _valid_envelope()
+    invalid_result = json.loads(str(invalid["result"]))
+    invalid_result["brief_reason"] = "模型输出解释" * 201
+    invalid["result"] = json.dumps(invalid_result, ensure_ascii=False)
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(invalid, ensure_ascii=False),
+                stderr="",
+            ),
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_valid_envelope(), ensure_ascii=False),
+                stderr="",
+            ),
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "frozen"
+    assert store.attempts_reserved() == 2
+    first_attempt = json.loads(
+        (
+            tmp_path
+            / "llm"
+            / "attempts"
+            / f"{definition.task_spec.evaluation_key}.a01.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert first_attempt["validation"]["error_class"] == "validation_failed"
+    assert first_attempt["metadata"]["retryable"] is True
+    assert len(fake_run.calls) == 2
+
+
 @pytest.mark.parametrize(
     ("stderr", "expected"),
     [
