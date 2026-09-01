@@ -114,7 +114,7 @@ def _terminate_process_group(process: subprocess.Popen[str]) -> None:
         pass
 
 
-def _run_semantic_validator(
+def run_isolated_simplify_semantic_validator(
     *,
     evaluation_key: str,
     request: Mapping[str, object],
@@ -310,7 +310,7 @@ def _audit_attempt(
             "status": "identity_error",
             "error": "validation.structured_output 与 envelope 不一致",
         }
-    semantic = _run_semantic_validator(
+    semantic = run_isolated_simplify_semantic_validator(
         evaluation_key=entry.evaluation_key,
         request=definition.request,
         structured_output=structured_output,

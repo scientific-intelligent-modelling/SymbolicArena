@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications import (
-    _run_semantic_validator,
+    run_isolated_simplify_semantic_validator,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     CONTRACT_EFFORT,
@@ -233,7 +233,7 @@ def _strictly_revalidate_attempt(
     if stored_structured is not None and stored_structured != structured_output:
         raise PromotionError("validation.structured_output 与 envelope 不一致")
 
-    semantic = _run_semantic_validator(
+    semantic = run_isolated_simplify_semantic_validator(
         evaluation_key=entry.evaluation_key,
         request=definition.request,
         structured_output=structured_output,
