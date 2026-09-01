@@ -358,6 +358,7 @@ def _validate_state_counts(
     value: object,
     *,
     context: str,
+    allow_exhausted: bool = False,
 ) -> dict[str, int]:
     if not isinstance(value, Mapping):
         _raise(f"{context} 缺失")
@@ -366,10 +367,18 @@ def _validate_state_counts(
         value.get("non_applicable"),
         context=f"{context}.non_applicable",
     )
-    extras = sorted(set(value) - {"frozen", "non_applicable"})
+    state_counts = {"frozen": frozen, "non_applicable": non_applicable}
+    allowed_fields = {"frozen", "non_applicable"}
+    if allow_exhausted:
+        state_counts["exhausted"] = _parse_int(
+            value.get("exhausted"),
+            context=f"{context}.exhausted",
+        )
+        allowed_fields.add("exhausted")
+    extras = sorted(set(value) - allowed_fields)
     if extras:
         _raise(f"{context} 存在额外状态字段: {extras}")
-    return {"frozen": frozen, "non_applicable": non_applicable}
+    return state_counts
 
 
 def _validate_frozen_summary(
@@ -378,6 +387,7 @@ def _validate_frozen_summary(
     index_path: Path,
     plan: Any,
     label: str,
+    allow_exhausted: bool = False,
 ) -> dict[str, Any]:
     payload = _read_json_object(summary_path, context=f"{label} summary")
     status = _string(payload.get("status"), context=f"{label}.summary.status")
@@ -411,6 +421,7 @@ def _validate_frozen_summary(
     state_counts = _validate_state_counts(
         payload.get("state_counts"),
         context=f"{label}.summary.state_counts",
+        allow_exhausted=allow_exhausted,
     )
     return {
         "summary_path": str(summary_path.resolve()),
@@ -506,6 +517,167 @@ def _validate_non_applicable_evidence_payload(
         _raise(f"{label} evidence_sha256 与 plan.request.evidence_hash 不一致: {logical_id}")
 
 
+def _validate_exhausted_attempt_payload(
+    payload: Mapping[str, Any],
+    *,
+    logical_id: str,
+    evaluation_key: str,
+    task_type: str,
+    attempt_id: str,
+    attempt_number: int,
+    error_class: str,
+    retryable: bool,
+    label: str,
+) -> None:
+    expected_attempt_id = f"{evaluation_key}.a{attempt_number:02d}"
+    if attempt_id != expected_attempt_id:
+        _raise(f"{label} exhausted.attempt_id 不符合规范命名: {logical_id}")
+    if payload.get("attempt_id") != attempt_id:
+        _raise(f"{label} exhausted.attempt_json.attempt_id 与 index 不一致: {logical_id}")
+    if payload.get("evaluation_key") != evaluation_key:
+        _raise(f"{label} exhausted.attempt_json.evaluation_key 与 index 不一致: {logical_id}")
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, Mapping):
+        _raise(f"{label} exhausted.attempt_json.metadata 缺失: {logical_id}")
+    expected_pairs = {
+        "attempt_id": attempt_id,
+        "attempt_number": attempt_number,
+        "evaluation_key": evaluation_key,
+        "logical_id": logical_id,
+        "task_type": task_type,
+        "error_class": error_class,
+    }
+    for field_name, expected_value in expected_pairs.items():
+        if metadata.get(field_name) != expected_value:
+            _raise(f"{label} exhausted.attempt_json.metadata.{field_name} 漂移: {logical_id}")
+    if _parse_bool(
+        metadata.get("retryable"),
+        context=f"{label}.{logical_id}.exhausted.metadata.retryable",
+    ) is not retryable:
+        _raise(f"{label} exhausted.attempt_json.metadata.retryable 漂移: {logical_id}")
+    validation = payload.get("validation")
+    if not isinstance(validation, Mapping):
+        _raise(f"{label} exhausted.attempt_json.validation 缺失: {logical_id}")
+    if _parse_bool(
+        validation.get("ok"),
+        context=f"{label}.{logical_id}.exhausted.validation.ok",
+    ):
+        _raise(f"{label} exhausted.attempt_json.validation.ok 必须为 false: {logical_id}")
+    validation_error_class = _string(
+        validation.get("error_class"),
+        context=f"{label}.{logical_id}.exhausted.validation.error_class",
+    )
+    if validation_error_class != error_class:
+        _raise(f"{label} exhausted.attempt_json.validation.error_class 漂移: {logical_id}")
+
+
+def _validate_exhausted_payload(
+    row: Mapping[str, Any],
+    *,
+    logical_id: str,
+    evaluation_key: str,
+    task_type: str,
+    label: str,
+) -> dict[str, Any]:
+    if row.get("attempt_id") is not None:
+        _raise(f"{label} {logical_id} exhausted 时 attempt_id 必须为 null")
+    if row.get("structured_output") is not None:
+        _raise(f"{label} {logical_id} exhausted 时 structured_output 必须为 null")
+    if row.get("non_applicable") is not None:
+        _raise(f"{label} {logical_id} exhausted 时 non_applicable 必须为 null")
+    if row.get("result_path") is not None or row.get("result_sha256") is not None:
+        _raise(f"{label} {logical_id} exhausted 时 result 绑定必须为 null")
+    exhausted = row.get("exhausted")
+    if not isinstance(exhausted, Mapping):
+        _raise(f"{label} {logical_id}.exhausted 缺失")
+    attempt_count = _parse_int(
+        exhausted.get("attempt_count"),
+        context=f"{label}.{logical_id}.exhausted.attempt_count",
+    )
+    if attempt_count != 3:
+        _raise(f"{label} {logical_id}.exhausted.attempt_count 必须为 3")
+    last_error_class = _string(
+        exhausted.get("last_error_class"),
+        context=f"{label}.{logical_id}.exhausted.last_error_class",
+    )
+    attempts = exhausted.get("attempts")
+    if not isinstance(attempts, list) or len(attempts) != attempt_count:
+        _raise(f"{label} {logical_id}.exhausted.attempts 数量必须等于 attempt_count")
+    validated_attempts: list[dict[str, Any]] = []
+    for expected_number, item in enumerate(attempts, start=1):
+        if not isinstance(item, Mapping):
+            _raise(f"{label} {logical_id}.exhausted.attempts[{expected_number}] 必须是 object")
+        attempt_id = _string(
+            item.get("attempt_id"),
+            context=f"{label}.{logical_id}.exhausted.attempts[{expected_number}].attempt_id",
+        )
+        attempt_number = _parse_int(
+            item.get("attempt_number"),
+            context=f"{label}.{logical_id}.exhausted.attempts[{expected_number}].attempt_number",
+        )
+        if attempt_number != expected_number:
+            _raise(f"{label} {logical_id}.exhausted.attempt_number 序列不连续")
+        status = _string(
+            item.get("status"),
+            context=f"{label}.{logical_id}.exhausted.attempts[{expected_number}].status",
+        )
+        if status != "failed":
+            _raise(f"{label} {logical_id}.exhausted 仅允许 failed attempts")
+        error_class = _string(
+            item.get("error_class"),
+            context=f"{label}.{logical_id}.exhausted.attempts[{expected_number}].error_class",
+        )
+        retryable = _parse_bool(
+            item.get("retryable"),
+            context=f"{label}.{logical_id}.exhausted.attempts[{expected_number}].retryable",
+        )
+        attempt_path = _resolve_report_path(
+            item.get("attempt_path"),
+            context=f"{label}.{logical_id}.exhausted.attempts[{expected_number}].attempt_path",
+        )
+        attempt_sha256 = _sha256_string(
+            item.get("attempt_sha256"),
+            context=f"{label}.{logical_id}.exhausted.attempts[{expected_number}].attempt_sha256",
+        )
+        if not attempt_path.is_file():
+            _raise(f"{label} exhausted attempt 文件不存在: {attempt_path}")
+        if _sha256_file(attempt_path) != attempt_sha256:
+            _raise(f"{label} exhausted.attempt_sha256 与文件不一致: {logical_id}")
+        payload = _read_json_object(
+            attempt_path,
+            context=f"{label} exhausted attempt_json[{expected_number}]",
+        )
+        _validate_exhausted_attempt_payload(
+            payload,
+            logical_id=logical_id,
+            evaluation_key=evaluation_key,
+            task_type=task_type,
+            attempt_id=attempt_id,
+            attempt_number=attempt_number,
+            error_class=error_class,
+            retryable=retryable,
+            label=label,
+        )
+        validated_attempts.append(
+            {
+                "attempt_id": attempt_id,
+                "attempt_number": attempt_number,
+                "status": status,
+                "error_class": error_class,
+                "retryable": retryable,
+                "attempt_path": str(attempt_path),
+                "attempt_sha256": attempt_sha256,
+            }
+        )
+    if validated_attempts[-1]["error_class"] != last_error_class:
+        _raise(f"{label} {logical_id}.exhausted.last_error_class 与最后一次 attempt 不一致")
+    return {
+        "attempt_count": attempt_count,
+        "last_error_class": last_error_class,
+        "attempts": validated_attempts,
+    }
+
+
 def _load_frozen_index_rows(
     *,
     index_path: Path,
@@ -513,6 +685,7 @@ def _load_frozen_index_rows(
     plan_path: Path,
     expected_task_type: str,
     label: str,
+    allow_exhausted: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     plan = _load_plan_with_contract(plan_path, label=f"{label} plan")
     summary_info = _validate_frozen_summary(
@@ -520,6 +693,7 @@ def _load_frozen_index_rows(
         index_path=index_path,
         plan=plan,
         label=label,
+        allow_exhausted=allow_exhausted,
     )
     rows = _iter_jsonl(index_path, label=f"{label} index")
     if len(rows) != summary_info["row_count"]:
@@ -529,6 +703,8 @@ def _load_frozen_index_rows(
     plan_entries_by_logical_id = {entry.logical_id: entry for entry in plan.entries}
     seen_evaluation_keys: set[str] = set()
     state_counts = {"frozen": 0, "non_applicable": 0}
+    if allow_exhausted:
+        state_counts["exhausted"] = 0
     for row in rows:
         logical_id = _string(row.get("logical_id"), context=f"{label}.logical_id")
         plan_entry = plan_entries_by_logical_id.get(logical_id)
@@ -564,6 +740,8 @@ def _load_frozen_index_rows(
         if state == "frozen":
             if row.get("non_applicable") is not None:
                 _raise(f"{label} {logical_id} frozen 时 non_applicable 必须为 null")
+            if row.get("exhausted") is not None:
+                _raise(f"{label} {logical_id} frozen 时 exhausted 必须为 null")
             structured_output = row.get("structured_output")
             if not isinstance(structured_output, Mapping):
                 _raise(f"{label} {logical_id}.structured_output 缺失")
@@ -593,6 +771,8 @@ def _load_frozen_index_rows(
                 _raise(f"{label} {logical_id} non_applicable 时 structured_output 必须为 null")
             if row.get("result_path") is not None or row.get("result_sha256") is not None:
                 _raise(f"{label} {logical_id} non_applicable 时 result 绑定必须为 null")
+            if row.get("exhausted") is not None:
+                _raise(f"{label} {logical_id} non_applicable 时 exhausted 必须为 null")
             non_applicable = row.get("non_applicable")
             if not isinstance(non_applicable, Mapping):
                 _raise(f"{label} {logical_id}.non_applicable 缺失")
@@ -620,6 +800,18 @@ def _load_frozen_index_rows(
                 reason=reason,
                 evidence_sha256=evidence_sha256,
                 plan_sha256=plan.plan_sha256,
+                label=label,
+            )
+        elif state == "exhausted":
+            if not allow_exhausted:
+                _raise(f"{label} {logical_id}.state 非法: {state!r}")
+            if task_type != "pred_simplify":
+                _raise(f"{label} {logical_id} 仅 pred_simplify 允许 exhausted")
+            _validate_exhausted_payload(
+                row,
+                logical_id=logical_id,
+                evaluation_key=evaluation_key,
+                task_type=task_type,
                 label=label,
             )
         else:
@@ -658,6 +850,17 @@ def _select_simplified_expression(
     allow_missing: bool,
 ) -> tuple[str | None, str]:
     state = _string(row.get("state"), context=f"{logical_id}.state")
+    if state == "exhausted":
+        if not allow_missing:
+            _raise(f"{logical_id} 不允许 exhausted")
+        _validate_exhausted_payload(
+            row,
+            logical_id=logical_id,
+            evaluation_key=_string(row.get("evaluation_key"), context=f"{logical_id}.evaluation_key"),
+            task_type=_string(row.get("task_type"), context=f"{logical_id}.task_type"),
+            label="pred_frozen_index",
+        )
+        return None, state
     if state == "non_applicable":
         _validate_non_applicable(
             row,
@@ -668,7 +871,7 @@ def _select_simplified_expression(
             _raise(f"{logical_id} 不允许 non_applicable")
         return None, state
     if state != "frozen":
-        _raise(f"{logical_id} state 必须是 frozen/non_applicable")
+        _raise(f"{logical_id} state 必须是 frozen/non_applicable/exhausted")
     return _validate_simplify_structured_output(row, logical_id=logical_id, allow_missing=allow_missing)
 
 
@@ -1476,6 +1679,7 @@ def aggregate_clean_metrics(
         plan_path=pred_plan_jsonl,
         expected_task_type="pred_simplify",
         label="pred_frozen_index",
+        allow_exhausted=True,
     )
     pred_rows = _build_pred_index(
         pred_index_rows,
@@ -1862,6 +2066,7 @@ def aggregate_clean_metrics(
         "expected_runs": expected_runs,
         "expected_task_rows": expected_task_rows,
         "expected_algorithm_rows": expected_algorithms,
+        "judge_exhausted_count": sum(1 for row in pred_rows.values() if row["state"] == "exhausted"),
     }
     summary_sha256 = _sha256_text(_canonical_json({"inputs": {
         "numeric_csv": numeric_info,

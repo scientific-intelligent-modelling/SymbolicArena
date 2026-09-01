@@ -259,6 +259,8 @@ def _write_frozen_group(
     plan_by_logical_id = {str(row["logical_id"]): row for row in plan_rows}
     index_rows: list[dict[str, object]] = []
     state_counts = {"frozen": 0, "non_applicable": 0}
+    if task_type == "pred_simplify":
+        state_counts["exhausted"] = 0
     for spec in row_specs:
         logical_id = str(spec["logical_id"])
         plan_row = plan_by_logical_id[logical_id]
@@ -287,9 +289,10 @@ def _write_frozen_group(
                     "result_sha256": _sha256_file(result_path),
                     "structured_output": spec["structured_output"],
                     "non_applicable": None,
+                    "exhausted": None,
                 }
             )
-        else:
+        elif spec["state"] == "non_applicable":
             reason = str(spec["reason"])
             evidence_path = tmp_path / "non_applicable" / name / f"{evaluation_key_value}.json"
             request_context = {
@@ -324,8 +327,71 @@ def _write_frozen_group(
                         "evidence_path": str(evidence_path.resolve()),
                         "evidence_sha256": evidence_sha256,
                     },
+                    "exhausted": None,
                 }
             )
+        elif spec["state"] == "exhausted":
+            assert task_type == "pred_simplify"
+            attempts: list[dict[str, object]] = []
+            for attempt_number in range(1, 4):
+                attempt_id = f"{evaluation_key_value}.a{attempt_number:02d}"
+                attempt_path = (
+                    tmp_path / "attempts" / name / f"{attempt_id}.json"
+                ).resolve()
+                error_class = "timeout"
+                attempt_payload = {
+                    "attempt_id": attempt_id,
+                    "evaluation_key": evaluation_key_value,
+                    "metadata": {
+                        "attempt_id": attempt_id,
+                        "attempt_number": attempt_number,
+                        "evaluation_key": evaluation_key_value,
+                        "logical_id": logical_id,
+                        "task_type": task_type,
+                        "error_class": error_class,
+                        "retryable": True,
+                    },
+                    "validation": {
+                        "ok": False,
+                        "error_class": error_class,
+                        "error_message": f"fixture timeout {attempt_number}",
+                    },
+                }
+                _write_json(attempt_path, attempt_payload)
+                attempts.append(
+                    {
+                        "attempt_id": attempt_id,
+                        "attempt_number": attempt_number,
+                        "status": "failed",
+                        "error_class": error_class,
+                        "retryable": True,
+                        "attempt_path": str(attempt_path),
+                        "attempt_sha256": _sha256_file(attempt_path),
+                    }
+                )
+            index_rows.append(
+                {
+                    "plan_sha256": plan_sha256,
+                    "evaluation_key": evaluation_key_value,
+                    "logical_id": logical_id,
+                    "task_type": task_type,
+                    "condition": "clean",
+                    "priority": int(plan_row["priority"]),
+                    "state": "exhausted",
+                    "attempt_id": None,
+                    "result_path": None,
+                    "result_sha256": None,
+                    "structured_output": None,
+                    "non_applicable": None,
+                    "exhausted": {
+                        "attempt_count": 3,
+                        "last_error_class": "timeout",
+                        "attempts": attempts,
+                    },
+                }
+            )
+        else:
+            raise AssertionError(f"未知 frozen index 测试状态: {spec['state']!r}")
         state_counts[str(spec["state"])] += 1
     _write_jsonl(index_path, index_rows)
     _write_json(
@@ -697,8 +763,7 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
             },
             {
                 "logical_id": "pred_simplify::qlattice::g0005::s522::clean",
-                "state": "non_applicable",
-                "reason": "missing_final_expression",
+                "state": "exhausted",
             },
         ],
     )
@@ -868,8 +933,9 @@ def test_aggregate_clean_metrics_valid_fixture_passes(tmp_path: Path) -> None:
             int(run_rows[1]["predicted_complexity"]),
         )
     )
-    assert run_rows[2]["pred_state"] == "non_applicable"
+    assert run_rows[2]["pred_state"] == "exhausted"
     assert float(run_rows[2]["m_sym"]) == pytest.approx(0.0)
+    assert float(run_rows[2]["m_min"]) == pytest.approx(0.0)
 
     report_payload = json.loads((tmp_path / "outputs/aggregate_clean_metrics.json").read_text("utf-8"))
     assert report["summary_sha256"] == report_payload["summary_sha256"]
@@ -879,6 +945,12 @@ def test_aggregate_clean_metrics_valid_fixture_passes(tmp_path: Path) -> None:
         "frozen": 1,
         "non_applicable": 0,
     }
+    assert report_payload["inputs"]["pred_frozen_index"]["summary_json"]["state_counts"] == {
+        "frozen": 2,
+        "non_applicable": 0,
+        "exhausted": 1,
+    }
+    assert report_payload["summary"]["judge_exhausted_count"] == 1
 
 
 def test_aggregate_clean_metrics_hard_fails_when_numeric_csv_binding_is_tampered(
@@ -941,6 +1013,27 @@ def test_aggregate_clean_metrics_hard_fails_on_extra_evidence(tmp_path: Path) ->
     _write_jsonl(paths["evidence_jsonl"], rows)
 
     with pytest.raises(AggregateCleanMetricsError, match="evidence_jsonl logical_key 集合不闭合"):
+        _aggregate(paths, tmp_path)
+
+
+def test_aggregate_clean_metrics_revalidates_exhausted_attempt_artifacts(
+    tmp_path: Path,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    rows = _read_jsonl(paths["pred_index_jsonl"])
+    exhausted_row = next(row for row in rows if row["state"] == "exhausted")
+    attempt = exhausted_row["exhausted"]["attempts"][1]
+    attempt_path = Path(attempt["attempt_path"])
+    payload = json.loads(attempt_path.read_text(encoding="utf-8"))
+    payload["validation"]["error_class"] = "tampered_error"
+    _write_json(attempt_path, payload)
+    attempt["attempt_sha256"] = _sha256_file(attempt_path)
+    _write_jsonl(paths["pred_index_jsonl"], rows)
+    summary = json.loads(paths["pred_summary_json"].read_text(encoding="utf-8"))
+    summary["output_sha256"] = _sha256_file(paths["pred_index_jsonl"])
+    _write_json(paths["pred_summary_json"], summary)
+
+    with pytest.raises(AggregateCleanMetricsError, match="validation.error_class"):
         _aggregate(paths, tmp_path)
 
 

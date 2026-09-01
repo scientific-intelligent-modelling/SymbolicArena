@@ -288,6 +288,13 @@ def _require_bool(value: object, *, context: str) -> bool:
     return value
 
 
+def _require_sqlite_bool(value: object, *, context: str) -> bool:
+    integer = _require_int(value, context=context)
+    if integer not in {0, 1}:
+        raise FrozenResultIndexError(f"{context} 必须是 SQLite 布尔值 0 或 1")
+    return bool(integer)
+
+
 def _build_frozen_row(
     *,
     connection: sqlite3.Connection,
@@ -368,6 +375,7 @@ def _build_frozen_row(
         "result_sha256": expected_sha256,
         "structured_output": validated_structured_output,
         "non_applicable": None,
+        "exhausted": None,
     }
 
 
@@ -461,6 +469,11 @@ def _validate_attempt_payload(
     retryable: bool,
     context: str,
 ) -> None:
+    expected_attempt_id = f"{entry.evaluation_key}.a{attempt_number:02d}"
+    if attempt_id != expected_attempt_id:
+        raise FrozenResultIndexError(
+            f"{context}.attempt_id 不符合 evaluation_key + attempt_number 契约"
+        )
     payload_attempt_id = _require_string(
         payload.get("attempt_id"),
         context=f"{context}.attempt_json.attempt_id",
@@ -503,6 +516,20 @@ def _validate_attempt_payload(
     )
     if actual_retryable is not retryable:
         raise FrozenResultIndexError(f"{context}.attempt_json.metadata.retryable 漂移")
+    validation = _require_mapping(
+        payload.get("validation"),
+        context=f"{context}.attempt_json.validation",
+    )
+    if validation.get("ok") is not False:
+        raise FrozenResultIndexError(f"{context}.attempt_json.validation.ok 必须为 false")
+    validation_error_class = _require_string(
+        validation.get("error_class"),
+        context=f"{context}.attempt_json.validation.error_class",
+    )
+    if validation_error_class != error_class:
+        raise FrozenResultIndexError(
+            f"{context}.attempt_json.validation.error_class 漂移"
+        )
 
 
 def _build_exhausted_row(
@@ -511,12 +538,19 @@ def _build_exhausted_row(
     entry: object,
     plan_sha256: str,
     attempts_dir: Path | None,
+    task_row: sqlite3.Row,
 ) -> JsonDict:
     context = f"任务 {entry.logical_id}"
     if entry.definition.task_spec.task_type != "pred_simplify":
         raise FrozenResultIndexError(f"{context} 仅 pred_simplify 允许 exhausted 终态")
     if attempts_dir is None:
         raise FrozenResultIndexError(f"{context} 启用 exhausted 索引时必须提供 attempts_dir")
+    task_attempt_count = _require_int(
+        task_row["attempt_count"],
+        context=f"{context}.tasks.attempt_count",
+    )
+    if task_attempt_count != 3:
+        raise FrozenResultIndexError(f"{context} exhausted 的 tasks.attempt_count 必须为 3")
     contradictory_frozen = _fetch_one(
         connection,
         """SELECT 1
@@ -568,11 +602,9 @@ def _build_exhausted_row(
             attempt_row["error_class"],
             context=f"{context}.error_class[{expected_number}]",
         )
-        retryable = bool(
-            _require_int(
-                attempt_row["retryable"],
-                context=f"{context}.retryable[{expected_number}]",
-            )
+        retryable = _require_sqlite_bool(
+            attempt_row["retryable"],
+            context=f"{context}.retryable[{expected_number}]",
         )
         attempt_path = attempts_dir / f"{attempt_id}.json"
         if not attempt_path.is_file():
@@ -602,6 +634,16 @@ def _build_exhausted_row(
                 "attempt_sha256": attempt_sha256,
             }
         )
+    last_error_class = _require_string(
+        attempt_rows[-1]["error_class"],
+        context=f"{context}.last_error_class",
+    )
+    task_last_error_class = _require_string(
+        task_row["last_error_class"],
+        context=f"{context}.tasks.last_error_class",
+    )
+    if task_last_error_class != last_error_class:
+        raise FrozenResultIndexError(f"{context}.tasks.last_error_class 与最后 attempt 不一致")
     task_kind = _infer_task_kind(entry.definition.task_spec.task_type, entry.definition.task_kind)
     return {
         "plan_sha256": plan_sha256,
@@ -619,10 +661,7 @@ def _build_exhausted_row(
         "non_applicable": None,
         "exhausted": {
             "attempt_count": 3,
-            "last_error_class": _require_string(
-                attempt_rows[-1]["error_class"],
-                context=f"{context}.last_error_class",
-            ),
+            "last_error_class": last_error_class,
             "attempts": attempts,
         },
     }
@@ -647,7 +686,7 @@ def build_frozen_result_index(
 
     rows: list[JsonDict] = []
     state_counts = {"frozen": 0, "non_applicable": 0}
-    attempts_dir_path = Path(attempts_dir) if attempts_dir is not None else None
+    attempts_dir_path = Path(attempts_dir).resolve() if attempts_dir is not None else None
     if allow_exhausted:
         state_counts["exhausted"] = 0
     connection = _connect_read_only(state_db)
@@ -655,7 +694,8 @@ def build_frozen_result_index(
         for entry in entries:
             task_row = _fetch_one(
                 connection,
-                """SELECT logical_id, task_type, spec_json, state
+                """SELECT logical_id, task_type, spec_json, state,
+                          attempt_count, last_error_class
                    FROM tasks
                    WHERE evaluation_key = ?""",
                 (entry.evaluation_key,),
@@ -685,6 +725,7 @@ def build_frozen_result_index(
                     entry=entry,
                     plan_sha256=loaded_plan.plan_sha256,
                     attempts_dir=attempts_dir_path,
+                    task_row=task_row,
                 )
             else:
                 row = _build_non_applicable_row(

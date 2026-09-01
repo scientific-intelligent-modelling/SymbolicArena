@@ -417,6 +417,7 @@ def test_build_frozen_result_index_cli_writes_index_and_summary(tmp_path: Path) 
     assert rows[0]["result_sha256"] == _sha256_file(Path(rows[0]["result_path"]))
     assert rows[0]["structured_output"]["decision"] == "equivalent"
     assert rows[0]["non_applicable"] is None
+    assert rows[0]["exhausted"] is None
     assert rows[1]["state"] == "non_applicable"
     assert rows[1]["structured_output"] is None
     assert rows[1]["non_applicable"] == {
@@ -583,6 +584,135 @@ def test_exhausted_rejects_attempt_identity_drift(tmp_path: Path) -> None:
     )
 
     with pytest.raises(FrozenResultIndexError, match="attempt_json.evaluation_key"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+            allow_exhausted=True,
+            attempts_dir=attempts_dir,
+        )
+
+
+def test_exhausted_rejects_noncanonical_attempt_id_even_when_artifact_matches(
+    tmp_path: Path,
+) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0005::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    attempts = _exhaust_task(store, row, attempts_dir)
+    original = attempts[0]
+    drifted_id = f"{row['evaluation_key']}.wrong01"
+    original_path = Path(original["attempt_path"])
+    payload = json.loads(original_path.read_text(encoding="utf-8"))
+    payload["attempt_id"] = drifted_id
+    payload["metadata"]["attempt_id"] = drifted_id
+    drifted_path = attempts_dir / f"{drifted_id}.json"
+    _write_json(drifted_path, payload)
+    original_path.unlink()
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "UPDATE attempts SET attempt_id = ? WHERE attempt_id = ?",
+            (drifted_id, original["attempt_id"]),
+        )
+        connection.commit()
+
+    with pytest.raises(FrozenResultIndexError, match="attempt_id 不符合"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+            allow_exhausted=True,
+            attempts_dir=attempts_dir,
+        )
+
+
+def test_exhausted_rejects_validation_error_class_drift(tmp_path: Path) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0006::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    attempts = _exhaust_task(store, row, attempts_dir)
+    attempt_path = Path(attempts[1]["attempt_path"])
+    payload = json.loads(attempt_path.read_text(encoding="utf-8"))
+    payload["validation"]["error_class"] = "tampered_error"
+    _write_json(attempt_path, payload)
+
+    with pytest.raises(FrozenResultIndexError, match="validation.error_class"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+            allow_exhausted=True,
+            attempts_dir=attempts_dir,
+        )
+
+
+def test_exhausted_rejects_non_boolean_db_retryable(tmp_path: Path) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0007::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    attempts = _exhaust_task(store, row, attempts_dir)
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "UPDATE attempts SET retryable = 2 WHERE attempt_id = ?",
+            (attempts[0]["attempt_id"],),
+        )
+        connection.commit()
+
+    with pytest.raises(FrozenResultIndexError, match="SQLite 布尔值"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+            allow_exhausted=True,
+            attempts_dir=attempts_dir,
+        )
+
+
+def test_exhausted_rejects_task_attempt_count_or_last_error_drift(tmp_path: Path) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0008::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _exhaust_task(store, row, attempts_dir)
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "UPDATE tasks SET last_error_class = 'drifted' WHERE evaluation_key = ?",
+            (row["evaluation_key"],),
+        )
+        connection.commit()
+
+    with pytest.raises(FrozenResultIndexError, match="last_error_class"):
         build_frozen_result_index(
             plan_jsonl=plan_path,
             state_db=state_db,
