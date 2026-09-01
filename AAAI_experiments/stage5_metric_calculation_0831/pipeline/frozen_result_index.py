@@ -1,8 +1,9 @@
 """冻结结果索引构建器。
 
 读取 canonical plan JSONL 与只读状态库，校验每个计划任务都已形成
-`frozen` 或 `non_applicable` 的闭环，并输出可按
-`logical_id` / `evaluation_key` 检索的规范 JSONL。
+可审计闭环，并输出可按 `logical_id` / `evaluation_key` 检索的规范 JSONL。
+默认只接受 `frozen` 与 `non_applicable`。若显式启用 `allow_exhausted`，
+则仅允许 `pred_simplify` 额外落入严格审计过的 `exhausted` 终态。
 """
 
 from __future__ import annotations
@@ -152,6 +153,30 @@ def _validate_task_row(task_row: sqlite3.Row, *, expected_spec_json: str, contex
     return state
 
 
+def _validate_task_row_with_exhausted(
+    task_row: sqlite3.Row,
+    *,
+    expected_spec_json: str,
+    context: str,
+    allow_exhausted: bool,
+) -> str:
+    if not allow_exhausted:
+        return _validate_task_row(
+            task_row,
+            expected_spec_json=expected_spec_json,
+            context=context,
+        )
+    state = _require_string(task_row["state"], context=f"{context}.state")
+    if state not in {"frozen", "non_applicable", "exhausted"}:
+        raise FrozenResultIndexError(
+            f"{context} 未形成 frozen/non_applicable/exhausted 闭环: {state}"
+        )
+    spec_json = _require_string(task_row["spec_json"], context=f"{context}.spec_json")
+    if spec_json != expected_spec_json:
+        raise FrozenResultIndexError(f"{context} 任务契约发生漂移")
+    return state
+
+
 def _validate_file_sha256(
     path: Path,
     *,
@@ -249,6 +274,18 @@ def _validate_non_applicable_evidence_payload(
         plan_sha256=plan_sha256,
         context=context,
     )
+
+
+def _require_int(value: object, *, context: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise FrozenResultIndexError(f"{context} 必须是整数")
+    return value
+
+
+def _require_bool(value: object, *, context: str) -> bool:
+    if not isinstance(value, bool):
+        raise FrozenResultIndexError(f"{context} 必须是布尔值")
+    return value
 
 
 def _build_frozen_row(
@@ -410,6 +447,184 @@ def _build_non_applicable_row(
             "evidence_path": str(evidence_path_obj),
             "evidence_sha256": evidence_sha256,
         },
+        "exhausted": None,
+    }
+
+
+def _validate_attempt_payload(
+    payload: Mapping[str, object],
+    *,
+    entry: object,
+    attempt_id: str,
+    attempt_number: int,
+    error_class: str,
+    retryable: bool,
+    context: str,
+) -> None:
+    payload_attempt_id = _require_string(
+        payload.get("attempt_id"),
+        context=f"{context}.attempt_json.attempt_id",
+    )
+    if payload_attempt_id != attempt_id:
+        raise FrozenResultIndexError(f"{context}.attempt_json.attempt_id 漂移")
+    payload_evaluation_key = _require_string(
+        payload.get("evaluation_key"),
+        context=f"{context}.attempt_json.evaluation_key",
+    )
+    if payload_evaluation_key != entry.evaluation_key:
+        raise FrozenResultIndexError(f"{context}.attempt_json.evaluation_key 漂移")
+    metadata = _require_mapping(
+        payload.get("metadata"),
+        context=f"{context}.attempt_json.metadata",
+    )
+    expected_pairs = {
+        "attempt_id": attempt_id,
+        "evaluation_key": entry.evaluation_key,
+        "logical_id": entry.logical_id,
+        "task_type": entry.definition.task_spec.task_type,
+        "error_class": error_class,
+    }
+    for field_name, expected_value in expected_pairs.items():
+        actual_value = _require_string(
+            metadata.get(field_name),
+            context=f"{context}.attempt_json.metadata.{field_name}",
+        )
+        if actual_value != expected_value:
+            raise FrozenResultIndexError(f"{context}.attempt_json.metadata.{field_name} 漂移")
+    actual_attempt_number = _require_int(
+        metadata.get("attempt_number"),
+        context=f"{context}.attempt_json.metadata.attempt_number",
+    )
+    if actual_attempt_number != attempt_number:
+        raise FrozenResultIndexError(f"{context}.attempt_json.metadata.attempt_number 漂移")
+    actual_retryable = _require_bool(
+        metadata.get("retryable"),
+        context=f"{context}.attempt_json.metadata.retryable",
+    )
+    if actual_retryable is not retryable:
+        raise FrozenResultIndexError(f"{context}.attempt_json.metadata.retryable 漂移")
+
+
+def _build_exhausted_row(
+    *,
+    connection: sqlite3.Connection,
+    entry: object,
+    plan_sha256: str,
+    attempts_dir: Path | None,
+) -> JsonDict:
+    context = f"任务 {entry.logical_id}"
+    if entry.definition.task_spec.task_type != "pred_simplify":
+        raise FrozenResultIndexError(f"{context} 仅 pred_simplify 允许 exhausted 终态")
+    if attempts_dir is None:
+        raise FrozenResultIndexError(f"{context} 启用 exhausted 索引时必须提供 attempts_dir")
+    contradictory_frozen = _fetch_one(
+        connection,
+        """SELECT 1
+           FROM frozen_results
+           WHERE evaluation_key = ?""",
+        (entry.evaluation_key,),
+        context=f"{context}.frozen_results",
+    )
+    if contradictory_frozen is not None:
+        raise FrozenResultIndexError(f"{context} exhausted 与 frozen 记录冲突")
+    contradictory_non_applicable = _fetch_one(
+        connection,
+        """SELECT 1
+           FROM non_applicable_results
+           WHERE evaluation_key = ?""",
+        (entry.evaluation_key,),
+        context=f"{context}.non_applicable_results",
+    )
+    if contradictory_non_applicable is not None:
+        raise FrozenResultIndexError(f"{context} exhausted 与 non_applicable 记录冲突")
+    attempt_rows = connection.execute(
+        """SELECT attempt_id, attempt_number, status, error_class, retryable
+           FROM attempts
+           WHERE evaluation_key = ?
+           ORDER BY attempt_number ASC""",
+        (entry.evaluation_key,),
+    ).fetchall()
+    if len(attempt_rows) != 3:
+        raise FrozenResultIndexError(f"{context} exhausted 必须恰有 3 次 failed attempts")
+    attempts: list[dict[str, object]] = []
+    for expected_number, attempt_row in enumerate(attempt_rows, start=1):
+        attempt_id = _require_string(
+            attempt_row["attempt_id"],
+            context=f"{context}.attempt_id[{expected_number}]",
+        )
+        attempt_number = _require_int(
+            attempt_row["attempt_number"],
+            context=f"{context}.attempt_number[{expected_number}]",
+        )
+        if attempt_number != expected_number:
+            raise FrozenResultIndexError(f"{context} attempt_number 序列不连续")
+        status = _require_string(
+            attempt_row["status"],
+            context=f"{context}.attempt_status[{expected_number}]",
+        )
+        if status != "failed":
+            raise FrozenResultIndexError(f"{context} exhausted 只允许 failed attempts")
+        error_class = _require_string(
+            attempt_row["error_class"],
+            context=f"{context}.error_class[{expected_number}]",
+        )
+        retryable = bool(
+            _require_int(
+                attempt_row["retryable"],
+                context=f"{context}.retryable[{expected_number}]",
+            )
+        )
+        attempt_path = attempts_dir / f"{attempt_id}.json"
+        if not attempt_path.is_file():
+            raise FrozenResultIndexError(f"{context} attempt 文件不存在: {attempt_path}")
+        attempt_sha256 = _sha256_file(attempt_path)
+        payload = _read_json_object(
+            attempt_path,
+            context=f"{context}.attempt_json[{expected_number}]",
+        )
+        _validate_attempt_payload(
+            payload,
+            entry=entry,
+            attempt_id=attempt_id,
+            attempt_number=attempt_number,
+            error_class=error_class,
+            retryable=retryable,
+            context=context,
+        )
+        attempts.append(
+            {
+                "attempt_id": attempt_id,
+                "attempt_number": attempt_number,
+                "status": status,
+                "error_class": error_class,
+                "retryable": retryable,
+                "attempt_path": str(attempt_path),
+                "attempt_sha256": attempt_sha256,
+            }
+        )
+    task_kind = _infer_task_kind(entry.definition.task_spec.task_type, entry.definition.task_kind)
+    return {
+        "plan_sha256": plan_sha256,
+        "evaluation_key": entry.evaluation_key,
+        "logical_id": entry.logical_id,
+        "task_type": entry.definition.task_spec.task_type,
+        "task_kind": task_kind,
+        "condition": entry.definition.task_spec.condition,
+        "priority": entry.definition.task_spec.priority,
+        "state": "exhausted",
+        "attempt_id": None,
+        "result_path": None,
+        "result_sha256": None,
+        "structured_output": None,
+        "non_applicable": None,
+        "exhausted": {
+            "attempt_count": 3,
+            "last_error_class": _require_string(
+                attempt_rows[-1]["error_class"],
+                context=f"{context}.last_error_class",
+            ),
+            "attempts": attempts,
+        },
     }
 
 
@@ -419,6 +634,8 @@ def build_frozen_result_index(
     state_db: str | Path,
     output_jsonl: str | Path,
     summary_json: str | Path,
+    allow_exhausted: bool = False,
+    attempts_dir: str | Path | None = None,
 ) -> JsonDict:
     try:
         loaded_plan = load_plan_jsonl(plan_jsonl)
@@ -430,6 +647,9 @@ def build_frozen_result_index(
 
     rows: list[JsonDict] = []
     state_counts = {"frozen": 0, "non_applicable": 0}
+    attempts_dir_path = Path(attempts_dir) if attempts_dir is not None else None
+    if allow_exhausted:
+        state_counts["exhausted"] = 0
     connection = _connect_read_only(state_db)
     try:
         for entry in entries:
@@ -447,16 +667,24 @@ def build_frozen_result_index(
                 raise FrozenResultIndexError(f"任务 {entry.logical_id} 的 logical_id 发生漂移")
             if task_row["task_type"] != entry.definition.task_spec.task_type:
                 raise FrozenResultIndexError(f"任务 {entry.logical_id} 的 task_type 发生漂移")
-            state = _validate_task_row(
+            state = _validate_task_row_with_exhausted(
                 task_row,
                 expected_spec_json=entry.definition.task_spec.canonical_json(),
                 context=f"任务 {entry.logical_id}",
+                allow_exhausted=allow_exhausted,
             )
             if state == "frozen":
                 row = _build_frozen_row(
                     connection=connection,
                     entry=entry,
                     plan_sha256=loaded_plan.plan_sha256,
+                )
+            elif state == "exhausted":
+                row = _build_exhausted_row(
+                    connection=connection,
+                    entry=entry,
+                    plan_sha256=loaded_plan.plan_sha256,
+                    attempts_dir=attempts_dir_path,
                 )
             else:
                 row = _build_non_applicable_row(
@@ -490,11 +718,13 @@ def build_frozen_result_index(
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="校验并索引 Stage5 frozen/non_applicable 结果")
+    parser = argparse.ArgumentParser(description="校验并索引 Stage5 frozen/non_applicable/exhausted 结果")
     parser.add_argument("--plan-jsonl", type=Path, required=True)
     parser.add_argument("--state-db", type=Path, required=True)
     parser.add_argument("--output-jsonl", type=Path, required=True)
     parser.add_argument("--summary-json", type=Path, required=True)
+    parser.add_argument("--allow-exhausted", action="store_true")
+    parser.add_argument("--attempts-dir", type=Path)
     return parser.parse_args(argv)
 
 
@@ -506,6 +736,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             state_db=args.state_db,
             output_jsonl=args.output_jsonl,
             summary_json=args.summary_json,
+            allow_exhausted=bool(args.allow_exhausted),
+            attempts_dir=args.attempts_dir,
         )
     except FrozenResultIndexError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

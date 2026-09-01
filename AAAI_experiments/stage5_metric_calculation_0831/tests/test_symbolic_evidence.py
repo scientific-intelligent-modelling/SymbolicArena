@@ -360,6 +360,92 @@ def test_validate_simplification_external_probe_counterexample_is_preserved() ->
     assert exc_info.value.evidence["counterexample"]["row_index"] == 7
 
 
+def test_validate_simplification_accepts_exact_decimal_rebuild_for_drsr_g0031() -> None:
+    evidence = validate_simplification(
+        original=(
+            "-0.2934868971342668 + -0.12741047181401519*(1 - cos(x)**2) + "
+            "-0.08204681377994838*(2*x - sin(2*x)) + -0.3910717874828409*y + "
+            "0.0947660838403801*y*(1 - cos(x)**2) + "
+            "0.03951161654272465*y*(2*x - sin(2*x)) + "
+            "-0.9964401599100835*cos(x) - -0.356291962406277*sin(x) + "
+            "-2.8406151724099575*(1 - sin(x)**2)*cos(y)"
+        ),
+        simplified=(
+            "(0.03951161654272465*y - 0.08204681377994838)*(2*x - sin(2*x)) + "
+            "(0.0947660838403801*y - 0.12741047181401519)*sin(x)**2 - "
+            "2.8406151724099575*cos(x)**2*cos(y) - 0.9964401599100835*cos(x) + "
+            "0.356291962406277*sin(x) - 0.3910717874828409*y - 0.2934868971342668"
+        ),
+        allowed_variables={"x", "y"},
+        allowed_functions={"cos", "sin"},
+        seed=522,
+        probe_points=[
+            {"split": "id_test", "row_index": 2, "values": {"x": -1.29601738954305, "y": -2.02716923268692}},
+            {"split": "id_test", "row_index": 7, "values": {"x": -1.52151659891278, "y": -1.20684142398226}},
+            {"split": "id_test", "row_index": 12, "values": {"x": -1.41853781260912, "y": -1.58209982848495}},
+            {"split": "id_test", "row_index": 15, "values": {"x": -4.32048932008737, "y": 1.44999454562668}},
+        ],
+        probe_source="dataset_probes_v1",
+        probe_sample_sha256="c" * 64,
+    )
+
+    assert evidence["decision"] == "equivalent"
+    assert evidence["symbolic_decision"] == "equivalent"
+    assert evidence["proof_basis"] == "symbolic_difference_zero"
+    assert evidence["probe_source"] == "dataset_probes_v1"
+
+
+def test_validate_simplification_accepts_high_precision_probe_recheck_for_dso_g0036() -> None:
+    evidence = validate_simplification(
+        original="x0*(-x1 + exp(x1 - x1/sin(x0 + x1 - (-x0 + x1*(x0 + (x0 - exp(2*x0))/x0))/x0**2)))",
+        simplified="x0*(exp(x1 - x1/sin(x0 + x1 + 1/x0 - x1*(x0 + 1)/x0**2 + x1*exp(2*x0)/x0**3)) - x1)",
+        allowed_variables={"x0", "x1"},
+        allowed_functions={"exp", "sin"},
+        seed=520,
+        probe_points=[
+            {
+                "split": "ood_test",
+                "row_index": 816,
+                "values": {
+                    "x0": 5.3863613867106334e-09,
+                    "x1": -0.10034954717906915,
+                },
+            }
+        ],
+        probe_source="dataset_probes_v1",
+        probe_sample_sha256="d" * 64,
+    )
+
+    assert evidence["decision"] == "equivalent"
+    assert evidence["symbolic_decision"] == "equivalent"
+    assert evidence["proof_basis"] == "symbolic_difference_zero"
+    assert evidence["probe_count"] == 1
+    assert evidence["max_abs_error"] == "0"
+
+
+def test_validate_simplification_keeps_exact_decimal_rounding_counterexample_for_drsr_g0041() -> None:
+    with pytest.raises(SimplificationContractError) as exc_info:
+        validate_simplification(
+            original=(
+                "-0.46670925507939076*0.18330990085757692*x0/"
+                "(0.905859281929194*x1*x2 + -0.7430329173164343*x3 + "
+                "-0.5894043940212699*x4 + -0.8595230589106997*x5)"
+            ),
+            simplified=(
+                "-0.085552427277916698*x0/"
+                "(0.905859281929194*x1*x2 - 0.7430329173164343*x3 - "
+                "0.5894043940212699*x4 - 0.8595230589106997*x5)"
+            ),
+            allowed_variables={"x0", "x1", "x2", "x3", "x4", "x5"},
+            allowed_functions=set(),
+            seed=520,
+        )
+
+    assert exc_info.value.evidence["symbolic_decision"] == "not_equivalent"
+    assert exc_info.value.evidence["proof_basis"] == "symbolic_nonzero_exact_difference"
+    assert exc_info.value.evidence["counterexample"] is None
+
+
 def test_validate_simplification_rejects_new_function_and_variable() -> None:
     with pytest.raises(SymbolicEvidenceError):
         validate_simplification(

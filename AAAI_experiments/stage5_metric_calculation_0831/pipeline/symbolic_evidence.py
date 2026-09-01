@@ -37,6 +37,8 @@ class _BuildContext:
     allowed_variables: set[str] | None
     allowed_functions: set[str] | None
     inferred_variables: set[str]
+    source_text: str
+    exact_numeric_literals: bool = False
     symbols: dict[str, sp.Symbol] = field(default_factory=dict)
     source_functions: set[str] = field(default_factory=set)
 
@@ -150,6 +152,18 @@ def _parameter_symbol_name(index: int) -> str:
     return f"params__{index}"
 
 
+def _parse_real_number_text(text: str, *, exact_numeric_literals: bool) -> sp.Basic:
+    stripped = text.strip()
+    if any(character in stripped for character in ".eE"):
+        value = float(stripped)
+        if not math.isfinite(value):
+            raise SymbolicEvidenceError(f"只允许有限常量，收到: {stripped!r}")
+        if exact_numeric_literals:
+            return sp.Rational(stripped)
+        return sp.Float(stripped)
+    return sp.Integer(int(stripped))
+
+
 def _ensure_real_number(value: object) -> sp.Basic:
     if isinstance(value, bool):
         raise SymbolicEvidenceError("布尔字面量不能作为普通数值常量")
@@ -240,13 +254,8 @@ class _PrefixTokenStream:
         return token
 
 
-def _parse_prefix_number(text: str) -> sp.Basic:
-    if any(character in text for character in ".eE"):
-        value = float(text)
-        if not math.isfinite(value):
-            raise SymbolicEvidenceError(f"只允许有限常量，收到: {text!r}")
-        return sp.Float(text)
-    return sp.Integer(int(text))
+def _parse_prefix_number(text: str, *, exact_numeric_literals: bool) -> sp.Basic:
+    return _parse_real_number_text(text, exact_numeric_literals=exact_numeric_literals)
 
 
 def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
@@ -348,7 +357,10 @@ def _call_handler(name: str):
 def _parse_prefix_term(stream: _PrefixTokenStream, ctx: _BuildContext) -> sp.Basic:
     token = stream.pop()
     if token.kind == "number":
-        return _parse_prefix_number(token.value)
+        return _parse_prefix_number(
+            token.value,
+            exact_numeric_literals=ctx.exact_numeric_literals,
+        )
     if token.kind != "ident":
         raise SymbolicEvidenceError(
             f"prefix 表达式期望 number/ident，实际是 {token.kind}"
@@ -430,9 +442,20 @@ def _convert_piecewise_call(node: ast.Call, ctx: _BuildContext) -> sp.Basic:
     return sp.Piecewise(*branches)
 
 
+def _convert_constant(node: ast.Constant, ctx: _BuildContext) -> sp.Basic:
+    if isinstance(node.value, float) and ctx.exact_numeric_literals:
+        source_text = ast.get_source_segment(ctx.source_text, node)
+        if isinstance(source_text, str):
+            return _parse_real_number_text(
+                source_text,
+                exact_numeric_literals=True,
+            )
+    return _ensure_real_number(node.value)
+
+
 def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
     if isinstance(node, ast.Constant):
-        return _ensure_real_number(node.value)
+        return _convert_constant(node, ctx)
     if isinstance(node, ast.Name):
         if node.id in CONSTANT_NAMES:
             return CONSTANT_NAMES[node.id]
@@ -576,16 +599,13 @@ def _abstract_constants(tree: dict[str, object]) -> dict[str, object]:
     return {"type": "Constant"}
 
 
-def build_symbolic_artifact(
+def _build_sympy_expression(
     source: str,
     *,
     allowed_variables: Collection[str] | None = None,
     allowed_functions: Collection[str] | None = None,
-) -> dict[str, object]:
-    """把不可信表达式安全地转换为稳定的 SymPy 证据对象。"""
-
-    if not isinstance(source, str) or not source.strip():
-        raise SymbolicEvidenceError("source 必须是非空字符串")
+    exact_numeric_literals: bool = False,
+) -> tuple[sp.Basic, _BuildContext, str]:
     normalized_allowed_variables = (
         set(allowed_variables) if allowed_variables is not None else None
     )
@@ -598,6 +618,8 @@ def build_symbolic_artifact(
         allowed_variables=normalized_allowed_variables,
         allowed_functions=normalized_allowed_functions,
         inferred_variables=set(),
+        source_text=source,
+        exact_numeric_literals=exact_numeric_literals,
     )
     try:
         root, source_kind, inferred_variables = _extract_expression_ast(source)
@@ -621,6 +643,25 @@ def build_symbolic_artifact(
             expr = _build_prefix_expression(source, ctx)
         else:
             raise
+    return expr, ctx, source_kind
+
+
+def build_symbolic_artifact(
+    source: str,
+    *,
+    allowed_variables: Collection[str] | None = None,
+    allowed_functions: Collection[str] | None = None,
+) -> dict[str, object]:
+    """把不可信表达式安全地转换为稳定的 SymPy 证据对象。"""
+
+    if not isinstance(source, str) or not source.strip():
+        raise SymbolicEvidenceError("source 必须是非空字符串")
+    expr, ctx, source_kind = _build_sympy_expression(
+        source,
+        allowed_variables=allowed_variables,
+        allowed_functions=allowed_functions,
+        exact_numeric_literals=False,
+    )
 
     canonical_expression = sp.sstr(expr, order="lex")
     canonical_tree = _canonical_tree(expr)
@@ -811,9 +852,9 @@ def _format_real(value: float) -> str:
     return "0" if text == "-0" else text
 
 
-def _sympy_real_to_float(value: sp.Basic) -> float | None:
+def _sympy_real_to_float(value: sp.Basic, *, digits: int = 50) -> float | None:
     try:
-        numeric = complex(sp.N(value, 50))
+        numeric = complex(sp.N(value, digits))
     except Exception:
         return None
     if abs(numeric.imag) > 1e-12:
@@ -844,18 +885,38 @@ def _probe_points(
     return points
 
 
-def _evaluate_real(expr: sp.Basic, values: Mapping[str, float]) -> float | None:
-    substitutions = {
-        sp.Symbol(name): sp.Float(repr(value))
-        for name, value in values.items()
-    }
+def _probe_substitutions(
+    values: Mapping[str, float],
+    *,
+    exact_numeric_literals: bool,
+) -> dict[sp.Symbol, sp.Basic]:
+    substitutions: dict[sp.Symbol, sp.Basic] = {}
+    for name, value in values.items():
+        if exact_numeric_literals:
+            substitutions[sp.Symbol(name)] = sp.Rational(str(value))
+        else:
+            substitutions[sp.Symbol(name)] = sp.Float(repr(value))
+    return substitutions
+
+
+def _evaluate_real(
+    expr: sp.Basic,
+    values: Mapping[str, float],
+    *,
+    exact_numeric_literals: bool = False,
+    digits: int = 50,
+) -> float | None:
+    substitutions = _probe_substitutions(
+        values,
+        exact_numeric_literals=exact_numeric_literals,
+    )
     try:
         substituted = expr.subs(substitutions)
     except Exception:
         return None
     if substituted.free_symbols:
         return None
-    return _sympy_real_to_float(substituted)
+    return _sympy_real_to_float(substituted, digits=digits)
 
 
 def _format_probe_values(values: Mapping[str, float]) -> dict[str, str]:
@@ -1000,6 +1061,97 @@ def _proof_guard_triggered(
     ) > SYMBOLIC_PROOF_NODE_LIMIT
 
 
+def _safe_equals_zero(expr: sp.Basic) -> bool | None:
+    try:
+        return expr.equals(0)
+    except (RecursionError, RuntimeError):
+        return None
+    except Exception:
+        return None
+
+
+def _build_exact_decimal_pair(
+    original_artifact: Mapping[str, object],
+    simplified_artifact: Mapping[str, object],
+) -> tuple[sp.Basic, sp.Basic, sp.Basic] | None:
+    original_source = original_artifact.get("source_text")
+    simplified_source = simplified_artifact.get("source_text")
+    if not isinstance(original_source, str) or not isinstance(simplified_source, str):
+        return None
+    try:
+        exact_original, _, _ = _build_sympy_expression(
+            original_source,
+            exact_numeric_literals=True,
+        )
+        exact_simplified, _, _ = _build_sympy_expression(
+            simplified_source,
+            exact_numeric_literals=True,
+        )
+    except (SymbolicEvidenceError, SyntaxError, ValueError):
+        return None
+    return (
+        exact_original,
+        exact_simplified,
+        sp.simplify(sp.together(exact_original - exact_simplified)),
+    )
+
+
+def _is_nonzero_rational_function(expr: sp.Basic) -> bool:
+    if expr == 0:
+        return False
+    free_symbols = tuple(sorted(expr.free_symbols, key=lambda symbol: str(symbol)))
+    if not free_symbols:
+        return bool(getattr(expr, "is_number", False)) and bool(getattr(expr, "is_finite", False))
+    try:
+        if not expr.is_rational_function(*free_symbols):
+            return False
+        numerator, _ = sp.together(expr).as_numer_denom()
+        return sp.simplify(numerator) != 0
+    except Exception:
+        return False
+
+
+def _rebuild_probe_record(
+    *,
+    expr_lhs: sp.Basic,
+    expr_rhs: sp.Basic,
+    values: Mapping[str, float],
+    point: Mapping[str, object],
+    abs_tolerance: float,
+    rel_tolerance: float,
+    exact_numeric_literals: bool,
+    digits: int,
+) -> dict[str, object] | None:
+    lhs_value = _evaluate_real(
+        expr_lhs,
+        values,
+        exact_numeric_literals=exact_numeric_literals,
+        digits=digits,
+    )
+    rhs_value = _evaluate_real(
+        expr_rhs,
+        values,
+        exact_numeric_literals=exact_numeric_literals,
+        digits=digits,
+    )
+    if lhs_value is None or rhs_value is None:
+        return None
+    abs_error = abs(lhs_value - rhs_value)
+    scale = max(abs(lhs_value), abs(rhs_value))
+    rel_error = 0.0 if scale == 0.0 else abs_error / scale
+    tolerance = abs_tolerance + rel_tolerance * scale
+    return _probe_record(
+        values=values,
+        original_value=lhs_value,
+        simplified_value=rhs_value,
+        abs_error=abs_error,
+        rel_error=rel_error,
+        tolerance=tolerance,
+        split=point.get("split") if isinstance(point.get("split"), str) else None,
+        row_index=point.get("row_index") if isinstance(point.get("row_index"), int) else None,
+    )
+
+
 def _equivalence_core(
     original_artifact: Mapping[str, object],
     simplified_artifact: Mapping[str, object],
@@ -1024,6 +1176,7 @@ def _equivalence_core(
     )
     complexity_guard = _proof_guard_triggered(original_artifact, simplified_artifact)
     proof_basis = "none"
+    exact_decimal_pair: tuple[sp.Basic, sp.Basic, sp.Basic] | None = None
 
     if original_artifact["artifact_sha256"] == simplified_artifact["artifact_sha256"]:
         symbolic_decision = "equivalent"
@@ -1039,20 +1192,51 @@ def _equivalence_core(
     else:
         difference = sp.simplify(sp.together(original_expr - simplified_expr))
         difference_is_zero = difference == 0
-        equals_result = difference.equals(0)
+        equals_result = _safe_equals_zero(difference)
         difference_equals_zero = equals_result is True
         if difference_is_zero or difference_equals_zero:
             symbolic_decision = "equivalent"
             proof_basis = "symbolic_difference_zero"
-        elif (
-            bool(getattr(difference, "is_number", False))
-            and bool(getattr(difference, "is_finite", False))
-            and difference != 0
-        ):
-            symbolic_decision = "not_equivalent"
-            proof_basis = "symbolic_nonzero_constant_difference"
         else:
-            symbolic_decision = "undetermined"
+            exact_decimal_pair = _build_exact_decimal_pair(
+                original_artifact,
+                simplified_artifact,
+            )
+            if exact_decimal_pair is not None:
+                _, _, exact_difference = exact_decimal_pair
+                exact_difference_is_zero = exact_difference == 0
+                exact_difference_equals_zero = _safe_equals_zero(exact_difference) is True
+                if exact_difference_is_zero or exact_difference_equals_zero:
+                    symbolic_decision = "equivalent"
+                    proof_basis = "symbolic_difference_zero"
+                elif (
+                    bool(getattr(exact_difference, "is_number", False))
+                    and bool(getattr(exact_difference, "is_finite", False))
+                    and exact_difference != 0
+                ):
+                    symbolic_decision = "not_equivalent"
+                    proof_basis = "symbolic_nonzero_constant_difference"
+                elif _is_nonzero_rational_function(exact_difference):
+                    symbolic_decision = "not_equivalent"
+                    proof_basis = "symbolic_nonzero_exact_difference"
+                elif (
+                    bool(getattr(difference, "is_number", False))
+                    and bool(getattr(difference, "is_finite", False))
+                    and difference != 0
+                ):
+                    symbolic_decision = "not_equivalent"
+                    proof_basis = "symbolic_nonzero_constant_difference"
+                else:
+                    symbolic_decision = "undetermined"
+            elif (
+                bool(getattr(difference, "is_number", False))
+                and bool(getattr(difference, "is_finite", False))
+                and difference != 0
+            ):
+                symbolic_decision = "not_equivalent"
+                proof_basis = "symbolic_nonzero_constant_difference"
+            else:
+                symbolic_decision = "undetermined"
 
     probe_records: list[dict[str, object]] = []
     skipped_probe_records: list[dict[str, object]] = []
@@ -1125,6 +1309,37 @@ def _equivalence_core(
             )
             probe_records.append(record)
             if abs_error > tolerance:
+                if symbolic_decision == "equivalent" and proof_basis != "artifact_identity":
+                    if exact_decimal_pair is not None:
+                        exact_original_expr, exact_simplified_expr, _ = exact_decimal_pair
+                        rebuilt_record = _rebuild_probe_record(
+                            expr_lhs=exact_original_expr,
+                            expr_rhs=exact_simplified_expr,
+                            values=values,
+                            point=point,
+                            abs_tolerance=abs_tolerance,
+                            rel_tolerance=rel_tolerance,
+                            exact_numeric_literals=True,
+                            digits=100,
+                        )
+                    else:
+                        rebuilt_record = _rebuild_probe_record(
+                            expr_lhs=original_expr,
+                            expr_rhs=simplified_expr,
+                            values=values,
+                            point=point,
+                            abs_tolerance=abs_tolerance,
+                            rel_tolerance=rel_tolerance,
+                            exact_numeric_literals=True,
+                            digits=100,
+                        )
+                    if rebuilt_record is not None and (
+                        float(rebuilt_record["abs_error"]) <= float(rebuilt_record["tolerance"])
+                    ):
+                        probe_records[-1] = rebuilt_record
+                        if "双精度探针命中微小残差，已用十进制有理替换做高精度复核。" not in assumptions:
+                            assumptions.append("双精度探针命中微小残差，已用十进制有理替换做高精度复核。")
+                        continue
                 return {
                     "symbolic_decision": "not_equivalent",
                     "probe_records": probe_records,
@@ -1357,7 +1572,7 @@ def validate_simplification(
             "max_rel_error": max_rel_error,
             "max_tolerance": max_tolerance,
             "numeric_probes": list(core["probe_records"]),
-            "counterexample": core["probe_records"][-1] if core["probe_records"] else None,
+            "counterexample": core["counterexample"],
             "assumptions": list(core["assumptions"]),
             "original_sha256": original_artifact["artifact_sha256"],
             "simplified_sha256": simplified_artifact["artifact_sha256"],

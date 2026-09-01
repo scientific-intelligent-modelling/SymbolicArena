@@ -65,6 +65,27 @@ def _task_kind_for(task_type: str) -> str:
 
 
 def _schema_for(task_kind: str) -> dict[str, Any]:
+    if task_kind == "simplify":
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "outcome": {"type": "string"},
+                "simplified_expression": {"type": ["string", "null"]},
+                "equivalence_assessment": {"type": "string"},
+                "assumptions": {"type": "array", "items": {"type": "string"}},
+                "confidence": {"type": "number"},
+                "brief_reason": {"type": "string"},
+            },
+            "required": [
+                "outcome",
+                "simplified_expression",
+                "equivalence_assessment",
+                "assumptions",
+                "confidence",
+                "brief_reason",
+            ],
+        }
     if task_kind == "equivalence":
         return {
             "type": "object",
@@ -99,6 +120,15 @@ def _schema_for(task_kind: str) -> dict[str, Any]:
 
 
 def _valid_structured_output(task_kind: str) -> dict[str, Any]:
+    if task_kind == "simplify":
+        return {
+            "outcome": "simplified",
+            "simplified_expression": "x0 + x1",
+            "equivalence_assessment": "preserved",
+            "assumptions": [],
+            "confidence": 1.0,
+            "brief_reason": "deterministic test fixture",
+        }
     if task_kind == "equivalence":
         return {
             "decision": "equivalent",
@@ -280,6 +310,66 @@ def _freeze_task(
     )
 
 
+def _exhaust_task(
+    store: TaskStateStore,
+    row: dict[str, Any],
+    attempts_dir: Path,
+    *,
+    error_class: str = "timeout",
+    retryable: bool = True,
+    attempt_payload_mutator: Any | None = None,
+) -> list[dict[str, Any]]:
+    spec = _task_spec_from_plan_row(row)
+    store.register_task(spec)
+    attempts: list[dict[str, Any]] = []
+    for attempt_number in range(1, 4):
+        lease = store.reserve_attempt(
+            spec.evaluation_key,
+            now=float(attempt_number),
+            lease_seconds=60.0,
+        )
+        attempt_path = attempts_dir / f"{lease.attempt_id}.json"
+        payload: dict[str, Any] = {
+            "attempt_id": lease.attempt_id,
+            "evaluation_key": spec.evaluation_key,
+            "metadata": {
+                "attempt_id": lease.attempt_id,
+                "attempt_number": lease.attempt_number,
+                "evaluation_key": spec.evaluation_key,
+                "logical_id": spec.logical_id,
+                "task_type": spec.task_type,
+                "error_class": error_class,
+                "retryable": retryable,
+            },
+            "validation": {
+                "ok": False,
+                "error_class": error_class,
+                "error_message": f"fixture error {attempt_number}",
+            },
+        }
+        if attempt_payload_mutator is not None:
+            payload = attempt_payload_mutator(attempt_number, payload)
+        _write_json(attempt_path, payload)
+        next_state = store.finish_failure(
+            lease.attempt_id,
+            error_class=error_class,
+            retryable=retryable,
+            now=float(attempt_number) + 0.5,
+        )
+        attempts.append(
+            {
+                "attempt_id": lease.attempt_id,
+                "attempt_number": lease.attempt_number,
+                "attempt_path": attempt_path,
+                "attempt_sha256": _sha256_file(attempt_path),
+                "error_class": error_class,
+                "retryable": retryable,
+                "next_state": next_state,
+            }
+        )
+    return attempts
+
+
 def test_build_frozen_result_index_cli_writes_index_and_summary(tmp_path: Path) -> None:
     frozen_row = _build_plan_row(tmp_path, "equivalence::frozen", task_type="equivalence", priority=1)
     non_applicable_row, evidence_path, evidence_sha256, _ = _build_non_applicable_fixture(
@@ -346,6 +436,161 @@ def test_build_frozen_result_index_cli_writes_index_and_summary(tmp_path: Path) 
         "state_db": str(state_db),
         "status": "ok",
     }
+
+
+def test_build_frozen_result_index_accepts_pred_exhausted_with_attempt_audit(
+    tmp_path: Path,
+) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0001::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    plan_sha256 = _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    expected_attempts = _exhaust_task(store, row, attempts_dir)
+
+    output_jsonl = tmp_path / "frozen_index.jsonl"
+    summary_json = tmp_path / "frozen_index.summary.json"
+    summary = build_frozen_result_index(
+        plan_jsonl=plan_path,
+        state_db=state_db,
+        output_jsonl=output_jsonl,
+        summary_json=summary_json,
+        allow_exhausted=True,
+        attempts_dir=attempts_dir,
+    )
+
+    assert summary["plan_sha256"] == plan_sha256
+    rows = [json.loads(line) for line in output_jsonl.read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 1
+    exhausted_row = rows[0]
+    assert exhausted_row["logical_id"] == str(row["logical_id"])
+    assert exhausted_row["state"] == "exhausted"
+    assert exhausted_row["attempt_id"] is None
+    assert exhausted_row["result_path"] is None
+    assert exhausted_row["result_sha256"] is None
+    assert exhausted_row["structured_output"] is None
+    assert exhausted_row["non_applicable"] is None
+    assert exhausted_row["exhausted"]["attempt_count"] == 3
+    assert exhausted_row["exhausted"]["last_error_class"] == "timeout"
+    assert [item["attempt_number"] for item in exhausted_row["exhausted"]["attempts"]] == [1, 2, 3]
+    assert exhausted_row["exhausted"]["attempts"] == [
+        {
+            "attempt_id": item["attempt_id"],
+            "attempt_number": item["attempt_number"],
+            "status": "failed",
+            "error_class": item["error_class"],
+            "retryable": item["retryable"],
+            "attempt_path": str(item["attempt_path"]),
+            "attempt_sha256": item["attempt_sha256"],
+        }
+        for item in expected_attempts
+    ]
+    assert summary["state_counts"] == {"frozen": 0, "non_applicable": 0, "exhausted": 1}
+
+
+def test_pred_exhausted_requires_explicit_allow_flag(tmp_path: Path) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0002::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _exhaust_task(store, row, attempts_dir)
+
+    with pytest.raises(FrozenResultIndexError, match="frozen/non_applicable"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+        )
+
+
+def test_allow_exhausted_requires_attempts_dir(tmp_path: Path) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0003::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _exhaust_task(store, row, attempts_dir)
+
+    with pytest.raises(FrozenResultIndexError, match="attempts_dir"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+            allow_exhausted=True,
+        )
+
+
+def test_exhausted_only_supported_for_pred_simplify(tmp_path: Path) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "equivalence::exhausted_disallowed",
+        task_type="equivalence",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _exhaust_task(store, row, attempts_dir)
+
+    with pytest.raises(FrozenResultIndexError, match="仅 pred_simplify"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+            allow_exhausted=True,
+            attempts_dir=attempts_dir,
+        )
+
+
+def test_exhausted_rejects_attempt_identity_drift(tmp_path: Path) -> None:
+    row = _build_plan_row(
+        tmp_path,
+        "pred_simplify::fixture::g0004::s520::clean",
+        task_type="pred_simplify",
+    )
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "state.sqlite3"
+    attempts_dir = tmp_path / "attempts"
+    store = TaskStateStore(state_db, attempt_cap=10)
+    _exhaust_task(
+        store,
+        row,
+        attempts_dir,
+        attempt_payload_mutator=lambda attempt_number, payload: (
+            {**payload, "evaluation_key": "0" * 64} if attempt_number == 2 else payload
+        ),
+    )
+
+    with pytest.raises(FrozenResultIndexError, match="attempt_json.evaluation_key"):
+        build_frozen_result_index(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            output_jsonl=tmp_path / "out.jsonl",
+            summary_json=tmp_path / "summary.json",
+            allow_exhausted=True,
+            attempts_dir=attempts_dir,
+        )
 
 
 def test_duplicate_logical_id_or_evaluation_key_hard_fails(tmp_path: Path) -> None:
