@@ -52,6 +52,16 @@ class PredecessorAttemptManifest:
     attempt_count: int
 
 
+@dataclass(frozen=True)
+class TaskSupersession:
+    predecessor_evaluation_key: str
+    successor: TaskSpec
+    identity: str
+    reason: str
+    predecessor_plan_sha256: str
+    successor_plan_sha256: str
+
+
 class TaskStateStore:
     """支持并发 worker、断点恢复和硬预算的任务状态库。"""
 
@@ -64,6 +74,7 @@ class TaskStateStore:
         max_attempts_per_task: int = 3,
         attempt_offset: int = 0,
         predecessor_attempt_manifest: PredecessorAttemptManifest | None = None,
+        allow_schema_upgrade: bool = False,
     ) -> None:
         if attempt_cap <= 0:
             raise StateContractError("attempt_cap 必须为正整数")
@@ -87,6 +98,7 @@ class TaskStateStore:
         self.max_attempts_per_task = int(max_attempts_per_task)
         self.requested_attempt_offset = int(attempt_offset)
         self.predecessor_attempt_manifest = predecessor_attempt_manifest
+        self.allow_schema_upgrade = bool(allow_schema_upgrade)
         self.predecessor_attempt_manifest_path = (
             predecessor_attempt_manifest.path if predecessor_attempt_manifest is not None else ""
         )
@@ -124,69 +136,114 @@ class TaskStateStore:
 
     def _initialize(self) -> None:
         with self._write_transaction() as connection:
-            connection.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS meta (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS tasks (
-                    evaluation_key TEXT PRIMARY KEY,
-                    logical_id TEXT NOT NULL UNIQUE,
-                    task_type TEXT NOT NULL,
-                    condition_name TEXT NOT NULL,
-                    priority INTEGER NOT NULL,
-                    input_hash TEXT NOT NULL,
-                    prompt_version TEXT NOT NULL,
-                    schema_version TEXT NOT NULL,
-                    dependencies_json TEXT NOT NULL,
-                    spec_json TEXT NOT NULL,
-                    state TEXT NOT NULL,
-                    attempt_count INTEGER NOT NULL DEFAULT 0,
-                    lease_expires_at REAL,
-                    last_error_class TEXT,
-                    created_at REAL NOT NULL,
-                    updated_at REAL NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS idx_tasks_ready
-                    ON tasks(state, condition_name, priority, logical_id);
-                CREATE TABLE IF NOT EXISTS attempts (
-                    attempt_id TEXT PRIMARY KEY,
-                    evaluation_key TEXT NOT NULL REFERENCES tasks(evaluation_key),
-                    attempt_number INTEGER NOT NULL,
-                    status TEXT NOT NULL,
-                    reserved_at REAL NOT NULL,
-                    lease_expires_at REAL NOT NULL,
-                    finished_at REAL,
-                    error_class TEXT,
-                    retryable INTEGER,
-                    UNIQUE(evaluation_key, attempt_number)
-                );
-                CREATE TABLE IF NOT EXISTS frozen_results (
-                    evaluation_key TEXT PRIMARY KEY REFERENCES tasks(evaluation_key),
-                    attempt_id TEXT NOT NULL UNIQUE REFERENCES attempts(attempt_id),
-                    result_path TEXT NOT NULL,
-                    result_sha256 TEXT NOT NULL,
-                    frozen_at REAL NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS non_applicable_results (
-                    evaluation_key TEXT PRIMARY KEY REFERENCES tasks(evaluation_key),
-                    reason TEXT NOT NULL,
-                    evidence_path TEXT NOT NULL,
-                    evidence_sha256 TEXT NOT NULL,
-                    marked_at REAL NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS events (
-                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    evaluation_key TEXT,
-                    attempt_id TEXT,
-                    event_type TEXT NOT NULL,
-                    event_at REAL NOT NULL,
-                    details_json TEXT NOT NULL
-                );
-                """
+            ddl_statements = (
+                """CREATE TABLE IF NOT EXISTS meta (
+                       key TEXT PRIMARY KEY,
+                       value TEXT NOT NULL
+                   )""",
+                """CREATE TABLE IF NOT EXISTS tasks (
+                       evaluation_key TEXT PRIMARY KEY,
+                       logical_id TEXT NOT NULL UNIQUE,
+                       task_type TEXT NOT NULL,
+                       condition_name TEXT NOT NULL,
+                       priority INTEGER NOT NULL,
+                       input_hash TEXT NOT NULL,
+                       prompt_version TEXT NOT NULL,
+                       schema_version TEXT NOT NULL,
+                       dependencies_json TEXT NOT NULL,
+                       spec_json TEXT NOT NULL,
+                       state TEXT NOT NULL,
+                       attempt_count INTEGER NOT NULL DEFAULT 0,
+                       lease_expires_at REAL,
+                       last_error_class TEXT,
+                       created_at REAL NOT NULL,
+                       updated_at REAL NOT NULL
+                   )""",
+                """CREATE INDEX IF NOT EXISTS idx_tasks_ready
+                   ON tasks(state, condition_name, priority, logical_id)""",
+                """CREATE TABLE IF NOT EXISTS attempts (
+                       attempt_id TEXT PRIMARY KEY,
+                       evaluation_key TEXT NOT NULL REFERENCES tasks(evaluation_key),
+                       attempt_number INTEGER NOT NULL,
+                       status TEXT NOT NULL,
+                       reserved_at REAL NOT NULL,
+                       lease_expires_at REAL NOT NULL,
+                       finished_at REAL,
+                       error_class TEXT,
+                       retryable INTEGER,
+                       UNIQUE(evaluation_key, attempt_number)
+                   )""",
+                """CREATE TABLE IF NOT EXISTS frozen_results (
+                       evaluation_key TEXT PRIMARY KEY REFERENCES tasks(evaluation_key),
+                       attempt_id TEXT NOT NULL UNIQUE REFERENCES attempts(attempt_id),
+                       result_path TEXT NOT NULL,
+                       result_sha256 TEXT NOT NULL,
+                       frozen_at REAL NOT NULL
+                   )""",
+                """CREATE TABLE IF NOT EXISTS non_applicable_results (
+                       evaluation_key TEXT PRIMARY KEY REFERENCES tasks(evaluation_key),
+                       reason TEXT NOT NULL,
+                       evidence_path TEXT NOT NULL,
+                       evidence_sha256 TEXT NOT NULL,
+                       marked_at REAL NOT NULL
+                   )""",
+                """CREATE TABLE IF NOT EXISTS task_supersessions (
+                       predecessor_evaluation_key TEXT PRIMARY KEY REFERENCES tasks(evaluation_key),
+                       successor_evaluation_key TEXT NOT NULL UNIQUE REFERENCES tasks(evaluation_key),
+                       predecessor_logical_id TEXT NOT NULL UNIQUE,
+                       successor_logical_id TEXT NOT NULL UNIQUE,
+                       identity TEXT NOT NULL UNIQUE,
+                       reason TEXT NOT NULL,
+                       predecessor_plan_sha256 TEXT NOT NULL,
+                       successor_plan_sha256 TEXT NOT NULL,
+                       superseded_at REAL NOT NULL
+                   )""",
+                """CREATE TABLE IF NOT EXISTS events (
+                       event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       evaluation_key TEXT,
+                       attempt_id TEXT,
+                       event_type TEXT NOT NULL,
+                       event_at REAL NOT NULL,
+                       details_json TEXT NOT NULL
+                   )""",
             )
-            existing = dict(connection.execute("SELECT key, value FROM meta").fetchall())
+            existing_tables = {
+                str(row["name"])
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            if "meta" in existing_tables:
+                existing = dict(connection.execute("SELECT key, value FROM meta").fetchall())
+                existing_schema_version = existing.get("schema_version")
+                if existing_schema_version != "state.v3" and not self.allow_schema_upgrade:
+                    raise StateContractError(
+                        "检测到已有旧版状态库；请显式传入 allow_schema_upgrade=True 后再升级到 state.v3"
+                    )
+                if existing_schema_version != "state.v3":
+                    self._assert_no_running_for_schema_upgrade(connection)
+                elif (
+                    "task_supersessions" in existing_tables
+                    and not self._task_supersession_identity_unique_enforced(connection)
+                ):
+                    if not self.allow_schema_upgrade:
+                        raise StateContractError(
+                            "检测到 state.v3 缺少全局唯一 supersession identity；"
+                            "请显式传入 allow_schema_upgrade=True 后再修复 schema"
+                        )
+                    self._assert_no_running_for_schema_upgrade(connection)
+                    self._assert_no_duplicate_supersession_identities(connection)
+                    connection.execute(
+                        """CREATE UNIQUE INDEX IF NOT EXISTS
+                               idx_task_supersessions_identity_unique
+                           ON task_supersessions(identity)"""
+                    )
+            else:
+                existing = {}
+            for statement in ddl_statements:
+                connection.execute(statement)
+            if "meta" in existing_tables:
+                existing = dict(connection.execute("SELECT key, value FROM meta").fetchall())
             existing_attempt_offset = int(existing.get("attempt_offset", "0"))
             legacy_needs_manifest = (
                 existing_attempt_offset > 0 and "predecessor_attempt_count" not in existing
@@ -228,11 +285,11 @@ class TaskStateStore:
                 "predecessor_attempt_manifest_path": self.predecessor_attempt_manifest_path,
                 "predecessor_attempt_manifest_sha256": self.predecessor_attempt_manifest_sha256,
                 "predecessor_attempt_count": str(self.predecessor_attempt_count),
-                "schema_version": "state.v2",
+                "schema_version": "state.v3",
             }
             for key, value in desired.items():
                 previous = existing.get(key)
-                if key == "schema_version" and previous == "state.v1":
+                if key == "schema_version" and previous in {"state.v1", "state.v2"}:
                     connection.execute("UPDATE meta SET value = ? WHERE key = ?", (value, key))
                     continue
                 if previous is not None and previous != value:
@@ -273,6 +330,130 @@ class TaskStateStore:
             raise StateContractError("evaluation_key 和 logical_id 不得为空")
         if spec.condition not in {"clean", "noise001", "noise005"}:
             raise StateContractError(f"未知任务条件: {spec.condition!r}")
+
+    @staticmethod
+    def _task_identity_fields(
+        *,
+        task_type: str,
+        condition: str,
+        priority: int,
+        dependencies_json: str,
+    ) -> tuple[str, str, int, str]:
+        return (
+            str(task_type),
+            str(condition),
+            int(priority),
+            str(dependencies_json),
+        )
+
+    @classmethod
+    def _task_identity_from_spec(cls, spec: TaskSpec) -> tuple[str, str, int, str]:
+        return cls._task_identity_fields(
+            task_type=spec.task_type,
+            condition=spec.condition,
+            priority=spec.priority,
+            dependencies_json=json.dumps(list(spec.dependencies), ensure_ascii=False),
+        )
+
+    @classmethod
+    def _task_identity_from_row(cls, row: sqlite3.Row) -> tuple[str, str, int, str]:
+        return cls._task_identity_fields(
+            task_type=str(row["task_type"]),
+            condition=str(row["condition_name"]),
+            priority=int(row["priority"]),
+            dependencies_json=str(row["dependencies_json"]),
+        )
+
+    @staticmethod
+    def _assert_no_running_for_schema_upgrade(connection: sqlite3.Connection) -> None:
+        running_tasks = int(
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM tasks WHERE state='running'"
+            ).fetchone()["count"]
+        )
+        running_attempts = int(
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM attempts WHERE status='running'"
+            ).fetchone()["count"]
+        )
+        if running_tasks or running_attempts:
+            raise StateContractError(
+                "状态库仍有 running tasks/attempts，禁止执行 schema upgrade"
+            )
+
+    @staticmethod
+    def _task_supersession_identity_unique_enforced(connection: sqlite3.Connection) -> bool:
+        indexes = connection.execute("PRAGMA index_list('task_supersessions')").fetchall()
+        for index in indexes:
+            if int(index["unique"]) != 1:
+                continue
+            columns = connection.execute(
+                f"PRAGMA index_info('{str(index['name'])}')"
+            ).fetchall()
+            if len(columns) != 1:
+                continue
+            if str(columns[0]["name"]) == "identity":
+                return True
+        return False
+
+    @staticmethod
+    def _assert_no_duplicate_supersession_identities(connection: sqlite3.Connection) -> None:
+        row = connection.execute(
+            """SELECT identity
+               FROM task_supersessions
+               GROUP BY identity
+               HAVING COUNT(*) > 1
+               LIMIT 1"""
+        ).fetchone()
+        if row is not None:
+            raise StateContractError(
+                f"task_supersessions.identity 存在重复值，禁止升级: {row['identity']!r}"
+            )
+
+    @staticmethod
+    def _valid_superseded_predecessors(connection: sqlite3.Connection) -> set[str]:
+        rows = connection.execute(
+            """SELECT ts.predecessor_evaluation_key
+               FROM task_supersessions ts
+               JOIN tasks predecessor
+                 ON predecessor.evaluation_key = ts.predecessor_evaluation_key
+                AND predecessor.logical_id = ts.predecessor_logical_id
+               JOIN frozen_results predecessor_frozen
+                 ON predecessor_frozen.evaluation_key = ts.predecessor_evaluation_key
+               JOIN tasks successor
+                 ON successor.evaluation_key = ts.successor_evaluation_key
+                AND successor.logical_id = ts.successor_logical_id
+               WHERE predecessor.state='superseded'"""
+        ).fetchall()
+        return {str(row["predecessor_evaluation_key"]) for row in rows}
+
+    @classmethod
+    def _count_active_logical_tasks(cls, connection: sqlite3.Connection) -> int:
+        rows = connection.execute("SELECT evaluation_key, state FROM tasks").fetchall()
+        valid_superseded = cls._valid_superseded_predecessors(connection)
+        count = 0
+        for row in rows:
+            if str(row["state"]) == "superseded" and str(row["evaluation_key"]) in valid_superseded:
+                continue
+            count += 1
+        return count
+
+    @classmethod
+    def _is_terminal_for_gate(
+        cls,
+        connection: sqlite3.Connection,
+        *,
+        evaluation_key: str,
+        state: str,
+        valid_superseded: set[str] | None = None,
+    ) -> bool:
+        if state in {"frozen", "non_applicable"}:
+            return True
+        if state != "superseded":
+            return False
+        if valid_superseded is None:
+            valid_superseded = cls._valid_superseded_predecessors(connection)
+        return evaluation_key in valid_superseded
 
     @staticmethod
     def _load_existing_task_specs(
@@ -324,9 +505,7 @@ class TaskStateStore:
                 )
             )
         with self._write_transaction() as connection:
-            logical_count = int(
-                connection.execute("SELECT COUNT(*) AS count FROM tasks").fetchone()["count"]
-            )
+            logical_count = self._active_logical_task_count(connection)
             known_by_evaluation, known_by_logical = self._load_existing_task_specs(
                 connection,
                 evaluation_keys=[spec.evaluation_key for spec, _, _ in prepared_specs],
@@ -404,10 +583,446 @@ class TaskStateStore:
                         details=details,
                     )
 
+    @classmethod
+    def _active_logical_task_count(cls, connection: sqlite3.Connection) -> int:
+        return cls._count_active_logical_tasks(connection)
+
+    @staticmethod
+    def _fetch_tasks_by_evaluation_keys(
+        connection: sqlite3.Connection,
+        evaluation_keys: Sequence[str],
+    ) -> dict[str, sqlite3.Row]:
+        rows_by_key: dict[str, sqlite3.Row] = {}
+        values = tuple(dict.fromkeys(str(item) for item in evaluation_keys if str(item)))
+        for start in range(0, len(values), 500):
+            chunk = values[start : start + 500]
+            if not chunk:
+                continue
+            placeholders = ",".join("?" for _ in chunk)
+            query = f"SELECT * FROM tasks WHERE evaluation_key IN ({placeholders})"
+            for row in connection.execute(query, chunk).fetchall():
+                rows_by_key[str(row["evaluation_key"])] = row
+        return rows_by_key
+
+    @staticmethod
+    def _fetch_frozen_bindings(
+        connection: sqlite3.Connection,
+        evaluation_keys: Sequence[str],
+    ) -> set[str]:
+        frozen_keys: set[str] = set()
+        values = tuple(dict.fromkeys(str(item) for item in evaluation_keys if str(item)))
+        for start in range(0, len(values), 500):
+            chunk = values[start : start + 500]
+            if not chunk:
+                continue
+            placeholders = ",".join("?" for _ in chunk)
+            query = (
+                "SELECT evaluation_key FROM frozen_results "
+                f"WHERE evaluation_key IN ({placeholders})"
+            )
+            for row in connection.execute(query, chunk).fetchall():
+                frozen_keys.add(str(row["evaluation_key"]))
+        return frozen_keys
+
+    @staticmethod
+    def _fetch_existing_supersessions(
+        connection: sqlite3.Connection,
+        *,
+        predecessor_keys: Sequence[str],
+        successor_keys: Sequence[str],
+        identities: Sequence[str],
+    ) -> tuple[dict[str, sqlite3.Row], dict[str, sqlite3.Row], dict[str, sqlite3.Row]]:
+        by_predecessor: dict[str, sqlite3.Row] = {}
+        by_successor: dict[str, sqlite3.Row] = {}
+        by_identity: dict[str, sqlite3.Row] = {}
+        for values, column in (
+            (tuple(dict.fromkeys(str(item) for item in predecessor_keys if str(item))), "predecessor_evaluation_key"),
+            (tuple(dict.fromkeys(str(item) for item in successor_keys if str(item))), "successor_evaluation_key"),
+            (tuple(dict.fromkeys(str(item) for item in identities if str(item))), "identity"),
+        ):
+            for start in range(0, len(values), 500):
+                chunk = values[start : start + 500]
+                if not chunk:
+                    continue
+                placeholders = ",".join("?" for _ in chunk)
+                query = f"SELECT * FROM task_supersessions WHERE {column} IN ({placeholders})"
+                for row in connection.execute(query, chunk).fetchall():
+                    by_predecessor[str(row["predecessor_evaluation_key"])] = row
+                    by_successor[str(row["successor_evaluation_key"])] = row
+                    by_identity[str(row["identity"])] = row
+        return by_predecessor, by_successor, by_identity
+
+    @staticmethod
+    def _has_running_attempt(connection: sqlite3.Connection, evaluation_key: str) -> bool:
+        row = connection.execute(
+            "SELECT 1 FROM attempts WHERE evaluation_key = ? AND status = 'running' LIMIT 1",
+            (evaluation_key,),
+        ).fetchone()
+        return row is not None
+
+    @staticmethod
+    def _has_active_dependents(connection: sqlite3.Connection, evaluation_key: str) -> bool:
+        valid_superseded = TaskStateStore._valid_superseded_predecessors(connection)
+        rows = connection.execute(
+            """SELECT evaluation_key, state, dependencies_json
+               FROM tasks
+               WHERE evaluation_key != ?""",
+            (evaluation_key,),
+        ).fetchall()
+        for row in rows:
+            dependencies = json.loads(str(row["dependencies_json"]))
+            state = str(row["state"])
+            dependent_key = str(row["evaluation_key"])
+            if evaluation_key not in dependencies:
+                continue
+            if state in {"frozen", "non_applicable"}:
+                continue
+            if state == "superseded" and dependent_key in valid_superseded:
+                continue
+            return True
+        return False
+
+    def register_supersession(
+        self,
+        predecessor_evaluation_key: str,
+        successor: TaskSpec,
+        *,
+        identity: str,
+        reason: str,
+        predecessor_plan_sha256: str,
+        successor_plan_sha256: str,
+        now: float | None = None,
+    ) -> None:
+        self.register_supersession_batch(
+            (
+                TaskSupersession(
+                    predecessor_evaluation_key=predecessor_evaluation_key,
+                    successor=successor,
+                    identity=identity,
+                    reason=reason,
+                    predecessor_plan_sha256=predecessor_plan_sha256,
+                    successor_plan_sha256=successor_plan_sha256,
+                ),
+            ),
+            now=now,
+        )
+
+    def register_supersession_batch(
+        self,
+        supersessions: Sequence[TaskSupersession],
+        *,
+        now: float | None = None,
+    ) -> None:
+        if not supersessions:
+            return
+        timestamp = time.time() if now is None else float(now)
+        prepared: list[tuple[TaskSupersession, str, str]] = []
+        seen_predecessors: set[str] = set()
+        seen_successor_evaluations: set[str] = set()
+        seen_successor_logicals: set[str] = set()
+        seen_identities: set[str] = set()
+        for item in supersessions:
+            predecessor_key = str(item.predecessor_evaluation_key)
+            if not predecessor_key:
+                raise StateContractError("supersession predecessor 不得为空")
+            self._validate_task_spec(item.successor)
+            if not item.identity:
+                raise StateContractError("supersession identity 不得为空")
+            if not item.reason:
+                raise StateContractError("supersession reason 不得为空")
+            if not item.predecessor_plan_sha256 or not item.successor_plan_sha256:
+                raise StateContractError("supersession plan sha256 不得为空")
+            if predecessor_key in seen_predecessors:
+                raise StateContractError(f"supersession predecessor 重复: {predecessor_key!r}")
+            if item.successor.evaluation_key in seen_successor_evaluations:
+                raise StateContractError(
+                    f"supersession successor evaluation_key 重复: {item.successor.evaluation_key!r}"
+                )
+            if item.successor.logical_id in seen_successor_logicals:
+                raise StateContractError(
+                    f"supersession successor logical_id 重复: {item.successor.logical_id!r}"
+                )
+            if item.identity in seen_identities:
+                raise StateContractError(f"supersession identity 重复: {item.identity!r}")
+            seen_predecessors.add(predecessor_key)
+            seen_successor_evaluations.add(item.successor.evaluation_key)
+            seen_successor_logicals.add(item.successor.logical_id)
+            seen_identities.add(item.identity)
+            prepared.append(
+                (
+                    item,
+                    item.successor.canonical_json(),
+                    json.dumps(list(item.successor.dependencies), ensure_ascii=False),
+                )
+            )
+        with self._write_transaction() as connection:
+            predecessor_rows = self._fetch_tasks_by_evaluation_keys(
+                connection,
+                [item.predecessor_evaluation_key for item, _, _ in prepared],
+            )
+            frozen_bindings = self._fetch_frozen_bindings(
+                connection,
+                [item.predecessor_evaluation_key for item, _, _ in prepared],
+            )
+            known_by_evaluation, known_by_logical = self._load_existing_task_specs(
+                connection,
+                evaluation_keys=[item.successor.evaluation_key for item, _, _ in prepared],
+                logical_ids=[item.successor.logical_id for item, _, _ in prepared],
+            )
+            (
+                superseded_by_predecessor,
+                superseded_by_successor,
+                superseded_by_identity,
+            ) = self._fetch_existing_supersessions(
+                connection,
+                predecessor_keys=[item.predecessor_evaluation_key for item, _, _ in prepared],
+                successor_keys=[item.successor.evaluation_key for item, _, _ in prepared],
+                identities=[item.identity for item, _, _ in prepared],
+            )
+            active_logical_count = self._active_logical_task_count(connection)
+            pending_inserts: list[tuple[object, ...]] = []
+            pending_registration_events: list[tuple[str, float, dict[str, object]]] = []
+            pending_supersession_rows: list[tuple[object, ...]] = []
+            pending_supersession_events: list[tuple[str, str, str, str, float]] = []
+            newly_superseded = 0
+            newly_inserted = 0
+            for item, successor_spec_json, successor_dependencies_json in prepared:
+                predecessor_key = str(item.predecessor_evaluation_key)
+                successor = item.successor
+                predecessor = predecessor_rows.get(predecessor_key)
+                if predecessor is None:
+                    raise StateContractError(f"supersession predecessor 不存在: {predecessor_key!r}")
+                predecessor_state = str(predecessor["state"])
+                existing_mapping = superseded_by_predecessor.get(predecessor_key)
+                known_entry = known_by_evaluation.get(successor.evaluation_key)
+                known_successor_key = known_by_logical.get(successor.logical_id)
+                successor_mapping = superseded_by_successor.get(successor.evaluation_key)
+                identity_mapping = superseded_by_identity.get(item.identity)
+                predecessor_identity = self._task_identity_from_row(predecessor)
+                successor_identity = self._task_identity_fields(
+                    task_type=successor.task_type,
+                    condition=successor.condition,
+                    priority=successor.priority,
+                    dependencies_json=successor_dependencies_json,
+                )
+                if predecessor_identity != successor_identity:
+                    raise StateContractError(
+                        f"supersession identity 不一致: {predecessor_key!r} -> {successor.evaluation_key!r}"
+                    )
+                if predecessor_state == "superseded":
+                    if existing_mapping is None:
+                        raise StateContractError(
+                            f"任务 {predecessor_key!r} 已是 superseded，但缺少 supersession 绑定"
+                        )
+                    if (
+                        str(existing_mapping["predecessor_logical_id"]) != str(predecessor["logical_id"])
+                        or str(existing_mapping["successor_logical_id"]) != successor.logical_id
+                    ):
+                        raise StateContractError(
+                            f"任务 {predecessor_key!r} 的 supersession logical_id 发生漂移"
+                        )
+                    if str(existing_mapping["successor_evaluation_key"]) != successor.evaluation_key:
+                        raise StateContractError(
+                            f"任务 {predecessor_key!r} 的 supersession successor 发生漂移"
+                        )
+                    if (
+                        str(existing_mapping["identity"]) != item.identity
+                        or str(existing_mapping["reason"]) != item.reason
+                        or str(existing_mapping["predecessor_plan_sha256"])
+                        != item.predecessor_plan_sha256
+                        or str(existing_mapping["successor_plan_sha256"])
+                        != item.successor_plan_sha256
+                    ):
+                        raise StateContractError(
+                            f"任务 {predecessor_key!r} 的 supersession manifest 发生漂移"
+                        )
+                    if (
+                        identity_mapping is not None
+                        and str(identity_mapping["predecessor_evaluation_key"]) != predecessor_key
+                    ):
+                        raise StateContractError(f"supersession identity 重复: {item.identity!r}")
+                    if (
+                        known_entry is None
+                        or known_successor_key != successor.evaluation_key
+                        or known_entry["spec_json"] != successor_spec_json
+                    ):
+                        raise StateContractError(
+                            f"任务 {successor.logical_id!r} 已存在，但 supersession successor 契约漂移"
+                        )
+                    continue
+                if predecessor_state != "frozen":
+                    raise StateContractError(
+                        f"任务 {predecessor_key!r} 当前状态 {predecessor_state!r}，不可 supersede"
+                    )
+                if predecessor_key not in frozen_bindings:
+                    raise StateContractError(
+                        f"任务 {predecessor_key!r} 缺少 frozen binding，禁止 supersede"
+                    )
+                if self._has_running_attempt(connection, predecessor_key):
+                    raise StateContractError(
+                        f"任务 {predecessor_key!r} 存在 running attempt，禁止 supersede"
+                    )
+                if self._has_active_dependents(connection, predecessor_key):
+                    raise StateContractError(
+                        f"任务 {predecessor_key!r} 仍被 active dependents 引用，禁止 supersede"
+                    )
+                if existing_mapping is not None:
+                    raise StateContractError(
+                        f"任务 {predecessor_key!r} 已绑定 supersession successor，当前请求漂移"
+                    )
+                if successor_mapping is not None:
+                    raise StateContractError(
+                        f"任务 {successor.evaluation_key!r} 已绑定其他 supersession predecessor"
+                    )
+                if identity_mapping is not None:
+                    raise StateContractError(f"supersession identity 重复: {item.identity!r}")
+                if known_entry is None and known_successor_key is None:
+                    pending_inserts.append(
+                        (
+                            successor.evaluation_key,
+                            successor.logical_id,
+                            successor.task_type,
+                            successor.condition,
+                            int(successor.priority),
+                            successor.input_hash,
+                            successor.prompt_version,
+                            successor.schema_version,
+                            successor_dependencies_json,
+                            successor_spec_json,
+                            timestamp,
+                            timestamp,
+                        )
+                    )
+                    pending_registration_events.append(
+                        (
+                            successor.evaluation_key,
+                            timestamp,
+                            {
+                                "logical_id": successor.logical_id,
+                                "supersession_predecessor": predecessor_key,
+                            },
+                        )
+                    )
+                    known_by_evaluation[successor.evaluation_key] = {
+                        "logical_id": successor.logical_id,
+                        "spec_json": successor_spec_json,
+                    }
+                    known_by_logical[successor.logical_id] = successor.evaluation_key
+                    newly_inserted += 1
+                elif known_entry is None or known_successor_key != successor.evaluation_key:
+                    raise StateContractError(
+                        "任务唯一标识冲突: "
+                        f"evaluation_key={successor.evaluation_key!r}, logical_id={successor.logical_id!r}"
+                    )
+                elif known_entry["spec_json"] != successor_spec_json:
+                    raise StateContractError(
+                        f"任务 {successor.logical_id!r} 已存在，但 supersession successor 契约漂移"
+                    )
+                else:
+                    raise StateContractError(
+                        f"任务 {successor.logical_id!r} 已存在，不能把现有任务重新声明为新 supersession successor"
+                    )
+                pending_supersession_rows.append(
+                    (
+                        predecessor_key,
+                        successor.evaluation_key,
+                        str(predecessor["logical_id"]),
+                        successor.logical_id,
+                        item.identity,
+                        item.reason,
+                        item.predecessor_plan_sha256,
+                        item.successor_plan_sha256,
+                        timestamp,
+                    )
+                )
+                pending_supersession_events.append(
+                    (predecessor_key, successor.evaluation_key, item.identity, item.reason, timestamp)
+                )
+                newly_superseded += 1
+            next_active_logical_count = active_logical_count - newly_superseded + newly_inserted
+            if next_active_logical_count > self.logical_task_cap:
+                raise StateContractError(
+                    f"逻辑任务预算已耗尽: {next_active_logical_count}/{self.logical_task_cap}"
+                )
+            if pending_inserts:
+                connection.executemany(
+                    """INSERT INTO tasks(
+                           evaluation_key, logical_id, task_type, condition_name,
+                           priority, input_hash, prompt_version, schema_version,
+                           dependencies_json, spec_json, state, created_at, updated_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)""",
+                    pending_inserts,
+                )
+                for evaluation_key, event_at, details in pending_registration_events:
+                    self._event(
+                        connection,
+                        event_type="task_registered",
+                        event_at=event_at,
+                        evaluation_key=evaluation_key,
+                        details=details,
+                    )
+            if pending_supersession_rows:
+                connection.executemany(
+                    """INSERT INTO task_supersessions(
+                           predecessor_evaluation_key, successor_evaluation_key,
+                           predecessor_logical_id, successor_logical_id, identity, reason,
+                           predecessor_plan_sha256, successor_plan_sha256, superseded_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    pending_supersession_rows,
+                )
+                connection.executemany(
+                    """UPDATE tasks
+                       SET state='superseded', lease_expires_at=NULL,
+                           last_error_class=NULL, updated_at=?
+                       WHERE evaluation_key=?""",
+                    [(event_at, predecessor_key) for predecessor_key, _, _, _, event_at in pending_supersession_events],
+                )
+                for predecessor_key, successor_key, identity, reason, event_at in pending_supersession_events:
+                    self._event(
+                        connection,
+                        event_type="task_superseded",
+                        event_at=event_at,
+                        evaluation_key=predecessor_key,
+                        details={
+                            "successor_evaluation_key": successor_key,
+                            "identity": identity,
+                            "reason": reason,
+                        },
+                    )
+
     def attempts_reserved(self) -> int:
         with self._connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()
         return self.attempt_offset + int(row["count"])
+
+    def state_summary(self) -> dict[str, object]:
+        with self._connect() as connection:
+            state_rows = connection.execute(
+                "SELECT state, COUNT(*) AS count FROM tasks GROUP BY state"
+            ).fetchall()
+            historical_count = int(
+                connection.execute("SELECT COUNT(*) AS count FROM tasks").fetchone()["count"]
+            )
+            superseded_count = int(
+                len(self._valid_superseded_predecessors(connection))
+            )
+            attempt_count = int(
+                connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()["count"]
+            )
+        state_counts = {str(row["state"]): int(row["count"]) for row in state_rows}
+        return {
+            "logical_tasks": {
+                "active": historical_count - superseded_count,
+                "historical": historical_count,
+                "superseded": superseded_count,
+                "state_counts": state_counts,
+            },
+            "attempts": {
+                "physical": attempt_count,
+                "reserved": self.attempt_offset + attempt_count,
+                "offset": self.attempt_offset,
+            },
+        }
 
     def task_state(self, evaluation_key: str) -> str:
         with self._connect() as connection:
@@ -437,16 +1052,22 @@ class TaskStateStore:
             index = order.index(condition)
         except ValueError as exc:
             raise StateContractError(f"未知任务条件: {condition!r}") from exc
+        valid_superseded = TaskStateStore._valid_superseded_predecessors(connection)
         for preceding in order[:index]:
-            unfinished = int(
-                connection.execute(
-                    """SELECT COUNT(*) AS count FROM tasks
-                       WHERE condition_name = ?
-                         AND state NOT IN ('frozen', 'non_applicable')""",
-                    (preceding,),
-                ).fetchone()["count"]
-            )
-            if unfinished:
+            rows = connection.execute(
+                """SELECT evaluation_key, state FROM tasks
+                   WHERE condition_name = ?""",
+                (preceding,),
+            ).fetchall()
+            if any(
+                not TaskStateStore._is_terminal_for_gate(
+                    connection,
+                    evaluation_key=str(row["evaluation_key"]),
+                    state=str(row["state"]),
+                    valid_superseded=valid_superseded,
+                )
+                for row in rows
+            ):
                 return False
         return True
 
@@ -457,16 +1078,22 @@ class TaskStateStore:
         condition: str,
         priority: int,
     ) -> bool:
-        unfinished = int(
-            connection.execute(
-                """SELECT COUNT(*) AS count FROM tasks
-                   WHERE condition_name = ?
-                     AND priority < ?
-                     AND state NOT IN ('frozen', 'non_applicable')""",
-                (condition, int(priority)),
-            ).fetchone()["count"]
+        valid_superseded = TaskStateStore._valid_superseded_predecessors(connection)
+        rows = connection.execute(
+            """SELECT evaluation_key, state FROM tasks
+               WHERE condition_name = ?
+                 AND priority < ?""",
+            (condition, int(priority)),
+        ).fetchall()
+        return not any(
+            not TaskStateStore._is_terminal_for_gate(
+                connection,
+                evaluation_key=str(row["evaluation_key"]),
+                state=str(row["state"]),
+                valid_superseded=valid_superseded,
+            )
+            for row in rows
         )
-        return unfinished == 0
 
     def next_ready_key(self, *, allowed_conditions: Sequence[str]) -> str | None:
         if not allowed_conditions:
