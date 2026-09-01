@@ -1,0 +1,67 @@
+{
+  "schema_version": "turn_contract_retry_policy.v1",
+  "status": "applied",
+  "applied_at": "2026-09-01T09:59:52+08:00",
+  "implementation_commit": "6b16459246bc4a92ef531ee44d520ff61cd592e8",
+  "model_invoked_for_policy_change": false,
+  "observed_attempt_count": 3,
+  "observations": [
+    {
+      "logical_id": "pred_simplify::drsr::g0022::s520::clean",
+      "attempt_id": "e607a499128689dcb6c8566306f84b58f61db02182d5d1f2e72a27f76c06fcb0.a02",
+      "audit_sha256": "ffd849e2b0fca5665acb8644390ada7d4ebcb745e5967e233e4d06935f7237d0",
+      "num_turns": 2,
+      "stop_reason": "end_turn",
+      "returncode": 0,
+      "model_key": "claude-opus-5[1m]",
+      "canonical_model": "claude-opus-5",
+      "server_tool_use_total": 0,
+      "total_cost_usd": 0.1093495,
+      "later_task_state": "exhausted"
+    },
+    {
+      "logical_id": "pred_simplify::dso::g0026::s522::clean",
+      "attempt_id": "f3e02020759fbec77e00476886ab43b4965e59b02b37f813c6eb5504db65f552.a01",
+      "audit_sha256": "e7413f13325bb0b328f4629dabc9213d6f79637ad3092fbd3aa7fe3e7454b474",
+      "num_turns": 2,
+      "stop_reason": "end_turn",
+      "returncode": 0,
+      "model_key": "claude-opus-5[1m]",
+      "canonical_model": "claude-opus-5",
+      "server_tool_use_total": 0,
+      "total_cost_usd": 0.11263425,
+      "later_task_state": "frozen"
+    },
+    {
+      "logical_id": "pred_simplify::e2esr::g0005::s521::clean",
+      "attempt_id": "2403df26b05339d11bbbd4127dc627c35ce6768ecbb5b434c85846893d70b818.a01",
+      "audit_sha256": "08015fb18f7a0f3864b43eedb636c5094d4b23469bb0d63e05e7cd48649bc886",
+      "num_turns": 2,
+      "stop_reason": "end_turn",
+      "returncode": 0,
+      "model_key": "claude-opus-5[1m]",
+      "canonical_model": "claude-opus-5",
+      "server_tool_use_total": 0,
+      "total_cost_usd": 0.13999775,
+      "later_task_state_at_audit": "retry_wait"
+    }
+  ],
+  "policy": {
+    "accept_turn_contract_violation_output": false,
+    "retryable": true,
+    "circuit_break": false,
+    "max_attempts_per_task": 3,
+    "rationale": "隔离的 turn 数漂移不改变模型和零工具契约；拒绝本次输出并在同一任务预算内重试即可，不应停止其它独立任务。"
+  },
+  "global_circuit_breakers_preserved_for": [
+    "model key or canonical model drift",
+    "non-zero server tool use",
+    "Claude CLI command or schema contract drift",
+    "frozen result provenance drift"
+  ],
+  "verification": {
+    "targeted_tests": "5 passed",
+    "claude_runner_tests": "41 passed",
+    "run_claude_plan_tests": "12 passed"
+  }
+}
