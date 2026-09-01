@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import random
 import re
+import signal
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -29,10 +32,14 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import (
     TaskSpec,
     TaskStateStore,
 )
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.semantic_validation_worker import (
+    WORKER_MODULE as SEMANTIC_VALIDATION_WORKER_MODULE,
+    build_semantic_validation_payload,
+    validate_simplify_semantics_payload,
+)
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_evidence import (
     SimplificationContractError,
     SymbolicEvidenceError,
-    validate_simplification,
 )
 
 
@@ -93,7 +100,9 @@ _CLI_CONTRACT_FLAGS = frozenset(
         "--json-schema",
     }
 )
-SEMANTIC_VALIDATOR_VERSION = "symbolic_evidence.v1"
+SEMANTIC_VALIDATOR_VERSION = "symbolic_evidence.v2"
+SEMANTIC_VALIDATOR_TRANSPORT_VERSION = "semantic_validation_worker.v1"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -241,6 +250,10 @@ def _normalize_text_output(value: object) -> str:
     return str(value)
 
 
+def _default_semantic_validator_command_builder() -> list[str]:
+    return [sys.executable, "-m", SEMANTIC_VALIDATION_WORKER_MODULE]
+
+
 def _infer_task_kind(task_type: str, explicit: str | None) -> str:
     if explicit is not None:
         return explicit
@@ -283,131 +296,27 @@ def _is_circuit_break_violation(exc: Exception) -> bool:
     return any(pattern in message for pattern in _CIRCUIT_BREAK_PATTERNS)
 
 
-def _semantic_seed(evaluation_key: str) -> int:
-    digest = hashlib.sha256(evaluation_key.encode("utf-8")).hexdigest()
-    return int(digest[:16], 16)
-
-
-def _validated_probe_contract(
-    request: Mapping[str, object],
-) -> tuple[Sequence[Mapping[str, object]] | None, str | None, str | None]:
-    present = {
-        key
-        for key in (
-            "probe_points",
-            "probe_source",
-            "probe_sample_sha256",
-            "dataset_probe_evidence",
-        )
-        if request.get(key) is not None
-    }
-    if not present:
-        return None, None, None
-    required = {
-        "probe_points",
-        "probe_source",
-        "probe_sample_sha256",
-        "dataset_probe_evidence",
-    }
-    if present != required:
-        raise SymbolicEvidenceError(
-            f"dataset probe 请求字段不完整: 缺少 {sorted(required - present)}"
-        )
-    points = request.get("probe_points")
-    source = request.get("probe_source")
-    sample_sha256 = request.get("probe_sample_sha256")
-    probe_raw = request.get("dataset_probe_evidence")
-    if not isinstance(points, list) or not all(isinstance(item, Mapping) for item in points):
-        raise SymbolicEvidenceError("probe_points 必须是对象数组")
-    if not isinstance(source, str) or not source:
-        raise SymbolicEvidenceError("probe_source 必须是非空字符串")
-    if not isinstance(sample_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", sample_sha256):
-        raise SymbolicEvidenceError("probe_sample_sha256 非法")
-    if not isinstance(probe_raw, Mapping):
-        raise SymbolicEvidenceError("dataset_probe_evidence 必须是对象")
-    probe = dict(probe_raw)
-    if probe.get("schema_version") != source:
-        raise SymbolicEvidenceError("probe_source 与 dataset_probe_evidence 不一致")
-    if probe.get("points") != points:
-        raise SymbolicEvidenceError("probe_points 与 dataset_probe_evidence 不一致")
-    if probe.get("sample_sha256") != sample_sha256:
-        raise SymbolicEvidenceError("probe_sample_sha256 与 dataset_probe_evidence 不一致")
-    variables = request.get("variables")
-    if probe.get("variables") != variables:
-        raise SymbolicEvidenceError("probe variables 与 simplify request.variables 不一致")
-    dataset_id = request.get("dataset_id")
-    if probe.get("dataset_name") != dataset_id:
-        raise SymbolicEvidenceError("probe dataset_name 与 simplify request.dataset_id 不一致")
-    sample_payload = {
-        "schema_version": probe.get("schema_version"),
-        "dataset_name": probe.get("dataset_name"),
-        "variables": probe.get("variables"),
-        "points": probe.get("points"),
-    }
-    if _sha256_text(canonical_json(sample_payload)) != sample_sha256:
-        raise SymbolicEvidenceError("dataset probe sample_sha256 校验失败")
-    evidence_sha256 = probe.get("evidence_sha256")
-    evidence_payload = {
-        key: value for key, value in probe.items() if key != "evidence_sha256"
-    }
-    if not isinstance(evidence_sha256, str) or _sha256_text(
-        canonical_json(evidence_payload)
-    ) != evidence_sha256:
-        raise SymbolicEvidenceError("dataset probe evidence_sha256 校验失败")
-    return points, source, sample_sha256
-
-
 def _validate_simplify_semantics(
     definition: "TaskDefinition",
     structured_output: Mapping[str, object],
 ) -> JsonDict:
-    outcome = structured_output.get("outcome")
-    if outcome == "unable":
-        return {"decision": "not_applicable", "reason": "outcome_unable"}
+    return validate_simplify_semantics_payload(
+        evaluation_key=definition.task_spec.evaluation_key,
+        request=definition.request,
+        structured_output=structured_output,
+    )
 
-    original = definition.request.get("expression")
-    simplified = structured_output.get("simplified_expression")
-    variables = definition.request.get("variables")
-    functions = definition.request.get("allowed_functions")
-    if not isinstance(original, str) or not original.strip():
-        raise SymbolicEvidenceError("simplify request.expression 缺失或无效")
-    if not isinstance(simplified, str) or not simplified.strip():
-        raise SymbolicEvidenceError("simplified_expression 缺失或无效")
-    if not isinstance(variables, list) or not all(
-        isinstance(item, str) and item for item in variables
-    ):
-        raise SymbolicEvidenceError("simplify request.variables 缺失或无效")
-    if not isinstance(functions, list) or not all(
-        isinstance(item, str) and item for item in functions
-    ):
-        raise SymbolicEvidenceError("simplify request.allowed_functions 缺失或无效")
-    probe_points, probe_source, probe_sample_sha256 = _validated_probe_contract(
-        definition.request
-    )
-    evidence = validate_simplification(
-        original=original,
-        simplified=simplified,
-        allowed_variables=variables,
-        allowed_functions=functions,
-        seed=_semantic_seed(definition.task_spec.evaluation_key),
-        probe_points=probe_points,
-        probe_source=probe_source,
-        probe_sample_sha256=probe_sample_sha256,
-    )
-    deterministic = definition.request.get("deterministic_evidence")
-    if deterministic is not None:
-        if not isinstance(deterministic, Mapping):
-            raise SymbolicEvidenceError("deterministic_evidence 必须是对象")
-        artifact = deterministic.get("symbolic_artifact")
-        if not isinstance(artifact, Mapping):
-            raise SymbolicEvidenceError("deterministic_evidence.symbolic_artifact 缺失")
-        if artifact.get("artifact_sha256") != evidence.get("original_sha256"):
-            raise SymbolicEvidenceError("请求中的 symbolic artifact 与原公式不一致")
-        if list(artifact.get("variables", [])) != sorted(
-            set(str(item) for item in artifact.get("variables", []))
-        ):
-            raise SymbolicEvidenceError("请求中的 symbolic artifact variables 未规范化")
-    return evidence
+
+class _SemanticValidatorTimeoutError(TimeoutError):
+    def __init__(self, message: str, *, semantic_evidence: Mapping[str, object]) -> None:
+        super().__init__(message)
+        self.semantic_evidence = dict(semantic_evidence)
+
+
+class _SemanticValidatorSymbolicEvidenceFailure(SymbolicEvidenceError):
+    def __init__(self, message: str, *, semantic_evidence: Mapping[str, object]) -> None:
+        super().__init__(message)
+        self.semantic_evidence = dict(semantic_evidence)
 
 
 def _enforce_runtime_envelope_contract(envelope: Mapping[str, object]) -> None:
@@ -529,11 +438,15 @@ class ClaudeRunner:
         backoff_schedule_seconds: Sequence[float] = (1.0, 2.0),
         backoff_jitter_ratio: float = 0.2,
         uniform_fn: Callable[[float, float], float] = random.uniform,
+        semantic_validator_timeout_seconds: float = 90.0,
+        semantic_validator_command_builder: Callable[[], list[str]] = _default_semantic_validator_command_builder,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds 必须为正数")
         if not 0.0 <= backoff_jitter_ratio <= 1.0:
             raise ValueError("backoff_jitter_ratio 必须位于 [0, 1]")
+        if semantic_validator_timeout_seconds <= 0:
+            raise ValueError("semantic_validator_timeout_seconds 必须为正数")
         self.store = store
         self.attempts_dir = Path(attempts_dir)
         self.frozen_dir = Path(frozen_dir)
@@ -550,6 +463,8 @@ class ClaudeRunner:
         self.backoff_schedule_seconds = tuple(float(item) for item in backoff_schedule_seconds)
         self.backoff_jitter_ratio = float(backoff_jitter_ratio)
         self.uniform_fn = uniform_fn
+        self.semantic_validator_timeout_seconds = float(semantic_validator_timeout_seconds)
+        self.semantic_validator_command_builder = semantic_validator_command_builder
 
     def execute(self, definition: TaskDefinition) -> ClaudeRunResult:
         self.store.register_task(definition.task_spec)
@@ -711,6 +626,8 @@ class ClaudeRunner:
         usage: JsonDict | None = None
         structured_output: JsonDict | None = None
         scratch_path = self.scratch_dir / attempt_id
+        semantic_algorithm_path = Path(__file__).with_name("symbolic_evidence.py")
+        semantic_worker_path = Path(__file__).with_name("semantic_validation_worker.py")
 
         try:
             scratch_path.mkdir(parents=True, exist_ok=False)
@@ -822,7 +739,7 @@ class ClaudeRunner:
                         semantic_evidence: JsonDict | None = None
                         if task_kind == "simplify":
                             try:
-                                semantic_evidence = _validate_simplify_semantics(
+                                semantic_evidence = self._run_semantic_validator(
                                     definition,
                                     structured_output,
                                 )
@@ -837,14 +754,21 @@ class ClaudeRunner:
                                     "structured_output": structured_output,
                                     "semantic_evidence": semantic_evidence,
                                 }
-                            except SymbolicEvidenceError as exc:
+                            except _SemanticValidatorSymbolicEvidenceFailure as exc:
                                 error_class = "validation_failed"
                                 retryable = True
-                                semantic_evidence = {
-                                    "decision": "contract_error",
-                                    "error_type": type(exc).__name__,
+                                semantic_evidence = dict(exc.semantic_evidence)
+                                validation = {
+                                    "ok": False,
+                                    "error_class": error_class,
                                     "error_message": str(exc),
+                                    "structured_output": structured_output,
+                                    "semantic_evidence": semantic_evidence,
                                 }
+                            except _SemanticValidatorTimeoutError as exc:
+                                error_class = "semantic_validator_timeout"
+                                retryable = True
+                                semantic_evidence = dict(exc.semantic_evidence)
                                 validation = {
                                     "ok": False,
                                     "error_class": error_class,
@@ -921,9 +845,10 @@ class ClaudeRunner:
             "schema_path": str(definition.schema_path),
             "schema_sha256": schema_sha256,
             "semantic_validator_version": SEMANTIC_VALIDATOR_VERSION,
-            "semantic_validator_sha256": _sha256_file(
-                Path(__file__).with_name("symbolic_evidence.py")
-            ),
+            "semantic_validator_sha256": _sha256_file(semantic_algorithm_path),
+            "semantic_validator_transport_version": SEMANTIC_VALIDATOR_TRANSPORT_VERSION,
+            "semantic_validator_worker_sha256": _sha256_file(semantic_worker_path),
+            "semantic_validator_timeout_seconds": self.semantic_validator_timeout_seconds,
             "request_sha256": _sha256_text(request_text),
             "stdout_sha256": _sha256_text(stdout),
             "stderr_sha256": _sha256_text(stderr),
@@ -996,6 +921,118 @@ class ClaudeRunner:
             total_cost_usd=total_cost_usd,
             claude_version=claude_version,
         )
+
+    def _terminate_semantic_validator_process(self, process: subprocess.Popen[str]) -> None:
+        if process.poll() is not None:
+            return
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        except Exception:
+            try:
+                process.terminate()
+            except Exception:
+                return
+        try:
+            process.wait(timeout=0.2)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        except Exception:
+            try:
+                process.kill()
+            except Exception:
+                return
+        try:
+            process.wait(timeout=5.0)
+        except subprocess.TimeoutExpired:
+            pass
+
+    def _run_semantic_validator(
+        self,
+        definition: TaskDefinition,
+        structured_output: Mapping[str, object],
+    ) -> JsonDict:
+        payload = build_semantic_validation_payload(
+            evaluation_key=definition.task_spec.evaluation_key,
+            request=definition.request,
+            structured_output=structured_output,
+        )
+        command = list(self.semantic_validator_command_builder())
+        if not command:
+            raise RuntimeError("semantic validator command 为空")
+        try:
+            process = subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=str(_REPO_ROOT),
+                start_new_session=True,
+            )
+        except OSError as exc:
+            raise RuntimeError(f"启动 semantic validator 失败: {exc}") from exc
+        try:
+            stdout, stderr = process.communicate(
+                canonical_json(payload),
+                timeout=self.semantic_validator_timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            self._terminate_semantic_validator_process(process)
+            try:
+                stdout, stderr = process.communicate(timeout=5.0)
+            except Exception:
+                stdout = _normalize_text_output(exc.stdout)
+                stderr = _normalize_text_output(exc.stderr)
+            else:
+                stdout = _normalize_text_output(stdout)
+                stderr = _normalize_text_output(stderr)
+            semantic_evidence = {
+                "decision": "validator_timeout",
+                "error_type": "TimeoutExpired",
+                "error_message": (
+                    f"semantic validator 超时，超过 {self.semantic_validator_timeout_seconds:g} 秒"
+                ),
+            }
+            raise _SemanticValidatorTimeoutError(
+                str(semantic_evidence["error_message"]),
+                semantic_evidence=semantic_evidence,
+            ) from exc
+        stdout = _normalize_text_output(stdout)
+        stderr = _normalize_text_output(stderr)
+        if process.returncode != 0:
+            detail = stderr.strip() or stdout.strip() or f"rc={process.returncode}"
+            raise RuntimeError(f"semantic validator 进程异常退出: {detail}")
+        if not stdout.strip():
+            raise RuntimeError("semantic validator stdout 为空")
+        try:
+            response = json.loads(stdout)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"semantic validator 输出不是合法 JSON: {exc}") from exc
+        if not isinstance(response, dict):
+            raise RuntimeError("semantic validator 输出不是 JSON object")
+        semantic_evidence = response.get("semantic_evidence")
+        if not isinstance(semantic_evidence, Mapping):
+            raise RuntimeError("semantic validator 输出缺少 semantic_evidence")
+        semantic_evidence_payload = dict(semantic_evidence)
+        status = response.get("status")
+        if status == "ok":
+            return semantic_evidence_payload
+        error_message = str(response.get("error_message") or "semantic validator 返回错误")
+        if status == "simplification_contract_error":
+            raise SimplificationContractError(error_message, evidence=semantic_evidence_payload)
+        if status == "symbolic_evidence_error":
+            raise _SemanticValidatorSymbolicEvidenceFailure(
+                error_message,
+                semantic_evidence=semantic_evidence_payload,
+            )
+        raise RuntimeError(f"semantic validator 返回未知状态: {status!r}")
 
     def _freeze_success(
         self,

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -234,7 +236,12 @@ class FakeSubprocessRun:
         return outcome
 
 
-def _runner(tmp_path: Path, store: TaskStateStore, fake_run: FakeSubprocessRun) -> ClaudeRunner:
+def _runner(
+    tmp_path: Path,
+    store: TaskStateStore,
+    fake_run: FakeSubprocessRun,
+    **overrides: object,
+) -> ClaudeRunner:
     return ClaudeRunner(
         store,
         attempts_dir=tmp_path / "llm" / "attempts",
@@ -246,7 +253,14 @@ def _runner(tmp_path: Path, store: TaskStateStore, fake_run: FakeSubprocessRun) 
         sleep_fn=lambda seconds: None,
         allow_non_claude_executable=False,
         backoff_schedule_seconds=(0.0, 0.0),
+        **overrides,
     )
+
+
+def _write_validator_script(tmp_path: Path, name: str, body: str) -> Path:
+    script_path = tmp_path / name
+    script_path.write_text(body, encoding="utf-8")
+    return script_path
 
 
 def test_success_freezes_once_and_restart_is_idempotent(tmp_path: Path) -> None:
@@ -297,6 +311,31 @@ def test_success_freezes_once_and_restart_is_idempotent(tmp_path: Path) -> None:
     assert attempt_audit["metadata"]["schema_sha256"] == definition.schema_sha256
     assert attempt_audit["metadata"]["wall_latency_seconds"] >= 0.0
     assert attempt_audit["metadata"]["scratch_dir"] == str(scratch_path)
+    algorithm_path = (
+        REPO_ROOT
+        / "AAAI_experiments"
+        / "stage5_metric_calculation_0831"
+        / "pipeline"
+        / "symbolic_evidence.py"
+    )
+    worker_path = (
+        REPO_ROOT
+        / "AAAI_experiments"
+        / "stage5_metric_calculation_0831"
+        / "pipeline"
+        / "semantic_validation_worker.py"
+    )
+    assert attempt_audit["metadata"]["semantic_validator_version"] == "symbolic_evidence.v2"
+    assert (
+        attempt_audit["metadata"]["semantic_validator_transport_version"]
+        == "semantic_validation_worker.v1"
+    )
+    assert attempt_audit["metadata"]["semantic_validator_sha256"] == _sha256_text(
+        algorithm_path.read_text(encoding="utf-8")
+    )
+    assert attempt_audit["metadata"]["semantic_validator_worker_sha256"] == _sha256_text(
+        worker_path.read_text(encoding="utf-8")
+    )
     assert attempt_audit["metadata"]["usage"]["server_tool_use"] == {
         "web_fetch_requests": 0,
         "web_search_requests": 0,
@@ -465,6 +504,169 @@ def test_simplify_counterexample_retries_then_freezes_first_valid_result(tmp_pat
     )
     assert first["validation"]["error_class"] == "validation_failed"
     assert first["validation"]["semantic_evidence"]["counterexample"]
+
+
+def test_simplify_symbolic_evidence_error_is_preserved_in_attempt_audit(tmp_path: Path) -> None:
+    definition = _simplify_task_definition(tmp_path, "ek-simplify-symbolic-error")
+    definition = replace(
+        definition,
+        request={
+            "expression": "x0 + x1",
+            "variables": ["x0", "x1"],
+            "evidence_hash": "evidence",
+        },
+    )
+    store = TaskStateStore(
+        tmp_path / "control" / "state.sqlite3",
+        attempt_cap=5,
+        max_attempts_per_task=1,
+    )
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope("x1 + x0"), ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "exhausted"
+    assert result.error_class == "validation_failed"
+    attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    semantic_evidence = attempt["validation"]["semantic_evidence"]
+    assert semantic_evidence == {
+        "decision": "contract_error",
+        "error_type": "SymbolicEvidenceError",
+        "error_message": "simplify request.allowed_functions 缺失或无效",
+    }
+
+
+def test_simplify_semantic_validator_timeout_is_retryable_and_kills_worker(tmp_path: Path) -> None:
+    definition = _simplify_task_definition(tmp_path, "ek-simplify-validator-timeout")
+    pid_path = tmp_path / "validator-timeout.pid"
+    script_path = _write_validator_script(
+        tmp_path,
+        "sleeping_validator.py",
+        "\n".join(
+            [
+                "import json",
+                "import os",
+                "import pathlib",
+                "import sys",
+                "import time",
+                "pathlib.Path(sys.argv[1]).write_text(str(os.getpid()), encoding='utf-8')",
+                "json.load(sys.stdin)",
+                "time.sleep(30)",
+            ]
+        )
+        + "\n",
+    )
+    store = TaskStateStore(
+        tmp_path / "control" / "state.sqlite3",
+        attempt_cap=5,
+        max_attempts_per_task=1,
+    )
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope("x1 + x0"), ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(
+        tmp_path,
+        store,
+        fake_run,
+        semantic_validator_timeout_seconds=0.2,
+        semantic_validator_command_builder=lambda: [sys.executable, str(script_path), str(pid_path)],
+    ).execute(definition)
+
+    assert result.state == "exhausted"
+    assert result.error_class == "semantic_validator_timeout"
+    assert pid_path.is_file()
+    pid = int(pid_path.read_text(encoding="utf-8"))
+    deadline = time.time() + 3.0
+    while True:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            break
+        if time.time() >= deadline:
+            raise AssertionError(f"语义验证超时后子进程仍存活: pid={pid}")
+        time.sleep(0.05)
+    attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert attempt["validation"]["error_class"] == "semantic_validator_timeout"
+    assert attempt["metadata"]["retryable"] is True
+    assert attempt["validation"]["semantic_evidence"]["decision"] == "validator_timeout"
+
+
+def test_simplify_semantic_validator_subprocess_crash_maps_to_retryable_error(tmp_path: Path) -> None:
+    definition = _simplify_task_definition(tmp_path, "ek-simplify-validator-crash")
+    script_path = _write_validator_script(
+        tmp_path,
+        "crashing_validator.py",
+        "\n".join(
+            [
+                "import json",
+                "import sys",
+                "json.load(sys.stdin)",
+                "sys.stderr.write('validator crashed\\n')",
+                "raise RuntimeError('boom')",
+            ]
+        )
+        + "\n",
+    )
+    store = TaskStateStore(
+        tmp_path / "control" / "state.sqlite3",
+        attempt_cap=5,
+        max_attempts_per_task=1,
+    )
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_simplify_envelope("x1 + x0"), ensure_ascii=False),
+                stderr="",
+            )
+        ]
+    )
+
+    result = _runner(
+        tmp_path,
+        store,
+        fake_run,
+        semantic_validator_timeout_seconds=1.0,
+        semantic_validator_command_builder=lambda: [sys.executable, str(script_path)],
+    ).execute(definition)
+
+    assert result.state == "exhausted"
+    assert result.error_class == "semantic_validator_error"
+    attempt = json.loads(
+        (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert attempt["validation"]["error_class"] == "semantic_validator_error"
+    assert attempt["metadata"]["retryable"] is True
+    assert attempt["validation"]["semantic_evidence"]["decision"] == "validator_error"
+    assert "validator crashed" in attempt["validation"]["semantic_evidence"]["error_message"]
 
 
 def test_simplify_unable_is_valid_terminal_without_formula_validation(tmp_path: Path) -> None:
