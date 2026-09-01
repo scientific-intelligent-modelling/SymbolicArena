@@ -888,3 +888,162 @@ def test_cli_dry_run_does_not_pollute_output_or_evidence_dir(tmp_path: Path) -> 
     assert not report_json.exists()
     assert not fixture["non_applicable_index_jsonl"].exists()
     assert not fixture["non_applicable_evidence_dir"].exists()
+
+
+def test_cli_materializes_phase_specific_callable_no_call_and_full_plans(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import load_plan_jsonl
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import main
+
+    fixture = _make_fixture(
+        tmp_path,
+        full_counts=False,
+        pred_overrides={("alg00", "g0001", 521): {"outcome": "unable", "valid_output": True}},
+    )
+    all_callable_jsonl = tmp_path / "symbolic_tasks.jsonl"
+    all_non_applicable_jsonl = tmp_path / "symbolic_non_applicable.jsonl"
+    report_json = tmp_path / "symbolic_report.json"
+    eq_callable_jsonl = tmp_path / "equivalence_callable.jsonl"
+    eq_non_applicable_jsonl = tmp_path / "equivalence_non_applicable.jsonl"
+    eq_full_plan_jsonl = tmp_path / "equivalence_full_plan.jsonl"
+    structure_callable_jsonl = tmp_path / "structure_callable.jsonl"
+    structure_non_applicable_jsonl = tmp_path / "structure_non_applicable.jsonl"
+    structure_full_plan_jsonl = tmp_path / "structure_full_plan.jsonl"
+
+    exit_code = main(
+        [
+            "--gt-frozen-index-jsonl",
+            str(fixture["gt_frozen"]),
+            "--pred-frozen-index-jsonl",
+            str(fixture["pred_frozen"]),
+            "--gt-frozen-summary-json",
+            str(fixture["gt_summary"]),
+            "--pred-frozen-summary-json",
+            str(fixture["pred_summary"]),
+            "--gt-plan-jsonl",
+            str(fixture["gt_plan"]),
+            "--pred-plan-jsonl",
+            str(fixture["pred_plan"]),
+            "--clean-run-metrics-csv",
+            str(fixture["clean_run_metrics_csv"]),
+            "--repo-root",
+            str(fixture["repo_root"]),
+            "--expected-gt-count",
+            "1",
+            "--expected-pred-count",
+            "3",
+            "--expected-pair-count",
+            "3",
+            "--output-jsonl",
+            str(all_callable_jsonl),
+            "--non-applicable-index-jsonl",
+            str(all_non_applicable_jsonl),
+            "--non-applicable-evidence-dir",
+            str(fixture["non_applicable_evidence_dir"]),
+            "--report-json",
+            str(report_json),
+            "--equivalence-output-jsonl",
+            str(eq_callable_jsonl),
+            "--equivalence-non-applicable-index-jsonl",
+            str(eq_non_applicable_jsonl),
+            "--equivalence-full-plan-jsonl",
+            str(eq_full_plan_jsonl),
+            "--structure-output-jsonl",
+            str(structure_callable_jsonl),
+            "--structure-non-applicable-index-jsonl",
+            str(structure_non_applicable_jsonl),
+            "--structure-full-plan-jsonl",
+            str(structure_full_plan_jsonl),
+        ]
+    )
+    assert exit_code == 0
+
+    all_callable_rows = [json.loads(line) for line in all_callable_jsonl.read_text(encoding="utf-8").splitlines()]
+    all_non_applicable_rows = [
+        json.loads(line) for line in all_non_applicable_jsonl.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(all_callable_rows) == 3
+    assert len(all_non_applicable_rows) == 3
+
+    eq_callable_rows = [json.loads(line) for line in eq_callable_jsonl.read_text(encoding="utf-8").splitlines()]
+    eq_non_applicable_rows = [
+        json.loads(line) for line in eq_non_applicable_jsonl.read_text(encoding="utf-8").splitlines()
+    ]
+    structure_callable_rows = [
+        json.loads(line) for line in structure_callable_jsonl.read_text(encoding="utf-8").splitlines()
+    ]
+    structure_non_applicable_rows = [
+        json.loads(line)
+        for line in structure_non_applicable_jsonl.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(eq_callable_rows) == 2
+    assert len(eq_non_applicable_rows) == 1
+    assert len(structure_callable_rows) == 1
+    assert len(structure_non_applicable_rows) == 2
+    assert {row["phase"] for row in eq_non_applicable_rows} == {"equivalence"}
+    assert {row["phase"] for row in structure_non_applicable_rows} == {"structure"}
+
+    assert len(load_plan_jsonl(eq_full_plan_jsonl).entries) == 3
+    assert len(load_plan_jsonl(structure_full_plan_jsonl).entries) == 3
+
+    report = json.loads(report_json.read_text(encoding="utf-8"))
+    assert report["phase_outputs"]["equivalence"]["callable_task_count"] == 2
+    assert report["phase_outputs"]["equivalence"]["non_applicable_count"] == 1
+    assert report["phase_outputs"]["equivalence"]["full_plan_count"] == 3
+    assert report["phase_outputs"]["structure"]["callable_task_count"] == 1
+    assert report["phase_outputs"]["structure"]["non_applicable_count"] == 2
+    assert report["phase_outputs"]["structure"]["full_plan_count"] == 3
+
+
+def test_cli_selected_phase_filters_standard_non_applicable_index(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import main
+
+    fixture = _make_fixture(
+        tmp_path,
+        full_counts=False,
+        pred_overrides={("alg00", "g0001", 521): {"outcome": "unable", "valid_output": True}},
+    )
+    output_jsonl = tmp_path / "equivalence_tasks.jsonl"
+    non_applicable_jsonl = tmp_path / "equivalence_non_applicable.jsonl"
+    report_json = tmp_path / "equivalence_report.json"
+    exit_code = main(
+        [
+            "--gt-frozen-index-jsonl",
+            str(fixture["gt_frozen"]),
+            "--pred-frozen-index-jsonl",
+            str(fixture["pred_frozen"]),
+            "--gt-frozen-summary-json",
+            str(fixture["gt_summary"]),
+            "--pred-frozen-summary-json",
+            str(fixture["pred_summary"]),
+            "--gt-plan-jsonl",
+            str(fixture["gt_plan"]),
+            "--pred-plan-jsonl",
+            str(fixture["pred_plan"]),
+            "--clean-run-metrics-csv",
+            str(fixture["clean_run_metrics_csv"]),
+            "--repo-root",
+            str(fixture["repo_root"]),
+            "--expected-gt-count",
+            "1",
+            "--expected-pred-count",
+            "3",
+            "--expected-pair-count",
+            "3",
+            "--phase",
+            "equivalence",
+            "--output-jsonl",
+            str(output_jsonl),
+            "--non-applicable-index-jsonl",
+            str(non_applicable_jsonl),
+            "--non-applicable-evidence-dir",
+            str(fixture["non_applicable_evidence_dir"]),
+            "--report-json",
+            str(report_json),
+        ]
+    )
+    assert exit_code == 0
+    callable_rows = [json.loads(line) for line in output_jsonl.read_text(encoding="utf-8").splitlines()]
+    non_applicable_rows = [json.loads(line) for line in non_applicable_jsonl.read_text(encoding="utf-8").splitlines()]
+    assert len(callable_rows) == 2
+    assert len(non_applicable_rows) == 1
+    assert {row["phase"] for row in non_applicable_rows} == {"equivalence"}

@@ -818,6 +818,43 @@ def _request_allowed_functions(request: Mapping[str, Any], *, context: str) -> l
     return _require_string_list(raw, context=f"{context}.allowed_functions")
 
 
+def _phase_task_type(phase: str) -> str:
+    if phase == "equivalence":
+        return EQUIVALENCE_TASK_TYPE
+    if phase == "structure":
+        return STRUCTURE_TASK_TYPE
+    raise SymbolicTaskBuilderError(f"未知 phase: {phase!r}")
+
+
+def _phase_callable_tasks(tasks: Sequence[PlannedTask], *, phase: str) -> list[PlannedTask]:
+    if phase == "all":
+        return list(tasks)
+    expected_task_type = _phase_task_type(phase)
+    return [task for task in tasks if task.task_type == expected_task_type]
+
+
+def _phase_no_call_records(rows: Sequence[Mapping[str, Any]], *, phase: str) -> list[dict[str, Any]]:
+    if phase == "all":
+        selected = [dict(row) for row in rows]
+    else:
+        selected = [dict(row) for row in rows if row.get("phase") == phase]
+    selected.sort(key=lambda item: (int(item["priority"]), str(item["logical_id"])))
+    return selected
+
+
+def _phase_full_plan_rows(
+    tasks: Sequence[PlannedTask],
+    no_call_records: Sequence[Mapping[str, Any]],
+    *,
+    phase: str,
+) -> list[dict[str, Any]]:
+    callable_rows = [_task_json_record(task) for task in _phase_callable_tasks(tasks, phase=phase)]
+    no_call_rows = _phase_no_call_records(no_call_records, phase=phase)
+    rows = [*callable_rows, *no_call_rows]
+    rows.sort(key=lambda item: (int(item["priority"]), str(item["logical_id"])))
+    return rows
+
+
 def _request_domain_assumptions(
     request: Mapping[str, Any],
     *,
@@ -1114,6 +1151,7 @@ def _no_call_record(
         "logical_id": logical_id,
         "task_type": task_type,
         "condition": CONDITION,
+        "priority": task_spec.priority,
         "reason": reason,
         "evaluation_key": task_key,
         "input_hash": task_spec.input_hash,
@@ -1584,13 +1622,87 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=repo_root / DEFAULT_NON_APPLICABLE_EVIDENCE_DIR,
     )
     parser.add_argument("--report-json", type=Path, default=stage_root / "reports/clean_symbolic_task_plan.json")
+    parser.add_argument("--equivalence-output-jsonl", type=Path)
+    parser.add_argument("--equivalence-non-applicable-index-jsonl", type=Path)
+    parser.add_argument("--equivalence-full-plan-jsonl", type=Path)
+    parser.add_argument("--structure-output-jsonl", type=Path)
+    parser.add_argument("--structure-non-applicable-index-jsonl", type=Path)
+    parser.add_argument("--structure-full-plan-jsonl", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args(argv)
+
+
+def _validate_phase_materialization_request(args: argparse.Namespace) -> None:
+    requested: dict[str, tuple[Path | None, Path | None, Path | None]] = {
+        "equivalence": (
+            args.equivalence_output_jsonl,
+            args.equivalence_non_applicable_index_jsonl,
+            args.equivalence_full_plan_jsonl,
+        ),
+        "structure": (
+            args.structure_output_jsonl,
+            args.structure_non_applicable_index_jsonl,
+            args.structure_full_plan_jsonl,
+        ),
+    }
+    for phase, outputs in requested.items():
+        if not any(output is not None for output in outputs):
+            continue
+        if args.phase not in {phase, "all"}:
+            raise SymbolicTaskBuilderError(
+                f"phase={args.phase!r} 时不能请求 {phase} 专属物化输出"
+            )
+
+
+def _materialize_phase_outputs(
+    *,
+    tasks: Sequence[PlannedTask],
+    no_call_records: Sequence[Mapping[str, Any]],
+    args: argparse.Namespace,
+) -> dict[str, dict[str, Any]]:
+    phase_outputs: dict[str, dict[str, Any]] = {}
+    phase_requests = {
+        "equivalence": {
+            "callable": args.equivalence_output_jsonl,
+            "non_applicable": args.equivalence_non_applicable_index_jsonl,
+            "full_plan": args.equivalence_full_plan_jsonl,
+        },
+        "structure": {
+            "callable": args.structure_output_jsonl,
+            "non_applicable": args.structure_non_applicable_index_jsonl,
+            "full_plan": args.structure_full_plan_jsonl,
+        },
+    }
+    for phase, outputs in phase_requests.items():
+        if not any(path is not None for path in outputs.values()):
+            continue
+        callable_tasks = _phase_callable_tasks(tasks, phase=phase)
+        callable_rows = [_task_json_record(task) for task in callable_tasks]
+        no_call_rows = _phase_no_call_records(no_call_records, phase=phase)
+        full_rows = [*callable_rows, *no_call_rows]
+        full_rows.sort(key=lambda item: (int(item["priority"]), str(item["logical_id"])))
+        payload: dict[str, Any] = {
+            "callable_task_count": len(callable_rows),
+            "non_applicable_count": len(no_call_rows),
+            "full_plan_count": len(full_rows),
+        }
+        if outputs["callable"] is not None:
+            _write_jsonl(outputs["callable"], callable_rows)
+            payload["callable_output_jsonl"] = str(outputs["callable"].resolve())
+        if outputs["non_applicable"] is not None:
+            _write_jsonl(outputs["non_applicable"], no_call_rows)
+            payload["non_applicable_index_jsonl"] = str(outputs["non_applicable"].resolve())
+        if outputs["full_plan"] is not None:
+            _write_jsonl(outputs["full_plan"], full_rows)
+            payload["full_plan_jsonl"] = str(outputs["full_plan"].resolve())
+        phase_outputs[phase] = payload
+    return phase_outputs
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        _validate_phase_materialization_request(args)
         tasks, report = build_symbolic_task_plan(
             gt_frozen_index_jsonl=args.gt_frozen_index_jsonl.resolve(),
             pred_frozen_index_jsonl=args.pred_frozen_index_jsonl.resolve(),
@@ -1616,8 +1728,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.dry_run:
         print(json.dumps(report["planning_counts"], ensure_ascii=False, sort_keys=True))
         return 0
+    selected_no_call_records = _phase_no_call_records(report["no_call_records"], phase=args.phase)
     _write_jsonl(args.output_jsonl, [_task_json_record(task) for task in tasks])
-    _write_jsonl(args.non_applicable_index_jsonl, report["no_call_records"])
+    _write_jsonl(args.non_applicable_index_jsonl, selected_no_call_records)
+    phase_outputs = _materialize_phase_outputs(
+        tasks=tasks,
+        no_call_records=report["no_call_records"],
+        args=args,
+    )
+    if phase_outputs:
+        report["phase_outputs"] = phase_outputs
     _write_json(args.report_json, report)
     print(json.dumps(report["planning_counts"], ensure_ascii=False, sort_keys=True))
     return 0
