@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.clean_task_builder import (  # noqa: E402
+    CleanTaskBuilderError,
     PlannedTask,
     build_clean_task_plan,
     extract_expression_body,
@@ -192,6 +193,43 @@ def test_real_build_is_stable(real_all_plan: tuple[list[PlannedTask], dict[str, 
     assert first_record == second_record
     assert "api_key" not in first_record
     assert "token" not in first_record.lower()
+
+
+def test_gt_v2_uses_distinct_prompt_and_logical_ids() -> None:
+    v1_tasks, _ = build_clean_task_plan(phase="gt")
+    v2_tasks, report = build_clean_task_plan(
+        phase="gt",
+        gt_prompt_path=STAGE_ROOT / "config/prompts/simplify.v2.txt",
+        gt_logical_id_suffix="v2",
+    )
+
+    assert len(v2_tasks) == 50
+    assert all(task.logical_id.endswith("::v2") for task in v2_tasks)
+    assert {task.logical_id for task in v1_tasks}.isdisjoint(
+        {task.logical_id for task in v2_tasks}
+    )
+    assert {task.evaluation_key for task in v1_tasks}.isdisjoint(
+        {task.evaluation_key for task in v2_tasks}
+    )
+    assert {task.prompt_version for task in v2_tasks} == {"simplify.v2"}
+    assert {task.schema_version for task in v2_tasks} == {"simplify.v1"}
+    assert report["contract"]["gt_logical_id_suffix"] == "v2"
+    assert report["contract"]["prompt_path"].endswith("simplify.v2.txt")
+
+
+@pytest.mark.parametrize("suffix", ["V2", "v2::retry", "../v2", ""])
+def test_gt_logical_id_suffix_rejects_ambiguous_values(suffix: str) -> None:
+    with pytest.raises(CleanTaskBuilderError, match="gt_logical_id_suffix"):
+        build_clean_task_plan(phase="gt", gt_logical_id_suffix=suffix)
+
+
+def test_gt_contract_override_is_rejected_outside_gt_phase() -> None:
+    with pytest.raises(CleanTaskBuilderError, match="仅允许与 phase=gt"):
+        build_clean_task_plan(
+            phase="all",
+            gt_prompt_path=STAGE_ROOT / "config/prompts/simplify.v2.txt",
+            gt_logical_id_suffix="v2",
+        )
 
 
 def test_formula_priority_prefers_instantiated_then_normalized_then_return_then_equation() -> None:

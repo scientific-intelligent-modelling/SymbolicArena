@@ -279,8 +279,15 @@ def _iter_gzip_jsonl(path: Path) -> Iterable[dict[str, Any]]:
             yield dict(_require_mapping(row, context=f"{path}:{line_number}"))
 
 
-def _load_prompt_schema(repo_root: Path) -> PromptSchemaBundle:
-    prompt_path = (repo_root / SIMPLIFY_PROMPT_RELATIVE).resolve()
+def _load_prompt_schema(
+    repo_root: Path,
+    *,
+    prompt_path: Path | None = None,
+) -> PromptSchemaBundle:
+    selected_prompt = prompt_path if prompt_path is not None else SIMPLIFY_PROMPT_RELATIVE
+    prompt_path = (
+        selected_prompt if selected_prompt.is_absolute() else repo_root / selected_prompt
+    ).resolve()
     schema_path = (repo_root / SIMPLIFY_SCHEMA_RELATIVE).resolve()
     prompt_bytes = prompt_path.read_bytes()
     schema_bytes = schema_path.read_bytes()
@@ -775,8 +782,9 @@ def _validate_clean_payload(source: Mapping[str, Any], payload: Mapping[str, Any
             raise CleanTaskBuilderError(f"{source.get('task_id')}: sigma 非法") from exc
 
 
-def _gt_logical_id(dataset_id: str) -> str:
-    return f"{GT_TASK_TYPE}::{dataset_id}"
+def _gt_logical_id(dataset_id: str, *, suffix: str | None = None) -> str:
+    logical_id = f"{GT_TASK_TYPE}::{dataset_id}"
+    return f"{logical_id}::{suffix}" if suffix is not None else logical_id
 
 
 def _pred_logical_id(identity: Mapping[str, Any]) -> str:
@@ -911,6 +919,7 @@ def _build_gt_task(
     index: int,
     contract: PromptSchemaBundle,
     dataset_probes: Mapping[str, Mapping[str, Any]],
+    logical_id_suffix: str | None = None,
 ) -> tuple[PlannedTask | None, dict[str, Any] | None]:
     dataset_id = row.get("dataset_id")
     if not isinstance(dataset_id, str) or not dataset_id:
@@ -920,7 +929,7 @@ def _build_gt_task(
         raise CleanTaskBuilderError(f"{dataset_id}: ordered_variables 非法")
     expression = row.get("normalized_expression_input")
     original_expression = row.get("return_source")
-    logical_id = _gt_logical_id(dataset_id)
+    logical_id = _gt_logical_id(dataset_id, suffix=logical_id_suffix)
     source_evidence_hash = row.get("evidence_sha256")
     if not isinstance(source_evidence_hash, str) or not source_evidence_hash:
         raise CleanTaskBuilderError(f"{dataset_id}: evidence_sha256 缺失")
@@ -1281,11 +1290,24 @@ def build_clean_task_plan(
     expected_gt_count: int | None = 50,
     expected_pred_count: int | None = 2250,
     repo_root: Path | None = None,
+    gt_prompt_path: Path | None = None,
+    gt_logical_id_suffix: str | None = None,
 ) -> tuple[list[PlannedTask], dict[str, Any]]:
     if phase not in TASK_PHASES:
         raise CleanTaskBuilderError(f"未知 phase: {phase!r}")
+    if gt_logical_id_suffix is not None and not re.fullmatch(
+        r"[a-z0-9][a-z0-9._-]*", gt_logical_id_suffix
+    ):
+        raise CleanTaskBuilderError(
+            "gt_logical_id_suffix 仅允许小写字母、数字、点、下划线和连字符"
+        )
+    if phase != "gt" and (gt_prompt_path is not None or gt_logical_id_suffix is not None):
+        raise CleanTaskBuilderError("GT 契约覆盖参数仅允许与 phase=gt 一起使用")
     repo_root = repo_root or _repo_root()
-    contract = _load_prompt_schema(repo_root)
+    contract = _load_prompt_schema(
+        repo_root,
+        prompt_path=gt_prompt_path,
+    )
     gt_path = (ground_truth_jsonl or (repo_root / DEFAULT_GROUND_TRUTH_JSONL)).resolve()
     recovery_path = (
         formula_recovery_json or (repo_root / DEFAULT_FORMULA_RECOVERY_JSON)
@@ -1354,6 +1376,7 @@ def build_clean_task_plan(
             index=index,
             contract=contract,
             dataset_probes=dataset_probes,
+            logical_id_suffix=gt_logical_id_suffix,
         )
         if task is not None:
             gt_tasks.append(task)
@@ -1422,6 +1445,7 @@ def build_clean_task_plan(
             "schema_path": contract.schema_path,
             "schema_version": contract.schema_version,
             "schema_sha256": contract.schema_sha256,
+            "gt_logical_id_suffix": gt_logical_id_suffix,
         },
         "validation": {
             "ground_truth_row_count": len(gt_rows),
@@ -1485,6 +1509,17 @@ def build_argument_parser() -> argparse.ArgumentParser:
         help="相对仓库根目录的 clean freeze glob",
     )
     parser.add_argument(
+        "--gt-prompt-path",
+        type=Path,
+        default=None,
+        help="仅 phase=gt 可用的 simplify 提示词覆盖路径",
+    )
+    parser.add_argument(
+        "--gt-logical-id-suffix",
+        default=None,
+        help="为 GT logical_id 增加版本后缀，例如 v2",
+    )
+    parser.add_argument(
         "--output-jsonl",
         type=Path,
         default=repo_root / DEFAULT_OUTPUT_JSONL,
@@ -1516,6 +1551,8 @@ def main(argv: list[str] | None = None) -> int:
         freeze_glob=args.freeze_glob,
         expected_gt_count=args.expected_gt_count,
         expected_pred_count=args.expected_pred_count,
+        gt_prompt_path=args.gt_prompt_path,
+        gt_logical_id_suffix=args.gt_logical_id_suffix,
     )
     if args.report and args.report != "-":
         _write_json(Path(args.report), report)
