@@ -118,6 +118,12 @@ def _require_float01(value: object, *, context: str) -> float:
     return number
 
 
+def _require_int(value: object, *, context: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise MaterializePredVsGtEvidenceError(f"{context} 必须是整数")
+    return value
+
+
 def _require_sha256(value: object, *, context: str) -> str:
     text = _require_string(value, context=context)
     if len(text) != 64 or any(character not in "0123456789abcdef" for character in text):
@@ -217,7 +223,7 @@ def materialize_pred_vs_gt_evidence(
         algorithm_slug, dataset_index, seed = _parse_pred_logical_id(pred_logical_id)
         request_algorithm_slug = _require_string(request.get("algorithm_slug"), context=f"{context}.request.algorithm_slug")
         request_dataset_index = _require_string(request.get("dataset_index"), context=f"{context}.request.dataset_index")
-        request_seed = int(request.get("seed"))
+        request_seed = _require_int(request.get("seed"), context=f"{context}.request.seed")
         if (algorithm_slug, dataset_index, seed) != (request_algorithm_slug, request_dataset_index, request_seed):
             raise MaterializePredVsGtEvidenceError(f"{context} pred_logical_id 与 request 身份不一致")
         if _require_string(request.get("ground_truth_logical_id"), context=f"{context}.request.ground_truth_logical_id") != gt_logical_id:

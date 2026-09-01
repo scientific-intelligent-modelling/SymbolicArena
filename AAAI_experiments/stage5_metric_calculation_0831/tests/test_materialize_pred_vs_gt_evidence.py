@@ -271,3 +271,30 @@ def test_cli_rejects_request_hash_drift(tmp_path: Path, capsys: pytest.CaptureFi
     assert exit_code == 2
     assert "request.evidence_hash" in captured.err
 
+
+def test_rejects_non_integer_request_seed(tmp_path: Path) -> None:
+    evidence = _pair_evidence_payload()
+    row = _plan_row(
+        tmp_path,
+        logical_id="equivalence::qlattice::g0005::s520::clean",
+        request={
+            "algorithm": "QLattice",
+            "algorithm_slug": "qlattice",
+            "dataset_id": "BPG3",
+            "dataset_index": "g0005",
+            "seed": "520",
+            "ground_truth_logical_id": "gt_simplify::BPG3",
+            "prediction_logical_id": "pred_simplify::qlattice::g0005::s520::clean",
+            "deterministic_evidence": evidence,
+            "evidence_hash": evidence["evidence_sha256"],
+        },
+    )
+    plan_jsonl = tmp_path / "equivalence_callable.jsonl"
+    _write_jsonl(plan_jsonl, [row])
+
+    with pytest.raises(MaterializePredVsGtEvidenceError, match="request.seed 必须是整数"):
+        materialize_pred_vs_gt_evidence(
+            equivalence_plan_jsonl=plan_jsonl,
+            output_jsonl=tmp_path / "out.jsonl",
+            report_json=tmp_path / "report.json",
+        )
