@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .audit_exhausted_simplifications import (
+    match_audit_envelope_sanitization,
     run_isolated_simplify_semantic_validator,
 )
 from .claude_contract import (
@@ -26,7 +27,12 @@ from .claude_contract import (
     validate_claude_envelope,
 )
 from .claude_runner import _infer_task_kind
-from .run_claude_plan import PlanContractError, load_plan_jsonl
+from .run_claude_plan import (
+    LoadedPlan,
+    PlanContractError,
+    _row_to_definition,
+    load_plan_jsonl,
+)
 
 
 JsonDict = dict[str, object]
@@ -90,6 +96,89 @@ def _connect_read_only(path: Path) -> sqlite3.Connection:
     return connection
 
 
+def _load_audit_plan(
+    path: str | Path,
+    *,
+    allow_archived_rendered_prompt: bool,
+) -> tuple[LoadedPlan, dict[str, str], str, int]:
+    plan_path = Path(path)
+    try:
+        loaded = load_plan_jsonl(plan_path)
+    except PlanContractError as strict_error:
+        if not allow_archived_rendered_prompt or "rendered_prompt" not in str(strict_error):
+            raise
+        try:
+            raw = plan_path.read_bytes()
+        except OSError as exc:
+            raise PlanContractError(f"无法读取 plan JSONL {plan_path}: {exc}") from exc
+        entries = []
+        prompts: dict[str, str] = {}
+        mismatch_count = 0
+        with plan_path.open("r", encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                try:
+                    parsed = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise PlanContractError(
+                        f"{plan_path}:{line_number} JSONL 解析失败: {exc}"
+                    ) from exc
+                if not isinstance(parsed, dict):
+                    raise PlanContractError(f"{plan_path}:{line_number} 必须是 JSON object")
+                archived_prompt = parsed.get("rendered_prompt")
+                if not isinstance(archived_prompt, str) or not archived_prompt.strip():
+                    raise PlanContractError(
+                        f"{plan_path}:{line_number}.rendered_prompt 缺失，不能使用归档兼容模式"
+                    )
+                row_without_render = dict(parsed)
+                row_without_render.pop("rendered_prompt", None)
+                entry = _row_to_definition(row_without_render, line_number=line_number)
+                current_prompt = render_prompt(
+                    entry.definition.prompt_template,
+                    entry.definition.request,
+                    entry.definition.schema,
+                )
+                mismatch_count += archived_prompt != current_prompt
+                prompts[entry.evaluation_key] = archived_prompt
+                entries.append(entry)
+        if not entries:
+            raise PlanContractError("plan JSONL 不能为空")
+        keys = [entry.evaluation_key for entry in entries]
+        logical_ids = [entry.logical_id for entry in entries]
+        if len(set(keys)) != len(keys):
+            raise PlanContractError("归档 plan 存在重复 evaluation_key")
+        if len(set(logical_ids)) != len(logical_ids):
+            raise PlanContractError("归档 plan 存在重复 logical_id")
+        if mismatch_count == 0:
+            raise PlanContractError(
+                "严格 plan 读取失败，但归档 rendered_prompt 与当前渲染结果没有差异"
+            ) from strict_error
+        return (
+            LoadedPlan(
+                plan_path=plan_path,
+                plan_sha256=hashlib.sha256(raw).hexdigest(),
+                entries=tuple(entries),
+            ),
+            prompts,
+            "archived_plan_v1",
+            mismatch_count,
+        )
+    return (
+        loaded,
+        {
+            entry.evaluation_key: render_prompt(
+                entry.definition.prompt_template,
+                entry.definition.request,
+                entry.definition.schema,
+            )
+            for entry in loaded.entries
+        },
+        "current_renderer",
+        0,
+    )
+
+
 def _failure(base: Mapping[str, object], code: str, message: str) -> JsonDict:
     return {**base, "status": "failed", "failure_class": code, "error": message}
 
@@ -125,7 +214,9 @@ def _audit_one_frozen(
     state_row: Mapping[str, object] | None,
     attempts_dir: Path,
     frozen_dir: Path,
+    expected_rendered_prompt: str,
     semantic_timeout_seconds: float,
+    allow_archived_execution_metadata: bool,
 ) -> JsonDict:
     base: JsonDict = {
         "evaluation_key": entry.evaluation_key,
@@ -224,17 +315,22 @@ def _audit_one_frozen(
         "returncode": 0,
         "timed_out": False,
     }
+    execution_metadata_mode = "current"
     for field, wanted in expected_metadata.items():
+        if (
+            field == "transport_version"
+            and metadata.get(field) is None
+            and allow_archived_execution_metadata
+        ):
+            execution_metadata_mode = "archived_missing_transport_version"
+            continue
         if metadata.get(field) != wanted:
             return _failure(bound, "metadata_identity_error", f"metadata.{field} 不符合冻结契约")
+    bound["execution_metadata_mode"] = execution_metadata_mode
     if validation.get("ok") is not True or validation.get("error_class") is not None:
         return _failure(bound, "validation_state_error", "frozen validation 不是成功状态")
 
-    expected_prompt = render_prompt(
-        definition.prompt_template,
-        definition.request,
-        definition.schema,
-    )
+    expected_prompt = expected_rendered_prompt
     if payload.get("prompt") != expected_prompt:
         return _failure(bound, "prompt_mismatch", "prompt 与冻结 plan 不一致")
     if payload.get("command") != build_claude_command(definition.schema):
@@ -257,11 +353,16 @@ def _audit_one_frozen(
         stdout_envelope = json.loads(stdout)
     except json.JSONDecodeError as exc:
         return _failure(bound, "outer_json_invalid", f"stdout 不是合法 JSON: {exc}")
-    if stdout_envelope != envelope:
+    envelope_sanitization_mode = match_audit_envelope_sanitization(
+        stdout_envelope,
+        envelope,
+    )
+    if envelope_sanitization_mode is None:
         return _failure(bound, "raw_output_mismatch", "envelope 与原始 stdout 不一致")
+    bound["envelope_sanitization_mode"] = envelope_sanitization_mode
     try:
         structured_output = validate_claude_envelope(
-            envelope,
+            stdout_envelope,
             task_kind=task_kind,
             schema=definition.schema,
         )
@@ -357,6 +458,8 @@ def audit_frozen_simplifications(
     expected_plan_count: int | None = None,
     semantic_timeout_seconds: float = 90.0,
     workers: int = 16,
+    allow_archived_rendered_prompt: bool = False,
+    allow_archived_execution_metadata: bool = False,
 ) -> JsonDict:
     if semantic_timeout_seconds <= 0:
         raise FrozenSimplificationAuditError("semantic_timeout_seconds 必须为正数")
@@ -366,7 +469,15 @@ def audit_frozen_simplifications(
         raise FrozenSimplificationAuditError("expected_plan_count 必须为正整数")
     sys.setrecursionlimit(max(sys.getrecursionlimit(), 100_000))
     try:
-        loaded_plan = load_plan_jsonl(plan_jsonl)
+        (
+            loaded_plan,
+            rendered_prompts,
+            rendered_prompt_mode,
+            archived_rendered_prompt_mismatch_count,
+        ) = _load_audit_plan(
+            plan_jsonl,
+            allow_archived_rendered_prompt=allow_archived_rendered_prompt,
+        )
     except PlanContractError as exc:
         raise FrozenSimplificationAuditError(f"plan 契约失败: {exc}") from exc
     if expected_plan_count is not None and len(loaded_plan.entries) != expected_plan_count:
@@ -419,7 +530,9 @@ def audit_frozen_simplifications(
                 state_row=by_key.get(entry.evaluation_key),
                 attempts_dir=attempts_path,
                 frozen_dir=frozen_path,
+                expected_rendered_prompt=rendered_prompts[entry.evaluation_key],
                 semantic_timeout_seconds=semantic_timeout_seconds,
+                allow_archived_execution_metadata=allow_archived_execution_metadata,
             )
         except Exception as exc:  # pragma: no cover - 完整报告优先于单行崩溃
             return {
@@ -452,6 +565,10 @@ def audit_frozen_simplifications(
         "plan_sha256": loaded_plan.plan_sha256,
         "plan_count": len(loaded_plan.entries),
         "expected_plan_count": expected_plan_count,
+        "rendered_prompt_mode": rendered_prompt_mode,
+        "allow_archived_rendered_prompt": allow_archived_rendered_prompt,
+        "allow_archived_execution_metadata": allow_archived_execution_metadata,
+        "archived_rendered_prompt_mismatch_count": archived_rendered_prompt_mismatch_count,
         "state_db": str(state_path),
         "state_binding_sha256": state_binding_sha256,
         "database_task_count": len(state_rows),
@@ -477,6 +594,24 @@ def audit_frozen_simplifications(
             and row.get("stored_semantic_evidence_matches_current") is False
             for row in rows
         ),
+        "envelope_sanitization_mode_counts": dict(
+            sorted(
+                Counter(
+                    str(row.get("envelope_sanitization_mode"))
+                    for row in rows
+                    if row.get("status") == "passed"
+                ).items()
+            )
+        ),
+        "execution_metadata_mode_counts": dict(
+            sorted(
+                Counter(
+                    str(row.get("execution_metadata_mode"))
+                    for row in rows
+                    if row.get("status") == "passed"
+                ).items()
+            )
+        ),
         "output_jsonl": str(output_path),
         "output_sha256": _sha256_file(output_path),
     }
@@ -495,6 +630,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-plan-count", type=int, default=None)
     parser.add_argument("--semantic-timeout-seconds", type=float, default=90.0)
     parser.add_argument("--workers", type=int, default=16)
+    parser.add_argument("--allow-archived-rendered-prompt", action="store_true")
+    parser.add_argument("--allow-archived-execution-metadata", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -511,6 +648,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             expected_plan_count=args.expected_plan_count,
             semantic_timeout_seconds=args.semantic_timeout_seconds,
             workers=args.workers,
+            allow_archived_rendered_prompt=args.allow_archived_rendered_prompt,
+            allow_archived_execution_metadata=args.allow_archived_execution_metadata,
         )
     except FrozenSimplificationAuditError as exc:
         print(str(exc), file=sys.stderr)

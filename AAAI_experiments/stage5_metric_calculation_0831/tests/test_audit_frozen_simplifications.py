@@ -4,13 +4,15 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_frozen_simplifications import (
+    FrozenSimplificationAuditError,
     audit_frozen_simplifications,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     CONTRACT_EFFORT,
     CONTRACT_MODEL,
-    CONTRACT_TRANSPORT_VERSION,
     build_claude_command,
     canonical_json,
     evaluation_key,
@@ -77,7 +79,8 @@ def test_full_frozen_result_is_revalidated_without_model_call(tmp_path: Path) ->
         schema_version="simplify.v1",
         dependencies=(),
     )
-    rendered_prompt = render_prompt(prompt_template, request, schema)
+    current_rendered_prompt = render_prompt(prompt_template, request, schema)
+    rendered_prompt = current_rendered_prompt + "\nARCHIVED_PROMPT_PROJECTION_V0\n"
     plan_path = tmp_path / "plan.jsonl"
     plan_path.write_text(
         canonical_json(
@@ -143,7 +146,6 @@ def test_full_frozen_result_is_revalidated_without_model_call(tmp_path: Path) ->
         "task_kind": "simplify",
         "requested_model": CONTRACT_MODEL,
         "requested_effort": CONTRACT_EFFORT,
-        "transport_version": CONTRACT_TRANSPORT_VERSION,
         "prompt_path": str(prompt_path),
         "prompt_sha256": prompt_sha256,
         "rendered_prompt_sha256": _sha256_text(rendered_prompt),
@@ -197,6 +199,34 @@ def test_full_frozen_result_is_revalidated_without_model_call(tmp_path: Path) ->
         result_sha256=_sha256_file(frozen_path),
     )
 
+    with pytest.raises(FrozenSimplificationAuditError, match="rendered_prompt"):
+        audit_frozen_simplifications(
+            plan_jsonl=plan_path,
+            state_db=state_db,
+            attempts_dir=attempts_dir,
+            frozen_dir=frozen_dir,
+            output_jsonl=tmp_path / "strict-audit.jsonl",
+            report_json=tmp_path / "strict-report.json",
+            expected_plan_count=1,
+            semantic_timeout_seconds=20.0,
+            workers=1,
+        )
+
+    archived_prompt_only = audit_frozen_simplifications(
+        plan_jsonl=plan_path,
+        state_db=state_db,
+        attempts_dir=attempts_dir,
+        frozen_dir=frozen_dir,
+        output_jsonl=tmp_path / "archived-prompt-only.jsonl",
+        report_json=tmp_path / "archived-prompt-only-report.json",
+        expected_plan_count=1,
+        semantic_timeout_seconds=20.0,
+        workers=1,
+        allow_archived_rendered_prompt=True,
+    )
+    assert archived_prompt_only["status"] == "failed"
+    assert archived_prompt_only["failure_class_counts"] == {"metadata_identity_error": 1}
+
     report = audit_frozen_simplifications(
         plan_jsonl=plan_path,
         state_db=state_db,
@@ -207,6 +237,8 @@ def test_full_frozen_result_is_revalidated_without_model_call(tmp_path: Path) ->
         expected_plan_count=1,
         semantic_timeout_seconds=20.0,
         workers=1,
+        allow_archived_rendered_prompt=True,
+        allow_archived_execution_metadata=True,
     )
 
     assert report["status"] == "ok"
@@ -214,6 +246,11 @@ def test_full_frozen_result_is_revalidated_without_model_call(tmp_path: Path) ->
     assert report["failed_count"] == 0
     assert report["model_invoked"] is False
     assert report["state_db_mutated"] is False
+    assert report["rendered_prompt_mode"] == "archived_plan_v1"
+    assert report["archived_rendered_prompt_mismatch_count"] == 1
+    assert report["execution_metadata_mode_counts"] == {
+        "archived_missing_transport_version": 1
+    }
     assert report["stored_semantic_evidence_mismatch_count"] == 1
     row = json.loads((tmp_path / "audit.jsonl").read_text(encoding="utf-8"))
     assert row["status"] == "passed"
