@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import fcntl
 import hashlib
 import json
+import os
 import sqlite3
+import socket
+import sys
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -59,6 +64,40 @@ class LoadedPredecessorAttemptManifest:
     attempt_count: int
 
 
+@dataclass
+class _PlanRunLock:
+    path: Path
+    identity_key: str
+    owner: JsonDict
+    _handle: Any
+
+    def release(self) -> None:
+        try:
+            fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            self._handle.close()
+
+
+class ConcurrentRunRejected(RuntimeError):
+    """同一实验已有活跃实例持有跨进程锁。"""
+
+    def __init__(
+        self,
+        *,
+        lock_path: Path,
+        identity_key: str,
+        requested_report_path: Path,
+        rejection_report_path: Path,
+        active_owner: object,
+    ) -> None:
+        super().__init__(f"active run lock already held: {lock_path}")
+        self.lock_path = lock_path
+        self.identity_key = identity_key
+        self.requested_report_path = requested_report_path
+        self.rejection_report_path = rejection_report_path
+        self.active_owner = active_owner
+
+
 RunnerFactory = Callable[[TaskStateStore], Any]
 
 
@@ -77,6 +116,153 @@ def _atomic_write_json(path: Path, payload: Mapping[str, object]) -> None:
         encoding="utf-8",
     )
     tmp_path.replace(path)
+
+
+def _plan_lock_identity_payload(
+    *,
+    state_db: Path,
+    plan_path: Path,
+    plan_sha256: str,
+) -> JsonDict:
+    return {
+        "state_db": str(state_db.resolve()),
+        "plan_jsonl": str(plan_path.resolve()),
+        "plan_sha256": plan_sha256,
+    }
+
+
+def _plan_lock_identity_key(
+    *,
+    state_db: Path,
+    plan_path: Path,
+    plan_sha256: str,
+) -> str:
+    return _sha256_text(
+        canonical_json(
+            _plan_lock_identity_payload(
+                state_db=state_db,
+                plan_path=plan_path,
+                plan_sha256=plan_sha256,
+            )
+        )
+    )[:16]
+
+
+def _plan_lock_path(
+    *,
+    state_db: Path,
+    plan_path: Path,
+    plan_sha256: str,
+) -> Path:
+    identity_key = _plan_lock_identity_key(
+        state_db=state_db,
+        plan_path=plan_path,
+        plan_sha256=plan_sha256,
+    )
+    resolved_state_db = state_db.resolve()
+    return resolved_state_db.parent / f".run_claude_plan.{identity_key}.lock"
+
+
+def _concurrent_rejection_report_path(report_path: Path, *, identity_key: str) -> Path:
+    suffix = report_path.suffix or ".json"
+    stem = report_path.name[: -len(report_path.suffix)] if report_path.suffix else report_path.name
+    return report_path.with_name(f"{stem}.concurrent_run_rejected.{identity_key}{suffix}")
+
+
+def _read_lock_owner_payload(lock_path: Path) -> object:
+    try:
+        raw = lock_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {"raw": raw}
+
+
+def _write_lock_owner_payload(handle: Any, owner: Mapping[str, object]) -> None:
+    handle.seek(0)
+    handle.truncate()
+    handle.write(json.dumps(owner, ensure_ascii=False, sort_keys=True))
+    handle.flush()
+    os.fsync(handle.fileno())
+
+
+def _acquire_plan_run_lock(
+    *,
+    state_db: Path,
+    plan_path: Path,
+    plan_sha256: str,
+    report_path: Path,
+) -> _PlanRunLock:
+    resolved_state_db = state_db.resolve()
+    resolved_plan_path = plan_path.resolve()
+    resolved_report_path = report_path.resolve()
+    identity_key = _plan_lock_identity_key(
+        state_db=resolved_state_db,
+        plan_path=resolved_plan_path,
+        plan_sha256=plan_sha256,
+    )
+    lock_path = _plan_lock_path(
+        state_db=resolved_state_db,
+        plan_path=resolved_plan_path,
+        plan_sha256=plan_sha256,
+    )
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = lock_path.open("a+", encoding="utf-8")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        handle.close()
+        raise ConcurrentRunRejected(
+            lock_path=lock_path,
+            identity_key=identity_key,
+            requested_report_path=resolved_report_path,
+            rejection_report_path=_concurrent_rejection_report_path(
+                resolved_report_path,
+                identity_key=identity_key,
+            ),
+            active_owner=_read_lock_owner_payload(lock_path),
+        ) from exc
+    owner: JsonDict = {
+        "pid": os.getpid(),
+        "hostname": socket.gethostname(),
+        "state_db": str(resolved_state_db),
+        "plan_jsonl": str(resolved_plan_path),
+        "plan_sha256": plan_sha256,
+        "report_json": str(resolved_report_path),
+        "identity_key": identity_key,
+        "acquired_at": time.time(),
+    }
+    _write_lock_owner_payload(handle, owner)
+    return _PlanRunLock(
+        path=lock_path,
+        identity_key=identity_key,
+        owner=owner,
+        _handle=handle,
+    )
+
+
+@contextmanager
+def _plan_run_lock(
+    *,
+    state_db: Path,
+    plan_path: Path,
+    plan_sha256: str,
+    report_path: Path,
+):
+    lock = _acquire_plan_run_lock(
+        state_db=state_db,
+        plan_path=plan_path,
+        plan_sha256=plan_sha256,
+        report_path=report_path,
+    )
+    try:
+        yield lock
+    finally:
+        lock.release()
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -584,6 +770,7 @@ def execute_plan(
 
     started_at_monotonic = time.monotonic()
     report_path = Path(report_json)
+    resolved_state_db = Path(state_db).resolve()
     result_counts = {"success": 0, "cache": 0, "failure": 0, "circuit_breaker": 0}
     loaded_plan: LoadedPlan | None = None
     loaded_predecessor_manifest: LoadedPredecessorAttemptManifest | None = None
@@ -602,6 +789,7 @@ def execute_plan(
             },
         )
         return 2
+    resolved_plan_path = loaded_plan.plan_path.resolve()
     if predecessor_attempt_manifest is not None:
         try:
             loaded_predecessor_manifest = _load_predecessor_attempt_manifest(
@@ -621,211 +809,252 @@ def execute_plan(
             return 2
 
     try:
-        store = TaskStateStore(
-            state_db,
-            attempt_offset=physical_attempt_offset,
-            predecessor_attempt_manifest=(
-                PredecessorAttemptManifest(
-                    path=str(loaded_predecessor_manifest.path),
-                    sha256=loaded_predecessor_manifest.sha256,
-                    attempt_count=loaded_predecessor_manifest.attempt_count,
+        with _plan_run_lock(
+            state_db=resolved_state_db,
+            plan_path=resolved_plan_path,
+            plan_sha256=loaded_plan.plan_sha256,
+            report_path=report_path,
+        ) as run_lock:
+            try:
+                store = TaskStateStore(
+                    state_db,
+                    attempt_offset=physical_attempt_offset,
+                    predecessor_attempt_manifest=(
+                        PredecessorAttemptManifest(
+                            path=str(loaded_predecessor_manifest.path),
+                            sha256=loaded_predecessor_manifest.sha256,
+                            attempt_count=loaded_predecessor_manifest.attempt_count,
+                        )
+                        if loaded_predecessor_manifest is not None
+                        else None
+                    ),
                 )
-                if loaded_predecessor_manifest is not None
-                else None
-            ),
-        )
-        store.register_tasks(
-            [entry.definition.task_spec for entry in loaded_plan.entries]
-        )
-        recovered_expired_attempt_ids = store.recover_expired_leases()
-        attempts_reserved_at_start = store.attempts_reserved()
-        _verify_cached_frozen_entries(store, loaded_plan.entries)
-        selected_entries = _select_scope(loaded_plan.entries, logical_ids=logical_ids)
-        selected_state_map = _task_state_map(store, selected_entries)
-        runnable_entries = [
-            entry
-            for entry in selected_entries
-            if selected_state_map[entry.evaluation_key] in {"pending", "retry_wait"}
-        ]
-        if limit is not None:
-            runnable_entries = runnable_entries[:limit]
-        result_counts["cache"] = sum(
-            1
-            for entry in selected_entries
-            if selected_state_map[entry.evaluation_key] == "frozen"
-        )
-        _atomic_write_json(
-            report_path,
-            _build_report(
-                loaded_plan=loaded_plan,
-                store=store,
-                entries=loaded_plan.entries,
-                selected_entries=selected_entries,
-                submitted_task_count=0,
-                completed_task_count=0,
-                result_counts=result_counts,
-                started_at_monotonic=started_at_monotonic,
-                requested_logical_ids=logical_ids,
-                limit=limit,
-                workers=workers,
-                stopped_by_circuit_breaker=False,
-                stopped_by_fatal_error=False,
-                recovered_expired_attempt_ids=recovered_expired_attempt_ids,
-                predecessor_attempt_manifest=loaded_predecessor_manifest,
-                attempts_reserved_at_start=attempts_reserved_at_start,
-                status="running",
-            ),
-        )
-    except PlanContractError as exc:
-        _atomic_write_json(
-            report_path,
-            {
-                "status": "plan_contract_error",
-                "error": str(exc),
-                "plan_jsonl": str(plan_jsonl),
-                "plan_sha256": loaded_plan.plan_sha256,
-                "model_invoked": False,
-            },
-        )
-        return 2
-    except StateContractError as exc:
-        _atomic_write_json(
-            report_path,
-            {
-                "status": "state_contract_error",
-                "error": str(exc),
-                "plan_jsonl": str(plan_jsonl),
-                "plan_sha256": loaded_plan.plan_sha256,
-                "state_db": str(state_db),
-                "model_invoked": False,
-                "physical_attempt_offset": physical_attempt_offset,
-                "predecessor_attempt_manifest_path": (
-                    str(loaded_predecessor_manifest.path)
-                    if loaded_predecessor_manifest is not None
-                    else None
-                ),
-                "predecessor_attempt_manifest_sha256": (
-                    loaded_predecessor_manifest.sha256
-                    if loaded_predecessor_manifest is not None
-                    else None
-                ),
-                "predecessor_attempt_count": (
-                    loaded_predecessor_manifest.attempt_count
-                    if loaded_predecessor_manifest is not None
-                    else 0
-                ),
-            },
-        )
-        return 2
-
-    runner = (runner_factory or _default_runner_factory)(
-        store,
-        attempts_dir=Path(attempts_dir),
-        frozen_dir=Path(frozen_dir),
-    )
-    submitted_task_count = 0
-    completed_task_count = 0
-    total_cost_usd = 0.0
-    stopped_by_circuit_breaker = False
-    stopped_by_fatal_error = False
-    fatal_error: str | None = None
-    next_index = 0
-    in_flight: dict[concurrent.futures.Future[ClaudeRunResult], PlannedDefinition] = {}
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        while next_index < len(runnable_entries) and len(in_flight) < workers:
-            entry = runnable_entries[next_index]
-            next_index += 1
-            future = executor.submit(runner.execute, entry.definition)
-            in_flight[future] = entry
-            submitted_task_count += 1
-
-        while in_flight:
-            done, _ = concurrent.futures.wait(
-                tuple(in_flight),
-                return_when=concurrent.futures.FIRST_COMPLETED,
-            )
-            for future in done:
-                in_flight.pop(future)
-                try:
-                    result = future.result()
-                except ClaudeRunnerCircuitBreaker as exc:
-                    result_counts["circuit_breaker"] += 1
-                    stopped_by_circuit_breaker = True
-                    fatal_error = str(exc)
-                except Exception as exc:  # pragma: no cover - 真实 runner 兜底
-                    result_counts["failure"] += 1
-                    fatal_error = str(exc)
-                    stopped_by_fatal_error = True
-                else:
-                    if result.from_cache:
-                        result_counts["cache"] += 1
-                    elif result.state == "frozen":
-                        result_counts["success"] += 1
-                    else:
-                        result_counts["failure"] += 1
-                    if not result.from_cache and result.total_cost_usd is not None:
-                        total_cost_usd += float(result.total_cost_usd)
-                completed_task_count += 1
-                report_payload = _build_report(
+                store.register_tasks(
+                    [entry.definition.task_spec for entry in loaded_plan.entries]
+                )
+                recovered_expired_attempt_ids = store.recover_expired_leases()
+                attempts_reserved_at_start = store.attempts_reserved()
+                _verify_cached_frozen_entries(store, loaded_plan.entries)
+                selected_entries = _select_scope(loaded_plan.entries, logical_ids=logical_ids)
+                selected_state_map = _task_state_map(store, selected_entries)
+                runnable_entries = [
+                    entry
+                    for entry in selected_entries
+                    if selected_state_map[entry.evaluation_key] in {"pending", "retry_wait"}
+                ]
+                if limit is not None:
+                    runnable_entries = runnable_entries[:limit]
+                result_counts["cache"] = sum(
+                    1
+                    for entry in selected_entries
+                    if selected_state_map[entry.evaluation_key] == "frozen"
+                )
+                initial_report = _build_report(
                     loaded_plan=loaded_plan,
                     store=store,
                     entries=loaded_plan.entries,
                     selected_entries=selected_entries,
-                    submitted_task_count=submitted_task_count,
-                    completed_task_count=completed_task_count,
+                    submitted_task_count=0,
+                    completed_task_count=0,
                     result_counts=result_counts,
                     started_at_monotonic=started_at_monotonic,
                     requested_logical_ids=logical_ids,
                     limit=limit,
                     workers=workers,
-                    stopped_by_circuit_breaker=stopped_by_circuit_breaker,
-                    stopped_by_fatal_error=stopped_by_fatal_error,
-                        recovered_expired_attempt_ids=recovered_expired_attempt_ids,
-                        predecessor_attempt_manifest=loaded_predecessor_manifest,
-                        attempts_reserved_at_start=attempts_reserved_at_start,
-                        status="failed" if fatal_error else "running",
-                    error=fatal_error,
+                    stopped_by_circuit_breaker=False,
+                    stopped_by_fatal_error=False,
+                    recovered_expired_attempt_ids=recovered_expired_attempt_ids,
+                    predecessor_attempt_manifest=loaded_predecessor_manifest,
+                    attempts_reserved_at_start=attempts_reserved_at_start,
+                    status="running",
                 )
-                report_payload["total_cost_usd"] = total_cost_usd
-                _atomic_write_json(report_path, report_payload)
+                initial_report["lock_path"] = str(run_lock.path)
+                initial_report["lock_owner"] = dict(run_lock.owner)
+                _atomic_write_json(report_path, initial_report)
+            except PlanContractError as exc:
+                _atomic_write_json(
+                    report_path,
+                    {
+                        "status": "plan_contract_error",
+                        "error": str(exc),
+                        "plan_jsonl": str(plan_jsonl),
+                        "plan_sha256": loaded_plan.plan_sha256,
+                        "model_invoked": False,
+                        "lock_path": str(run_lock.path),
+                        "lock_owner": dict(run_lock.owner),
+                    },
+                )
+                return 2
+            except StateContractError as exc:
+                _atomic_write_json(
+                    report_path,
+                    {
+                        "status": "state_contract_error",
+                        "error": str(exc),
+                        "plan_jsonl": str(plan_jsonl),
+                        "plan_sha256": loaded_plan.plan_sha256,
+                        "state_db": str(state_db),
+                        "model_invoked": False,
+                        "physical_attempt_offset": physical_attempt_offset,
+                        "predecessor_attempt_manifest_path": (
+                            str(loaded_predecessor_manifest.path)
+                            if loaded_predecessor_manifest is not None
+                            else None
+                        ),
+                        "predecessor_attempt_manifest_sha256": (
+                            loaded_predecessor_manifest.sha256
+                            if loaded_predecessor_manifest is not None
+                            else None
+                        ),
+                        "predecessor_attempt_count": (
+                            loaded_predecessor_manifest.attempt_count
+                            if loaded_predecessor_manifest is not None
+                            else 0
+                        ),
+                        "lock_path": str(run_lock.path),
+                        "lock_owner": dict(run_lock.owner),
+                    },
+                )
+                return 2
 
-            while (
-                not stopped_by_circuit_breaker
-                and not stopped_by_fatal_error
-                and next_index < len(runnable_entries)
-                and len(in_flight) < workers
-            ):
-                entry = runnable_entries[next_index]
-                next_index += 1
-                future = executor.submit(runner.execute, entry.definition)
-                in_flight[future] = entry
-                submitted_task_count += 1
+            runner = (runner_factory or _default_runner_factory)(
+                store,
+                attempts_dir=Path(attempts_dir),
+                frozen_dir=Path(frozen_dir),
+            )
+            submitted_task_count = 0
+            completed_task_count = 0
+            total_cost_usd = 0.0
+            stopped_by_circuit_breaker = False
+            stopped_by_fatal_error = False
+            fatal_error: str | None = None
+            next_index = 0
+            in_flight: dict[concurrent.futures.Future[ClaudeRunResult], PlannedDefinition] = {}
 
-    final_status = "failed" if fatal_error else "completed"
-    final_report = _build_report(
-        loaded_plan=loaded_plan,
-        store=store,
-        entries=loaded_plan.entries,
-        selected_entries=selected_entries,
-        submitted_task_count=submitted_task_count,
-        completed_task_count=completed_task_count,
-        result_counts=result_counts,
-        started_at_monotonic=started_at_monotonic,
-        requested_logical_ids=logical_ids,
-        limit=limit,
-        workers=workers,
-        stopped_by_circuit_breaker=stopped_by_circuit_breaker,
-        stopped_by_fatal_error=stopped_by_fatal_error,
-        recovered_expired_attempt_ids=recovered_expired_attempt_ids,
-        predecessor_attempt_manifest=loaded_predecessor_manifest,
-        attempts_reserved_at_start=attempts_reserved_at_start,
-        status=final_status,
-        error=fatal_error,
-    )
-    final_report["total_cost_usd"] = total_cost_usd
-    _atomic_write_json(report_path, final_report)
-    return 1 if fatal_error else 0
+            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+                while next_index < len(runnable_entries) and len(in_flight) < workers:
+                    entry = runnable_entries[next_index]
+                    next_index += 1
+                    future = executor.submit(runner.execute, entry.definition)
+                    in_flight[future] = entry
+                    submitted_task_count += 1
+
+                while in_flight:
+                    done, _ = concurrent.futures.wait(
+                        tuple(in_flight),
+                        return_when=concurrent.futures.FIRST_COMPLETED,
+                    )
+                    for future in done:
+                        in_flight.pop(future)
+                        try:
+                            result = future.result()
+                        except ClaudeRunnerCircuitBreaker as exc:
+                            result_counts["circuit_breaker"] += 1
+                            stopped_by_circuit_breaker = True
+                            fatal_error = str(exc)
+                        except Exception as exc:  # pragma: no cover - 真实 runner 兜底
+                            result_counts["failure"] += 1
+                            fatal_error = str(exc)
+                            stopped_by_fatal_error = True
+                        else:
+                            if result.from_cache:
+                                result_counts["cache"] += 1
+                            elif result.state == "frozen":
+                                result_counts["success"] += 1
+                            else:
+                                result_counts["failure"] += 1
+                            if not result.from_cache and result.total_cost_usd is not None:
+                                total_cost_usd += float(result.total_cost_usd)
+                        completed_task_count += 1
+                        report_payload = _build_report(
+                            loaded_plan=loaded_plan,
+                            store=store,
+                            entries=loaded_plan.entries,
+                            selected_entries=selected_entries,
+                            submitted_task_count=submitted_task_count,
+                            completed_task_count=completed_task_count,
+                            result_counts=result_counts,
+                            started_at_monotonic=started_at_monotonic,
+                            requested_logical_ids=logical_ids,
+                            limit=limit,
+                            workers=workers,
+                            stopped_by_circuit_breaker=stopped_by_circuit_breaker,
+                            stopped_by_fatal_error=stopped_by_fatal_error,
+                            recovered_expired_attempt_ids=recovered_expired_attempt_ids,
+                            predecessor_attempt_manifest=loaded_predecessor_manifest,
+                            attempts_reserved_at_start=attempts_reserved_at_start,
+                            status="failed" if fatal_error else "running",
+                            error=fatal_error,
+                        )
+                        report_payload["total_cost_usd"] = total_cost_usd
+                        report_payload["lock_path"] = str(run_lock.path)
+                        report_payload["lock_owner"] = dict(run_lock.owner)
+                        _atomic_write_json(report_path, report_payload)
+
+                    while (
+                        not stopped_by_circuit_breaker
+                        and not stopped_by_fatal_error
+                        and next_index < len(runnable_entries)
+                        and len(in_flight) < workers
+                    ):
+                        entry = runnable_entries[next_index]
+                        next_index += 1
+                        future = executor.submit(runner.execute, entry.definition)
+                        in_flight[future] = entry
+                        submitted_task_count += 1
+
+            final_status = "failed" if fatal_error else "completed"
+            final_report = _build_report(
+                loaded_plan=loaded_plan,
+                store=store,
+                entries=loaded_plan.entries,
+                selected_entries=selected_entries,
+                submitted_task_count=submitted_task_count,
+                completed_task_count=completed_task_count,
+                result_counts=result_counts,
+                started_at_monotonic=started_at_monotonic,
+                requested_logical_ids=logical_ids,
+                limit=limit,
+                workers=workers,
+                stopped_by_circuit_breaker=stopped_by_circuit_breaker,
+                stopped_by_fatal_error=stopped_by_fatal_error,
+                recovered_expired_attempt_ids=recovered_expired_attempt_ids,
+                predecessor_attempt_manifest=loaded_predecessor_manifest,
+                attempts_reserved_at_start=attempts_reserved_at_start,
+                status=final_status,
+                error=fatal_error,
+            )
+            final_report["total_cost_usd"] = total_cost_usd
+            final_report["lock_path"] = str(run_lock.path)
+            final_report["lock_owner"] = dict(run_lock.owner)
+            _atomic_write_json(report_path, final_report)
+            return 1 if fatal_error else 0
+    except ConcurrentRunRejected as exc:
+        rejection_report = {
+            "status": "concurrent_run_rejected",
+            "error": (
+                "同一 state_db + plan 已有活跃实例持锁运行，拒绝并发执行；"
+                "主报告未被覆盖。"
+            ),
+            "plan_jsonl": str(resolved_plan_path),
+            "plan_sha256": loaded_plan.plan_sha256,
+            "state_db": str(resolved_state_db),
+            "requested_report_json": str(report_path.resolve()),
+            "conflict_report_json": str(exc.rejection_report_path),
+            "lock_path": str(exc.lock_path),
+            "lock_identity_key": exc.identity_key,
+            "lock_owner": exc.active_owner,
+            "model_invoked": False,
+        }
+        _atomic_write_json(exc.rejection_report_path, rejection_report)
+        print(
+            (
+                "检测到并发 run_claude_plan 实例，已拒绝本次运行；"
+                f"详情写入 {exc.rejection_report_path}"
+            ),
+            file=sys.stderr,
+        )
+        return 3
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

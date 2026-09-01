@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
+import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +39,11 @@ def _sha256_text(text: str) -> str:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _write_helper_script(path: Path, body: str) -> Path:
+    path.write_text(body, encoding="utf-8")
+    return path
 
 
 def _write_plan_jsonl(path: Path, rows: list[dict[str, Any]]) -> str:
@@ -680,6 +688,161 @@ def test_startup_recovers_expired_lease_before_selecting_runnable_tasks(tmp_path
     report = json.loads(report_json.read_text(encoding="utf-8"))
     assert report["recovered_expired_attempt_ids"] == [expired.attempt_id]
     assert report["recovered_expired_attempt_count"] == 1
+
+
+def test_concurrent_run_is_rejected_without_overwriting_primary_report_and_then_can_reenter(
+    tmp_path: Path,
+) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import (
+        _concurrent_rejection_report_path,
+        main,
+    )
+
+    row = _build_plan_row(tmp_path, "equivalence::locked")
+    plan_path = tmp_path / "plan.jsonl"
+    plan_sha256 = _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "control" / "state.sqlite3"
+    report_json = tmp_path / "reports" / "progress.json"
+    _write_json(report_json, {"status": "seed", "marker": "keep-me"})
+    primary_report_before = report_json.read_text(encoding="utf-8")
+    helper_ready = tmp_path / "holder-ready.json"
+    release_file = tmp_path / "release-holder"
+    helper_script = _write_helper_script(
+        tmp_path / "hold_plan_lock.py",
+        "\n".join(
+            [
+                "import json",
+                "import os",
+                "import sys",
+                "import time",
+                "from pathlib import Path",
+                "from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import _acquire_plan_run_lock",
+                "state_db = Path(sys.argv[1])",
+                "plan_jsonl = Path(sys.argv[2])",
+                "plan_sha256 = sys.argv[3]",
+                "report_json = Path(sys.argv[4])",
+                "ready_path = Path(sys.argv[5])",
+                "release_path = Path(sys.argv[6])",
+                "lock = _acquire_plan_run_lock(",
+                "    state_db=state_db,",
+                "    plan_path=plan_jsonl,",
+                "    plan_sha256=plan_sha256,",
+                "    report_path=report_json,",
+                ")",
+                "ready_path.write_text(",
+                "    json.dumps({'pid': os.getpid(), 'lock_path': str(lock.path), 'owner': lock.owner}, ensure_ascii=False),",
+                "    encoding='utf-8',",
+                ")",
+                "try:",
+                "    while not release_path.exists():",
+                "        time.sleep(0.05)",
+                "finally:",
+                "    lock.release()",
+                "",
+            ]
+        ),
+    )
+    env = dict(os.environ)
+    existing_pythonpath = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = (
+        f"{REPO_ROOT}:{existing_pythonpath}"
+        if existing_pythonpath
+        else str(REPO_ROOT)
+    )
+    holder = subprocess.Popen(
+        [
+            sys.executable,
+            str(helper_script),
+            str(state_db),
+            str(plan_path),
+            plan_sha256,
+            str(report_json),
+            str(helper_ready),
+            str(release_file),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=str(REPO_ROOT),
+        env=env,
+    )
+    try:
+        deadline = time.time() + 5.0
+        while not helper_ready.exists():
+            if holder.poll() is not None:
+                stdout, stderr = holder.communicate(timeout=1.0)
+                raise AssertionError(
+                    f"持锁辅助进程提前退出: rc={holder.returncode}, stdout={stdout!r}, stderr={stderr!r}"
+                )
+            if time.time() >= deadline:
+                raise AssertionError("持锁辅助进程未在时限内完成 ready")
+            time.sleep(0.05)
+
+        holder_info = json.loads(helper_ready.read_text(encoding="utf-8"))
+        calls: list[str] = []
+        exit_code = main(
+            [
+                "--plan-jsonl",
+                str(plan_path),
+                "--state-db",
+                str(state_db),
+                "--attempts-dir",
+                str(tmp_path / "llm" / "attempts"),
+                "--frozen-dir",
+                str(tmp_path / "llm" / "frozen"),
+                "--report-json",
+                str(report_json),
+            ],
+            runner_factory=_runner_factory(behaviors={}, calls=calls),
+        )
+
+        assert exit_code == 3
+        assert calls == []
+        assert report_json.read_text(encoding="utf-8") == primary_report_before
+        rejection_path = _concurrent_rejection_report_path(
+            report_json.resolve(),
+            identity_key=str(holder_info["owner"]["identity_key"]),
+        )
+        assert rejection_path.is_file()
+        rejection = json.loads(rejection_path.read_text(encoding="utf-8"))
+        assert rejection["status"] == "concurrent_run_rejected"
+        assert rejection["model_invoked"] is False
+        assert rejection["requested_report_json"] == str(report_json.resolve())
+        assert rejection["conflict_report_json"] == str(rejection_path)
+        assert rejection["lock_path"] == holder_info["lock_path"]
+        assert rejection["lock_owner"]["pid"] == holder_info["pid"]
+        assert rejection["lock_owner"]["plan_sha256"] == plan_sha256
+
+        release_file.write_text("release\n", encoding="utf-8")
+        holder.wait(timeout=5.0)
+        assert holder.returncode == 0
+
+        reentry_calls: list[str] = []
+        second_exit = main(
+            [
+                "--plan-jsonl",
+                str(plan_path),
+                "--state-db",
+                str(state_db),
+                "--attempts-dir",
+                str(tmp_path / "llm" / "attempts"),
+                "--frozen-dir",
+                str(tmp_path / "llm" / "frozen"),
+                "--report-json",
+                str(report_json),
+            ],
+            runner_factory=_runner_factory(behaviors={}, calls=reentry_calls),
+        )
+
+        assert second_exit == 0
+        assert reentry_calls == ["equivalence::locked"]
+        final_report = json.loads(report_json.read_text(encoding="utf-8"))
+        assert final_report["status"] == "completed"
+        assert final_report["lock_owner"]["plan_sha256"] == plan_sha256
+    finally:
+        if holder.poll() is None:
+            release_file.write_text("release\n", encoding="utf-8")
+            holder.wait(timeout=5.0)
 
 
 def test_cached_result_sha_drift_fails_before_runner_invocation(tmp_path: Path) -> None:
