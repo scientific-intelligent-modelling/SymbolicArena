@@ -38,6 +38,14 @@ _LEGACY_SECRET_KEY_PATTERN = re.compile(
     r"(token|api[_-]?key|authorization|secret|password)",
     re.IGNORECASE,
 )
+_TRAILING_JSON_FENCE_PATTERN = re.compile(
+    r"(?P<prefix>[^{}" + "`" + r"]{0,512})"
+    r"(?P<fence>```json[ \t]*\r?\n(?P<body>[\s\S]*?)\r?\n```)\Z"
+)
+_FORBIDDEN_NORMALIZATION_PREFIX_PATTERN = re.compile(
+    r"(?:tool[ _-]?(?:result|use)|stdout|stderr|<tool|\b(?:bash|python)\b)",
+    re.IGNORECASE,
+)
 
 
 class ExhaustedSimplificationAuditError(RuntimeError):
@@ -83,6 +91,62 @@ def match_audit_envelope_sanitization(
     if _legacy_sanitize_for_audit(raw_envelope) == stored_envelope:
         return "legacy_token_substring"
     return None
+
+
+def validate_envelope_with_optional_fenced_result_normalization(
+    envelope: Mapping[str, object],
+    *,
+    task_kind: str,
+    schema: Mapping[str, object],
+) -> tuple[dict[str, object], str]:
+    """先走原始严格契约；仅对受限尾部 fenced JSON 形态尝试临时归一化。"""
+
+    try:
+        return (
+            validate_claude_envelope(
+                envelope,
+                task_kind=task_kind,
+                schema=schema,
+            ),
+            "strict_passthrough",
+        )
+    except ContractViolation:
+        normalized = _normalize_trailing_fenced_json_result_envelope(envelope)
+        if normalized is None:
+            raise
+    return (
+        validate_claude_envelope(
+            normalized,
+            task_kind=task_kind,
+            schema=schema,
+        ),
+        "tail_fenced_json_object",
+    )
+
+
+def _normalize_trailing_fenced_json_result_envelope(
+    envelope: Mapping[str, object],
+) -> dict[str, object] | None:
+    result = envelope.get("result")
+    if not isinstance(result, str):
+        return None
+    matched = _TRAILING_JSON_FENCE_PATTERN.fullmatch(result)
+    if matched is None:
+        return None
+    if _FORBIDDEN_NORMALIZATION_PREFIX_PATTERN.search(matched.group("prefix")):
+        return None
+    if result.count("```json") != 1 or result.count("```") != 2:
+        return None
+    body = matched.group("body")
+    try:
+        parsed = json.loads(body)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, Mapping):
+        return None
+    normalized = dict(envelope)
+    normalized["result"] = body
+    return normalized
 
 
 def _sha256_file(path: Path) -> str:
@@ -347,10 +411,12 @@ def _audit_attempt(
     if envelope_sanitization_mode is None:
         return {**base, "status": "identity_error", "error": "envelope 与 stdout 不一致"}
     try:
-        structured_output = validate_claude_envelope(
-            stdout_envelope,
-            task_kind="simplify",
-            schema=definition.schema,
+        structured_output, normalization_mode = (
+            validate_envelope_with_optional_fenced_result_normalization(
+                stdout_envelope,
+                task_kind="simplify",
+                schema=definition.schema,
+            )
         )
     except ContractViolation as exc:
         return {**base, "status": "strict_contract_failed", "error": str(exc)}
@@ -372,6 +438,7 @@ def _audit_attempt(
         **semantic,
         "structured_output": structured_output,
         "envelope_sanitization_mode": envelope_sanitization_mode,
+        "result_normalization_mode": normalization_mode,
     }
 
 
@@ -483,6 +550,13 @@ def audit_exhausted_simplifications(
 
     output_path = Path(output_jsonl).resolve()
     _atomic_write_jsonl(output_path, task_rows)
+    normalization_mode_counts: dict[str, int] = {}
+    for row in task_rows:
+        for attempt in row["attempts"]:
+            mode = attempt.get("result_normalization_mode")
+            if isinstance(mode, str):
+                normalization_mode_counts[mode] = normalization_mode_counts.get(mode, 0) + 1
+
     report: JsonDict = {
         "status": "ok",
         "model_invoked": False,
@@ -504,6 +578,7 @@ def audit_exhausted_simplifications(
         "promotable_task_count": sum(row["resolution"] == "promotable" for row in task_rows),
         "unresolved_task_count": sum(row["resolution"] == "unresolved" for row in task_rows),
         "attempt_status_counts": dict(sorted(attempt_status_counts.items())),
+        "result_normalization_mode_counts": dict(sorted(normalization_mode_counts.items())),
         "output_jsonl": str(output_path),
         "output_sha256": _sha256_file(output_path),
     }

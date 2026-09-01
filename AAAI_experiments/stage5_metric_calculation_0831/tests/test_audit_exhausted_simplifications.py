@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications import (
+    _normalize_trailing_fenced_json_result_envelope,
     audit_exhausted_simplifications,
     match_audit_envelope_sanitization,
 )
@@ -47,6 +48,14 @@ def _envelope(structured: dict[str, object], *, turns: int = 1) -> dict[str, obj
     }
 
 
+def _prefixed_fenced_result(
+    structured: dict[str, object],
+    *,
+    prefix: str = "Verified: preserved under simplification.\n\n",
+) -> str:
+    return prefix + "```json\n" + json.dumps(structured, ensure_ascii=False) + "\n```"
+
+
 def test_recognizes_legacy_token_count_redaction() -> None:
     raw = {
         "usage": {
@@ -77,6 +86,13 @@ def test_recognizes_legacy_token_count_redaction() -> None:
         },
     }
     assert match_audit_envelope_sanitization(raw, stored) == "legacy_token_substring"
+
+
+def test_fenced_result_normalization_rejects_tool_marker_prefix() -> None:
+    envelope = {
+        "result": "Tool Result: verified\n\n```json\n{\"outcome\":\"unable\"}\n```"
+    }
+    assert _normalize_trailing_fenced_json_result_envelope(envelope) is None
 
 
 def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
@@ -170,7 +186,15 @@ def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
             retryable=True,
             now=float(number) + 0.5,
         )
-        envelope = _envelope(structured, turns=1 if number == 1 else 2)
+        if number == 1:
+            envelope = _envelope(structured, turns=1)
+            envelope["result"] = _prefixed_fenced_result(structured)
+        elif number == 2:
+            envelope = _envelope(structured, turns=1)
+            envelope["result"] = _prefixed_fenced_result(structured) + "\nextra"
+        else:
+            envelope = _envelope(structured, turns=2)
+            envelope["result"] = _prefixed_fenced_result(structured)
         stdout = json.dumps(envelope)
         payload = {
             "attempt_id": lease.attempt_id,
@@ -225,6 +249,7 @@ def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
     assert report["promotable_task_count"] == 1
     assert report["model_invoked"] is False
     assert report["state_db_mutated"] is False
+    assert report["result_normalization_mode_counts"] == {"tail_fenced_json_object": 1}
     restarted = TaskStateStore(state_db)
     assert restarted.task_state(task_key) == "exhausted"
     assert restarted.attempts_reserved() == 3
@@ -235,3 +260,4 @@ def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
         "strict_contract_failed",
         "strict_contract_failed",
     ]
+    assert rows[0]["attempts"][0]["result_normalization_mode"] == "tail_fenced_json_object"

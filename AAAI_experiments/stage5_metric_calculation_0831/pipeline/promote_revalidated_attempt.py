@@ -16,6 +16,7 @@ from typing import Any, Mapping, Sequence
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications import (
     match_audit_envelope_sanitization,
     run_isolated_simplify_semantic_validator,
+    validate_envelope_with_optional_fenced_result_normalization,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     CONTRACT_EFFORT,
@@ -25,7 +26,6 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     build_claude_command,
     canonical_json,
     render_prompt,
-    validate_claude_envelope,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import (
     SEMANTIC_VALIDATOR_VERSION,
@@ -229,10 +229,12 @@ def _strictly_revalidate_attempt(
     if envelope_sanitization_mode is None:
         raise PromotionError("envelope 与原始 stdout 不一致")
     try:
-        structured_output = validate_claude_envelope(
-            stdout_envelope,
-            task_kind=task_kind,
-            schema=definition.schema,
+        structured_output, result_normalization_mode = (
+            validate_envelope_with_optional_fenced_result_normalization(
+                stdout_envelope,
+                task_kind=task_kind,
+                schema=definition.schema,
+            )
         )
     except ContractViolation as exc:
         raise PromotionError(f"Claude envelope 严格契约失败: {exc}") from exc
@@ -253,7 +255,12 @@ def _strictly_revalidate_attempt(
     semantic_evidence = semantic.get("semantic_evidence")
     if not isinstance(semantic_evidence, Mapping):
         raise PromotionError("隔离语义重验证缺少 semantic_evidence")
-    return structured_output, dict(semantic_evidence), envelope_sanitization_mode
+    return (
+        structured_output,
+        dict(semantic_evidence),
+        envelope_sanitization_mode,
+        result_normalization_mode,
+    )
 
 
 def promote_revalidated_attempt(
@@ -297,6 +304,7 @@ def promote_revalidated_attempt(
         structured_output,
         semantic_evidence,
         envelope_sanitization_mode,
+        result_normalization_mode,
     ) = _strictly_revalidate_attempt(
         attempt=attempt,
         attempt_path=attempt_path,
@@ -338,6 +346,7 @@ def promote_revalidated_attempt(
             "semantic_validator_worker_sha256": _sha256_file(validator_worker_path),
             "semantic_validator_timeout_seconds": float(semantic_timeout_seconds),
             "source_envelope_sanitization_mode": envelope_sanitization_mode,
+            "result_normalization_mode": result_normalization_mode,
             "error_class": None,
             "retryable": False,
         }
@@ -352,6 +361,7 @@ def promote_revalidated_attempt(
             "source_attempt_audit_sha256": attempt_sha256,
             "reason": audit_reason,
             "new_model_call": False,
+            "result_normalization_mode": result_normalization_mode,
         },
     }
     frozen_payload = {
@@ -406,6 +416,7 @@ def promote_revalidated_attempt(
         "semantic_timeout_seconds": float(semantic_timeout_seconds),
         "strict_contract_revalidated": True,
         "source_envelope_sanitization_mode": envelope_sanitization_mode,
+        "result_normalization_mode": result_normalization_mode,
     }
     if report_json is not None:
         _atomic_write_json(Path(report_json), report)
