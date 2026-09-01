@@ -15,6 +15,7 @@ from typing import Any, Mapping, Sequence
 from .audit_exhausted_simplifications import (
     match_audit_envelope_sanitization,
     run_isolated_simplify_semantic_validator,
+    validate_envelope_with_optional_fenced_result_normalization,
 )
 from .claude_contract import (
     CONTRACT_EFFORT,
@@ -40,6 +41,28 @@ JsonDict = dict[str, object]
 
 class FrozenSimplificationAuditError(RuntimeError):
     """冻结 simplify 复核无法形成可信输入快照。"""
+
+
+_TAIL_FENCED_JSON_MODE = "tail_fenced_json_object"
+
+
+def _should_allow_promoted_fenced_result_normalization(
+    *,
+    validation: Mapping[str, object],
+    metadata: Mapping[str, object],
+) -> tuple[bool, str | None]:
+    promotion = validation.get("promotion")
+    if promotion is None:
+        return False, None
+    if not isinstance(promotion, Mapping) or promotion.get("new_model_call") is not False:
+        return False, "补冻标记缺失 new_model_call=false"
+    promotion_mode = promotion.get("result_normalization_mode")
+    metadata_mode = metadata.get("result_normalization_mode")
+    if promotion_mode != _TAIL_FENCED_JSON_MODE:
+        return False, "promotion.result_normalization_mode 不符合受限归一化白名单"
+    if metadata_mode != _TAIL_FENCED_JSON_MODE:
+        return False, "metadata.result_normalization_mode 不符合受限归一化白名单"
+    return True, None
 
 
 def _sha256_file(path: Path) -> str:
@@ -361,14 +384,36 @@ def _audit_one_frozen(
     if envelope_sanitization_mode is None:
         return _failure(bound, "raw_output_mismatch", "envelope 与原始 stdout 不一致")
     bound["envelope_sanitization_mode"] = envelope_sanitization_mode
+    result_normalization_mode = None
     try:
         structured_output = validate_claude_envelope(
             stdout_envelope,
             task_kind=task_kind,
             schema=definition.schema,
         )
+        result_normalization_mode = "strict_passthrough"
     except ContractViolation as exc:
-        return _failure(bound, "claude_contract_error", str(exc))
+        allowed_normalization, normalization_error = (
+            _should_allow_promoted_fenced_result_normalization(
+                validation=validation,
+                metadata=metadata,
+            )
+        )
+        if not allowed_normalization:
+            if normalization_error is not None:
+                return _failure(bound, "promotion_audit_error", normalization_error)
+            return _failure(bound, "claude_contract_error", str(exc))
+        try:
+            structured_output, result_normalization_mode = (
+                validate_envelope_with_optional_fenced_result_normalization(
+                    stdout_envelope,
+                    task_kind=task_kind,
+                    schema=definition.schema,
+                )
+            )
+        except ContractViolation as normalized_exc:
+            return _failure(bound, "claude_contract_error", str(normalized_exc))
+    bound["result_normalization_mode"] = result_normalization_mode
     if payload.get("structured_output") != structured_output:
         return _failure(bound, "structured_output_mismatch", "顶层 structured_output 与 envelope 不一致")
     if validation.get("structured_output") != structured_output:
@@ -445,6 +490,7 @@ def _audit_one_frozen(
             else False
         ),
         "promoted_without_new_model_call": promotion is not None,
+        "result_normalization_mode": result_normalization_mode,
     }
 
 
@@ -615,6 +661,15 @@ def audit_frozen_simplifications(
             sorted(
                 Counter(
                     str(row.get("envelope_sanitization_mode"))
+                    for row in rows
+                    if row.get("status") == "passed"
+                ).items()
+            )
+        ),
+        "result_normalization_mode_counts": dict(
+            sorted(
+                Counter(
+                    str(row.get("result_normalization_mode"))
                     for row in rows
                     if row.get("status") == "passed"
                 ).items()
