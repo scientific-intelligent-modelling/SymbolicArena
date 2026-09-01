@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import signal
 import sqlite3
 import subprocess
@@ -24,6 +25,7 @@ from .claude_contract import (
     validate_claude_envelope,
 )
 from .run_claude_plan import PlanContractError, load_plan_jsonl
+from .claude_runner import _redact_string, _sanitize_for_audit
 from .semantic_validation_worker import (
     WORKER_MODULE,
     build_semantic_validation_payload,
@@ -32,10 +34,55 @@ from .semantic_validation_worker import (
 
 JsonDict = dict[str, object]
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+_LEGACY_SECRET_KEY_PATTERN = re.compile(
+    r"(token|api[_-]?key|authorization|secret|password)",
+    re.IGNORECASE,
+)
 
 
 class ExhaustedSimplificationAuditError(RuntimeError):
     """exhausted simplify 审计无法形成可信闭环。"""
+
+
+def _legacy_sanitize_for_audit(
+    value: object,
+    *,
+    parent_key: str | None = None,
+) -> object:
+    if isinstance(value, Mapping):
+        sanitized: dict[str, object] = {}
+        for key, item in value.items():
+            key_text = str(key)
+            if _LEGACY_SECRET_KEY_PATTERN.search(key_text):
+                sanitized[key_text] = "[REDACTED]"
+            else:
+                sanitized[key_text] = _legacy_sanitize_for_audit(
+                    item,
+                    parent_key=key_text,
+                )
+        return sanitized
+    if isinstance(value, list):
+        return [_legacy_sanitize_for_audit(item, parent_key=parent_key) for item in value]
+    if isinstance(value, tuple):
+        return [_legacy_sanitize_for_audit(item, parent_key=parent_key) for item in value]
+    if isinstance(value, str):
+        if parent_key and _LEGACY_SECRET_KEY_PATTERN.search(parent_key):
+            return "[REDACTED]"
+        return _redact_string(value)
+    return value
+
+
+def match_audit_envelope_sanitization(
+    raw_envelope: Mapping[str, object],
+    stored_envelope: Mapping[str, object],
+) -> str | None:
+    """识别当前或已冻结的 legacy 脱敏投影，不放宽原始 envelope 契约。"""
+
+    if _sanitize_for_audit(raw_envelope) == stored_envelope:
+        return "current_boundary_keys"
+    if _legacy_sanitize_for_audit(raw_envelope) == stored_envelope:
+        return "legacy_token_substring"
+    return None
 
 
 def _sha256_file(path: Path) -> str:
@@ -293,11 +340,15 @@ def _audit_attempt(
             "status": "strict_contract_failed",
             "error": f"stdout 不是合法 envelope JSON: {exc}",
         }
-    if stdout_envelope != envelope:
+    envelope_sanitization_mode = match_audit_envelope_sanitization(
+        stdout_envelope,
+        envelope,
+    )
+    if envelope_sanitization_mode is None:
         return {**base, "status": "identity_error", "error": "envelope 与 stdout 不一致"}
     try:
         structured_output = validate_claude_envelope(
-            envelope,
+            stdout_envelope,
             task_kind="simplify",
             schema=definition.schema,
         )
@@ -316,7 +367,12 @@ def _audit_attempt(
         structured_output=structured_output,
         timeout_seconds=timeout_seconds,
     )
-    return {**base, **semantic, "structured_output": structured_output}
+    return {
+        **base,
+        **semantic,
+        "structured_output": structured_output,
+        "envelope_sanitization_mode": envelope_sanitization_mode,
+    }
 
 
 def audit_exhausted_simplifications(

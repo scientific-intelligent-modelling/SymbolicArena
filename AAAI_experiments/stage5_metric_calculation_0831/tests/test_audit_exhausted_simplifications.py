@@ -6,6 +6,7 @@ from pathlib import Path
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications import (
     audit_exhausted_simplifications,
+    match_audit_envelope_sanitization,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     CONTRACT_EFFORT,
@@ -44,6 +45,38 @@ def _envelope(structured: dict[str, object], *, turns: int = 1) -> dict[str, obj
         "subagent_stats": {"spawned": 0},
         "modelUsage": {CONTRACT_MODEL: {"canonicalModel": "claude-opus-5"}},
     }
+
+
+def test_recognizes_legacy_token_count_redaction() -> None:
+    raw = {
+        "usage": {
+            "input_tokens": 12,
+            "output_tokens": 34,
+            "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0},
+        },
+        "modelUsage": {
+            CONTRACT_MODEL: {
+                "inputTokens": 12,
+                "outputTokens": 34,
+                "canonicalModel": "claude-opus-5",
+            }
+        },
+    }
+    stored = {
+        "usage": {
+            "input_tokens": "[REDACTED]",
+            "output_tokens": "[REDACTED]",
+            "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0},
+        },
+        "modelUsage": {
+            CONTRACT_MODEL: {
+                "inputTokens": "[REDACTED]",
+                "outputTokens": "[REDACTED]",
+                "canonicalModel": "claude-opus-5",
+            }
+        },
+    }
+    assert match_audit_envelope_sanitization(raw, stored) == "legacy_token_substring"
 
 
 def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
