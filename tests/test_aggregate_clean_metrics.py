@@ -900,8 +900,53 @@ def _aggregate(paths: dict[str, Path], tmp_path: Path) -> dict[str, Any]:
     )
 
 
+def _rewrite_pred_exhausted_as_non_applicable(paths: dict[str, Path], tmp_path: Path) -> None:
+    rows = _read_jsonl(paths["pred_index_jsonl"])
+    target = next(
+        row for row in rows if row["logical_id"] == "pred_simplify::qlattice::g0005::s522::clean"
+    )
+    evidence_path = tmp_path / "non_applicable" / "pred_frozen" / f"{target['evaluation_key']}.json"
+    request_context = {
+        "algorithm": "QLattice",
+        "algorithm_slug": "qlattice",
+        "dataset_id": "BPG3",
+        "dataset_index": "g0005",
+        "noise_tag": "clean",
+        "seed": 522,
+    }
+    evidence_payload = _non_applicable_evidence_payload(
+        logical_id="pred_simplify::qlattice::g0005::s522::clean",
+        task_type="pred_simplify",
+        reason="missing_final_expression",
+        request_context=request_context,
+    )
+    _write_json(evidence_path, evidence_payload)
+    target["state"] = "non_applicable"
+    target["attempt_id"] = None
+    target["result_path"] = None
+    target["result_sha256"] = None
+    target["structured_output"] = None
+    target["non_applicable"] = {
+        "reason": "missing_final_expression",
+        "evidence_path": str(evidence_path.resolve()),
+        "evidence_sha256": _sha256_file(evidence_path),
+    }
+    target["exhausted"] = None
+    _write_jsonl(paths["pred_index_jsonl"], rows)
+    pred_summary = json.loads(paths["pred_summary_json"].read_text(encoding="utf-8"))
+    pred_summary["output_sha256"] = _sha256_file(paths["pred_index_jsonl"])
+    pred_summary["state_counts"] = {
+        "frozen": 2,
+        "non_applicable": 1,
+        "exhausted": 0,
+    }
+    _write_json(paths["pred_summary_json"], pred_summary)
+
+
 def test_aggregate_clean_metrics_valid_fixture_passes(tmp_path: Path) -> None:
     paths = _build_fixture(tmp_path)
+    _rewrite_pred_exhausted_as_non_applicable(paths, tmp_path)
+
     report = _aggregate(paths, tmp_path)
 
     clean_run_csv = tmp_path / "outputs/clean_run_metrics.csv"
@@ -933,7 +978,7 @@ def test_aggregate_clean_metrics_valid_fixture_passes(tmp_path: Path) -> None:
             int(run_rows[1]["predicted_complexity"]),
         )
     )
-    assert run_rows[2]["pred_state"] == "exhausted"
+    assert run_rows[2]["pred_state"] == "non_applicable"
     assert float(run_rows[2]["m_sym"]) == pytest.approx(0.0)
     assert float(run_rows[2]["m_min"]) == pytest.approx(0.0)
 
@@ -947,16 +992,26 @@ def test_aggregate_clean_metrics_valid_fixture_passes(tmp_path: Path) -> None:
     }
     assert report_payload["inputs"]["pred_frozen_index"]["summary_json"]["state_counts"] == {
         "frozen": 2,
-        "non_applicable": 0,
-        "exhausted": 1,
+        "non_applicable": 1,
+        "exhausted": 0,
     }
-    assert report_payload["summary"]["judge_exhausted_count"] == 1
+    assert report_payload["summary"]["judge_exhausted_count"] == 0
+
+
+def test_aggregate_clean_metrics_hard_fails_when_pred_index_contains_exhausted(
+    tmp_path: Path,
+) -> None:
+    paths = _build_fixture(tmp_path)
+
+    with pytest.raises(AggregateCleanMetricsError, match="pred_frozen_index 仍包含 exhausted 终态"):
+        _aggregate(paths, tmp_path)
 
 
 def test_aggregate_clean_metrics_hard_fails_when_numeric_csv_binding_is_tampered(
     tmp_path: Path,
 ) -> None:
     paths = _build_fixture(tmp_path)
+    _rewrite_pred_exhausted_as_non_applicable(paths, tmp_path)
     _rewrite_csv_rows(paths["numeric_csv"], lambda rows: rows.__setitem__(0, {**rows[0], "id_quality": "0.9"}))
 
     with pytest.raises(AggregateCleanMetricsError, match="run_csv.sha256 与目标文件不一致"):
@@ -967,6 +1022,7 @@ def test_aggregate_clean_metrics_hard_fails_when_eff_q_trajectory_is_tampered(
     tmp_path: Path,
 ) -> None:
     paths = _build_fixture(tmp_path)
+    _rewrite_pred_exhausted_as_non_applicable(paths, tmp_path)
     _rewrite_csv_rows(paths["eff_csv"], lambda rows: rows[0].__setitem__("q_0005", "0.123456789"))
     report = json.loads(paths["eff_preparation_report_json"].read_text(encoding="utf-8"))
     report["outputs"]["eff_csv_sha256"] = _sha256_file(paths["eff_csv"])
@@ -980,6 +1036,7 @@ def test_aggregate_clean_metrics_hard_fails_when_equivalence_decision_is_tampere
     tmp_path: Path,
 ) -> None:
     paths = _build_fixture(tmp_path)
+    _rewrite_pred_exhausted_as_non_applicable(paths, tmp_path)
     rows = _read_jsonl(paths["equivalence_index_jsonl"])
     rows[0]["structured_output"]["decision"] = "not_equivalent"
     _write_jsonl(paths["equivalence_index_jsonl"], rows)
@@ -993,6 +1050,7 @@ def test_aggregate_clean_metrics_hard_fails_when_equivalence_decision_is_tampere
 
 def test_aggregate_clean_metrics_hard_fails_on_noncanonical_logical_id(tmp_path: Path) -> None:
     paths = _build_fixture(tmp_path)
+    _rewrite_pred_exhausted_as_non_applicable(paths, tmp_path)
     rows = _read_jsonl(paths["evidence_jsonl"])
     rows[0]["pred_logical_id"] = "pred_simplify::qlattice::BPG3::s520::clean"
     _write_jsonl(paths["evidence_jsonl"], rows)
@@ -1003,6 +1061,7 @@ def test_aggregate_clean_metrics_hard_fails_on_noncanonical_logical_id(tmp_path:
 
 def test_aggregate_clean_metrics_hard_fails_on_extra_evidence(tmp_path: Path) -> None:
     paths = _build_fixture(tmp_path)
+    _rewrite_pred_exhausted_as_non_applicable(paths, tmp_path)
     rows = _read_jsonl(paths["evidence_jsonl"])
     rows.append(
         _evidence_row(
@@ -1061,6 +1120,7 @@ def test_aggregate_clean_metrics_missing_required_inputs_raises_type_error(tmp_p
 
 def test_cli_accepts_frozen_summary_and_plan_flags(tmp_path: Path) -> None:
     paths = _build_fixture(tmp_path)
+    _rewrite_pred_exhausted_as_non_applicable(paths, tmp_path)
     clean_run_csv = tmp_path / "cli/clean_run_metrics.csv"
     task_stability_csv = tmp_path / "cli/task_stability.csv"
     algorithm_csv = tmp_path / "cli/algorithm_six_axis.csv"

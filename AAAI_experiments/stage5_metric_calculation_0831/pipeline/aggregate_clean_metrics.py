@@ -1686,6 +1686,12 @@ def aggregate_clean_metrics(
         pred_identity_map=pred_identity_map,
         expected_runs=expected_runs,
     )
+    pred_exhausted_count = sum(1 for row in pred_rows.values() if row["state"] == "exhausted")
+    if pred_exhausted_count:
+        _raise(
+            "pred_frozen_index 仍包含 exhausted 终态，clean 正式六轴聚合禁止继续；"
+            f"请先完成补冻或重验证闭环（exhausted={pred_exhausted_count}）"
+        )
     eq_index_rows, eq_info = _load_frozen_index_rows(
         index_path=equivalence_index_jsonl,
         summary_path=equivalence_summary_json,
@@ -2066,7 +2072,7 @@ def aggregate_clean_metrics(
         "expected_runs": expected_runs,
         "expected_task_rows": expected_task_rows,
         "expected_algorithm_rows": expected_algorithms,
-        "judge_exhausted_count": sum(1 for row in pred_rows.values() if row["state"] == "exhausted"),
+        "judge_exhausted_count": pred_exhausted_count,
     }
     summary_sha256 = _sha256_text(_canonical_json({"inputs": {
         "numeric_csv": numeric_info,
