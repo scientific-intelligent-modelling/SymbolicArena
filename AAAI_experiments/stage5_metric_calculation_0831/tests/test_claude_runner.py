@@ -913,7 +913,7 @@ def test_contract_drift_variants_raise_global_circuit_breaker_and_finish_failure
         (lambda envelope: envelope.__setitem__("stop_reason", "completed"), "stop-reason"),
     ],
 )
-def test_turn_contract_violation_triggers_breaker_but_keeps_retry_wait_when_budget_remains(
+def test_turn_contract_violation_is_rejected_then_retried_without_global_breaker(
     tmp_path: Path,
     mutator: object,
     label: str,
@@ -929,16 +929,22 @@ def test_turn_contract_violation_triggers_breaker_but_keeps_retry_wait_when_budg
                 returncode=0,
                 stdout=json.dumps(drifted, ensure_ascii=False),
                 stderr="",
-            )
+            ),
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(_valid_envelope(), ensure_ascii=False),
+                stderr="",
+            ),
         ]
     )
     runner = _runner(tmp_path, store, fake_run)
 
-    with pytest.raises(ClaudeRunnerCircuitBreaker, match="Claude 全局熔断"):
-        runner.execute(definition)
+    result = runner.execute(definition)
 
-    assert store.attempts_reserved() == 1
-    assert store.task_state(definition.task_spec.evaluation_key) == "retry_wait"
+    assert result.state == "frozen"
+    assert store.attempts_reserved() == 2
+    assert store.task_state(definition.task_spec.evaluation_key) == "frozen"
     attempt_audit = json.loads(
         (tmp_path / "llm" / "attempts" / f"{definition.task_spec.evaluation_key}.a01.json").read_text(
             encoding="utf-8"
@@ -946,7 +952,33 @@ def test_turn_contract_violation_triggers_breaker_but_keeps_retry_wait_when_budg
     )
     assert attempt_audit["validation"]["error_class"] == "turn_contract_violation"
     assert attempt_audit["metadata"]["retryable"] is True
-    assert len(fake_run.calls) == 1
+    assert len(fake_run.calls) == 2
+
+
+def test_repeated_turn_contract_violation_stops_at_task_attempt_cap(tmp_path: Path) -> None:
+    definition = _task_definition(tmp_path, "ek-turn-contract-exhausted")
+    drifted = _valid_envelope()
+    drifted["num_turns"] = 2
+    fake_run = FakeSubprocessRun(
+        [
+            subprocess.CompletedProcess(
+                args=["claude"],
+                returncode=0,
+                stdout=json.dumps(drifted, ensure_ascii=False),
+                stderr="",
+            )
+            for _ in range(3)
+        ]
+    )
+    store = TaskStateStore(tmp_path / "control" / "state.sqlite3", attempt_cap=5)
+
+    result = _runner(tmp_path, store, fake_run).execute(definition)
+
+    assert result.state == "exhausted"
+    assert result.error_class == "turn_contract_violation"
+    assert store.attempts_reserved() == 3
+    assert store.task_state(definition.task_spec.evaluation_key) == "exhausted"
+    assert len(fake_run.calls) == 3
 
 
 @pytest.mark.parametrize(

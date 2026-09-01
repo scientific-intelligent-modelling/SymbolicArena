@@ -807,7 +807,7 @@ class ClaudeRunner:
                     except TurnContractViolation as exc:
                         error_class = "turn_contract_violation"
                         retryable = True
-                        circuit_break = True
+                        circuit_break = False
                         validation = {
                             "ok": False,
                             "error_class": error_class,
