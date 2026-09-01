@@ -8,18 +8,28 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sqlite3
 import time
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications import (
+    _run_semantic_validator,
+)
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
+    CONTRACT_EFFORT,
+    CONTRACT_MODEL,
+    CONTRACT_TRANSPORT_VERSION,
+    ContractViolation,
+    build_claude_command,
+    canonical_json,
+    render_prompt,
     validate_claude_envelope,
-    validate_structured_output,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import (
     SEMANTIC_VALIDATOR_VERSION,
+    SEMANTIC_VALIDATOR_TRANSPORT_VERSION,
     _infer_task_kind,
-    _validate_simplify_semantics,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import (
     _load_predecessor_attempt_manifest,
@@ -36,12 +46,23 @@ class PromotionError(RuntimeError):
     """既有 attempt 不满足可审计补冻条件。"""
 
 
+_PROMOTABLE_ERROR_CLASSES = (
+    "validation_failed",
+    "semantic_validator_timeout",
+    "semantic_validator_error",
+)
+
+
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
 def _sha256_file(path: Path) -> str:
     return _sha256_bytes(path.read_bytes())
+
+
+def _sha256_text(value: str) -> str:
+    return _sha256_bytes(value.encode("utf-8"))
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -64,6 +85,170 @@ def _atomic_write_json(path: Path, payload: Mapping[str, object]) -> None:
     temporary.replace(path)
 
 
+def _load_failed_attempt_binding(
+    *,
+    state_db: Path,
+    attempt_id: str,
+    evaluation_key: str,
+) -> dict[str, object]:
+    if not state_db.is_file():
+        raise PromotionError(f"状态库不存在: {state_db}")
+    connection = sqlite3.connect(f"{state_db.resolve().as_uri()}?mode=ro", uri=True)
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            """SELECT a.attempt_id, a.evaluation_key, a.attempt_number,
+                      a.status AS attempt_status, a.error_class, a.retryable,
+                      t.logical_id, t.task_type, t.condition_name, t.input_hash,
+                      t.prompt_version, t.schema_version, t.state AS task_state
+               FROM attempts AS a
+               JOIN tasks AS t ON t.evaluation_key = a.evaluation_key
+               WHERE a.attempt_id = ?""",
+            (attempt_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+    if row is None:
+        raise PromotionError(f"状态库中不存在 attempt: {attempt_id}")
+    payload = dict(row)
+    if payload["evaluation_key"] != evaluation_key:
+        raise PromotionError("attempt 与状态库 evaluation_key 不一致")
+    if payload["attempt_status"] != "failed":
+        raise PromotionError("仅允许补冻状态库中 status=failed 的 attempt")
+    if payload["task_state"] not in {"retry_wait", "exhausted"}:
+        raise PromotionError(f"任务状态 {payload['task_state']!r} 不允许补冻")
+    if payload["error_class"] not in _PROMOTABLE_ERROR_CLASSES:
+        raise PromotionError(
+            f"原 error_class={payload['error_class']!r} 不在补冻白名单内"
+        )
+    return payload
+
+
+def _strictly_revalidate_attempt(
+    *,
+    attempt: Mapping[str, object],
+    attempt_path: Path,
+    entry: object,
+    binding: Mapping[str, object],
+    semantic_timeout_seconds: float,
+) -> tuple[dict[str, object], dict[str, object]]:
+    definition = entry.definition
+    task_kind = _infer_task_kind(
+        definition.task_spec.task_type,
+        definition.task_kind,
+    )
+    if task_kind != "simplify":
+        raise PromotionError("当前补冻器仅允许重验证 simplify 任务")
+
+    attempt_id = str(binding["attempt_id"])
+    attempt_number = int(binding["attempt_number"])
+    expected_attempt_id = f"{entry.evaluation_key}.a{attempt_number:02d}"
+    if attempt_id != expected_attempt_id or attempt_path.name != f"{attempt_id}.json":
+        raise PromotionError("attempt_id 或审计文件名不是 canonical 形式")
+    if attempt.get("attempt_id") != attempt_id:
+        raise PromotionError("payload attempt_id 与状态库不一致")
+    if attempt.get("evaluation_key") != entry.evaluation_key:
+        raise PromotionError("payload evaluation_key 与冻结 plan 不一致")
+    if attempt.get("request") != definition.request:
+        raise PromotionError("attempt request 与冻结 plan 不一致")
+
+    metadata = attempt.get("metadata")
+    validation = attempt.get("validation")
+    if not isinstance(metadata, Mapping) or not isinstance(validation, Mapping):
+        raise PromotionError("attempt metadata/validation 缺失")
+    expected_metadata = {
+        "attempt_id": attempt_id,
+        "attempt_number": attempt_number,
+        "evaluation_key": entry.evaluation_key,
+        "logical_id": entry.logical_id,
+        "task_type": definition.task_spec.task_type,
+        "task_kind": task_kind,
+        "requested_model": CONTRACT_MODEL,
+        "requested_effort": CONTRACT_EFFORT,
+        "transport_version": CONTRACT_TRANSPORT_VERSION,
+        "prompt_path": str(definition.prompt_path),
+        "prompt_sha256": definition.prompt_sha256,
+        "schema_path": str(definition.schema_path),
+        "schema_sha256": definition.schema_sha256,
+        "error_class": binding["error_class"],
+        "retryable": bool(binding["retryable"]),
+    }
+    for field, expected in expected_metadata.items():
+        if metadata.get(field) != expected:
+            raise PromotionError(f"metadata.{field} 与状态库/冻结 plan 不一致")
+    expected_state_fields = {
+        "logical_id": entry.logical_id,
+        "task_type": definition.task_spec.task_type,
+        "condition_name": definition.task_spec.condition,
+        "input_hash": definition.task_spec.input_hash,
+        "prompt_version": definition.task_spec.prompt_version,
+        "schema_version": definition.task_spec.schema_version,
+    }
+    for field, expected in expected_state_fields.items():
+        if binding.get(field) != expected:
+            raise PromotionError(f"状态库 {field} 与冻结 plan 不一致")
+    if validation.get("ok") is not False:
+        raise PromotionError("原 attempt 不是验证失败状态")
+    if validation.get("error_class") != binding["error_class"]:
+        raise PromotionError("validation.error_class 与状态库不一致")
+
+    expected_prompt = render_prompt(
+        definition.prompt_template,
+        definition.request,
+        definition.schema,
+    )
+    if attempt.get("prompt") != expected_prompt:
+        raise PromotionError("prompt 与冻结 plan 不一致")
+    if attempt.get("command") != build_claude_command(definition.schema):
+        raise PromotionError("Claude command 与固定单轮契约不一致")
+    if metadata.get("rendered_prompt_sha256") != _sha256_text(expected_prompt):
+        raise PromotionError("metadata.rendered_prompt_sha256 校验失败")
+    if metadata.get("request_sha256") != _sha256_text(canonical_json(definition.request)):
+        raise PromotionError("metadata.request_sha256 校验失败")
+
+    stdout = attempt.get("stdout")
+    stderr = attempt.get("stderr")
+    envelope = attempt.get("envelope")
+    if not isinstance(stdout, str) or not isinstance(stderr, str):
+        raise PromotionError("attempt stdout/stderr 缺失")
+    if metadata.get("stdout_sha256") != _sha256_text(stdout):
+        raise PromotionError("metadata.stdout_sha256 校验失败")
+    if metadata.get("stderr_sha256") != _sha256_text(stderr):
+        raise PromotionError("metadata.stderr_sha256 校验失败")
+    try:
+        stdout_envelope = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise PromotionError(f"stdout 不是合法 Claude envelope JSON: {exc}") from exc
+    if not isinstance(envelope, Mapping) or stdout_envelope != envelope:
+        raise PromotionError("envelope 与原始 stdout 不一致")
+    try:
+        structured_output = validate_claude_envelope(
+            envelope,
+            task_kind=task_kind,
+            schema=definition.schema,
+        )
+    except ContractViolation as exc:
+        raise PromotionError(f"Claude envelope 严格契约失败: {exc}") from exc
+    stored_structured = validation.get("structured_output")
+    if stored_structured is not None and stored_structured != structured_output:
+        raise PromotionError("validation.structured_output 与 envelope 不一致")
+
+    semantic = _run_semantic_validator(
+        evaluation_key=entry.evaluation_key,
+        request=definition.request,
+        structured_output=structured_output,
+        timeout_seconds=semantic_timeout_seconds,
+    )
+    if semantic.get("status") != "promotable":
+        raise PromotionError(
+            f"隔离语义重验证未通过: {semantic.get('status')}: {semantic.get('error')}"
+        )
+    semantic_evidence = semantic.get("semantic_evidence")
+    if not isinstance(semantic_evidence, Mapping):
+        raise PromotionError("隔离语义重验证缺少 semantic_evidence")
+    return structured_output, dict(semantic_evidence)
+
+
 def promote_revalidated_attempt(
     *,
     plan_jsonl: str | Path,
@@ -73,58 +258,43 @@ def promote_revalidated_attempt(
     predecessor_attempt_manifest: str | Path | None,
     audit_reason: str,
     report_json: str | Path | None = None,
+    semantic_timeout_seconds: float = 90.0,
 ) -> dict[str, object]:
     if not audit_reason.strip():
         raise PromotionError("audit_reason 不得为空")
+    if semantic_timeout_seconds <= 0:
+        raise PromotionError("semantic_timeout_seconds 必须为正数")
     attempt_path = Path(attempt_json).resolve()
     attempt_sha256 = _sha256_file(attempt_path)
     attempt = _read_object(attempt_path)
     attempt_id = attempt.get("attempt_id")
     evaluation_key = attempt.get("evaluation_key")
-    metadata = attempt.get("metadata")
-    validation = attempt.get("validation")
     if not isinstance(attempt_id, str) or not attempt_id:
         raise PromotionError("attempt_id 缺失")
     if not isinstance(evaluation_key, str) or not evaluation_key:
         raise PromotionError("evaluation_key 缺失")
-    if not isinstance(metadata, Mapping) or metadata.get("error_class") != "validation_failed":
-        raise PromotionError("仅允许补冻原 error_class=validation_failed 的 attempt")
-    if not isinstance(validation, Mapping) or validation.get("ok") is not False:
-        raise PromotionError("原 attempt 不是验证失败状态")
-    structured_raw = validation.get("structured_output")
-
     loaded_plan = load_plan_jsonl(plan_jsonl)
     by_key = {entry.evaluation_key: entry for entry in loaded_plan.entries}
     entry = by_key.get(evaluation_key)
     if entry is None:
         raise PromotionError("attempt evaluation_key 不在冻结 plan 中")
     definition = entry.definition
-    task_kind = _infer_task_kind(
-        definition.task_spec.task_type,
-        definition.task_kind,
+    task_kind = _infer_task_kind(definition.task_spec.task_type, definition.task_kind)
+    state_path = Path(state_db).resolve()
+    binding = _load_failed_attempt_binding(
+        state_db=state_path,
+        attempt_id=attempt_id,
+        evaluation_key=evaluation_key,
     )
-    if task_kind != "simplify":
-        raise PromotionError("当前补冻器仅允许重验证 simplify 任务")
-    if attempt.get("request") != definition.request:
-        raise PromotionError("attempt request 与冻结 plan 不一致")
-    if isinstance(structured_raw, Mapping):
-        structured_output = validate_structured_output(task_kind, structured_raw)
-    else:
-        envelope = attempt.get("envelope")
-        if not isinstance(envelope, Mapping):
-            raise PromotionError("原 attempt 缺少可重解析的 Claude envelope")
-        structured_output = validate_claude_envelope(
-            envelope,
-            task_kind=task_kind,
-            schema=definition.schema,
-        )
-    semantic_evidence = _validate_simplify_semantics(definition, structured_output)
-    if semantic_evidence.get("decision") not in {
-        "equivalent",
-        "undetermined",
-        "not_applicable",
-    }:
-        raise PromotionError("重验证未形成可接受的等价闭环")
+    structured_output, semantic_evidence = _strictly_revalidate_attempt(
+        attempt=attempt,
+        attempt_path=attempt_path,
+        entry=entry,
+        binding=binding,
+        semantic_timeout_seconds=semantic_timeout_seconds,
+    )
+    metadata = attempt["metadata"]
+    assert isinstance(metadata, Mapping)
 
     predecessor = None
     if predecessor_attempt_manifest is not None:
@@ -137,14 +307,11 @@ def promote_revalidated_attempt(
             attempt_count=loaded_predecessor.attempt_count,
         )
     store = TaskStateStore(
-        state_db,
+        state_path,
         predecessor_attempt_manifest=predecessor,
     )
-    state = store.task_state(evaluation_key)
-    if state not in {"retry_wait", "exhausted"}:
-        raise PromotionError(f"任务状态 {state!r} 不允许补冻")
-
     validator_path = Path(__file__).with_name("symbolic_evidence.py")
+    validator_worker_path = Path(__file__).with_name("semantic_validation_worker.py")
     promoted_at = time.time()
     promoted_metadata = dict(metadata)
     promoted_metadata.update(
@@ -156,6 +323,9 @@ def promote_revalidated_attempt(
             "promoted_at": promoted_at,
             "semantic_validator_version": SEMANTIC_VALIDATOR_VERSION,
             "semantic_validator_sha256": _sha256_file(validator_path),
+            "semantic_validator_transport_version": SEMANTIC_VALIDATOR_TRANSPORT_VERSION,
+            "semantic_validator_worker_sha256": _sha256_file(validator_worker_path),
+            "semantic_validator_timeout_seconds": float(semantic_timeout_seconds),
             "error_class": None,
             "retryable": False,
         }
@@ -198,7 +368,7 @@ def promote_revalidated_attempt(
             attempt_id,
             result_path=str(frozen_path),
             result_sha256=frozen_sha256,
-            allowed_error_classes=("validation_failed",),
+            allowed_error_classes=_PROMOTABLE_ERROR_CLASSES,
             audit_reason=audit_reason,
             now=promoted_at,
         )
@@ -221,6 +391,8 @@ def promote_revalidated_attempt(
         "proof_basis": semantic_evidence.get("proof_basis"),
         "probe_count": semantic_evidence.get("probe_count"),
         "audit_reason": audit_reason,
+        "semantic_timeout_seconds": float(semantic_timeout_seconds),
+        "strict_contract_revalidated": True,
     }
     if report_json is not None:
         _atomic_write_json(Path(report_json), report)
@@ -236,6 +408,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--predecessor-attempt-manifest", type=Path, default=None)
     parser.add_argument("--audit-reason", required=True)
     parser.add_argument("--report-json", type=Path, required=True)
+    parser.add_argument("--semantic-timeout-seconds", type=float, default=90.0)
     return parser.parse_args(argv)
 
 
@@ -249,6 +422,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         predecessor_attempt_manifest=args.predecessor_attempt_manifest,
         audit_reason=args.audit_reason,
         report_json=args.report_json,
+        semantic_timeout_seconds=args.semantic_timeout_seconds,
     )
     return 0
 

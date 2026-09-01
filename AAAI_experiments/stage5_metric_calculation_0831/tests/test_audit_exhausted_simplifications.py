@@ -10,6 +10,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_si
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     CONTRACT_EFFORT,
     CONTRACT_MODEL,
+    CONTRACT_TRANSPORT_VERSION,
     build_claude_command,
     canonical_json,
     evaluation_key,
@@ -137,12 +138,15 @@ def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
             now=float(number) + 0.5,
         )
         envelope = _envelope(structured, turns=1 if number == 1 else 2)
+        stdout = json.dumps(envelope)
         payload = {
             "attempt_id": lease.attempt_id,
             "evaluation_key": task_key,
             "request": request,
             "prompt": prompt,
             "command": command,
+            "stdout": stdout,
+            "stderr": "",
             "envelope": envelope,
             "validation": {
                 "ok": False,
@@ -155,10 +159,20 @@ def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
                 "evaluation_key": task_key,
                 "logical_id": logical_id,
                 "task_type": "pred_simplify",
+                "task_kind": "simplify",
                 "error_class": "validation_failed",
                 "retryable": True,
                 "requested_model": CONTRACT_MODEL,
                 "requested_effort": CONTRACT_EFFORT,
+                "transport_version": CONTRACT_TRANSPORT_VERSION,
+                "prompt_path": str(prompt_path),
+                "prompt_sha256": prompt_sha256,
+                "rendered_prompt_sha256": _sha256_text(prompt),
+                "schema_path": str(schema_path),
+                "schema_sha256": schema_sha256,
+                "request_sha256": _sha256_text(canonical_json(request)),
+                "stdout_sha256": _sha256_text(stdout),
+                "stderr_sha256": _sha256_text(""),
             },
         }
         (attempts_dir / f"{lease.attempt_id}.json").write_text(

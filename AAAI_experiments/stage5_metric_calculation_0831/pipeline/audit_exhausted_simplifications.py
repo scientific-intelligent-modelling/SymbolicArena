@@ -16,6 +16,7 @@ from typing import Any, Mapping, Sequence
 from .claude_contract import (
     CONTRACT_EFFORT,
     CONTRACT_MODEL,
+    CONTRACT_TRANSPORT_VERSION,
     ContractViolation,
     build_claude_command,
     canonical_json,
@@ -43,6 +44,10 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _atomic_write_json(path: Path, payload: Mapping[str, object]) -> None:
@@ -226,10 +231,16 @@ def _audit_attempt(
         "evaluation_key": entry.evaluation_key,
         "logical_id": entry.logical_id,
         "task_type": definition.task_spec.task_type,
+        "task_kind": "simplify",
         "error_class": row["error_class"],
         "retryable": bool(row["retryable"]),
         "requested_model": CONTRACT_MODEL,
         "requested_effort": CONTRACT_EFFORT,
+        "transport_version": CONTRACT_TRANSPORT_VERSION,
+        "prompt_path": str(definition.prompt_path),
+        "prompt_sha256": definition.prompt_sha256,
+        "schema_path": str(definition.schema_path),
+        "schema_sha256": definition.schema_sha256,
     }
     for field, expected in expected_metadata.items():
         if metadata.get(field) != expected:
@@ -251,9 +262,39 @@ def _audit_attempt(
         return {**base, "status": "strict_contract_failed", "error": "prompt 与冻结 plan 不一致"}
     if payload.get("command") != build_claude_command(definition.schema):
         return {**base, "status": "strict_contract_failed", "error": "Claude command 契约不一致"}
+    if metadata.get("rendered_prompt_sha256") != _sha256_text(expected_prompt):
+        return {
+            **base,
+            "status": "identity_error",
+            "error": "metadata.rendered_prompt_sha256 校验失败",
+        }
+    if metadata.get("request_sha256") != _sha256_text(canonical_json(definition.request)):
+        return {
+            **base,
+            "status": "identity_error",
+            "error": "metadata.request_sha256 校验失败",
+        }
+    stdout = payload.get("stdout")
+    stderr = payload.get("stderr")
+    if not isinstance(stdout, str) or not isinstance(stderr, str):
+        return {**base, "status": "artifact_invalid", "error": "stdout/stderr 缺失"}
+    if metadata.get("stdout_sha256") != _sha256_text(stdout):
+        return {**base, "status": "identity_error", "error": "stdout_sha256 校验失败"}
+    if metadata.get("stderr_sha256") != _sha256_text(stderr):
+        return {**base, "status": "identity_error", "error": "stderr_sha256 校验失败"}
     envelope = payload.get("envelope")
     if not isinstance(envelope, Mapping):
         return {**base, "status": "no_recoverable_output", "error": "缺少 Claude envelope"}
+    try:
+        stdout_envelope = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        return {
+            **base,
+            "status": "strict_contract_failed",
+            "error": f"stdout 不是合法 envelope JSON: {exc}",
+        }
+    if stdout_envelope != envelope:
+        return {**base, "status": "identity_error", "error": "envelope 与 stdout 不一致"}
     try:
         structured_output = validate_claude_envelope(
             envelope,
