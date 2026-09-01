@@ -1648,6 +1648,10 @@ def _validate_phase_materialization_request(args: argparse.Namespace) -> None:
     for phase, outputs in requested.items():
         if not any(output is not None for output in outputs):
             continue
+        if any(output is None for output in outputs):
+            raise SymbolicTaskBuilderError(
+                f"请求 {phase} 专属物化时必须同时提供 callable、non-applicable 和 full-plan 三个输出"
+            )
         if args.phase not in {phase, "all"}:
             raise SymbolicTaskBuilderError(
                 f"phase={args.phase!r} 时不能请求 {phase} 专属物化输出"
@@ -1679,9 +1683,9 @@ def _materialize_phase_outputs(
         callable_tasks = _phase_callable_tasks(tasks, phase=phase)
         callable_rows = [_task_json_record(task) for task in callable_tasks]
         no_call_rows = _phase_no_call_records(no_call_records, phase=phase)
-        full_rows = [*callable_rows, *no_call_rows]
-        full_rows.sort(key=lambda item: (int(item["priority"]), str(item["logical_id"])))
+        full_rows = _phase_full_plan_rows(tasks, no_call_records, phase=phase)
         payload: dict[str, Any] = {
+            "phase": phase,
             "callable_task_count": len(callable_rows),
             "non_applicable_count": len(no_call_rows),
             "full_plan_count": len(full_rows),
@@ -1689,12 +1693,15 @@ def _materialize_phase_outputs(
         if outputs["callable"] is not None:
             _write_jsonl(outputs["callable"], callable_rows)
             payload["callable_output_jsonl"] = str(outputs["callable"].resolve())
+            payload["callable_output_sha256"] = _sha256_file(outputs["callable"])
         if outputs["non_applicable"] is not None:
             _write_jsonl(outputs["non_applicable"], no_call_rows)
             payload["non_applicable_index_jsonl"] = str(outputs["non_applicable"].resolve())
+            payload["non_applicable_index_sha256"] = _sha256_file(outputs["non_applicable"])
         if outputs["full_plan"] is not None:
             _write_jsonl(outputs["full_plan"], full_rows)
             payload["full_plan_jsonl"] = str(outputs["full_plan"].resolve())
+            payload["full_plan_sha256"] = _sha256_file(outputs["full_plan"])
         phase_outputs[phase] = payload
     return phase_outputs
 

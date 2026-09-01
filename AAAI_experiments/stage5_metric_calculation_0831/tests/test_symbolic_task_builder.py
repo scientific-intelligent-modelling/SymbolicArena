@@ -989,9 +989,53 @@ def test_cli_materializes_phase_specific_callable_no_call_and_full_plans(tmp_pat
     assert report["phase_outputs"]["equivalence"]["callable_task_count"] == 2
     assert report["phase_outputs"]["equivalence"]["non_applicable_count"] == 1
     assert report["phase_outputs"]["equivalence"]["full_plan_count"] == 3
+    assert report["phase_outputs"]["equivalence"]["callable_output_sha256"] == hashlib.sha256(
+        eq_callable_jsonl.read_bytes()
+    ).hexdigest()
+    assert report["phase_outputs"]["equivalence"]["non_applicable_index_sha256"] == hashlib.sha256(
+        eq_non_applicable_jsonl.read_bytes()
+    ).hexdigest()
+    assert report["phase_outputs"]["equivalence"]["full_plan_sha256"] == hashlib.sha256(
+        eq_full_plan_jsonl.read_bytes()
+    ).hexdigest()
     assert report["phase_outputs"]["structure"]["callable_task_count"] == 1
     assert report["phase_outputs"]["structure"]["non_applicable_count"] == 2
     assert report["phase_outputs"]["structure"]["full_plan_count"] == 3
+
+
+def test_cli_rejects_partial_phase_materialization_request(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import main
+
+    fixture = _make_fixture(tmp_path, full_counts=False)
+    exit_code = main(
+        [
+            "--gt-frozen-index-jsonl",
+            str(fixture["gt_frozen"]),
+            "--pred-frozen-index-jsonl",
+            str(fixture["pred_frozen"]),
+            "--gt-frozen-summary-json",
+            str(fixture["gt_summary"]),
+            "--pred-frozen-summary-json",
+            str(fixture["pred_summary"]),
+            "--gt-plan-jsonl",
+            str(fixture["gt_plan"]),
+            "--pred-plan-jsonl",
+            str(fixture["pred_plan"]),
+            "--clean-run-metrics-csv",
+            str(fixture["clean_run_metrics_csv"]),
+            "--repo-root",
+            str(fixture["repo_root"]),
+            "--expected-gt-count",
+            "1",
+            "--expected-pred-count",
+            "3",
+            "--expected-pair-count",
+            "3",
+            "--equivalence-output-jsonl",
+            str(tmp_path / "equivalence_callable.jsonl"),
+        ]
+    )
+    assert exit_code == 2
 
 
 def test_cli_selected_phase_filters_standard_non_applicable_index(tmp_path: Path) -> None:
