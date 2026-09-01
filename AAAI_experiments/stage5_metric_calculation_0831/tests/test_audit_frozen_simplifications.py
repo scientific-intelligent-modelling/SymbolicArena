@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -256,3 +257,45 @@ def test_full_frozen_result_is_revalidated_without_model_call(tmp_path: Path) ->
     assert row["status"] == "passed"
     assert row["semantic_decision"] == "equivalent"
     assert row["stored_semantic_evidence_matches_current"] is False
+
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "UPDATE tasks SET state='superseded' WHERE evaluation_key=?",
+            (task_key,),
+        )
+
+    formal_report = audit_frozen_simplifications(
+        plan_jsonl=plan_path,
+        state_db=state_db,
+        attempts_dir=attempts_dir,
+        frozen_dir=frozen_dir,
+        output_jsonl=tmp_path / "superseded-formal.jsonl",
+        report_json=tmp_path / "superseded-formal-report.json",
+        expected_plan_count=1,
+        semantic_timeout_seconds=20.0,
+        workers=1,
+        allow_archived_rendered_prompt=True,
+        allow_archived_execution_metadata=True,
+    )
+    assert formal_report["status"] == "failed"
+    assert formal_report["failure_class_counts"] == {"state_missing": 1}
+    assert formal_report["database_task_count"] == 0
+    assert formal_report["ignored_task_count"] == 1
+
+    superseded_report = audit_frozen_simplifications(
+        plan_jsonl=plan_path,
+        state_db=state_db,
+        attempts_dir=attempts_dir,
+        frozen_dir=frozen_dir,
+        output_jsonl=tmp_path / "superseded-audit.jsonl",
+        report_json=tmp_path / "superseded-report.json",
+        expected_plan_count=1,
+        semantic_timeout_seconds=20.0,
+        workers=1,
+        allow_archived_rendered_prompt=True,
+        allow_archived_execution_metadata=True,
+        audit_superseded_plan=True,
+    )
+    assert superseded_report["status"] == "ok"
+    assert superseded_report["database_task_count"] == 1
+    assert superseded_report["ignored_task_count"] == 0

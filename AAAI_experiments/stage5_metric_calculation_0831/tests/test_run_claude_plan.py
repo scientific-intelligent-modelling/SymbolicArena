@@ -994,3 +994,47 @@ def test_predecessor_manifest_resume_keeps_same_db_budget_without_recount(tmp_pa
     second_report = json.loads(report_json.read_text(encoding="utf-8"))
     assert second_report["attempts_reserved_total"] == 12
     assert second_report["result_counts"]["cache"] == 1
+
+
+def test_superseded_plan_fails_closed_without_runner_invocation(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import main
+
+    row = _build_plan_row(tmp_path, "equivalence::superseded")
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "control" / "state.sqlite3"
+    report_json = tmp_path / "reports" / "progress.json"
+    spec = TaskSpec(**json.loads(canonical_json(row["task_spec"])))
+    store = TaskStateStore(state_db)
+    store.register_task(spec)
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "UPDATE tasks SET state='superseded' WHERE evaluation_key=?",
+            (spec.evaluation_key,),
+        )
+    calls: list[str] = []
+
+    exit_code = main(
+        [
+            "--plan-jsonl",
+            str(plan_path),
+            "--state-db",
+            str(state_db),
+            "--attempts-dir",
+            str(tmp_path / "llm" / "attempts"),
+            "--frozen-dir",
+            str(tmp_path / "llm" / "frozen"),
+            "--report-json",
+            str(report_json),
+        ],
+        runner_factory=_runner_factory(behaviors={}, calls=calls),
+    )
+
+    assert exit_code == 2
+    assert calls == []
+    report = json.loads(report_json.read_text(encoding="utf-8"))
+    assert report["status"] == "plan_superseded"
+    assert report["model_invoked"] is False
+    assert report["attempts_reserved_this_run"] == 0
+    assert report["superseded_selected_task_count"] == 1
+    assert report["superseded_selected_logical_ids"] == ["equivalence::superseded"]

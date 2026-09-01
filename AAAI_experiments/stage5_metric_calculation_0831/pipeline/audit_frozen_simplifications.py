@@ -217,6 +217,7 @@ def _audit_one_frozen(
     expected_rendered_prompt: str,
     semantic_timeout_seconds: float,
     allow_archived_execution_metadata: bool,
+    allowed_task_states: frozenset[str] = frozenset({"frozen"}),
 ) -> JsonDict:
     base: JsonDict = {
         "evaluation_key": entry.evaluation_key,
@@ -229,11 +230,11 @@ def _audit_one_frozen(
     binding_error = _validate_state_binding(entry, state_row)
     if binding_error is not None:
         return _failure(base, "state_identity_error", binding_error)
-    if state_row.get("state") != "frozen":
+    if state_row.get("state") not in allowed_task_states:
         return _failure(
             {**base, "task_state": state_row.get("state")},
             "task_not_frozen",
-            "任务尚未处于 frozen 终态",
+            f"任务状态不属于审计允许集合: {sorted(allowed_task_states)}",
         )
 
     attempt_id = state_row.get("frozen_attempt_id")
@@ -460,6 +461,7 @@ def audit_frozen_simplifications(
     workers: int = 16,
     allow_archived_rendered_prompt: bool = False,
     allow_archived_execution_metadata: bool = False,
+    audit_superseded_plan: bool = False,
 ) -> JsonDict:
     if semantic_timeout_seconds <= 0:
         raise FrozenSimplificationAuditError("semantic_timeout_seconds 必须为正数")
@@ -496,7 +498,7 @@ def audit_frozen_simplifications(
     state_path = Path(state_db).resolve()
     connection = _connect_read_only(state_path)
     try:
-        state_rows = connection.execute(
+        all_state_rows = connection.execute(
             """SELECT t.*, f.attempt_id AS frozen_attempt_id,
                       f.result_path, f.result_sha256, f.frozen_at,
                       a.attempt_number, a.status AS attempt_status,
@@ -511,6 +513,10 @@ def audit_frozen_simplifications(
         ).fetchall()
     finally:
         connection.close()
+    superseded_rows = [row for row in all_state_rows if row["state"] == "superseded"]
+    active_rows = [row for row in all_state_rows if row["state"] != "superseded"]
+    state_rows = superseded_rows if audit_superseded_plan else active_rows
+    ignored_rows = active_rows if audit_superseded_plan else superseded_rows
     by_key = {str(row["evaluation_key"]): dict(row) for row in state_rows}
     plan_keys = {entry.evaluation_key for entry in loaded_plan.entries}
     extra_keys = sorted(set(by_key) - plan_keys)
@@ -533,6 +539,11 @@ def audit_frozen_simplifications(
                 expected_rendered_prompt=rendered_prompts[entry.evaluation_key],
                 semantic_timeout_seconds=semantic_timeout_seconds,
                 allow_archived_execution_metadata=allow_archived_execution_metadata,
+                allowed_task_states=(
+                    frozenset({"superseded"})
+                    if audit_superseded_plan
+                    else frozenset({"frozen"})
+                ),
             )
         except Exception as exc:  # pragma: no cover - 完整报告优先于单行崩溃
             return {
@@ -568,10 +579,16 @@ def audit_frozen_simplifications(
         "rendered_prompt_mode": rendered_prompt_mode,
         "allow_archived_rendered_prompt": allow_archived_rendered_prompt,
         "allow_archived_execution_metadata": allow_archived_execution_metadata,
+        "audit_superseded_plan": audit_superseded_plan,
         "archived_rendered_prompt_mismatch_count": archived_rendered_prompt_mismatch_count,
         "state_db": str(state_path),
         "state_binding_sha256": state_binding_sha256,
         "database_task_count": len(state_rows),
+        "database_same_type_condition_count": len(all_state_rows),
+        "ignored_task_count": len(ignored_rows),
+        "ignored_task_keys_sha256": _sha256_json(
+            sorted(str(row["evaluation_key"]) for row in ignored_rows)
+        ),
         "attempts_dir": str(attempts_path),
         "frozen_dir": str(frozen_path),
         "workers": workers,
@@ -632,6 +649,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--allow-archived-rendered-prompt", action="store_true")
     parser.add_argument("--allow-archived-execution-metadata", action="store_true")
+    parser.add_argument(
+        "--audit-superseded-plan",
+        action="store_true",
+        help="显式只读审计已被正式 successor 替代的历史 plan",
+    )
     return parser.parse_args(argv)
 
 
@@ -650,6 +672,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             workers=args.workers,
             allow_archived_rendered_prompt=args.allow_archived_rendered_prompt,
             allow_archived_execution_metadata=args.allow_archived_execution_metadata,
+            audit_superseded_plan=args.audit_superseded_plan,
         )
     except FrozenSimplificationAuditError as exc:
         print(str(exc), file=sys.stderr)

@@ -832,10 +832,48 @@ def execute_plan(
                 store.register_tasks(
                     [entry.definition.task_spec for entry in loaded_plan.entries]
                 )
+                selected_entries = _select_scope(loaded_plan.entries, logical_ids=logical_ids)
+                selected_state_map = _task_state_map(store, selected_entries)
+                superseded_entries = [
+                    entry
+                    for entry in selected_entries
+                    if selected_state_map[entry.evaluation_key] == "superseded"
+                ]
+                if superseded_entries:
+                    attempts_reserved_at_start = store.attempts_reserved()
+                    superseded_report = _build_report(
+                        loaded_plan=loaded_plan,
+                        store=store,
+                        entries=loaded_plan.entries,
+                        selected_entries=selected_entries,
+                        submitted_task_count=0,
+                        completed_task_count=0,
+                        result_counts=result_counts,
+                        started_at_monotonic=started_at_monotonic,
+                        requested_logical_ids=logical_ids,
+                        limit=limit,
+                        workers=workers,
+                        stopped_by_circuit_breaker=False,
+                        stopped_by_fatal_error=False,
+                        recovered_expired_attempt_ids=(),
+                        predecessor_attempt_manifest=loaded_predecessor_manifest,
+                        attempts_reserved_at_start=attempts_reserved_at_start,
+                        status="plan_superseded",
+                        error="当前 plan 含已被正式 successor 替代的任务，拒绝再次执行",
+                    )
+                    superseded_report["superseded_selected_task_count"] = len(
+                        superseded_entries
+                    )
+                    superseded_report["superseded_selected_logical_ids"] = [
+                        entry.logical_id for entry in superseded_entries
+                    ]
+                    superseded_report["lock_path"] = str(run_lock.path)
+                    superseded_report["lock_owner"] = dict(run_lock.owner)
+                    _atomic_write_json(report_path, superseded_report)
+                    return 2
                 recovered_expired_attempt_ids = store.recover_expired_leases()
                 attempts_reserved_at_start = store.attempts_reserved()
                 _verify_cached_frozen_entries(store, loaded_plan.entries)
-                selected_entries = _select_scope(loaded_plan.entries, logical_ids=logical_ids)
                 selected_state_map = _task_state_map(store, selected_entries)
                 runnable_entries = [
                     entry
