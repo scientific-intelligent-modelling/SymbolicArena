@@ -51,7 +51,7 @@ STRUCTURE_DECISIONS = {
     "undetermined",
 }
 STRUCTURE_NO_CALL_REASONS = {"invalid_seed_or_expression"}
-GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)$")
+GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
 RUN_LOGICAL_ID_RE_TEMPLATE = r"^{prefix}::([a-z0-9_]+)::(g\d{{4}})::s(520|521|522)::clean$"
 STRUCTURE_LOGICAL_ID_RE = re.compile(
     r"^stab_structure::([a-z0-9_]+)::(g\d{4})::s(520|521|522)-s?(520|521|522)$"
@@ -1471,7 +1471,7 @@ def _load_evidence_index(
         )
         evidence_map[logical_key] = {
             "logical_key": logical_key,
-            "gt_logical_id": _optional_nonempty_string(row.get("gt_logical_id")),
+            "gt_logical_id": None,
             "pred_logical_id": _optional_nonempty_string(row.get("pred_logical_id")),
             "tree_similarity": tree_similarity,
             "variable_f1": variable_f1,
@@ -1508,6 +1508,15 @@ def _load_evidence_index(
                 )
             ),
         }
+        gt_logical_id = _optional_nonempty_string(row.get("gt_logical_id"))
+        if gt_logical_id is not None:
+            evidence_map[logical_key]["gt_logical_id"] = gt_logical_id
+            _, logical_key_dataset_id, _ = _parse_numeric_logical_key(logical_key)
+            gt_dataset_id = _parse_gt_logical_id(gt_logical_id)
+            if gt_dataset_id != logical_key_dataset_id:
+                _raise(
+                    f"{logical_key} deterministic evidence 的 gt_logical_id 与 logical_key.dataset_id 不一致"
+                )
     return evidence_map, {"path": str(path.resolve()), "sha256": _sha256_file(path), "row_count": len(evidence_map)}
 
 def _metric_alias(row: Mapping[str, Any], *candidates: tuple[str, ...]) -> object:

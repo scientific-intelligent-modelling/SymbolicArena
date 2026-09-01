@@ -45,6 +45,7 @@ SEEDS = (520, 521, 522)
 SEED_SET = frozenset(SEEDS)
 SEED_PAIRS = ((520, 521), (520, 522), (521, 522))
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
 EQUIVALENCE_GT_UNAVAILABLE = "upstream_gt_unavailable"
 EQUIVALENCE_PRED_UNAVAILABLE = "upstream_pred_unavailable"
 STRUCTURE_INVALID_SEED_OR_EXPRESSION = "invalid_seed_or_expression"
@@ -246,6 +247,19 @@ def _require_sha256(value: object, *, context: str) -> str:
     return text
 
 
+def _validate_gt_dataset_id(dataset_id: str, *, context: str) -> str:
+    if ":" in dataset_id:
+        raise SymbolicTaskBuilderError(f"{context} 不能包含冒号，否则 GT logical_id 解析会歧义")
+    return dataset_id
+
+
+def _parse_gt_logical_id(logical_id: str) -> tuple[str, str | None]:
+    match = GT_LOGICAL_ID_RE.fullmatch(logical_id)
+    if match is None:
+        raise SymbolicTaskBuilderError(f"GT logical_id 非 canonical: {logical_id!r}")
+    return match.group(1), match.group(2)
+
+
 def _resolve_maybe_relative(path_text: str, *, repo_root: Path) -> Path:
     path = Path(path_text)
     if not path.is_absolute():
@@ -391,8 +405,18 @@ def _simplify_plan_record(row: Mapping[str, Any]) -> dict[str, Any]:
     if condition != CONDITION:
         raise SymbolicTaskBuilderError(f"{logical_id} 的 condition 必须为 {CONDITION}")
     if task_type == GT_SIMPLIFY_TASK_TYPE:
-        dataset_id = _require_string(request.get("dataset_id"), context=f"{logical_id}.dataset_id")
+        dataset_id = _validate_gt_dataset_id(
+            _require_string(request.get("dataset_id"), context=f"{logical_id}.dataset_id"),
+            context=f"{logical_id}.dataset_id",
+        )
+        parsed_dataset_id, logical_suffix = _parse_gt_logical_id(logical_id)
+        if parsed_dataset_id != dataset_id:
+            raise SymbolicTaskBuilderError(
+                f"{logical_id}.dataset_id 漂移: {parsed_dataset_id!r} != {dataset_id!r}"
+            )
         expected_logical_id = f"{GT_SIMPLIFY_TASK_TYPE}::{dataset_id}"
+        if logical_suffix is not None:
+            expected_logical_id = f"{expected_logical_id}::{logical_suffix}"
     elif task_type == PRED_SIMPLIFY_TASK_TYPE:
         algorithm_slug = _require_string(
             request.get("algorithm_slug"),

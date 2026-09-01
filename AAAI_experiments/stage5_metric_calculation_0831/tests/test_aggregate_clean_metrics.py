@@ -143,13 +143,14 @@ def _evidence_row(
     logical_key: str,
     pred_logical_id: str,
     pred_expression: str,
+    gt_logical_id: str = "gt_simplify::demo_ds",
 ) -> dict[str, object]:
     gt_expression = "x0 + x1"
     gt_artifact = build_symbolic_artifact(gt_expression)
     pred_artifact = build_symbolic_artifact(pred_expression)
     return {
         "logical_key": logical_key,
-        "gt_logical_id": "gt_simplify::demo_ds",
+        "gt_logical_id": gt_logical_id,
         "pred_logical_id": pred_logical_id,
         "evidence_hash": _fake_sha(f"evidence::{pred_logical_id}"),
         "ground_truth": {
@@ -642,6 +643,40 @@ def test_aggregate_clean_metrics_builds_run_task_and_algorithm_outputs(
     report_payload = json.loads(report_json.read_text(encoding="utf-8"))
     assert report_payload["summary_sha256"] == payload["summary_sha256"]
     assert report_payload["outputs"]["clean_run_metrics_csv"]["sha256"]
+
+
+def test_aggregate_clean_metrics_accepts_gt_v2_logical_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    gt_rows = [json.loads(line) for line in paths["gt_index_jsonl"].read_text(encoding="utf-8").splitlines()]
+    gt_rows[0]["logical_id"] = "gt_simplify::demo_ds::v2"
+    _write_jsonl(paths["gt_index_jsonl"], gt_rows)
+
+    evidence_rows = [
+        _evidence_row(
+            logical_key="AlgoA::demo_ds::s520::clean",
+            pred_logical_id="pred_simplify::algoa::g0001::s520::clean",
+            pred_expression="x0 + x1",
+            gt_logical_id="gt_simplify::demo_ds::v2",
+        ),
+        _evidence_row(
+            logical_key="AlgoA::demo_ds::s521::clean",
+            pred_logical_id="pred_simplify::algoa::g0001::s521::clean",
+            pred_expression="x0 + x1 + x2",
+            gt_logical_id="gt_simplify::demo_ds::v2",
+        ),
+    ]
+    _write_jsonl(paths["evidence_jsonl"], evidence_rows)
+    _patch_fixture_contract(monkeypatch, paths, tmp_path)
+
+    kwargs = _aggregate_kwargs(paths, tmp_path)
+    aggregate_clean_metrics(**kwargs)
+
+    with Path(kwargs["clean_run_csv"]).open("r", encoding="utf-8", newline="") as handle:
+        run_rows = list(csv.DictReader(handle))
+    assert {row["gt_logical_id"] for row in run_rows} == {"gt_simplify::demo_ds::v2"}
 
 
 def test_aggregate_clean_metrics_hard_fails_when_valid_run_lacks_deterministic_evidence(

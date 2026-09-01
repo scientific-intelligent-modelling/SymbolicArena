@@ -237,6 +237,44 @@ def test_materialize_pred_vs_gt_evidence_accepts_full_plan_and_skips_non_applica
     assert report["outputs"]["evidence_jsonl_row_count"] == 1
 
 
+def test_materialize_pred_vs_gt_evidence_preserves_gt_v2_logical_id(tmp_path: Path) -> None:
+    evidence = _pair_evidence_payload()
+    evidence["lhs_binding"]["frozen_logical_id"] = "gt_simplify::BPG3::v2"
+    evidence["evidence_sha256"] = _sha256_json(
+        {key: value for key, value in evidence.items() if key != "evidence_sha256"}
+    )
+    row = _plan_row(
+        tmp_path,
+        logical_id="equivalence::qlattice::g0005::s520::clean",
+        request={
+            "algorithm": "QLattice",
+            "algorithm_slug": "qlattice",
+            "dataset_id": "BPG3",
+            "dataset_index": "g0005",
+            "seed": 520,
+            "ground_truth_logical_id": "gt_simplify::BPG3::v2",
+            "prediction_logical_id": "pred_simplify::qlattice::g0005::s520::clean",
+            "deterministic_evidence": evidence,
+            "evidence_hash": evidence["evidence_sha256"],
+        },
+    )
+    plan_jsonl = tmp_path / "equivalence_callable.jsonl"
+    output_jsonl = tmp_path / "clean_pred_vs_gt_evidence.jsonl"
+    report_json = tmp_path / "report.json"
+    _write_jsonl(plan_jsonl, [row])
+
+    materialize_pred_vs_gt_evidence(
+        equivalence_plan_jsonl=plan_jsonl,
+        output_jsonl=output_jsonl,
+        report_json=report_json,
+        expected_row_count=1,
+    )
+
+    materialized = json.loads(output_jsonl.read_text(encoding="utf-8").splitlines()[0])
+    assert materialized["gt_logical_id"] == "gt_simplify::BPG3::v2"
+    assert materialized["logical_key"] == "QLattice::BPG3::s520::clean"
+
+
 def test_cli_rejects_request_hash_drift(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     evidence = _pair_evidence_payload()
     bad_row = _plan_row(

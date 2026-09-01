@@ -838,6 +838,110 @@ def test_simplify_plan_logical_id_must_match_request_identity(tmp_path: Path) ->
         )
 
 
+def test_gt_v2_logical_id_is_preserved_across_downstream_symbolic_plan(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
+        build_symbolic_task_plan,
+    )
+
+    fixture = _make_fixture(tmp_path, full_counts=False)
+    repo_root = fixture["repo_root"]
+    gt_row = _simplify_plan_row(
+        repo_root,
+        logical_id="gt_simplify::Dataset01::v2",
+        task_type="gt_simplify",
+        priority=10,
+        request=_gt_request("Dataset01"),
+    )
+    _write_jsonl(fixture["gt_plan"], [gt_row])
+    _write_jsonl(
+        fixture["gt_frozen"],
+        [
+            _frozen_index_row(
+                plan_sha256=_sha256_file(fixture["gt_plan"]),
+                evaluation_key_value=gt_row["evaluation_key"],
+                logical_id=gt_row["logical_id"],
+                task_type="gt_simplify",
+                priority=10,
+                state="frozen",
+                result_sha256=_result_sha(0, 1),
+                structured_output={
+                    "outcome": "simplified",
+                    "simplified_expression": "x0 + x1",
+                    "equivalence_assessment": "preserved",
+                    "assumptions": [],
+                    "confidence": 1.0,
+                    "brief_reason": "fixture gt v2",
+                },
+            )
+        ],
+    )
+    _write_frozen_summary(
+        fixture["gt_summary"],
+        output_jsonl=fixture["gt_frozen"],
+        plan_jsonl=fixture["gt_plan"],
+        frozen_count=1,
+        non_applicable_count=0,
+    )
+
+    tasks, _ = build_symbolic_task_plan(
+        gt_frozen_index_jsonl=fixture["gt_frozen"],
+        pred_frozen_index_jsonl=fixture["pred_frozen"],
+        gt_frozen_summary_json=fixture["gt_summary"],
+        pred_frozen_summary_json=fixture["pred_summary"],
+        gt_plan_jsonl=fixture["gt_plan"],
+        pred_plan_jsonl=fixture["pred_plan"],
+        clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+        non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+        repo_root=repo_root,
+        expected_gt_count=1,
+        expected_pred_count=3,
+        expected_pair_count=3,
+    )
+
+    eq_task = next(task for task in tasks if task.task_type == "equivalence")
+    assert eq_task.request["ground_truth_logical_id"] == "gt_simplify::Dataset01::v2"
+    assert eq_task.request["deterministic_evidence"]["lhs_binding"]["frozen_logical_id"] == "gt_simplify::Dataset01::v2"
+
+
+def test_gt_unknown_suffix_is_rejected_in_symbolic_plan_input(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
+        SymbolicTaskBuilderError,
+        build_symbolic_task_plan,
+    )
+
+    fixture = _make_fixture(tmp_path, full_counts=False)
+    gt_rows = [
+        json.loads(line)
+        for line in fixture["gt_plan"].read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    gt_rows[0]["logical_id"] = "gt_simplify::Dataset01::v3"
+    _write_jsonl(fixture["gt_plan"], gt_rows)
+    _write_frozen_summary(
+        fixture["gt_summary"],
+        output_jsonl=fixture["gt_frozen"],
+        plan_jsonl=fixture["gt_plan"],
+        frozen_count=1,
+        non_applicable_count=0,
+    )
+
+    with pytest.raises(SymbolicTaskBuilderError, match="GT logical_id 非 canonical"):
+        build_symbolic_task_plan(
+            gt_frozen_index_jsonl=fixture["gt_frozen"],
+            pred_frozen_index_jsonl=fixture["pred_frozen"],
+            gt_frozen_summary_json=fixture["gt_summary"],
+            pred_frozen_summary_json=fixture["pred_summary"],
+            gt_plan_jsonl=fixture["gt_plan"],
+            pred_plan_jsonl=fixture["pred_plan"],
+            clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+            non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+            repo_root=fixture["repo_root"],
+            expected_gt_count=1,
+            expected_pred_count=3,
+            expected_pair_count=3,
+        )
+
+
 def test_cli_dry_run_does_not_pollute_output_or_evidence_dir(tmp_path: Path) -> None:
     from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import main
 
