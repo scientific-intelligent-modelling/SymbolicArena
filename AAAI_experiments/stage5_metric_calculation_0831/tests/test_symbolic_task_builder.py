@@ -949,6 +949,68 @@ def test_gt_v2_logical_id_is_preserved_across_downstream_symbolic_plan(tmp_path:
     assert eq_task.request["deterministic_evidence"]["lhs_binding"]["frozen_logical_id"] == "gt_simplify::Dataset01::v2"
 
 
+def test_pred_v2_logical_id_is_preserved_across_downstream_symbolic_plan(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
+        build_symbolic_task_plan,
+    )
+
+    fixture = _make_fixture(tmp_path, full_counts=False)
+    pred_rows = [
+        json.loads(line)
+        for line in fixture["pred_plan"].read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    predecessor = pred_rows[0]
+    successor = _simplify_plan_row(
+        fixture["repo_root"],
+        logical_id=f"{predecessor['logical_id']}::v2",
+        task_type="pred_simplify",
+        priority=20,
+        request=dict(predecessor["request"]),
+    )
+    pred_rows[0] = successor
+    _write_jsonl(fixture["pred_plan"], pred_rows)
+    pred_plan_sha256 = _sha256_file(fixture["pred_plan"])
+
+    frozen_rows = [
+        json.loads(line)
+        for line in fixture["pred_frozen"].read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    for row in frozen_rows:
+        row["plan_sha256"] = pred_plan_sha256
+    frozen_rows[0]["logical_id"] = successor["logical_id"]
+    frozen_rows[0]["evaluation_key"] = successor["evaluation_key"]
+    _write_jsonl(fixture["pred_frozen"], frozen_rows)
+    _write_frozen_summary(
+        fixture["pred_summary"],
+        output_jsonl=fixture["pred_frozen"],
+        plan_jsonl=fixture["pred_plan"],
+        frozen_count=3,
+        non_applicable_count=0,
+    )
+
+    tasks, _ = build_symbolic_task_plan(
+        gt_frozen_index_jsonl=fixture["gt_frozen"],
+        pred_frozen_index_jsonl=fixture["pred_frozen"],
+        gt_frozen_summary_json=fixture["gt_summary"],
+        pred_frozen_summary_json=fixture["pred_summary"],
+        gt_plan_jsonl=fixture["gt_plan"],
+        pred_plan_jsonl=fixture["pred_plan"],
+        clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+        non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+        repo_root=fixture["repo_root"],
+        expected_gt_count=1,
+        expected_pred_count=3,
+        expected_pair_count=3,
+    )
+
+    eq_task = next(task for task in tasks if task.logical_id.endswith("::s520::clean"))
+    expected_logical_id = "pred_simplify::alg00::g0001::s520::clean::v2"
+    assert eq_task.request["prediction_logical_id"] == expected_logical_id
+    assert eq_task.request["deterministic_evidence"]["rhs_binding"]["frozen_logical_id"] == expected_logical_id
+
+
 def test_gt_unknown_suffix_is_rejected_in_symbolic_plan_input(tmp_path: Path) -> None:
     from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
         SymbolicTaskBuilderError,

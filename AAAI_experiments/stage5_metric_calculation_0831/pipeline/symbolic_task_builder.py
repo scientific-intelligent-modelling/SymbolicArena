@@ -50,6 +50,9 @@ SEED_SET = frozenset(SEEDS)
 SEED_PAIRS = ((520, 521), (520, 522), (521, 522))
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
+PRED_LOGICAL_ID_RE = re.compile(
+    r"^pred_simplify::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::clean(?:::(v[1-9]\d*))?$"
+)
 EQUIVALENCE_GT_UNAVAILABLE = "upstream_gt_unavailable"
 EQUIVALENCE_PRED_UNAVAILABLE = "upstream_pred_unavailable"
 STRUCTURE_INVALID_SEED_OR_EXPRESSION = "invalid_seed_or_expression"
@@ -266,6 +269,13 @@ def _parse_gt_logical_id(logical_id: str) -> tuple[str, str | None]:
     return match.group(1), match.group(2)
 
 
+def _parse_pred_logical_id(logical_id: str) -> tuple[str, str, int, str | None]:
+    match = PRED_LOGICAL_ID_RE.fullmatch(logical_id)
+    if match is None:
+        raise SymbolicTaskBuilderError(f"pred logical_id 非 canonical: {logical_id!r}")
+    return match.group(1), match.group(2), int(match.group(3)), match.group(4)
+
+
 def _resolve_maybe_relative(path_text: str, *, repo_root: Path) -> Path:
     path = Path(path_text)
     if not path.is_absolute():
@@ -445,7 +455,20 @@ def _simplify_plan_record(row: Mapping[str, Any]) -> dict[str, Any]:
             raise SymbolicTaskBuilderError(
                 f"{logical_id}.task_id 漂移: {task_id!r} != {expected_task_id!r}"
             )
+        parsed_algorithm_slug, parsed_dataset_index, parsed_seed, logical_suffix = (
+            _parse_pred_logical_id(logical_id)
+        )
+        if (parsed_algorithm_slug, parsed_dataset_index, parsed_seed) != (
+            algorithm_slug,
+            dataset_index,
+            seed,
+        ):
+            raise SymbolicTaskBuilderError(
+                f"simplify plan logical_id 非 canonical: {logical_id!r} 与 request 身份不一致"
+            )
         expected_logical_id = _pred_logical_id(algorithm_slug, dataset_index, seed)
+        if logical_suffix is not None:
+            expected_logical_id = f"{expected_logical_id}::{logical_suffix}"
     else:
         raise SymbolicTaskBuilderError(f"{logical_id} 的 task_type 非法: {task_type!r}")
     if logical_id != expected_logical_id:
