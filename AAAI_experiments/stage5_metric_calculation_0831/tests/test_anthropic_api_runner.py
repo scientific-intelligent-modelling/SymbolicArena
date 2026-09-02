@@ -37,6 +37,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import (  # 
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_anthropic_api_plan import (  # noqa: E402
     load_api_channels,
+    parse_args,
 )
 
 
@@ -516,6 +517,33 @@ def test_single_api_channel_requires_explicit_degraded_mode(tmp_path: Path) -> N
     )
     result = runner.execute(_definition(tmp_path, "5" * 64))
     assert result.state == "frozen"
+
+
+def test_api_cli_accepts_explicit_formula_audit_budgets(tmp_path: Path) -> None:
+    args = parse_args(
+        [
+            "--plan-jsonl",
+            str(tmp_path / "plan.jsonl"),
+            "--state-db",
+            str(tmp_path / "state.sqlite3"),
+            "--attempts-dir",
+            str(tmp_path / "attempts"),
+            "--frozen-dir",
+            str(tmp_path / "frozen"),
+            "--report-json",
+            str(tmp_path / "report.json"),
+            "--attempt-cap",
+            "1575",
+            "--logical-task-cap",
+            "1050",
+            "--max-attempts-per-task",
+            "2",
+        ]
+    )
+
+    assert args.attempt_cap == 1575
+    assert args.logical_task_cap == 1050
+    assert args.max_attempts_per_task == 2
 
 
 def test_api_simplification_frozen_result_passes_independent_audit(tmp_path: Path) -> None:

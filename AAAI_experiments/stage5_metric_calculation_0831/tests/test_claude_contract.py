@@ -13,7 +13,10 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     compact_request_for_prompt,
     evaluation_key,
     render_prompt,
+    sha256_json,
     validate_claude_envelope,
+    validate_formula_audit_scope,
+    validate_formula_audit_request,
     validate_structured_output,
 )
 
@@ -667,6 +670,82 @@ def test_validate_equivalence_and_structure_enums() -> None:
             "equivalence",
             {**equivalence, "decision": "equivalent"},
         )
+
+
+def test_validate_formula_audit_output_is_strict() -> None:
+    output = {
+        "simplification_equivalence": "preserved",
+        "simplification_quality": "strictly_simpler",
+        "suggested_simplified_expression": "x0",
+        "reference_equivalence": "not_equivalent",
+        "counterexample": "At x0=1 the values differ.",
+        "severity": "major",
+        "assumptions": ["x0 is real"],
+        "confidence": 0.91,
+        "brief_reason": "The rewrite is valid, but it does not match the reference.",
+    }
+
+    assert validate_structured_output("formula_audit", output) == output
+    with pytest.raises(ContractViolation, match="字段不匹配"):
+        validate_structured_output("formula_audit", {**output, "prior_verdict": "equivalent"})
+    with pytest.raises(ContractViolation, match="simplification_quality"):
+        validate_structured_output("formula_audit", {**output, "simplification_quality": "better"})
+    with pytest.raises(ContractViolation, match="counterexample"):
+        validate_structured_output(
+            "formula_audit",
+            {**output, "counterexample": ""},
+        )
+
+    validate_formula_audit_scope(
+        {"audit_scope": "prediction_formula"},
+        output,
+    )
+    with pytest.raises(ContractViolation, match="不得为 not_applicable"):
+        validate_formula_audit_scope(
+            {"audit_scope": "prediction_formula"},
+            {**output, "reference_equivalence": "not_applicable", "counterexample": None},
+        )
+    validate_formula_audit_scope(
+        {"audit_scope": "ground_truth_simplification"},
+        {**output, "reference_equivalence": "not_applicable", "counterexample": None},
+    )
+    gt_domain_counterexample = {
+        **output,
+        "simplification_equivalence": "not_preserved",
+        "reference_equivalence": "not_applicable",
+        "counterexample": "At x0=0, x0/x0 is undefined while 1 is defined.",
+    }
+    assert (
+        validate_structured_output("formula_audit", gt_domain_counterexample)
+        == gt_domain_counterexample
+    )
+    validate_formula_audit_scope(
+        {"audit_scope": "ground_truth_simplification"},
+        gt_domain_counterexample,
+    )
+
+
+def test_validate_formula_audit_request_rejects_prior_verdicts_and_hash_drift() -> None:
+    request_without_hash = {
+        "audit_scope": "prediction_formula",
+        "audit_binding_sha256": "a" * 64,
+        "variables": ["x0"],
+        "allowed_functions": ["sin"],
+        "domain_assumptions": {"variable_domain": "real"},
+        "original_expression": "x0 + 0",
+        "candidate_simplified_expression": "x0",
+        "reference_simplified_expression": "sin(x0)",
+        "review_round": 1,
+    }
+    request = {
+        **request_without_hash,
+        "evidence_hash": sha256_json(request_without_hash),
+    }
+    assert validate_formula_audit_request(request) == request
+    with pytest.raises(ContractViolation, match="字段不匹配"):
+        validate_formula_audit_request({**request, "stored_equivalence_decision": "equivalent"})
+    with pytest.raises(ContractViolation, match="evidence_hash"):
+        validate_formula_audit_request({**request, "original_expression": "x0 + 1"})
 
 
 def test_validate_envelope_accepts_plain_json_single_turn_but_no_real_tools() -> None:

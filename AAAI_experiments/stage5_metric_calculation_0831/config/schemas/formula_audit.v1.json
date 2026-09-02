@@ -1,0 +1,88 @@
+{
+  "$id": "symbolicarena.formula_audit.v1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "type": "array"
+    },
+    "brief_reason": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "counterexample": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reference_equivalence": {
+      "enum": [
+        "equivalent",
+        "not_equivalent",
+        "undetermined",
+        "not_applicable"
+      ],
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "pass",
+        "minor",
+        "major",
+        "critical",
+        "undetermined"
+      ],
+      "type": "string"
+    },
+    "simplification_equivalence": {
+      "enum": [
+        "preserved",
+        "not_preserved",
+        "undetermined"
+      ],
+      "type": "string"
+    },
+    "simplification_quality": {
+      "enum": [
+        "strictly_simpler",
+        "equally_simple",
+        "more_complex",
+        "undetermined"
+      ],
+      "type": "string"
+    },
+    "suggested_simplified_expression": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "simplification_equivalence",
+    "simplification_quality",
+    "suggested_simplified_expression",
+    "reference_equivalence",
+    "counterexample",
+    "severity",
+    "assumptions",
+    "confidence",
+    "brief_reason"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,103 @@
+{
+  "blindness_contract": {
+    "model_reported_severity_in_round2_request": false,
+    "round1_structured_output_in_round2_request": false,
+    "round2_request_keys": [
+      "allowed_functions",
+      "audit_binding_sha256",
+      "audit_scope",
+      "candidate_simplified_expression",
+      "domain_assumptions",
+      "evidence_hash",
+      "original_expression",
+      "reference_simplified_expression",
+      "review_round",
+      "variables"
+    ],
+    "stored_equivalence_decision_in_round2_request": false,
+    "stored_simplification_outcome_in_round2_request": false
+  },
+  "budget": {
+    "accounted_physical_attempt_count_before_round2": 1258,
+    "external_preflight_physical_attempt_count": 28,
+    "maximum_total_physical_attempts": 1575,
+    "remaining_physical_attempt_budget": 317,
+    "round1_initial_task_count": 1050,
+    "round1_physical_attempt_count": 1230,
+    "round2_budget_shortfall": 0,
+    "round2_budget_sufficient": true,
+    "round2_plan_count": 195,
+    "round2_plan_withheld_on_shortfall": false,
+    "round2_required_task_count": 195,
+    "round2_within_remaining_budget": true
+  },
+  "contract_ok": true,
+  "counts": {
+    "equivalence_conflict_count": 32,
+    "offline_final_severity_counts": {
+      "critical": 19,
+      "major": 53,
+      "minor": 1,
+      "pass": 857,
+      "undetermined": 120
+    },
+    "round1_state_distribution": {
+      "exhausted": 52,
+      "frozen": 998
+    },
+    "round1_task_count": 1050,
+    "round1_unresolved_without_frozen_result_count": 52,
+    "round2_deferred_by_budget_count": 0,
+    "round2_planned_count": 195,
+    "round2_trigger_count": 195,
+    "simplification_conflict_count": 41,
+    "trigger_reason_counts": {
+      "confidence_below_threshold": 60,
+      "ground_truth_high_offline_severity": 1,
+      "round1_result_unavailable:exhausted": 52,
+      "simplification_not_preserved": 19,
+      "stored_equivalence_conflict": 32,
+      "stored_simplification_conflict": 41,
+      "undetermined:reference_equivalence": 92,
+      "undetermined:severity": 87,
+      "undetermined:simplification_equivalence": 87,
+      "undetermined:simplification_quality": 4
+    }
+  },
+  "inputs": {
+    "round1_plan_jsonl": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/audits/formula_quality_1000_0903_v2/plans/formula_audit_round1.jsonl",
+    "round1_plan_sha256": "8b2de30b9bc6c41a67699f8ee3e239e5aaed3dd62ac9763d5cd73336768cf99d",
+    "round2_prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/formula_audit.v2.txt",
+    "round2_prompt_sha256": "69db108e15a2e62f54ef41ec2bd05f989a2e7edc9a51d40ff02f60bcee766932",
+    "sample_manifest_jsonl": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/audits/formula_quality_1000_0903_v2/manifests/formula_audit_sample.jsonl",
+    "sample_manifest_sha256": "c17f0a2c66a0768b354c6fdd42997c153252df0a1ecd56113014689da83524b2",
+    "state_contract": {
+      "attempt_cap": 1575,
+      "attempt_offset": 0,
+      "logical_task_cap": 1050,
+      "max_attempts_per_task": 2
+    },
+    "state_db": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/audits/formula_quality_1000_0903_v2/llm/round1/state.sqlite3"
+  },
+  "model_invoked": false,
+  "outputs": {
+    "comparisons_jsonl": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/audits/formula_quality_1000_0903_v2/results/formula_audit_round1_comparisons.jsonl",
+    "comparisons_sha256": "ba76a9d3eafc07f1549cf2c41fbe1ca661ae612a7882b58653fffaeb8447be64",
+    "report_json": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/audits/formula_quality_1000_0903_v2/reports/formula_audit_aggregate_report.json",
+    "round2_plan_jsonl": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/audits/formula_quality_1000_0903_v2/plans/formula_audit_round2.jsonl",
+    "round2_plan_sha256": "b41c796b7393b441fd31d1073d8d900891decfd1319bca37ceda0a98d8469bab",
+    "triggers_jsonl": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/audits/formula_quality_1000_0903_v2/manifests/formula_audit_round2_triggers.jsonl",
+    "triggers_sha256": "1bfe1763f8d2c8599325b3e4d715e3d40f7bd7f09980f1916a0d5e95267b6738"
+  },
+  "round1_execution_classification": "terminal_unresolved_tasks",
+  "severity_policy": {
+    "critical": "simplification not preserved, or GT stored simplification conflict",
+    "major": "prediction stored-decision conflict, or GT candidate more complex",
+    "minor": "prediction candidate is more complex without a stronger issue",
+    "model_reported_severity_is_evidence_only": true,
+    "pass": "no offline conflict or quality issue",
+    "source": "offline_deterministic_v1",
+    "undetermined": "a primary judgment is undetermined and no stronger conflict exists"
+  },
+  "status": "ok"
+}

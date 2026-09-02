@@ -15,6 +15,11 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.anthropic_api_runn
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import (
     execute_plan,
 )
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
+    MAX_ATTEMPTS_PER_TASK,
+    MAX_LOGICAL_TASKS,
+    MAX_PHYSICAL_ATTEMPTS,
+)
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskStateStore
 
 
@@ -95,6 +100,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--limit", type=_positive_int)
     parser.add_argument("--logical-id", dest="logical_ids", action="append", default=[])
     parser.add_argument("--workers", type=_positive_int, default=64)
+    parser.add_argument("--attempt-cap", type=_positive_int, default=MAX_PHYSICAL_ATTEMPTS)
+    parser.add_argument("--logical-task-cap", type=_positive_int, default=MAX_LOGICAL_TASKS)
+    parser.add_argument(
+        "--max-attempts-per-task",
+        type=_positive_int,
+        default=MAX_ATTEMPTS_PER_TASK,
+    )
     parser.add_argument("--physical-attempt-offset", type=int, default=0)
     parser.add_argument("--predecessor-attempt-manifest", type=Path)
     parser.add_argument(
@@ -153,6 +165,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         limit=args.limit,
         logical_ids=tuple(args.logical_ids),
         workers=args.workers,
+        attempt_cap=args.attempt_cap,
+        logical_task_cap=args.logical_task_cap,
+        max_attempts_per_task=args.max_attempts_per_task,
         physical_attempt_offset=args.physical_attempt_offset,
         predecessor_attempt_manifest=args.predecessor_attempt_manifest,
         runner_factory=runner_factory,

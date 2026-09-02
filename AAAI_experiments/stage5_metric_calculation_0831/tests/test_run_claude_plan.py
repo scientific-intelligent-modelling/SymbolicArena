@@ -366,6 +366,44 @@ def test_registers_all_tasks_but_limit_only_caps_this_run(tmp_path: Path) -> Non
     assert store.task_state(rows[2]["evaluation_key"]) == "pending"
 
 
+def test_cli_freezes_explicit_attempt_and_logical_budgets(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import main
+
+    row = _build_plan_row(tmp_path, "equivalence::budgeted")
+    plan_path = tmp_path / "plan.jsonl"
+    _write_plan_jsonl(plan_path, [row])
+    state_db = tmp_path / "control" / "state.sqlite3"
+
+    exit_code = main(
+        [
+            "--plan-jsonl",
+            str(plan_path),
+            "--state-db",
+            str(state_db),
+            "--attempts-dir",
+            str(tmp_path / "llm" / "attempts"),
+            "--frozen-dir",
+            str(tmp_path / "llm" / "frozen"),
+            "--report-json",
+            str(tmp_path / "reports" / "progress.json"),
+            "--attempt-cap",
+            "1575",
+            "--logical-task-cap",
+            "1050",
+            "--max-attempts-per-task",
+            "2",
+        ],
+        runner_factory=_runner_factory(behaviors={}, calls=[]),
+    )
+
+    assert exit_code == 0
+    with sqlite3.connect(state_db) as connection:
+        metadata = dict(connection.execute("SELECT key, value FROM meta"))
+    assert metadata["attempt_cap"] == "1575"
+    assert metadata["logical_task_cap"] == "1050"
+    assert metadata["max_attempts_per_task"] == "2"
+
+
 def test_run_uses_single_bulk_registration_call(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import main
 

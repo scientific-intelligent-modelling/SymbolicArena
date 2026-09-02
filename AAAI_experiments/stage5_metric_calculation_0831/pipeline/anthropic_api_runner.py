@@ -22,6 +22,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     _parse_single_json_result,
     canonical_json,
     validate_structured_output,
+    validate_formula_audit_scope,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import (
     ClaudeRunResult,
@@ -441,6 +442,11 @@ class AnthropicApiRunner(ClaudeRunner):
                         task_kind=task_kind,
                         schema=definition.schema,
                     )
+                    if task_kind == "formula_audit":
+                        validate_formula_audit_scope(
+                            definition.request,
+                            structured_output,
+                        )
                 except StructuredOutputViolation as exc:
                     error_class = "structured_output_invalid"
                     error_message = str(exc)

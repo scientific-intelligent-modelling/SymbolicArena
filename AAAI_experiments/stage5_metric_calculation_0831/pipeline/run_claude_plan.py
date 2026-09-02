@@ -18,9 +18,13 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
+    MAX_ATTEMPTS_PER_TASK,
+    MAX_LOGICAL_TASKS,
+    MAX_PHYSICAL_ATTEMPTS,
     canonical_json,
     evaluation_key,
     render_prompt,
+    validate_formula_audit_request,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import (
     ClaudeRunResult,
@@ -536,6 +540,11 @@ def _row_to_definition(row: Mapping[str, Any], *, line_number: int) -> PlannedDe
     task_kind = row.get("task_kind")
     if task_kind is not None and not isinstance(task_kind, str):
         raise PlanContractError(f"{context}.task_kind 必须是字符串")
+    if task_kind == "formula_audit":
+        try:
+            validate_formula_audit_request(request)
+        except ValueError as exc:
+            raise PlanContractError(f"{context}.request 不满足 formula audit 盲审契约: {exc}") from exc
 
     return PlannedDefinition(
         logical_id=logical_id,
@@ -706,6 +715,11 @@ def _build_report(
         "attempts_reserved_this_run": attempts_reserved_this_run,
         "model_invoked": attempts_reserved_this_run > 0,
         "attempts_reserved_for_plan": _attempt_count_for_plan(store, entries),
+        "attempt_cap": store.attempt_cap,
+        "attempt_budget_remaining": max(0, store.attempt_cap - attempts_reserved_total),
+        "attempt_budget_exhausted": attempts_reserved_total >= store.attempt_cap,
+        "logical_task_cap": store.logical_task_cap,
+        "max_attempts_per_task": store.max_attempts_per_task,
         "physical_attempt_offset": store.attempt_offset,
         "predecessor_attempt_manifest_path": (
             str(predecessor_attempt_manifest.path)
@@ -757,6 +771,9 @@ def execute_plan(
     limit: int | None = None,
     logical_ids: Sequence[str] = (),
     workers: int = 1,
+    attempt_cap: int = MAX_PHYSICAL_ATTEMPTS,
+    logical_task_cap: int = MAX_LOGICAL_TASKS,
+    max_attempts_per_task: int = MAX_ATTEMPTS_PER_TASK,
     physical_attempt_offset: int = 0,
     predecessor_attempt_manifest: str | Path | None = None,
     runner_factory: Callable[[TaskStateStore, Path, Path], Any] | None = None,
@@ -765,6 +782,12 @@ def execute_plan(
         raise ValueError("workers 必须为正整数")
     if limit is not None and limit <= 0:
         raise ValueError("limit 必须为正整数")
+    if attempt_cap <= 0:
+        raise ValueError("attempt_cap 必须为正整数")
+    if logical_task_cap <= 0:
+        raise ValueError("logical_task_cap 必须为正整数")
+    if max_attempts_per_task <= 0:
+        raise ValueError("max_attempts_per_task 必须为正整数")
     if physical_attempt_offset < 0:
         raise ValueError("physical_attempt_offset 不能为负数")
 
@@ -818,6 +841,9 @@ def execute_plan(
             try:
                 store = TaskStateStore(
                     state_db,
+                    attempt_cap=attempt_cap,
+                    logical_task_cap=logical_task_cap,
+                    max_attempts_per_task=max_attempts_per_task,
                     attempt_offset=physical_attempt_offset,
                     predecessor_attempt_manifest=(
                         PredecessorAttemptManifest(
@@ -957,8 +983,8 @@ def execute_plan(
 
             runner = (runner_factory or _default_runner_factory)(
                 store,
-                attempts_dir=Path(attempts_dir),
-                frozen_dir=Path(frozen_dir),
+                attempts_dir=Path(attempts_dir).resolve(),
+                frozen_dir=Path(frozen_dir).resolve(),
             )
             submitted_task_count = 0
             completed_task_count = 0
@@ -1110,6 +1136,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--limit", type=_positive_int, default=None)
     parser.add_argument("--logical-id", dest="logical_ids", action="append", default=[])
     parser.add_argument("--workers", type=_positive_int, default=1)
+    parser.add_argument("--attempt-cap", type=_positive_int, default=MAX_PHYSICAL_ATTEMPTS)
+    parser.add_argument("--logical-task-cap", type=_positive_int, default=MAX_LOGICAL_TASKS)
+    parser.add_argument(
+        "--max-attempts-per-task",
+        type=_positive_int,
+        default=MAX_ATTEMPTS_PER_TASK,
+    )
     parser.add_argument("--physical-attempt-offset", type=int, default=0)
     parser.add_argument("--predecessor-attempt-manifest", type=Path, default=None)
     return parser.parse_args(argv)
@@ -1130,6 +1163,9 @@ def main(
         limit=args.limit,
         logical_ids=tuple(args.logical_ids),
         workers=args.workers,
+        attempt_cap=args.attempt_cap,
+        logical_task_cap=args.logical_task_cap,
+        max_attempts_per_task=args.max_attempts_per_task,
         physical_attempt_offset=args.physical_attempt_offset,
         predecessor_attempt_manifest=args.predecessor_attempt_manifest,
         runner_factory=runner_factory,

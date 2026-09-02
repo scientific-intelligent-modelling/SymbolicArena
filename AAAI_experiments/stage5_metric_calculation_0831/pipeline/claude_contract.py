@@ -401,6 +401,13 @@ def _require_assumptions(value: object) -> None:
         raise ContractViolation("assumptions 的每一项都必须是字符串")
 
 
+def _require_optional_text(value: object, *, field: str, maximum: int) -> None:
+    if value is None:
+        return
+    if not isinstance(value, str) or not value.strip() or len(value) > maximum:
+        raise ContractViolation(f"{field} 必须是 null 或 1--{maximum} 字符的非空字符串")
+
+
 def validate_structured_output(
     task_kind: str,
     output: Mapping[str, object],
@@ -470,11 +477,143 @@ def validate_structured_output(
             "undetermined",
         }:
             raise ContractViolation(f"未知 structure decision: {output['decision']!r}")
+    elif normalized_kind == "formula_audit":
+        expected = {
+            "simplification_equivalence",
+            "simplification_quality",
+            "suggested_simplified_expression",
+            "reference_equivalence",
+            "counterexample",
+            "severity",
+            "assumptions",
+            "confidence",
+            "brief_reason",
+        }
+        _require_exact_keys(output, expected)
+        if output["simplification_equivalence"] not in {
+            "preserved",
+            "not_preserved",
+            "undetermined",
+        }:
+            raise ContractViolation(
+                "未知 simplification_equivalence: "
+                f"{output['simplification_equivalence']!r}"
+            )
+        if output["simplification_quality"] not in {
+            "strictly_simpler",
+            "equally_simple",
+            "more_complex",
+            "undetermined",
+        }:
+            raise ContractViolation(
+                f"未知 simplification_quality: {output['simplification_quality']!r}"
+            )
+        _require_optional_text(
+            output["suggested_simplified_expression"],
+            field="suggested_simplified_expression",
+            maximum=4000,
+        )
+        reference_equivalence = output["reference_equivalence"]
+        if reference_equivalence not in {
+            "equivalent",
+            "not_equivalent",
+            "undetermined",
+            "not_applicable",
+        }:
+            raise ContractViolation(
+                f"未知 reference_equivalence: {reference_equivalence!r}"
+            )
+        _require_optional_text(output["counterexample"], field="counterexample", maximum=1000)
+        if output["severity"] not in {
+            "pass",
+            "minor",
+            "major",
+            "critical",
+            "undetermined",
+        }:
+            raise ContractViolation(f"未知 severity: {output['severity']!r}")
+        _require_assumptions(output["assumptions"])
     else:
         raise ContractViolation(f"未知 task_kind: {task_kind!r}")
     _require_confidence(output["confidence"])
     _require_reason(output["brief_reason"])
     return dict(output)
+
+
+def validate_formula_audit_scope(
+    request: Mapping[str, object],
+    output: Mapping[str, object],
+) -> None:
+    """校验审计范围与 reference_equivalence 的跨对象约束。"""
+
+    scope = request.get("audit_scope")
+    reference_equivalence = output.get("reference_equivalence")
+    if scope == "ground_truth_simplification":
+        if reference_equivalence != "not_applicable":
+            raise StructuredOutputViolation(
+                "ground_truth_simplification 的 reference_equivalence 必须为 not_applicable"
+            )
+        return
+    if scope == "prediction_formula":
+        if reference_equivalence == "not_applicable":
+            raise StructuredOutputViolation(
+                "prediction_formula 的 reference_equivalence 不得为 not_applicable"
+            )
+        return
+    raise StructuredOutputViolation(f"未知 formula audit_scope: {scope!r}")
+
+
+def validate_formula_audit_request(request: Mapping[str, object]) -> dict[str, object]:
+    """严格限制盲审输入，防止历史裁决或来源标签被渲染进 prompt。"""
+
+    expected = {
+        "audit_scope",
+        "audit_binding_sha256",
+        "variables",
+        "allowed_functions",
+        "domain_assumptions",
+        "original_expression",
+        "candidate_simplified_expression",
+        "reference_simplified_expression",
+        "review_round",
+        "evidence_hash",
+    }
+    _require_exact_keys(request, expected)
+    scope = request["audit_scope"]
+    if scope not in {"ground_truth_simplification", "prediction_formula"}:
+        raise ContractViolation(f"未知 formula audit_scope: {scope!r}")
+    for field in ("audit_binding_sha256", "evidence_hash"):
+        value = request[field]
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+            raise ContractViolation(f"{field} 必须是小写 SHA-256")
+    for field in ("variables", "allowed_functions"):
+        value = request[field]
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ContractViolation(f"{field} 必须是字符串数组")
+    if not isinstance(request["domain_assumptions"], Mapping):
+        raise ContractViolation("domain_assumptions 必须是 JSON object")
+    for field in ("original_expression", "candidate_simplified_expression"):
+        value = request[field]
+        if not isinstance(value, str) or not value.strip():
+            raise ContractViolation(f"{field} 必须是非空字符串")
+    reference = request["reference_simplified_expression"]
+    if scope == "ground_truth_simplification" and reference is not None:
+        raise ContractViolation("ground_truth_simplification 的 reference 必须为 null")
+    if scope == "prediction_formula" and (
+        not isinstance(reference, str) or not reference.strip()
+    ):
+        raise ContractViolation("prediction_formula 的 reference 必须是非空字符串")
+    review_round = request["review_round"]
+    if isinstance(review_round, bool) or review_round not in {1, 2}:
+        raise ContractViolation("review_round 必须为整数 1 或 2")
+    without_evidence_hash = {
+        key: _copy_json_value(value)
+        for key, value in request.items()
+        if key != "evidence_hash"
+    }
+    if sha256_json(without_evidence_hash) != request["evidence_hash"]:
+        raise ContractViolation("formula audit evidence_hash 与 request 内容不一致")
+    return dict(request)
 
 
 def validate_claude_execution_metadata(envelope: Mapping[str, object]) -> None:
