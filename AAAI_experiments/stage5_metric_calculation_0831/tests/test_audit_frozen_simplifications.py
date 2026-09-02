@@ -546,6 +546,86 @@ def test_promoted_tail_fenced_json_frozen_can_be_revalidated(tmp_path: Path) -> 
     assert row["promoted_without_new_model_call"] is True
 
 
+def test_active_plan_audit_ignores_registered_predecessor_tasks(tmp_path: Path) -> None:
+    case = _build_promoted_frozen_case(
+        tmp_path,
+        promotion_mode="tail_fenced_json_object",
+        metadata_mode="tail_fenced_json_object",
+    )
+    plan_row = json.loads(Path(case["plan_path"]).read_text(encoding="utf-8"))
+    predecessor_logical_id = "gt_simplify::demo_predecessor"
+    predecessor_key = evaluation_key(
+        task_type="gt_simplify",
+        logical_id=predecessor_logical_id,
+        prompt_version=str(plan_row["prompt_version"]),
+        schema_version=str(plan_row["schema_version"]),
+        prompt_sha256=str(plan_row["prompt_sha256"]),
+        schema_sha256=str(plan_row["schema_sha256"]),
+        normalized_input=plan_row["normalized_input"],
+        evidence_hash=str(plan_row["request"]["evidence_hash"]),
+    )
+    predecessor_spec = TaskSpec(
+        evaluation_key=predecessor_key,
+        logical_id=predecessor_logical_id,
+        task_type="gt_simplify",
+        condition="clean",
+        priority=10,
+        input_hash=str(plan_row["input_hash"]),
+        prompt_version=str(plan_row["prompt_version"]),
+        schema_version=str(plan_row["schema_version"]),
+        dependencies=(),
+    )
+    store = TaskStateStore(case["state_db"])
+    store.register_task(predecessor_spec)
+    for index in range(3):
+        lease = store.reserve_attempt(predecessor_key, now=100.0 + index)
+        store.finish_failure(
+            lease.attempt_id,
+            error_class="validation_failed",
+            retryable=True,
+            now=100.5 + index,
+        )
+    successor_key = str(plan_row["evaluation_key"])
+    successor_logical_id = str(plan_row["logical_id"])
+    with sqlite3.connect(case["state_db"]) as connection:
+        connection.execute(
+            """INSERT INTO task_supersessions(
+                   predecessor_evaluation_key, successor_evaluation_key,
+                   predecessor_logical_id, successor_logical_id,
+                   identity, reason, predecessor_plan_sha256,
+                   successor_plan_sha256, superseded_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                predecessor_key,
+                successor_key,
+                predecessor_logical_id,
+                successor_logical_id,
+                "gt::demo",
+                "unit_test_recovery",
+                "a" * 64,
+                _sha256_file(Path(case["plan_path"])),
+                200.0,
+            ),
+        )
+
+    report = audit_frozen_simplifications(
+        plan_jsonl=case["plan_path"],
+        state_db=case["state_db"],
+        attempts_dir=case["attempts_dir"],
+        frozen_dir=case["frozen_dir"],
+        output_jsonl=tmp_path / "active-audit.jsonl",
+        report_json=tmp_path / "active-report.json",
+        expected_plan_count=1,
+        semantic_timeout_seconds=20.0,
+        workers=1,
+    )
+
+    assert report["status"] == "ok"
+    assert report["database_task_count"] == 1
+    assert report["ignored_task_count"] == 1
+    assert report["ignored_registered_predecessor_count"] == 1
+
+
 def test_promoted_tail_fenced_json_without_mode_marker_fails(tmp_path: Path) -> None:
     case = _build_promoted_frozen_case(
         tmp_path,

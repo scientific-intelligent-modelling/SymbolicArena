@@ -557,6 +557,12 @@ def audit_frozen_simplifications(
                ORDER BY t.logical_id""",
             (task_type, condition),
         ).fetchall()
+        registered_predecessor_keys = {
+            str(row["predecessor_evaluation_key"])
+            for row in connection.execute(
+                "SELECT predecessor_evaluation_key FROM task_supersessions"
+            ).fetchall()
+        }
     finally:
         connection.close()
     superseded_rows = [row for row in all_state_rows if row["state"] == "superseded"]
@@ -566,7 +572,16 @@ def audit_frozen_simplifications(
     by_key = {str(row["evaluation_key"]): dict(row) for row in state_rows}
     plan_keys = {entry.evaluation_key for entry in loaded_plan.entries}
     extra_keys = sorted(set(by_key) - plan_keys)
-    if extra_keys:
+    ignored_registered_predecessor_count = 0
+    if extra_keys and not audit_superseded_plan:
+        unknown_extra_keys = sorted(set(extra_keys) - registered_predecessor_keys)
+        if unknown_extra_keys:
+            raise FrozenSimplificationAuditError(
+                f"状态库存在 {len(unknown_extra_keys)} 个未登记 successor 的同类任务"
+            )
+        ignored_registered_predecessor_count = len(extra_keys)
+        ignored_rows.extend(by_key.pop(key) for key in extra_keys)
+    elif extra_keys:
         raise FrozenSimplificationAuditError(
             f"状态库存在 {len(extra_keys)} 个不属于当前 plan 的同类任务"
         )
@@ -629,9 +644,10 @@ def audit_frozen_simplifications(
         "archived_rendered_prompt_mismatch_count": archived_rendered_prompt_mismatch_count,
         "state_db": str(state_path),
         "state_binding_sha256": state_binding_sha256,
-        "database_task_count": len(state_rows),
+        "database_task_count": len(by_key),
         "database_same_type_condition_count": len(all_state_rows),
         "ignored_task_count": len(ignored_rows),
+        "ignored_registered_predecessor_count": ignored_registered_predecessor_count,
         "ignored_task_keys_sha256": _sha256_json(
             sorted(str(row["evaluation_key"]) for row in ignored_rows)
         ),
