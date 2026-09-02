@@ -15,9 +15,12 @@ CANONICAL_VARIABLE_PATTERN = re.compile(r"\bx\d+\b")
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+import AAAI_experiments.stage5_metric_calculation_0831.pipeline.clean_task_builder as clean_task_builder  # noqa: E402
+
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.clean_task_builder import (  # noqa: E402
     CleanTaskBuilderError,
     PlannedTask,
+    build_argument_parser,
     build_clean_task_plan,
     extract_expression_body,
     instantiate_parameters,
@@ -32,6 +35,9 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import (  # noqa: E402
     TaskDefinition as RunnerTaskDefinition,
 )
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.register_symbolic_plan import (  # noqa: E402
+    register_symbolic_plan,
+)
 
 
 @pytest.fixture(scope="session")
@@ -44,6 +50,24 @@ def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
             handle.write("\n")
+
+
+def test_noise_cli_defaults_defer_condition_specific_inputs() -> None:
+    args = build_argument_parser().parse_args(
+        ["--phase", "pred", "--condition", "noise005"]
+    )
+
+    assert args.formula_recovery_json is None
+    assert args.freeze_glob is None
+    assert args.output_jsonl is None
+    assert args.full_plan_jsonl is None
+    assert args.build_workers == 1
+
+
+def test_noise_default_freeze_glob_targets_result_freeze_bundle() -> None:
+    assert clean_task_builder._default_pred_freeze_glob("noise005") == str(
+        STAGE_ROOT / "source_snapshot/result_freeze/noise005_results.jsonl.gz"
+    )
 
 
 def _write_probe_jsonl(
@@ -107,6 +131,7 @@ def _build_freeze_row(
     algorithm: str = "DemoAlg",
     seed: int = 520,
     payload: dict[str, object],
+    condition: str = "clean",
 ) -> dict[str, object]:
     raw_text = json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2)
     return {
@@ -115,7 +140,7 @@ def _build_freeze_row(
             "batch": "demo_batch",
             "dataset_id": dataset_id,
             "host": "iaaccn22",
-            "noise_tag": "clean",
+            "noise_tag": condition,
             "path": f"/tmp/{task_id}/result.json",
             "seed": str(seed),
             "source_row_sha256": "source-sha-demo",
@@ -126,6 +151,285 @@ def _build_freeze_row(
             "sha256": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
         },
     }
+
+
+def test_noise_prediction_uses_condition_identity_and_equation_fallback(tmp_path: Path) -> None:
+    gt_path = tmp_path / "ground_truth_extract.jsonl"
+    _write_jsonl(
+        gt_path,
+        [{
+            "dataset_id": "DemoGT",
+            "evidence_sha256": "gt-evidence",
+            "ordered_variables": ["x0"],
+            "normalized_expression_input": "x0",
+            "return_source": "x0",
+            "return_ast_dump": "Name(...) ",
+            "selection_reason": "demo",
+            "source_checksums": {"formula_py_sha256": "abc"},
+            "target": "y",
+        }],
+    )
+    probes_path = tmp_path / "dataset_probes.jsonl"
+    _write_probe_jsonl(probes_path, dataset_id="DemoGT", variables=["x0"], target_name="y")
+    freeze_path = tmp_path / "noise001_freeze.jsonl.gz"
+    payload = {
+        "status": "ok",
+        "equation": "x0 + 1",
+        "feature_names": ["x0"],
+        "target_name": "y",
+        "train_label_noise": {"enabled": True, "requested": True, "sigma": 0.01},
+    }
+    row = _build_freeze_row(
+        task_id="demoalg_s520_noise001_g0001",
+        dataset_id="DemoGT",
+        algorithm="DemoAlg",
+        payload=payload,
+        condition="noise001",
+    )
+    with gzip.open(freeze_path, "wt", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+
+    tasks, report = build_clean_task_plan(
+        phase="pred",
+        condition="noise001",
+        ground_truth_jsonl=gt_path,
+        dataset_probes_jsonl=probes_path,
+        freeze_glob=str(freeze_path),
+        expected_gt_count=1,
+        expected_pred_count=1,
+        repo_root=REPO_ROOT,
+    )
+
+    assert len(tasks) == 1
+    assert tasks[0].condition == "noise001"
+    assert tasks[0].logical_id == "pred_simplify::demoalg::g0001::s520::noise001"
+    assert tasks[0].request["noise_tag"] == "noise001"
+    assert tasks[0].request["ast_source_evidence"]["selected_expression_source"] == "equation"
+    assert report["validation"]["noise_condition"] == "noise001"
+    assert report["validation"]["pred_freeze"]["formula_source_counts"] == {"equation": 1}
+
+
+def test_noise_prediction_with_unresolved_parameters_is_no_call(tmp_path: Path) -> None:
+    gt_path = tmp_path / "ground_truth_extract.jsonl"
+    _write_jsonl(
+        gt_path,
+        [{
+            "dataset_id": "DemoGT",
+            "evidence_sha256": "gt-evidence",
+            "ordered_variables": ["x0"],
+            "normalized_expression_input": "x0",
+            "return_source": "x0",
+            "return_ast_dump": "Name(...) ",
+            "selection_reason": "demo",
+            "source_checksums": {"formula_py_sha256": "abc"},
+            "target": "y",
+        }],
+    )
+    probes_path = tmp_path / "dataset_probes.jsonl"
+    _write_probe_jsonl(probes_path, dataset_id="DemoGT", variables=["x0"], target_name="y")
+    freeze_path = tmp_path / "noise005_freeze.jsonl.gz"
+    payload = {
+        "status": "ok",
+        "equation": "x0 + params[0]",
+        "feature_names": ["x0"],
+        "target_name": "y",
+        "train_label_noise": {"enabled": True, "requested": True, "sigma": 0.05},
+    }
+    row = _build_freeze_row(
+        task_id="demoalg_s520_noise005_g0001",
+        dataset_id="DemoGT",
+        algorithm="DemoAlg",
+        payload=payload,
+        condition="noise005",
+    )
+    with gzip.open(freeze_path, "wt", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+
+    tasks, report = build_clean_task_plan(
+        phase="pred",
+        condition="noise005",
+        ground_truth_jsonl=gt_path,
+        dataset_probes_jsonl=probes_path,
+        freeze_glob=str(freeze_path),
+        expected_gt_count=1,
+        expected_pred_count=1,
+        repo_root=REPO_ROOT,
+    )
+
+    assert tasks == []
+    no_call = report["no_call_records"][0]
+    assert no_call["reason"] == "unresolved_parameter_values"
+    assert no_call["condition"] == "noise005"
+    assert no_call["status"] == "planned_non_applicable"
+    assert no_call["task_spec"]["task_type"] == "pred_simplify"
+    assert no_call["task_spec"]["condition"] == "noise005"
+    assert no_call["request"]["evidence_hash"] == no_call["evidence_sha256"]
+    assert no_call["evidence_payload"]["schema_version"] == "symbolic_non_applicable.v1"
+    assert no_call["evidence_payload"]["phase"] == "pred"
+    assert no_call["evidence_payload"]["reason"] == "unresolved_parameter_values"
+    assert report["planning_counts"]["condition_total_max"] == 2251
+
+    evidence_dir = tmp_path / "non_applicable_evidence"
+    materialized_tasks, materialized_report = build_clean_task_plan(
+        phase="pred",
+        condition="noise005",
+        ground_truth_jsonl=gt_path,
+        dataset_probes_jsonl=probes_path,
+        freeze_glob=str(freeze_path),
+        expected_gt_count=1,
+        expected_pred_count=1,
+        repo_root=REPO_ROOT,
+        non_applicable_evidence_dir=evidence_dir,
+        write_non_applicable_evidence=True,
+        build_workers=2,
+    )
+    callable_plan = tmp_path / "callable.jsonl"
+    non_applicable_index = tmp_path / "non_applicable.jsonl"
+    _write_jsonl(callable_plan, [task.to_json_record() for task in materialized_tasks])
+    _write_jsonl(non_applicable_index, materialized_report["no_call_records"])
+    registration = register_symbolic_plan(
+        plan_jsonl=callable_plan,
+        non_applicable_index_jsonl=non_applicable_index,
+        state_db=tmp_path / "state.sqlite3",
+    )
+
+    assert registration["counts"]["callable_task_count"] == 0
+    assert registration["counts"]["non_applicable_task_count"] == 1
+    assert registration["distributions"]["final_state"] == {"non_applicable": 1}
+
+    cli_callable = tmp_path / "cli_callable.jsonl"
+    cli_non_applicable = tmp_path / "cli_non_applicable.jsonl"
+    cli_full_plan = tmp_path / "cli_full_plan.jsonl"
+    cli_report = tmp_path / "cli_report.json"
+    assert main(
+        [
+            "--phase",
+            "pred",
+            "--condition",
+            "noise005",
+            "--ground-truth-jsonl",
+            str(gt_path),
+            "--dataset-probes-jsonl",
+            str(probes_path),
+            "--freeze-glob",
+            str(freeze_path),
+            "--expected-gt-count",
+            "1",
+            "--expected-pred-count",
+            "1",
+            "--output-jsonl",
+            str(cli_callable),
+            "--non-applicable-index-jsonl",
+            str(cli_non_applicable),
+            "--full-plan-jsonl",
+            str(cli_full_plan),
+            "--non-applicable-evidence-dir",
+            str(tmp_path / "cli_evidence"),
+            "--report",
+            str(cli_report),
+        ]
+    ) == 0
+    assert cli_callable.read_text(encoding="utf-8") == ""
+    assert len(cli_non_applicable.read_text(encoding="utf-8").splitlines()) == 1
+    assert cli_full_plan.read_text(encoding="utf-8") == cli_non_applicable.read_text(
+        encoding="utf-8"
+    )
+    assert json.loads(cli_report.read_text(encoding="utf-8"))["outputs"][
+        "full_plan_usage"
+    ] == "frozen_index_only_never_api_runner"
+
+
+def test_noise_prediction_uses_explicit_condition_recovery_manifest(tmp_path: Path) -> None:
+    gt_path = tmp_path / "ground_truth_extract.jsonl"
+    _write_jsonl(
+        gt_path,
+        [{
+            "dataset_id": "DemoGT",
+            "evidence_sha256": "gt-evidence",
+            "ordered_variables": ["x0"],
+            "normalized_expression_input": "x0",
+            "return_source": "x0",
+            "return_ast_dump": "Name(...)",
+            "selection_reason": "demo",
+            "source_checksums": {"formula_py_sha256": "abc"},
+            "target": "y",
+        }],
+    )
+    probes_path = tmp_path / "dataset_probes.jsonl"
+    _write_probe_jsonl(probes_path, dataset_id="DemoGT", variables=["x0"], target_name="y")
+    equation = "def equation(col0, params):\n    return col0 + params[0]\n"
+    payload = {
+        "status": "ok",
+        "equation": equation,
+        "feature_names": ["x0"],
+        "target_name": "y",
+        "train_label_noise": {"enabled": True, "requested": True, "sigma": 0.01},
+    }
+    row = _build_freeze_row(
+        task_id="demoalg_s520_noise001_g0001",
+        dataset_id="DemoGT",
+        algorithm="DemoAlg",
+        payload=payload,
+        condition="noise001",
+    )
+    freeze_path = tmp_path / "noise001_freeze.jsonl.gz"
+    with gzip.open(freeze_path, "wt", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+
+    candidate = {
+        "function": "def equation(x0, params):\n    return x0 + params[0]\n",
+        "params": [2.5],
+    }
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+    canonical_params = json.dumps(
+        candidate["params"], ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    recovery_path = tmp_path / "noise001_formula_recovery.v1.json"
+    recovery_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "formula_recovery.v1",
+                "condition": "noise001",
+                "entries": [{
+                    "task_id": "demoalg_s520_noise001_g0001",
+                    "resolution": "recovered_params",
+                    "frozen_result_sha256": row["result"]["sha256"],
+                    "equation_sha256": hashlib.sha256(equation.encode("utf-8")).hexdigest(),
+                    "params": candidate["params"],
+                    "source_evidence": {
+                        "candidate_path": str(candidate_path),
+                        "candidate_sha256": hashlib.sha256(candidate_path.read_bytes()).hexdigest(),
+                        "params_sha256": hashlib.sha256(canonical_params.encode("utf-8")).hexdigest(),
+                    },
+                }],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    tasks, report = build_clean_task_plan(
+        phase="pred",
+        condition="noise001",
+        ground_truth_jsonl=gt_path,
+        formula_recovery_json=recovery_path,
+        dataset_probes_jsonl=probes_path,
+        freeze_glob=str(freeze_path),
+        expected_gt_count=1,
+        expected_pred_count=1,
+        repo_root=REPO_ROOT,
+    )
+
+    assert len(tasks) == 1
+    assert tasks[0].request["expression"] == "x0 + (2.5)"
+    assert tasks[0].request["ast_source_evidence"]["formula_resolution"]["status"] == "recovered_params"
+    assert report["no_call_counts"]["pred"] == 0
+
+
+def test_noise_condition_rejects_gt_and_wrong_training_noise(tmp_path: Path) -> None:
+    with pytest.raises(CleanTaskBuilderError, match="noise 条件只允许 phase=pred"):
+        build_clean_task_plan(phase="gt", condition="noise001")
 
 
 def test_real_counts_and_clean_validation(real_all_plan: tuple[list[PlannedTask], dict[str, object]]) -> None:
@@ -303,6 +607,31 @@ def test_real_formula_recovery_manifest_is_strict_and_hashed() -> None:
     assert {entry["resolution"] for entry in entries.values()} == {"recovered_params"}
     assert all(entry.get("_candidate_function") for entry in entries.values())
     assert all(entry.get("_candidate_file_sha256") for entry in entries.values())
+
+
+def test_formula_recovery_manifest_rejects_entry_from_other_condition(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "mixed_condition.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "formula_recovery.v1",
+                "condition": "noise005",
+                "entries": [
+                    {
+                        "task_id": "demoalg_s520_noise001_g0001",
+                        "resolution": "unavailable",
+                        "frozen_result_sha256": "a" * 64,
+                        "equation_sha256": "b" * 64,
+                        "reason": "demo",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CleanTaskBuilderError, match="condition"):
+        load_formula_recovery_manifest(manifest_path, expected_condition="noise005")
 
 
 def test_missing_formula_emits_explicit_no_call_plan(tmp_path: Path) -> None:

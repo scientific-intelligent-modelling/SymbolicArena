@@ -12,7 +12,10 @@ import json
 import math
 import random
 import re
+import signal
 import sys
+import threading
+import time
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any, Collection, Mapping, Sequence
@@ -39,6 +42,7 @@ class _BuildContext:
     inferred_variables: set[str]
     source_text: str
     exact_numeric_literals: bool = False
+    evaluate_expressions: bool = True
     symbols: dict[str, sp.Symbol] = field(default_factory=dict)
     source_functions: set[str] = field(default_factory=set)
 
@@ -50,11 +54,17 @@ class _BuildContext:
 
 NUMPY_ATTRIBUTE_WHITELIST = {
     "abs",
+    "arccos",
+    "arcsin",
+    "clip",
     "cos",
+    "cosh",
     "divide",
     "exp",
     "log",
+    "log1p",
     "maximum",
+    "mean",
     "minimum",
     "pi",
     "sin",
@@ -66,11 +76,16 @@ NUMPY_ATTRIBUTE_WHITELIST = {
 CONSTANT_NAMES = {
     "E": sp.E,
     "I": sp.I,
+    "nan": sp.nan,
     "pi": sp.pi,
     "zoo": sp.zoo,
 }
-OPAQUE_FUNCTIONS = {"gradient"}
+OPAQUE_FUNCTIONS = {"gradient", "index", "mean", "norm"}
+UNEVALUATED_AST_NODE_THRESHOLD = 160
 SYMBOLIC_PROOF_NODE_LIMIT = 64
+SYMBOLIC_PROOF_TIMEOUT_SECONDS = 0.25
+NUMERIC_PROBE_TIMEOUT_SECONDS = 0.25
+NUMERIC_PROBE_TOTAL_TIMEOUT_SECONDS = 0.25
 PREFIX_TOKEN_RE = re.compile(
     r"""
     (?P<number>[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)
@@ -116,6 +131,14 @@ def _resolve_call_name(node: ast.AST) -> str:
     if isinstance(node, ast.Name):
         return _normalize_name(node.id)
     if isinstance(node, ast.Attribute):
+        if (
+            node.attr == "norm"
+            and isinstance(node.value, ast.Attribute)
+            and node.value.attr == "linalg"
+            and isinstance(node.value.value, ast.Name)
+            and node.value.value.id == "np"
+        ):
+            return "norm"
         if not isinstance(node.value, ast.Name) or node.value.id != "np":
             raise SymbolicEvidenceError("只允许 np.<math> 形式的属性调用")
         if node.attr not in NUMPY_ATTRIBUTE_WHITELIST:
@@ -143,7 +166,7 @@ def _literal_subscript_index(node: ast.AST) -> int:
         operand = node.operand
         if isinstance(operand, ast.Constant) and isinstance(operand.value, int):
             return -int(operand.value)
-    raise SymbolicEvidenceError("只允许 params[整数] 形式的下标访问")
+    raise SymbolicEvidenceError("只允许静态整数下标访问")
 
 
 def _parameter_symbol_name(index: int) -> str:
@@ -264,14 +287,19 @@ def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
     normalized = _normalize_name(name)
     if normalized in {
         "abs",
+        "clip",
         "sin",
         "cos",
+        "cosh",
         "tan",
         "tanh",
         "sinh",
         "exp",
         "log",
+        "log1p",
         "sqrt",
+        "mean",
+        "norm",
         "where",
         "divide",
         "div",
@@ -281,7 +309,9 @@ def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
         "mul",
         "maximum",
         "minimum",
-        "arctan",
+            "arctan",
+            "arccos",
+            "arcsin",
         "gradient",
         "compare",
     }:
@@ -305,21 +335,28 @@ def _require_min_arity(name: str, args: list[sp.Basic], minimum: int) -> list[sp
     return args
 
 
-def _build_where(args: list[sp.Basic]) -> sp.Basic:
+def _build_where(args: list[sp.Basic], ctx: _BuildContext) -> sp.Basic:
     condition, when_true, when_false = _require_arity("where", args, 3)
     if not (
         bool(getattr(condition, "is_Boolean", False))
         or bool(getattr(condition, "is_Relational", False))
     ):
         raise SymbolicEvidenceError("where 的第一个参数必须是比较条件")
-    return sp.Piecewise((when_true, condition), (when_false, True))
+    return sp.Piecewise(
+        (when_true, condition),
+        (when_false, True),
+        evaluate=ctx.evaluate_expressions,
+    )
 
 
-def _call_handler(name: str):
+def _call_handler(name: str, ctx: _BuildContext):
     unary = {
         "abs": sp.Abs,
+        "arccos": sp.acos,
+        "arcsin": sp.asin,
         "arctan": sp.atan,
         "cos": sp.cos,
+        "cosh": sp.cosh,
         "exp": sp.exp,
         "log": sp.log,
         "sin": sp.sin,
@@ -329,28 +366,90 @@ def _call_handler(name: str):
         "tanh": sp.tanh,
     }
     if name in unary:
-        return lambda args: unary[name](_require_arity(name, args, 1)[0])
+        return lambda args: unary[name](
+            _require_arity(name, args, 1)[0],
+            evaluate=ctx.evaluate_expressions,
+        )
+    if name == "log1p":
+        return lambda args: sp.log(
+            sp.Add(
+                _require_arity(name, args, 1)[0],
+                sp.Integer(1),
+                evaluate=ctx.evaluate_expressions,
+            ),
+            evaluate=ctx.evaluate_expressions,
+        )
+    if name == "clip":
+        return lambda args: sp.Min(
+            _require_arity(name, args, 3)[2],
+            sp.Max(
+                _require_arity(name, args, 3)[1],
+                _require_arity(name, args, 3)[0],
+                evaluate=ctx.evaluate_expressions,
+            ),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "gradient":
         gradient = sp.Function("gradient")
         return lambda args: gradient(_require_arity(name, args, 1)[0])
+    if name == "mean":
+        mean = sp.Function("mean")
+        return lambda args: mean(_require_arity(name, args, 1)[0])
+    if name == "norm":
+        norm = sp.Function("norm")
+        return lambda args: norm(_require_arity(name, args, 1)[0])
     if name in {"divide", "div"}:
-        return lambda args: _require_arity(name, args, 2)[0] / _require_arity(name, args, 2)[1]
+        return lambda args: sp.Mul(
+            _require_arity(name, args, 2)[0],
+            sp.Pow(
+                _require_arity(name, args, 2)[1],
+                sp.Integer(-1),
+                evaluate=ctx.evaluate_expressions,
+            ),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "power":
-        return lambda args: sp.Pow(*_require_arity(name, args, 2))
+        return lambda args: sp.Pow(
+            *_require_arity(name, args, 2),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "add":
-        return lambda args: sp.Add(*_require_min_arity(name, args, 2))
+        return lambda args: sp.Add(
+            *_require_min_arity(name, args, 2),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "sub":
-        return lambda args: _require_arity(name, args, 2)[0] - _require_arity(name, args, 2)[1]
+        return lambda args: sp.Add(
+            _require_arity(name, args, 2)[0],
+            sp.Mul(
+                sp.Integer(-1),
+                _require_arity(name, args, 2)[1],
+                evaluate=ctx.evaluate_expressions,
+            ),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "mul":
-        return lambda args: sp.Mul(*_require_min_arity(name, args, 2))
+        return lambda args: sp.Mul(
+            *_require_min_arity(name, args, 2),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "maximum":
-        return lambda args: sp.Max(*_require_min_arity(name, args, 2))
+        return lambda args: sp.Max(
+            *_require_min_arity(name, args, 2),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "minimum":
-        return lambda args: sp.Min(*_require_min_arity(name, args, 2))
+        return lambda args: sp.Min(
+            *_require_min_arity(name, args, 2),
+            evaluate=ctx.evaluate_expressions,
+        )
     if name == "where":
-        return lambda args: _build_where(args)
+        return lambda args: _build_where(args, ctx)
     if name == "compare":
-        return lambda args: sp.StrictGreaterThan(*_require_arity(name, args, 2))
+        return lambda args: sp.StrictGreaterThan(
+            *_require_arity(name, args, 2),
+            evaluate=ctx.evaluate_expressions,
+        )
     raise SymbolicEvidenceError(f"不支持的函数: {name}")
 
 
@@ -378,7 +477,7 @@ def _parse_prefix_term(stream: _PrefixTokenStream, ctx: _BuildContext) -> sp.Bas
                 stream.pop()
         stream.expect("rpar")
         normalized = _record_function(ctx, name)
-        return _call_handler(normalized)(args)
+        return _call_handler(normalized, ctx)(args)
     return _resolve_identifier(name, ctx)
 
 
@@ -398,24 +497,31 @@ def _convert_compare(node: ast.Compare, ctx: _BuildContext) -> sp.Basic:
     right = _convert_node(node.comparators[0], ctx)
     op = node.ops[0]
     if isinstance(op, ast.Gt):
-        return sp.StrictGreaterThan(left, right)
+        return sp.StrictGreaterThan(left, right, evaluate=ctx.evaluate_expressions)
     if isinstance(op, ast.GtE):
-        return sp.GreaterThan(left, right)
+        return sp.GreaterThan(left, right, evaluate=ctx.evaluate_expressions)
     if isinstance(op, ast.Lt):
-        return sp.StrictLessThan(left, right)
+        return sp.StrictLessThan(left, right, evaluate=ctx.evaluate_expressions)
     if isinstance(op, ast.LtE):
-        return sp.LessThan(left, right)
+        return sp.LessThan(left, right, evaluate=ctx.evaluate_expressions)
     if isinstance(op, ast.Eq):
-        return sp.Eq(left, right)
+        return sp.Eq(left, right, evaluate=ctx.evaluate_expressions)
     if isinstance(op, ast.NotEq):
-        return sp.Ne(left, right)
+        return sp.Ne(left, right, evaluate=ctx.evaluate_expressions)
     raise SymbolicEvidenceError(f"不支持的比较运算: {type(op).__name__}")
 
 
 def _compare_relation(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
-    if not isinstance(node, ast.Compare):
-        raise SymbolicEvidenceError("where 的条件必须是比较表达式")
-    return _convert_compare(node, ctx)
+    if isinstance(node, ast.Compare):
+        return _convert_compare(node, ctx)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.BitAnd, ast.BitOr)):
+        left = _compare_relation(node.left, ctx)
+        right = _compare_relation(node.right, ctx)
+        relation_type = sp.And if isinstance(node.op, ast.BitAnd) else sp.Or
+        return relation_type(left, right, evaluate=ctx.evaluate_expressions)
+    raise SymbolicEvidenceError(
+        "where 的条件必须是比较表达式，或由 &/| 连接的比较表达式"
+    )
 
 
 def _convert_piecewise_call(node: ast.Call, ctx: _BuildContext) -> sp.Basic:
@@ -439,7 +545,7 @@ def _convert_piecewise_call(node: ast.Call, ctx: _BuildContext) -> sp.Basic:
         else:
             condition = _compare_relation(condition_node, ctx)
         branches.append((value, condition))
-    return sp.Piecewise(*branches)
+    return sp.Piecewise(*branches, evaluate=ctx.evaluate_expressions)
 
 
 def _convert_constant(node: ast.Constant, ctx: _BuildContext) -> sp.Basic:
@@ -451,6 +557,57 @@ def _convert_constant(node: ast.Constant, ctx: _BuildContext) -> sp.Basic:
                 exact_numeric_literals=True,
             )
     return _ensure_real_number(node.value)
+
+
+def _convert_clip_call(node: ast.Call, ctx: _BuildContext) -> sp.Basic:
+    if len(node.args) > 3:
+        raise SymbolicEvidenceError("clip 最多接受 3 个位置参数")
+    missing = object()
+    values: list[ast.AST | None | object] = [missing, missing, missing]
+    for index, argument in enumerate(node.args):
+        values[index] = argument
+    keyword_positions = {"a": 0, "a_min": 1, "a_max": 2}
+    for keyword_argument in node.keywords:
+        if keyword_argument.arg not in keyword_positions:
+            raise SymbolicEvidenceError(
+                f"clip 不支持关键字参数: {keyword_argument.arg!r}"
+            )
+        position = keyword_positions[keyword_argument.arg]
+        if values[position] is not missing:
+            raise SymbolicEvidenceError(
+                f"clip 参数重复赋值: {keyword_argument.arg}"
+            )
+        values[position] = keyword_argument.value
+    if values[0] is missing:
+        raise SymbolicEvidenceError("clip 缺少待裁剪表达式")
+    if values[1] is missing or values[2] is missing:
+        raise SymbolicEvidenceError("clip 必须显式提供 a_min 与 a_max")
+
+    value_node = values[0]
+    assert isinstance(value_node, ast.AST)
+    result = _convert_node(value_node, ctx)
+
+    lower_node = values[1]
+    upper_node = values[2]
+    lower_is_none = isinstance(lower_node, ast.Constant) and lower_node.value is None
+    upper_is_none = isinstance(upper_node, ast.Constant) and upper_node.value is None
+    if lower_is_none and upper_is_none:
+        raise SymbolicEvidenceError("clip 的 a_min 与 a_max 不能同时为 None")
+    if not lower_is_none:
+        assert isinstance(lower_node, ast.AST)
+        result = sp.Max(
+            _convert_node(lower_node, ctx),
+            result,
+            evaluate=ctx.evaluate_expressions,
+        )
+    if not upper_is_none:
+        assert isinstance(upper_node, ast.AST)
+        result = sp.Min(
+            _convert_node(upper_node, ctx),
+            result,
+            evaluate=ctx.evaluate_expressions,
+        )
+    return result
 
 
 def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
@@ -466,20 +623,36 @@ def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
         left = _convert_node(node.left, ctx)
         right = _convert_node(node.right, ctx)
         if isinstance(node.op, ast.Add):
-            return left + right
+            return sp.Add(left, right, evaluate=ctx.evaluate_expressions)
         if isinstance(node.op, ast.Sub):
-            return left - right
+            return sp.Add(
+                left,
+                sp.Mul(sp.Integer(-1), right, evaluate=ctx.evaluate_expressions),
+                evaluate=ctx.evaluate_expressions,
+            )
         if isinstance(node.op, ast.Mult):
-            return left * right
+            return sp.Mul(left, right, evaluate=ctx.evaluate_expressions)
         if isinstance(node.op, ast.Div):
-            return left / right
+            return sp.Mul(
+                left,
+                sp.Pow(
+                    right,
+                    sp.Integer(-1),
+                    evaluate=ctx.evaluate_expressions,
+                ),
+                evaluate=ctx.evaluate_expressions,
+            )
         if isinstance(node.op, ast.Pow):
-            return sp.Pow(left, right)
+            return sp.Pow(left, right, evaluate=ctx.evaluate_expressions)
         raise SymbolicEvidenceError(f"不支持的二元运算: {type(node.op).__name__}")
     if isinstance(node, ast.UnaryOp):
         operand = _convert_node(node.operand, ctx)
         if isinstance(node.op, ast.USub):
-            return -operand
+            return sp.Mul(
+                sp.Integer(-1),
+                operand,
+                evaluate=ctx.evaluate_expressions,
+            )
         if isinstance(node.op, ast.UAdd):
             return operand
         raise SymbolicEvidenceError(f"不支持的一元运算: {type(node.op).__name__}")
@@ -493,6 +666,8 @@ def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
             if node.keywords:
                 raise SymbolicEvidenceError("Piecewise 不支持关键字参数")
             return _convert_piecewise_call(node, ctx)
+        if normalized == "clip":
+            return _convert_clip_call(node, ctx)
         if normalized == "where":
             if len(node.args) != 3:
                 raise SymbolicEvidenceError("where 需要 3 个参数")
@@ -504,15 +679,26 @@ def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
             args = [_convert_node(arg, ctx) for arg in node.args]
         if node.keywords:
             raise SymbolicEvidenceError("不支持关键字参数")
-        return _call_handler(normalized)(args)
+        return _call_handler(normalized, ctx)(args)
     if isinstance(node, ast.Compare):
         relation = _convert_compare(node, ctx)
         return sp.Piecewise((sp.Integer(1), relation), (sp.Integer(0), True))
     if isinstance(node, ast.Subscript):
-        if not isinstance(node.value, ast.Name) or node.value.id != "params":
-            raise SymbolicEvidenceError("只允许 params[整数] 形式的下标访问")
+        if not isinstance(node.value, ast.Name):
+            raise SymbolicEvidenceError("只允许命名变量的静态整数下标访问")
         index = _literal_subscript_index(node.slice)
-        return ctx.symbol(_parameter_symbol_name(index))
+        if node.value.id == "params":
+            return ctx.symbol(_parameter_symbol_name(index))
+        variable_name = node.value.id
+        if (
+            ctx.allowed_variables is not None
+            and variable_name not in ctx.allowed_variables
+            and variable_name not in ctx.inferred_variables
+        ):
+            raise SymbolicEvidenceError(f"检测到未授权下标变量: {variable_name}")
+        ctx.source_functions.add("index")
+        index_function = sp.Function("index")
+        return index_function(ctx.symbol(variable_name), sp.Integer(index))
 
     banned = (
         ast.Lambda,
@@ -605,6 +791,7 @@ def _build_sympy_expression(
     allowed_variables: Collection[str] | None = None,
     allowed_functions: Collection[str] | None = None,
     exact_numeric_literals: bool = False,
+    evaluate_expressions: bool | None = None,
 ) -> tuple[sp.Basic, _BuildContext, str]:
     normalized_allowed_variables = (
         set(allowed_variables) if allowed_variables is not None else None
@@ -620,9 +807,19 @@ def _build_sympy_expression(
         inferred_variables=set(),
         source_text=source,
         exact_numeric_literals=exact_numeric_literals,
+        evaluate_expressions=(
+            len(source) <= UNEVALUATED_AST_NODE_THRESHOLD * 4
+            if evaluate_expressions is None
+            else evaluate_expressions
+        ),
     )
     try:
         root, source_kind, inferred_variables = _extract_expression_ast(source)
+        ast_node_count = sum(1 for _ in ast.walk(root))
+        if evaluate_expressions is None:
+            ctx.evaluate_expressions = (
+                ast_node_count <= UNEVALUATED_AST_NODE_THRESHOLD
+            )
         ctx.inferred_variables = inferred_variables
         if (
             source_kind == "function_def"
@@ -651,6 +848,7 @@ def build_symbolic_artifact(
     *,
     allowed_variables: Collection[str] | None = None,
     allowed_functions: Collection[str] | None = None,
+    evaluate_expressions: bool | None = None,
 ) -> dict[str, object]:
     """把不可信表达式安全地转换为稳定的 SymPy 证据对象。"""
 
@@ -661,6 +859,7 @@ def build_symbolic_artifact(
         allowed_variables=allowed_variables,
         allowed_functions=allowed_functions,
         exact_numeric_literals=False,
+        evaluate_expressions=evaluate_expressions,
     )
 
     canonical_expression = sp.sstr(expr, order="lex")
@@ -678,6 +877,11 @@ def build_symbolic_artifact(
         "function_set": function_set,
         "operator_set": operator_set,
     }
+    construction_mode = (
+        "evaluated" if ctx.evaluate_expressions else "unevaluated_large_ast"
+    )
+    if not ctx.evaluate_expressions:
+        artifact_core["construction_mode"] = construction_mode
     artifact = {
         "source_kind": source_kind,
         "source_text": source,
@@ -687,6 +891,7 @@ def build_symbolic_artifact(
         "variables": variables,
         "function_set": function_set,
         "operator_set": operator_set,
+        "construction_mode": construction_mode,
         "artifact_sha256": _sha256_text(_canonical_json(artifact_core)),
         "sympy_expression": expr,
         "constants_abstracted_canonical_tree": constants_abstracted_canonical_tree,
@@ -1070,6 +1275,83 @@ def _safe_equals_zero(expr: sp.Basic) -> bool | None:
         return None
 
 
+class _SymbolicProofTimedOut(RuntimeError):
+    pass
+
+
+class _NumericProbeTimedOut(RuntimeError):
+    pass
+
+
+def _bounded_symbolic_difference(lhs: sp.Basic, rhs: sp.Basic) -> sp.Basic | None:
+    if threading.current_thread() is not threading.main_thread() or not hasattr(signal, "setitimer"):
+        return None
+
+    def raise_timeout(_signum: int, _frame: object) -> None:
+        raise _SymbolicProofTimedOut
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    started_at = time.monotonic()
+    signal.signal(signal.SIGALRM, raise_timeout)
+    previous_timer = signal.setitimer(signal.ITIMER_REAL, SYMBOLIC_PROOF_TIMEOUT_SECONDS)
+    try:
+        return sp.simplify(sp.together(lhs - rhs))
+    except _SymbolicProofTimedOut:
+        return None
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+        if previous_timer[0] > 0:
+            remaining = max(0.0, previous_timer[0] - (time.monotonic() - started_at))
+            signal.setitimer(signal.ITIMER_REAL, remaining, previous_timer[1])
+
+
+def _bounded_evaluate_real(
+    expr: sp.Basic,
+    values: Mapping[str, float],
+    *,
+    exact_numeric_literals: bool = False,
+    digits: int = 50,
+    timeout_seconds: float | None = None,
+) -> tuple[float | None, bool]:
+    if threading.current_thread() is not threading.main_thread() or not hasattr(signal, "setitimer"):
+        return None, True
+
+    def raise_timeout(_signum: int, _frame: object) -> None:
+        raise _NumericProbeTimedOut
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    started_at = time.monotonic()
+    signal.signal(signal.SIGALRM, raise_timeout)
+    effective_timeout = (
+        NUMERIC_PROBE_TIMEOUT_SECONDS
+        if timeout_seconds is None
+        else max(0.0, min(NUMERIC_PROBE_TIMEOUT_SECONDS, timeout_seconds))
+    )
+    if effective_timeout <= 0:
+        signal.signal(signal.SIGALRM, previous_handler)
+        return None, True
+    previous_timer = signal.setitimer(signal.ITIMER_REAL, effective_timeout)
+    try:
+        return (
+            _evaluate_real(
+                expr,
+                values,
+                exact_numeric_literals=exact_numeric_literals,
+                digits=digits,
+            ),
+            False,
+        )
+    except _NumericProbeTimedOut:
+        return None, True
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+        if previous_timer[0] > 0:
+            remaining = max(0.0, previous_timer[0] - (time.monotonic() - started_at))
+            signal.setitimer(signal.ITIMER_REAL, remaining, previous_timer[1])
+
+
 def _build_exact_decimal_pair(
     original_artifact: Mapping[str, object],
     simplified_artifact: Mapping[str, object],
@@ -1122,19 +1404,19 @@ def _rebuild_probe_record(
     exact_numeric_literals: bool,
     digits: int,
 ) -> dict[str, object] | None:
-    lhs_value = _evaluate_real(
+    lhs_value, lhs_timed_out = _bounded_evaluate_real(
         expr_lhs,
         values,
         exact_numeric_literals=exact_numeric_literals,
         digits=digits,
     )
-    rhs_value = _evaluate_real(
+    rhs_value, rhs_timed_out = _bounded_evaluate_real(
         expr_rhs,
         values,
         exact_numeric_literals=exact_numeric_literals,
         digits=digits,
     )
-    if lhs_value is None or rhs_value is None:
+    if lhs_timed_out or rhs_timed_out or lhs_value is None or rhs_value is None:
         return None
     abs_error = abs(lhs_value - rhs_value)
     scale = max(abs(lhs_value), abs(rhs_value))
@@ -1163,6 +1445,7 @@ def _equivalence_core(
     probe_points: Sequence[Mapping[str, object]] | None = None,
     probe_source: str | None = None,
     probe_sample_sha256: str | None = None,
+    enable_exact_decimal_rebuild: bool = True,
 ) -> dict[str, object]:
     original_expr = original_artifact["sympy_expression"]
     simplified_expr = simplified_artifact["sympy_expression"]
@@ -1190,35 +1473,56 @@ def _equivalence_core(
             f"表达式复杂度超过符号证明阈值 {SYMBOLIC_PROOF_NODE_LIMIT}，跳过高风险 simplify。"
         )
     else:
-        difference = sp.simplify(sp.together(original_expr - simplified_expr))
-        difference_is_zero = difference == 0
-        equals_result = _safe_equals_zero(difference)
-        difference_equals_zero = equals_result is True
-        if difference_is_zero or difference_equals_zero:
-            symbolic_decision = "equivalent"
-            proof_basis = "symbolic_difference_zero"
-        else:
-            exact_decimal_pair = _build_exact_decimal_pair(
-                original_artifact,
-                simplified_artifact,
+        difference = _bounded_symbolic_difference(original_expr, simplified_expr)
+        if difference is None:
+            symbolic_decision = "undetermined"
+            assumptions.append(
+                f"符号证明超时或当前执行线程无法安全设置超时（上限 {SYMBOLIC_PROOF_TIMEOUT_SECONDS:g} 秒），"
+                "保留数值探针交由后续裁决。"
             )
-            if exact_decimal_pair is not None:
-                _, _, exact_difference = exact_decimal_pair
-                exact_difference_is_zero = exact_difference == 0
-                exact_difference_equals_zero = _safe_equals_zero(exact_difference) is True
-                if exact_difference_is_zero or exact_difference_equals_zero:
-                    symbolic_decision = "equivalent"
-                    proof_basis = "symbolic_difference_zero"
-                elif (
-                    bool(getattr(exact_difference, "is_number", False))
-                    and bool(getattr(exact_difference, "is_finite", False))
-                    and exact_difference != 0
-                ):
-                    symbolic_decision = "not_equivalent"
-                    proof_basis = "symbolic_nonzero_constant_difference"
-                elif _is_nonzero_rational_function(exact_difference):
-                    symbolic_decision = "not_equivalent"
-                    proof_basis = "symbolic_nonzero_exact_difference"
+        else:
+            difference_is_zero = difference == 0
+            equals_result = (
+                _safe_equals_zero(difference)
+                if enable_exact_decimal_rebuild
+                else None
+            )
+            difference_equals_zero = equals_result is True
+            if difference_is_zero or difference_equals_zero:
+                symbolic_decision = "equivalent"
+                proof_basis = "symbolic_difference_zero"
+            else:
+                if enable_exact_decimal_rebuild:
+                    exact_decimal_pair = _build_exact_decimal_pair(
+                        original_artifact,
+                        simplified_artifact,
+                    )
+                if exact_decimal_pair is not None:
+                    _, _, exact_difference = exact_decimal_pair
+                    exact_difference_is_zero = exact_difference == 0
+                    exact_difference_equals_zero = _safe_equals_zero(exact_difference) is True
+                    if exact_difference_is_zero or exact_difference_equals_zero:
+                        symbolic_decision = "equivalent"
+                        proof_basis = "symbolic_difference_zero"
+                    elif (
+                        bool(getattr(exact_difference, "is_number", False))
+                        and bool(getattr(exact_difference, "is_finite", False))
+                        and exact_difference != 0
+                    ):
+                        symbolic_decision = "not_equivalent"
+                        proof_basis = "symbolic_nonzero_constant_difference"
+                    elif _is_nonzero_rational_function(exact_difference):
+                        symbolic_decision = "not_equivalent"
+                        proof_basis = "symbolic_nonzero_exact_difference"
+                    elif (
+                        bool(getattr(difference, "is_number", False))
+                        and bool(getattr(difference, "is_finite", False))
+                        and difference != 0
+                    ):
+                        symbolic_decision = "not_equivalent"
+                        proof_basis = "symbolic_nonzero_constant_difference"
+                    else:
+                        symbolic_decision = "undetermined"
                 elif (
                     bool(getattr(difference, "is_number", False))
                     and bool(getattr(difference, "is_finite", False))
@@ -1228,15 +1532,6 @@ def _equivalence_core(
                     proof_basis = "symbolic_nonzero_constant_difference"
                 else:
                     symbolic_decision = "undetermined"
-            elif (
-                bool(getattr(difference, "is_number", False))
-                and bool(getattr(difference, "is_finite", False))
-                and difference != 0
-            ):
-                symbolic_decision = "not_equivalent"
-                proof_basis = "symbolic_nonzero_constant_difference"
-            else:
-                symbolic_decision = "undetermined"
 
     probe_records: list[dict[str, object]] = []
     skipped_probe_records: list[dict[str, object]] = []
@@ -1264,6 +1559,7 @@ def _equivalence_core(
     else:
         if has_opaque_function and proof_basis != "artifact_identity" and probe_points is not None:
             assumptions.append("存在不透明函数，外部探针仅用于有限实数对比。")
+        probe_deadline = time.monotonic() + NUMERIC_PROBE_TOTAL_TIMEOUT_SECONDS
         for point in candidate_points:
             values = point["values"]
             assert isinstance(values, Mapping)
@@ -1277,8 +1573,40 @@ def _equivalence_core(
                     )
                 )
                 continue
-            original_value = _evaluate_real(original_expr, values)
-            simplified_value = _evaluate_real(simplified_expr, values)
+            remaining_probe_time = probe_deadline - time.monotonic()
+            original_value, original_timed_out = _bounded_evaluate_real(
+                original_expr,
+                values,
+                timeout_seconds=remaining_probe_time,
+            )
+            if original_timed_out:
+                skipped_probe_records.append(
+                    _skipped_probe_record(point=point, reason="numeric_probe_timeout")
+                )
+                assumptions.append(
+                    "数值探针超时（单表达式上限 "
+                    f"{NUMERIC_PROBE_TIMEOUT_SECONDS:g} 秒、整对上限 "
+                    f"{NUMERIC_PROBE_TOTAL_TIMEOUT_SECONDS:g} 秒），"
+                    "停止当前表达式对的剩余探针并交由后续裁决。"
+                )
+                break
+            remaining_probe_time = probe_deadline - time.monotonic()
+            simplified_value, simplified_timed_out = _bounded_evaluate_real(
+                simplified_expr,
+                values,
+                timeout_seconds=remaining_probe_time,
+            )
+            if simplified_timed_out:
+                skipped_probe_records.append(
+                    _skipped_probe_record(point=point, reason="numeric_probe_timeout")
+                )
+                assumptions.append(
+                    "数值探针超时（单表达式上限 "
+                    f"{NUMERIC_PROBE_TIMEOUT_SECONDS:g} 秒、整对上限 "
+                    f"{NUMERIC_PROBE_TOTAL_TIMEOUT_SECONDS:g} 秒），"
+                    "停止当前表达式对的剩余探针并交由后续裁决。"
+                )
+                break
             if original_value is None or simplified_value is None:
                 if original_value is None and simplified_value is None:
                     reason = "both_nonfinite"
@@ -1382,6 +1710,7 @@ def build_pair_evidence(
     probe_points: Sequence[Mapping[str, object]] | None = None,
     probe_source: str | None = None,
     probe_sample_sha256: str | None = None,
+    include_tree_distance: bool = True,
 ) -> dict[str, object]:
     lhs_artifact = build_symbolic_artifact(
         lhs,
@@ -1403,6 +1732,7 @@ def build_pair_evidence(
         probe_points=probe_points,
         probe_source=probe_source,
         probe_sample_sha256=probe_sample_sha256,
+        enable_exact_decimal_rebuild=False,
     )
     decision = core["symbolic_decision"]
     probe_hash = _sha256_text(_canonical_json(core["probe_records"]))
@@ -1410,6 +1740,22 @@ def build_pair_evidence(
     skipped_probe_reasons = dict(
         sorted(Counter(record["reason"] for record in skipped_probe_records).items())
     )
+    if include_tree_distance:
+        normalized_edit_distance = normalized_tree_edit_distance(
+            lhs_artifact,
+            rhs_artifact,
+        )
+        tree_evidence: dict[str, object] = {
+            "computed": True,
+            "normalized_edit_distance": normalized_edit_distance,
+            "tree_similarity": 1.0 - normalized_edit_distance,
+        }
+    else:
+        tree_evidence = {
+            "computed": False,
+            "normalized_edit_distance": None,
+            "tree_similarity": None,
+        }
     payload = {
         "decision": decision,
         "lhs_artifact": {key: value for key, value in lhs_artifact.items() if key != "sympy_expression"},
@@ -1433,10 +1779,7 @@ def build_pair_evidence(
             "max_tolerance": _max_metric(core["probe_records"], "tolerance"),
             "assumptions": list(core["assumptions"]),
         },
-        "tree": {
-            "normalized_edit_distance": normalized_tree_edit_distance(lhs_artifact, rhs_artifact),
-            "tree_similarity": tree_similarity(lhs_artifact, rhs_artifact),
-        },
+        "tree": tree_evidence,
         "variable": {"f1": variable_f1(lhs_artifact, rhs_artifact)},
         "operator": {"f1": operator_f1(lhs_artifact, rhs_artifact)},
         "probe_seed": seed,
@@ -1474,13 +1817,27 @@ def validate_simplification(
     probe_points: Sequence[Mapping[str, object]] | None = None,
     probe_source: str | None = None,
     probe_sample_sha256: str | None = None,
+    original_construction_mode: str | None = None,
 ) -> dict[str, object]:
     """验证化简是否保持等价，并返回可冻结的确定性证据。"""
 
+    if original_construction_mode not in {
+        None,
+        "evaluated",
+        "unevaluated_large_ast",
+    }:
+        raise SymbolicEvidenceError(
+            f"未知 original construction mode: {original_construction_mode!r}"
+        )
     original_artifact = build_symbolic_artifact(
         original,
         allowed_variables=allowed_variables,
         allowed_functions=allowed_functions,
+        evaluate_expressions=(
+            None
+            if original_construction_mode is None
+            else original_construction_mode == "evaluated"
+        ),
     )
     if original == simplified:
         normalized_points = (

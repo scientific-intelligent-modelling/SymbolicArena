@@ -7,7 +7,9 @@ stdout、stderr 和结构化结果由调用器写入不可变审计文件。
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
@@ -62,6 +64,16 @@ class TaskSupersession:
     successor_plan_sha256: str
 
 
+@dataclass(frozen=True)
+class TaskRetirement:
+    exhausted_evaluation_key: str
+    replacement: TaskSpec
+    identity: str
+    reason: str
+    exhausted_plan_sha256: str
+    replacement_plan_sha256: str
+
+
 class TaskStateStore:
     """支持并发 worker、断点恢复和硬预算的任务状态库。"""
 
@@ -111,28 +123,38 @@ class TaskStateStore:
             else 0
         )
         self.attempt_offset = self.predecessor_attempt_count
+        self._write_lock = threading.RLock()
+        self._configure_database()
         self._initialize()
 
+    def _configure_database(self) -> None:
+        """只在 store 初始化时设置持久 journal 模式，避免并发连接反复争锁。"""
+        with sqlite3.connect(self.path, timeout=60.0) as connection:
+            connection.execute("PRAGMA busy_timeout = 60000")
+            connection.execute("PRAGMA journal_mode = WAL")
+            connection.execute("PRAGMA synchronous = FULL")
+
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path, timeout=30.0)
+        connection = sqlite3.connect(self.path, timeout=60.0)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA busy_timeout = 60000")
         connection.execute("PRAGMA synchronous = FULL")
         return connection
 
     @contextmanager
     def _write_transaction(self) -> Iterator[sqlite3.Connection]:
-        connection = self._connect()
-        try:
-            connection.execute("BEGIN IMMEDIATE")
-            yield connection
-            connection.commit()
-        except Exception:
-            connection.rollback()
-            raise
-        finally:
-            connection.close()
+        with self._write_lock:
+            connection = self._connect()
+            try:
+                connection.execute("BEGIN IMMEDIATE")
+                yield connection
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
 
     def _initialize(self) -> None:
         with self._write_transaction() as connection:
@@ -197,6 +219,19 @@ class TaskStateStore:
                        predecessor_plan_sha256 TEXT NOT NULL,
                        successor_plan_sha256 TEXT NOT NULL,
                        superseded_at REAL NOT NULL
+                   )""",
+                """CREATE TABLE IF NOT EXISTS task_retirements (
+                       exhausted_evaluation_key TEXT PRIMARY KEY REFERENCES tasks(evaluation_key),
+                       replacement_evaluation_key TEXT NOT NULL REFERENCES tasks(evaluation_key),
+                       exhausted_logical_id TEXT NOT NULL UNIQUE,
+                       replacement_logical_id TEXT NOT NULL,
+                       identity TEXT NOT NULL UNIQUE,
+                       reason TEXT NOT NULL,
+                       exhausted_plan_sha256 TEXT NOT NULL,
+                       replacement_plan_sha256 TEXT NOT NULL,
+                       exhausted_attempt_count INTEGER NOT NULL,
+                       exhausted_last_error_class TEXT,
+                       retired_at REAL NOT NULL
                    )""",
                 """CREATE TABLE IF NOT EXISTS events (
                        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -412,7 +447,7 @@ class TaskStateStore:
 
     @staticmethod
     def _valid_superseded_predecessors(connection: sqlite3.Connection) -> set[str]:
-        rows = connection.execute(
+        supersession_rows = connection.execute(
             """SELECT ts.predecessor_evaluation_key
                FROM task_supersessions ts
                JOIN tasks predecessor
@@ -425,18 +460,38 @@ class TaskStateStore:
                 AND successor.logical_id = ts.successor_logical_id
                WHERE predecessor.state='superseded'"""
         ).fetchall()
-        return {str(row["predecessor_evaluation_key"]) for row in rows}
+        retirement_rows = connection.execute(
+            """SELECT tr.exhausted_evaluation_key AS predecessor_evaluation_key
+               FROM task_retirements tr
+               JOIN tasks exhausted
+                 ON exhausted.evaluation_key = tr.exhausted_evaluation_key
+                AND exhausted.logical_id = tr.exhausted_logical_id
+                AND exhausted.attempt_count = tr.exhausted_attempt_count
+               JOIN tasks replacement
+                 ON replacement.evaluation_key = tr.replacement_evaluation_key
+                AND replacement.logical_id = tr.replacement_logical_id
+               JOIN frozen_results replacement_frozen
+                 ON replacement_frozen.evaluation_key = tr.replacement_evaluation_key
+               WHERE exhausted.state='superseded'
+                 AND replacement.state='frozen'"""
+        ).fetchall()
+        return {
+            str(row["predecessor_evaluation_key"])
+            for row in (*supersession_rows, *retirement_rows)
+        }
 
     @classmethod
     def _count_active_logical_tasks(cls, connection: sqlite3.Connection) -> int:
-        rows = connection.execute("SELECT evaluation_key, state FROM tasks").fetchall()
+        rows = connection.execute(
+            "SELECT evaluation_key, logical_id, state FROM tasks"
+        ).fetchall()
         valid_superseded = cls._valid_superseded_predecessors(connection)
-        count = 0
+        active_revision_bases: set[str] = set()
         for row in rows:
             if str(row["state"]) == "superseded" and str(row["evaluation_key"]) in valid_superseded:
                 continue
-            count += 1
-        return count
+            active_revision_bases.add(cls._logical_revision_base(str(row["logical_id"])))
+        return len(active_revision_bases)
 
     @classmethod
     def _is_terminal_for_gate(
@@ -506,6 +561,16 @@ class TaskStateStore:
             )
         with self._write_transaction() as connection:
             logical_count = self._active_logical_task_count(connection)
+            revision_identities: dict[str, set[tuple[str, str, int, str]]] = {}
+            for row in connection.execute(
+                """SELECT logical_id, task_type, condition_name, priority,
+                          dependencies_json
+                   FROM tasks"""
+            ).fetchall():
+                base = self._logical_revision_base(str(row["logical_id"]))
+                revision_identities.setdefault(base, set()).add(
+                    self._task_identity_from_row(row)
+                )
             known_by_evaluation, known_by_logical = self._load_existing_task_specs(
                 connection,
                 evaluation_keys=[spec.evaluation_key for spec, _, _ in prepared_specs],
@@ -514,15 +579,33 @@ class TaskStateStore:
             pending_inserts: list[tuple[object, ...]] = []
             pending_events: list[tuple[str, float, dict[str, object]]] = []
             new_logical_count = 0
+            new_revision_bases: set[str] = set()
             # 先在内存里完成整批去重、漂移和预算校验，确认无误后再一次性落库。
             for spec, spec_json, dependencies_json in prepared_specs:
                 known_entry = known_by_evaluation.get(spec.evaluation_key)
                 known_evaluation_key = known_by_logical.get(spec.logical_id)
                 if known_entry is None and known_evaluation_key is None:
-                    if logical_count + new_logical_count >= self.logical_task_cap:
-                        raise StateContractError(
-                            f"逻辑任务预算已耗尽: {logical_count + new_logical_count}/{self.logical_task_cap}"
-                        )
+                    revision_base = self._logical_revision_base(spec.logical_id)
+                    spec_identity = self._task_identity_from_spec(spec)
+                    existing_identities = revision_identities.get(revision_base)
+                    if existing_identities is not None:
+                        if existing_identities != {spec_identity}:
+                            raise StateContractError(
+                                f"逻辑任务版本身份漂移: {revision_base!r}"
+                            )
+                    else:
+                        if revision_base in new_revision_bases:
+                            raise StateContractError(
+                                f"同批注册了多个新逻辑任务版本: {revision_base!r}"
+                            )
+                        if logical_count + new_logical_count >= self.logical_task_cap:
+                            raise StateContractError(
+                                "逻辑任务预算已耗尽: "
+                                f"{logical_count + new_logical_count}/{self.logical_task_cap}"
+                            )
+                        new_logical_count += 1
+                        new_revision_bases.add(revision_base)
+                        revision_identities[revision_base] = {spec_identity}
                     pending_inserts.append(
                         (
                             spec.evaluation_key,
@@ -551,7 +634,6 @@ class TaskStateStore:
                         "spec_json": spec_json,
                     }
                     known_by_logical[spec.logical_id] = spec.evaluation_key
-                    new_logical_count += 1
                     continue
                 if known_entry is None or known_evaluation_key != spec.evaluation_key:
                     raise StateContractError(
@@ -990,6 +1072,180 @@ class TaskStateStore:
                         },
                     )
 
+    @staticmethod
+    def _logical_revision_base(logical_id: str) -> str:
+        return re.sub(r"::v\d+$", "", logical_id)
+
+    def retire_exhausted_tasks(
+        self,
+        retirements: Sequence[TaskRetirement],
+        *,
+        now: float | None = None,
+    ) -> None:
+        """把已有同逻辑冻结替代项的旧 exhausted 版本审计化退休。"""
+
+        if not retirements:
+            return
+        timestamp = time.time() if now is None else float(now)
+        seen_exhausted: set[str] = set()
+        seen_identities: set[str] = set()
+        for item in retirements:
+            exhausted_key = str(item.exhausted_evaluation_key)
+            if not exhausted_key:
+                raise StateContractError("retirement exhausted_evaluation_key 不得为空")
+            self._validate_task_spec(item.replacement)
+            if not item.identity or not item.reason:
+                raise StateContractError("retirement identity 与 reason 不得为空")
+            if not item.exhausted_plan_sha256 or not item.replacement_plan_sha256:
+                raise StateContractError("retirement plan sha256 不得为空")
+            if exhausted_key in seen_exhausted:
+                raise StateContractError(f"retirement exhausted task 重复: {exhausted_key!r}")
+            if item.identity in seen_identities:
+                raise StateContractError(f"retirement identity 重复: {item.identity!r}")
+            seen_exhausted.add(exhausted_key)
+            seen_identities.add(item.identity)
+
+        pending_rows: list[tuple[object, ...]] = []
+        pending_events: list[tuple[str, str, str, str, float]] = []
+        with self._write_transaction() as connection:
+            for item in retirements:
+                exhausted_key = str(item.exhausted_evaluation_key)
+                exhausted = connection.execute(
+                    "SELECT * FROM tasks WHERE evaluation_key=?",
+                    (exhausted_key,),
+                ).fetchone()
+                if exhausted is None:
+                    raise StateContractError(f"retirement exhausted task 不存在: {exhausted_key!r}")
+                replacement = connection.execute(
+                    "SELECT * FROM tasks WHERE evaluation_key=?",
+                    (item.replacement.evaluation_key,),
+                ).fetchone()
+                if replacement is None:
+                    raise StateContractError(
+                        f"retirement replacement 不存在: {item.replacement.evaluation_key!r}"
+                    )
+                if str(replacement["logical_id"]) != item.replacement.logical_id:
+                    raise StateContractError("retirement replacement logical_id 漂移")
+                if str(replacement["spec_json"]) != item.replacement.canonical_json():
+                    raise StateContractError("retirement replacement spec 漂移")
+
+                existing = connection.execute(
+                    "SELECT * FROM task_retirements WHERE exhausted_evaluation_key=? OR identity=?",
+                    (exhausted_key, item.identity),
+                ).fetchall()
+                exhausted_state = str(exhausted["state"])
+                if exhausted_state == "superseded":
+                    if len(existing) != 1:
+                        raise StateContractError(
+                            f"任务 {exhausted_key!r} 已 superseded，但缺少唯一 retirement 绑定"
+                        )
+                    row = existing[0]
+                    expected = {
+                        "replacement_evaluation_key": item.replacement.evaluation_key,
+                        "exhausted_logical_id": str(exhausted["logical_id"]),
+                        "replacement_logical_id": item.replacement.logical_id,
+                        "identity": item.identity,
+                        "reason": item.reason,
+                        "exhausted_plan_sha256": item.exhausted_plan_sha256,
+                        "replacement_plan_sha256": item.replacement_plan_sha256,
+                    }
+                    if any(str(row[key]) != str(value) for key, value in expected.items()):
+                        raise StateContractError(
+                            f"任务 {exhausted_key!r} 的 retirement manifest 发生漂移"
+                        )
+                    continue
+                if exhausted_state != "exhausted":
+                    raise StateContractError(
+                        f"任务 {exhausted_key!r} 当前状态 {exhausted_state!r}，不可退休"
+                    )
+                if existing:
+                    raise StateContractError(
+                        f"任务 {exhausted_key!r} 已绑定不同 retirement manifest"
+                    )
+                if str(replacement["state"]) != "frozen":
+                    raise StateContractError("retirement replacement 必须处于 frozen")
+                replacement_frozen = connection.execute(
+                    "SELECT 1 FROM frozen_results WHERE evaluation_key=?",
+                    (item.replacement.evaluation_key,),
+                ).fetchone()
+                if replacement_frozen is None:
+                    raise StateContractError("retirement replacement 缺少 frozen binding")
+                exhausted_identity = self._task_identity_from_row(exhausted)
+                replacement_identity = self._task_identity_from_row(replacement)
+                if exhausted_identity != replacement_identity:
+                    raise StateContractError("retirement task identity 不一致")
+                exhausted_base = self._logical_revision_base(str(exhausted["logical_id"]))
+                replacement_base = self._logical_revision_base(item.replacement.logical_id)
+                if exhausted_base != replacement_base:
+                    raise StateContractError(
+                        f"retirement logical revision 不一致: {exhausted_base!r} != {replacement_base!r}"
+                    )
+                if self._has_running_attempt(connection, exhausted_key):
+                    raise StateContractError("retirement exhausted task 仍有 running attempt")
+                if self._has_active_dependents(connection, exhausted_key):
+                    raise StateContractError("retirement exhausted task 仍被 active dependents 引用")
+                supersession = connection.execute(
+                    "SELECT 1 FROM task_supersessions WHERE predecessor_evaluation_key=?",
+                    (exhausted_key,),
+                ).fetchone()
+                if supersession is not None:
+                    raise StateContractError("retirement exhausted task 已有 supersession 绑定")
+
+                pending_rows.append(
+                    (
+                        exhausted_key,
+                        item.replacement.evaluation_key,
+                        str(exhausted["logical_id"]),
+                        item.replacement.logical_id,
+                        item.identity,
+                        item.reason,
+                        item.exhausted_plan_sha256,
+                        item.replacement_plan_sha256,
+                        int(exhausted["attempt_count"]),
+                        exhausted["last_error_class"],
+                        timestamp,
+                    )
+                )
+                pending_events.append(
+                    (
+                        exhausted_key,
+                        item.replacement.evaluation_key,
+                        item.identity,
+                        item.reason,
+                        timestamp,
+                    )
+                )
+
+            if pending_rows:
+                connection.executemany(
+                    """INSERT INTO task_retirements(
+                           exhausted_evaluation_key, replacement_evaluation_key,
+                           exhausted_logical_id, replacement_logical_id, identity, reason,
+                           exhausted_plan_sha256, replacement_plan_sha256,
+                           exhausted_attempt_count, exhausted_last_error_class, retired_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    pending_rows,
+                )
+                connection.executemany(
+                    """UPDATE tasks
+                       SET state='superseded', lease_expires_at=NULL,
+                           last_error_class=NULL, updated_at=?
+                       WHERE evaluation_key=?""",
+                    [(event_at, exhausted_key) for exhausted_key, _, _, _, event_at in pending_events],
+                )
+                for exhausted_key, replacement_key, identity, reason, event_at in pending_events:
+                    self._event(
+                        connection,
+                        event_type="exhausted_task_retired",
+                        event_at=event_at,
+                        evaluation_key=exhausted_key,
+                        details={
+                            "replacement_evaluation_key": replacement_key,
+                            "identity": identity,
+                            "reason": reason,
+                        },
+                    )
+
     def attempts_reserved(self) -> int:
         with self._connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()
@@ -1006,13 +1262,14 @@ class TaskStateStore:
             superseded_count = int(
                 len(self._valid_superseded_predecessors(connection))
             )
+            active_count = self._count_active_logical_tasks(connection)
             attempt_count = int(
                 connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()["count"]
             )
         state_counts = {str(row["state"]): int(row["count"]) for row in state_rows}
         return {
             "logical_tasks": {
-                "active": historical_count - superseded_count,
+                "active": active_count,
                 "historical": historical_count,
                 "superseded": superseded_count,
                 "state_counts": state_counts,

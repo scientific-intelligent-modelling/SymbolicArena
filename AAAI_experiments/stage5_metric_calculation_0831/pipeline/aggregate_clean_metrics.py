@@ -58,7 +58,8 @@ STRUCTURE_NO_CALL_REASONS = {"invalid_seed_or_expression"}
 GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
 RUN_LOGICAL_ID_RE_TEMPLATE = r"^{prefix}::([a-z0-9_]+)::(g\d{{4}})::s(520|521|522)::clean{suffix}$"
 STRUCTURE_LOGICAL_ID_RE = re.compile(
-    r"^stab_structure::([a-z0-9_]+)::(g\d{4})::s(520|521|522)-s?(520|521|522)$"
+    r"^stab_structure::([a-z0-9_]+)::(g\d{4})::s(520|521|522)-s?(520|521|522)"
+    r"(?:::v[1-9]\d*)?$"
 )
 NUMERIC_LOGICAL_KEY_RE = re.compile(r"^([^:]+)::([^:]+)::s(520|521|522)::clean$")
 
@@ -175,7 +176,11 @@ def _parse_gt_logical_id(logical_id: str) -> str:
 
 
 def _parse_run_logical_id(logical_id: str, *, expected_prefix: str) -> tuple[str, str, int]:
-    suffix = r"(?:::v[1-9]\d*)?" if expected_prefix == "pred_simplify" else ""
+    suffix = (
+        r"(?:::v[1-9]\d*)?"
+        if expected_prefix in {"pred_simplify", "equivalence"}
+        else ""
+    )
     pattern = re.compile(
         RUN_LOGICAL_ID_RE_TEMPLATE.format(
             prefix=re.escape(expected_prefix),
@@ -274,7 +279,7 @@ def _validate_simplify_structured_output(
         effective_expression = _string(
             row.get("effective_expression"),
             context=f"{logical_id}.effective_expression",
-        )
+        ).strip()
         expression_resolution = _string(
             row.get("expression_resolution"),
             context=f"{logical_id}.expression_resolution",

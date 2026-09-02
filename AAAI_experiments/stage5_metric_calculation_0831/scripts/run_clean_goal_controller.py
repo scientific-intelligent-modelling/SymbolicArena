@@ -3,14 +3,15 @@
 
 说明：
 1. 该控制器不会重复启动已在运行中的 pred simplify batch，而是等待其收口；
-2. pred simplify 收口后，会自动执行 exhausted 审计/补冻、symbolic 任务构建、
-   equivalence 与 structure 批处理、evidence 物化，以及 clean 聚合；
+2. pred simplify 收口后，会自动执行 frozen 审计、流式 symbolic 任务构建、
+   双渠道 Opus5 API 的 equivalence/structure 批处理、evidence 物化与 clean 聚合；
 3. 该脚本可重复执行，尽量保持幂等；已完成阶段会被复用。
 """
 
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import sqlite3
 import subprocess
@@ -27,39 +28,72 @@ RESULTS_DIR = STAGE_ROOT / "results"
 STATE_DB = STAGE_ROOT / "llm/control/state_v2.sqlite3"
 ATTEMPTS_DIR = STAGE_ROOT / "llm/attempts_v2"
 FROZEN_DIR = STAGE_ROOT / "llm/frozen_v2"
+API_ATTEMPTS_DIR = STAGE_ROOT / "llm/api_attempts_v1"
+API_FROZEN_DIR = STAGE_ROOT / "llm/api_frozen_v1"
 PREDECESSOR_MANIFEST = STAGE_ROOT / "manifests/predecessor_attempts_v1.json"
 
+
+def _latest_revisioned_plan(base_plan: Path) -> Path:
+    pattern = re.compile(
+        rf"^{re.escape(base_plan.stem)}_active_v(?P<version>[1-9]\d*)\.jsonl$"
+    )
+    candidates: list[tuple[int, Path]] = []
+    for candidate in base_plan.parent.glob(f"{base_plan.stem}_active_v*.jsonl"):
+        match = pattern.fullmatch(candidate.name)
+        if match is not None:
+            candidates.append((int(match.group("version")), candidate))
+    return max(candidates, default=(0, base_plan), key=lambda item: item[0])[1]
+
 GT_PLAN = REPORTS_DIR / "clean_gt_simplify_tasks_v2.jsonl"
-PRED_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks_active_v3.jsonl"
+PRED_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks_active_v5.jsonl"
+PRED_LEGACY_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks_active_v3.jsonl"
+PRED_API_REPAIR_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks_active_v4.jsonl"
 GT_INDEX = RESULTS_DIR / "clean_gt_simplify_frozen_index_v2.jsonl"
 GT_SUMMARY = REPORTS_DIR / "clean_gt_simplify_frozen_index_v2_summary.json"
-PRED_INDEX = RESULTS_DIR / "clean_pred_simplify_frozen_index_active_v3.jsonl"
-PRED_SUMMARY = REPORTS_DIR / "clean_pred_simplify_frozen_index_active_v3_summary.json"
-EQ_PLAN = REPORTS_DIR / "clean_equivalence_tasks.jsonl"
+PRED_INDEX = RESULTS_DIR / "clean_pred_simplify_frozen_index_active_v5.jsonl"
+PRED_SUMMARY = REPORTS_DIR / "clean_pred_simplify_frozen_index_active_v5_summary.json"
+EQ_BASE_PLAN = REPORTS_DIR / "clean_equivalence_tasks.jsonl"
+EQ_PLAN = _latest_revisioned_plan(EQ_BASE_PLAN)
 EQ_NON_APPLICABLE = REPORTS_DIR / "clean_equivalence_non_applicable.jsonl"
-EQ_FULL_PLAN = REPORTS_DIR / "clean_equivalence_full_plan.jsonl"
+EQ_FULL_PLAN = (
+    EQ_PLAN
+    if EQ_PLAN != EQ_BASE_PLAN
+    else REPORTS_DIR / "clean_equivalence_full_plan.jsonl"
+)
 EQ_REGISTER_REPORT = REPORTS_DIR / "clean_equivalence_register_report.json"
 EQ_INDEX = REPORTS_DIR / "clean_equivalence_frozen_index.jsonl"
 EQ_SUMMARY = REPORTS_DIR / "clean_equivalence_frozen_index_summary.json"
-STRUCT_PLAN = REPORTS_DIR / "clean_structure_tasks.jsonl"
+STRUCT_BASE_PLAN = REPORTS_DIR / "clean_structure_tasks.jsonl"
+STRUCT_PLAN = _latest_revisioned_plan(STRUCT_BASE_PLAN)
 STRUCT_NON_APPLICABLE = REPORTS_DIR / "clean_structure_non_applicable.jsonl"
-STRUCT_FULL_PLAN = REPORTS_DIR / "clean_structure_full_plan.jsonl"
+STRUCT_FULL_PLAN = (
+    STRUCT_PLAN
+    if STRUCT_PLAN != STRUCT_BASE_PLAN
+    else REPORTS_DIR / "clean_structure_full_plan.jsonl"
+)
 STRUCT_REGISTER_REPORT = REPORTS_DIR / "clean_structure_register_report.json"
 STRUCT_INDEX = REPORTS_DIR / "clean_structure_frozen_index.jsonl"
 STRUCT_SUMMARY = REPORTS_DIR / "clean_structure_frozen_index_summary.json"
 SYMBOLIC_PLAN_REPORT = REPORTS_DIR / "clean_symbolic_task_plan.json"
-PRED_RECOVERED_REPORT = REPORTS_DIR / "clean_pred_active_v3_recovered_attempts.json"
+EQ_PLAN_REPORT = REPORTS_DIR / "clean_equivalence_task_plan.json"
+STRUCT_PLAN_REPORT = REPORTS_DIR / "clean_structure_task_plan.json"
+PRED_RECOVERED_REPORT = REPORTS_DIR / "clean_pred_active_v5_recovered_attempts.json"
 PRED_EXHAUSTED_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v3_exhausted_audit.jsonl"
 PRED_EXHAUSTED_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v3_exhausted_audit_report.json"
 PRED_FROZEN_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v3_frozen_audit.jsonl"
 PRED_FROZEN_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v3_frozen_audit_report.json"
+PRED_API_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v5_api_frozen_audit.jsonl"
+PRED_API_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v5_api_frozen_audit_report.json"
+PRED_AUDIT_REPAIR_REPORT = REPORTS_DIR / "clean_pred_active_v4_audit_repair.json"
+PRED_IDENTITY_REPAIR_REPORT = REPORTS_DIR / "clean_pred_simplify_tasks_active_v5_report.json"
+PRED_COMBINED_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v5_combined_audit_report.json"
 EQ_RECOVERED_REPORT = REPORTS_DIR / "clean_equivalence_recovered_attempts.json"
 STRUCT_RECOVERED_REPORT = REPORTS_DIR / "clean_structure_recovered_attempts.json"
 EVIDENCE_JSONL = RESULTS_DIR / "clean_pred_vs_gt_evidence.jsonl"
 EVIDENCE_REPORT = REPORTS_DIR / "clean_pred_vs_gt_evidence_report.json"
 AGGREGATE_REPORT = REPORTS_DIR / "aggregate_clean_metrics.json"
 
-RUN_CLAUDE_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan"
+RUN_API_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_anthropic_api_plan"
 MATERIALIZE_RECOVERED_MODULE = (
     "AAAI_experiments.stage5_metric_calculation_0831.pipeline.materialize_recovered_attempts"
 )
@@ -69,6 +103,9 @@ AUDIT_EXHAUSTED_MODULE = (
 AUDIT_FROZEN_MODULE = (
     "AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_frozen_simplifications"
 )
+AUDIT_API_FROZEN_MODULE = (
+    "AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_api_frozen_simplifications"
+)
 PROMOTE_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.promote_revalidated_attempt"
 FROZEN_INDEX_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index"
 SYMBOLIC_BUILDER_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder"
@@ -76,10 +113,12 @@ REGISTER_SYMBOLIC_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipe
 EVIDENCE_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.materialize_pred_vs_gt_evidence"
 AGGREGATE_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.aggregate_clean_metrics"
 
-BATCH_LIMIT = 256
-WORKERS = 8
+BATCH_LIMIT = 512
+WORKERS = 64
+SEMANTIC_WORKERS = 4
+MAX_TOKENS = 6144
 POLL_SECONDS = 30
-CLAUDE_RESOURCE_PREFIX = ["nice", "-n", "5", "taskset", "-c", "0-3,6-9"]
+RESOURCE_PREFIX = ["nice", "-n", "5", "taskset", "-c", "0-3,6-9"]
 
 
 class GoalControllerError(RuntimeError):
@@ -107,6 +146,24 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise GoalControllerError(f"{path} 顶层不是 JSON object")
     return payload
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(path)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -156,7 +213,7 @@ def _task_counts(task_type: str, condition: str = "clean") -> dict[str, int]:
 
 def _active_plan_pids(plan_path: Path) -> list[int]:
     plan_fragment = re.escape(plan_path.name)
-    pattern = f"run_claude_plan .*{plan_fragment}"
+    pattern = f"run_(?:claude|anthropic_api)_plan .*{plan_fragment}"
     completed = subprocess.run(
         ["pgrep", "-af", pattern],
         cwd=REPO_ROOT,
@@ -217,24 +274,30 @@ def _drive_plan_batches(*, plan_path: Path, task_type: str, report_prefix: str) 
             continue
         report_path = _next_batch_report(report_prefix)
         cmd = [
-            *CLAUDE_RESOURCE_PREFIX,
+            *RESOURCE_PREFIX,
             sys.executable,
             "-m",
-            RUN_CLAUDE_MODULE,
+            RUN_API_MODULE,
             "--plan-jsonl",
             _rel(plan_path),
             "--state-db",
             _rel(STATE_DB),
             "--attempts-dir",
-            _rel(ATTEMPTS_DIR),
+            _rel(API_ATTEMPTS_DIR),
             "--frozen-dir",
-            _rel(FROZEN_DIR),
+            _rel(API_FROZEN_DIR),
             "--report-json",
             _rel(report_path),
             "--limit",
             str(BATCH_LIMIT),
             "--workers",
             str(WORKERS),
+            "--per-channel-concurrency",
+            "32",
+            "--semantic-validation-concurrency",
+            str(SEMANTIC_WORKERS),
+            "--max-tokens",
+            str(MAX_TOKENS),
             "--physical-attempt-offset",
             "12",
             "--predecessor-attempt-manifest",
@@ -266,7 +329,7 @@ def _materialize_recovered_attempts(plan_path: Path, report_path: Path) -> None:
             "--state-db",
             _rel(STATE_DB),
             "--attempts-dir",
-            _rel(ATTEMPTS_DIR),
+            _rel(API_ATTEMPTS_DIR),
             "--report-json",
             _rel(report_path),
         ]
@@ -360,7 +423,7 @@ def _build_pred_index() -> None:
             _rel(PRED_SUMMARY),
             "--allow-exhausted",
             "--attempts-dir",
-            _rel(ATTEMPTS_DIR),
+            _rel(API_ATTEMPTS_DIR),
         ]
     )
     summary = _read_json(PRED_SUMMARY)
@@ -369,73 +432,175 @@ def _build_pred_index() -> None:
         raise GoalControllerError(f"pred frozen index 仍有 exhausted={exhausted}，不能进入 clean 正式聚合")
 
 
+def _verify_mixed_pred_audit() -> None:
+    legacy = _read_json(PRED_FROZEN_AUDIT_REPORT)
+    repair = _read_json(PRED_AUDIT_REPAIR_REPORT)
+    identity = _read_json(PRED_IDENTITY_REPAIR_REPORT)
+    api = _read_json(PRED_API_AUDIT_REPORT)
+
+    if (
+        legacy.get("status") != "failed"
+        or legacy.get("passed_count") != 2228
+        or legacy.get("failed_count") != 22
+        or legacy.get("plan_sha256") != _sha256_file(PRED_LEGACY_PLAN)
+        or legacy.get("output_sha256") != _sha256_file(PRED_FROZEN_AUDIT_JSONL)
+    ):
+        raise GoalControllerError("旧 Claude Code frozen 审计证据不满足 2228/22 拆分契约")
+    if (
+        repair.get("status") != "ok"
+        or repair.get("failed_count") != 22
+        or repair.get("predecessor_plan_sha256") != legacy.get("plan_sha256")
+        or repair.get("output_plan_sha256") != _sha256_file(PRED_API_REPAIR_PLAN)
+        or len(repair.get("bindings", [])) != 22
+    ):
+        raise GoalControllerError("v3 到 v4 的 22 项审计修复链不完整")
+    if (
+        identity.get("status") != "ok"
+        or identity.get("preserved_frozen_count") != 2238
+        or identity.get("successor_task_count") != 12
+        or identity.get("predecessor_plan_sha256") != repair.get("output_plan_sha256")
+        or identity.get("output_sha256") != _sha256_file(PRED_PLAN)
+    ):
+        raise GoalControllerError("v4 到 v5 的 12 项 identity 恢复链不完整")
+    if (
+        api.get("status") != "ok"
+        or api.get("plan_sha256") != identity.get("output_sha256")
+        or api.get("audited_count") != 22
+        or api.get("passed_count") != 22
+        or api.get("failed_count") != 0
+        or api.get("output_sha256") != _sha256_file(PRED_API_AUDIT_JSONL)
+    ):
+        raise GoalControllerError("双渠道 API frozen 独立审计未形成 22/22 闭环")
+
+    _atomic_write_json(
+        PRED_COMBINED_AUDIT_REPORT,
+        {
+            "status": "ok",
+            "model_invoked": False,
+            "active_plan_jsonl": str(PRED_PLAN.resolve()),
+            "active_plan_sha256": _sha256_file(PRED_PLAN),
+            "legacy_passed_count": 2228,
+            "api_passed_count": 22,
+            "combined_passed_count": 2250,
+            "combined_failed_count": 0,
+            "legacy_audit_report": str(PRED_FROZEN_AUDIT_REPORT.resolve()),
+            "api_audit_report": str(PRED_API_AUDIT_REPORT.resolve()),
+            "audit_repair_report": str(PRED_AUDIT_REPAIR_REPORT.resolve()),
+            "identity_repair_report": str(PRED_IDENTITY_REPAIR_REPORT.resolve()),
+        },
+    )
+
+
 def _audit_pred_frozen() -> None:
+    if PRED_COMBINED_AUDIT_REPORT.exists():
+        try:
+            _verify_mixed_pred_audit()
+        except GoalControllerError as exc:
+            log("pred_combined_audit_not_reusable", error=str(exc))
+        else:
+            log(
+                "reuse_pred_combined_audit",
+                report_json=str(PRED_COMBINED_AUDIT_REPORT),
+            )
+            return
     _run(
         [
-            *CLAUDE_RESOURCE_PREFIX,
+            *RESOURCE_PREFIX,
             sys.executable,
             "-m",
-            AUDIT_FROZEN_MODULE,
+            AUDIT_API_FROZEN_MODULE,
             "--plan-jsonl",
             _rel(PRED_PLAN),
             "--state-db",
             _rel(STATE_DB),
             "--attempts-dir",
-            _rel(ATTEMPTS_DIR),
+            _rel(API_ATTEMPTS_DIR),
             "--frozen-dir",
-            _rel(FROZEN_DIR),
+            _rel(API_FROZEN_DIR),
             "--output-jsonl",
-            _rel(PRED_FROZEN_AUDIT_JSONL),
+            _rel(PRED_API_AUDIT_JSONL),
             "--report-json",
-            _rel(PRED_FROZEN_AUDIT_REPORT),
-            "--expected-plan-count",
-            "2250",
+            _rel(PRED_API_AUDIT_REPORT),
+            "--expected-api-count",
+            "22",
             "--semantic-timeout-seconds",
-            "90",
+            "300",
             "--workers",
-            str(WORKERS),
+            str(SEMANTIC_WORKERS),
         ]
     )
+    _verify_mixed_pred_audit()
 
 
 def _build_symbolic_plans() -> None:
-    _run(
-        [
-            sys.executable,
-            "-m",
-            SYMBOLIC_BUILDER_MODULE,
-            "--gt-frozen-index-jsonl",
-            _rel(GT_INDEX),
-            "--pred-frozen-index-jsonl",
-            _rel(PRED_INDEX),
-            "--gt-frozen-summary-json",
-            _rel(GT_SUMMARY),
-            "--pred-frozen-summary-json",
-            _rel(PRED_SUMMARY),
-            "--clean-run-metrics-csv",
-            _rel(RESULTS_DIR / "clean_numeric_run_metrics.csv"),
-            "--gt-plan-jsonl",
-            _rel(GT_PLAN),
-            "--pred-plan-jsonl",
-            _rel(PRED_PLAN),
-            "--phase",
-            "all",
-            "--equivalence-output-jsonl",
-            _rel(EQ_PLAN),
-            "--equivalence-non-applicable-index-jsonl",
-            _rel(EQ_NON_APPLICABLE),
-            "--equivalence-full-plan-jsonl",
-            _rel(EQ_FULL_PLAN),
-            "--structure-output-jsonl",
-            _rel(STRUCT_PLAN),
-            "--structure-non-applicable-index-jsonl",
-            _rel(STRUCT_NON_APPLICABLE),
-            "--structure-full-plan-jsonl",
-            _rel(STRUCT_FULL_PLAN),
-            "--report-json",
-            _rel(SYMBOLIC_PLAN_REPORT),
-        ]
-    )
+    common = [
+        sys.executable,
+        "-m",
+        SYMBOLIC_BUILDER_MODULE,
+        "--gt-frozen-index-jsonl",
+        _rel(GT_INDEX),
+        "--pred-frozen-index-jsonl",
+        _rel(PRED_INDEX),
+        "--gt-frozen-summary-json",
+        _rel(GT_SUMMARY),
+        "--pred-frozen-summary-json",
+        _rel(PRED_SUMMARY),
+        "--clean-run-metrics-csv",
+        _rel(RESULTS_DIR / "clean_numeric_run_metrics.csv"),
+        "--gt-plan-jsonl",
+        _rel(GT_PLAN),
+        "--pred-plan-jsonl",
+        _rel(PRED_PLAN),
+        "--non-applicable-evidence-dir",
+        _rel(REPORTS_DIR / "clean_symbolic_non_applicable"),
+        "--stream-tasks",
+    ]
+    if EQ_PLAN == EQ_BASE_PLAN:
+        _run(
+            [
+                *RESOURCE_PREFIX,
+                *common,
+                "--phase",
+                "equivalence",
+                "--output-jsonl",
+                _rel(EQ_PLAN),
+                "--non-applicable-index-jsonl",
+                _rel(EQ_NON_APPLICABLE),
+                "--equivalence-output-jsonl",
+                _rel(EQ_PLAN),
+                "--equivalence-non-applicable-index-jsonl",
+                _rel(EQ_NON_APPLICABLE),
+                "--equivalence-full-plan-jsonl",
+                _rel(EQ_FULL_PLAN),
+                "--report-json",
+                _rel(EQ_PLAN_REPORT),
+            ]
+        )
+    else:
+        log("reuse_revisioned_equivalence_plan", plan_jsonl=str(EQ_PLAN))
+    if STRUCT_PLAN == STRUCT_BASE_PLAN:
+        _run(
+            [
+                *RESOURCE_PREFIX,
+                *common,
+                "--phase",
+                "structure",
+                "--output-jsonl",
+                _rel(STRUCT_PLAN),
+                "--non-applicable-index-jsonl",
+                _rel(STRUCT_NON_APPLICABLE),
+                "--structure-output-jsonl",
+                _rel(STRUCT_PLAN),
+                "--structure-non-applicable-index-jsonl",
+                _rel(STRUCT_NON_APPLICABLE),
+                "--structure-full-plan-jsonl",
+                _rel(STRUCT_FULL_PLAN),
+                "--report-json",
+                _rel(STRUCT_PLAN_REPORT),
+            ]
+        )
+    else:
+        log("reuse_revisioned_structure_plan", plan_jsonl=str(STRUCT_PLAN))
 
 
 def _register_symbolic(plan_path: Path, non_applicable_path: Path, report_path: Path) -> None:

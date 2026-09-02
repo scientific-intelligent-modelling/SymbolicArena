@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache
 import glob
 import gzip
@@ -35,17 +36,26 @@ DEFAULT_FREEZE_GLOB = str(
 SIMPLIFY_PROMPT_RELATIVE = STAGE_ROOT_RELATIVE / "config/prompts/simplify.v1.txt"
 SIMPLIFY_SCHEMA_RELATIVE = STAGE_ROOT_RELATIVE / "config/schemas/simplify.v1.json"
 DEFAULT_OUTPUT_JSONL = STAGE_ROOT_RELATIVE / "reports/clean_simplify_tasks.jsonl"
+DEFAULT_FULL_PLAN_JSONL = STAGE_ROOT_RELATIVE / "reports/clean_simplify_full_plan.jsonl"
 DEFAULT_REPORT_JSON = STAGE_ROOT_RELATIVE / "reports/clean_simplify_task_plan.json"
+DEFAULT_NON_APPLICABLE_INDEX_JSONL = (
+    STAGE_ROOT_RELATIVE / "reports/clean_simplify_non_applicable.jsonl"
+)
+DEFAULT_NON_APPLICABLE_EVIDENCE_DIR = (
+    STAGE_ROOT_RELATIVE / "reports/clean_simplify_non_applicable"
+)
 TASK_PHASES = ("gt", "pred", "all")
 GT_TASK_TYPE = "gt_simplify"
 PRED_TASK_TYPE = "pred_simplify"
 CONDITION = "clean"
+SUPPORTED_CONDITIONS = ("clean", "noise001", "noise005")
+CONDITION_SIGMA = {"clean": 0.0, "noise001": 0.01, "noise005": 0.05}
 GT_PRIORITY = 10
 PRED_PRIORITY = 20
 FUTURE_EQUIVALENCE_MAX = 2250
 FUTURE_STRUCTURE_MAX = 2250
 TASK_ID_PATTERN = re.compile(
-    r"^(?P<algorithm_slug>[a-z0-9]+)_s(?P<seed>\d+)_clean_g(?P<dataset_index>\d{4})$"
+    r"^(?P<algorithm_slug>[a-z0-9]+)_s(?P<seed>\d+)_(?P<condition>clean|noise001|noise005)_g(?P<dataset_index>\d{4})$"
 )
 CANONICAL_VARIABLE_PATTERN = re.compile(r"\bx\d+\b")
 INDEXED_VARIABLE_PATTERN = re.compile(r"\b(?:x|X|col)(\d+)\b")
@@ -140,6 +150,21 @@ class PlannedTask:
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
+
+
+def _default_pred_freeze_glob(
+    condition: str,
+    *,
+    repo_root: Path | None = None,
+) -> str:
+    root = (repo_root or _repo_root()).resolve()
+    if condition == CONDITION:
+        return str(root / DEFAULT_FREEZE_GLOB)
+    return str(
+        root
+        / STAGE_ROOT_RELATIVE
+        / f"source_snapshot/result_freeze/{condition}_results.jsonl.gz"
+    )
 
 
 def _canonical_json(value: object) -> str:
@@ -245,6 +270,13 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def _atomic_write_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_bytes(payload)
+    temporary.replace(path)
 
 
 def _require_mapping(value: object, *, context: str) -> Mapping[str, Any]:
@@ -531,7 +563,11 @@ def load_dataset_probes(path: Path) -> tuple[dict[str, dict[str, Any]], str]:
     return by_dataset, _sha256_bytes(raw_bytes)
 
 
-def load_formula_recovery_manifest(path: Path) -> tuple[dict[str, dict[str, Any]], str]:
+def load_formula_recovery_manifest(
+    path: Path,
+    *,
+    expected_condition: str = CONDITION,
+) -> tuple[dict[str, dict[str, Any]], str]:
     raw_bytes = path.read_bytes()
     try:
         payload = json.loads(raw_bytes.decode("utf-8"))
@@ -540,8 +576,10 @@ def load_formula_recovery_manifest(path: Path) -> tuple[dict[str, dict[str, Any]
     root = _require_mapping(payload, context=str(path))
     if root.get("schema_version") != "formula_recovery.v1":
         raise CleanTaskBuilderError("公式恢复 manifest schema_version 不匹配")
-    if root.get("condition") != CONDITION:
-        raise CleanTaskBuilderError("公式恢复 manifest condition 不是 clean")
+    if root.get("condition") != expected_condition:
+        raise CleanTaskBuilderError(
+            f"公式恢复 manifest condition 不是 {expected_condition}"
+        )
     entries = root.get("entries")
     if not isinstance(entries, list):
         raise CleanTaskBuilderError("公式恢复 manifest.entries 不是数组")
@@ -550,8 +588,13 @@ def load_formula_recovery_manifest(path: Path) -> tuple[dict[str, dict[str, Any]
     for index, raw_entry in enumerate(entries):
         entry = dict(_require_mapping(raw_entry, context=f"manifest.entries[{index}]"))
         task_id = entry.get("task_id")
-        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+        task_match = TASK_ID_PATTERN.fullmatch(task_id) if isinstance(task_id, str) else None
+        if task_match is None:
             raise CleanTaskBuilderError(f"公式恢复 entry.task_id 非法: {task_id!r}")
+        if task_match.group("condition") != expected_condition:
+            raise CleanTaskBuilderError(
+                f"{task_id}: entry condition 与 manifest condition={expected_condition!r} 不一致"
+            )
         if task_id in by_task_id:
             raise CleanTaskBuilderError(f"公式恢复 manifest 存在重复 task_id: {task_id}")
         resolution = entry.get("resolution")
@@ -624,6 +667,7 @@ def _resolve_prediction_formula(
     frozen_equation_sha256: str | None,
     feature_names: Sequence[str],
     recovery_entries: Mapping[str, Mapping[str, Any]],
+    allow_missing_parameter_recovery: bool = False,
 ) -> FormulaResolution:
     if not selected_expression:
         return FormulaResolution("", "", {}, "missing", None)
@@ -640,6 +684,14 @@ def _resolve_prediction_formula(
 
     if has_parameter_reference:
         if entry is None:
+            if allow_missing_parameter_recovery:
+                return FormulaResolution(
+                    "",
+                    expression_body,
+                    {},
+                    "unavailable",
+                    None,
+                )
             raise CleanTaskBuilderError(f"{task_id}: 未实例化 params 公式缺少恢复记录")
         if entry["resolution"] == "unavailable":
             return FormulaResolution(
@@ -735,13 +787,13 @@ def select_formula_with_source(payload: Mapping[str, Any]) -> tuple[str, str]:
     return expression, selected_from
 
 
-def _parse_task_identity(source: Mapping[str, Any]) -> dict[str, Any]:
+def _parse_task_identity(source: Mapping[str, Any], *, condition: str = CONDITION) -> dict[str, Any]:
     task_id = source.get("task_id")
     if not isinstance(task_id, str) or not task_id:
         raise CleanTaskBuilderError("freeze source.task_id 缺失")
     match = TASK_ID_PATTERN.fullmatch(task_id)
     if match is None:
-        raise CleanTaskBuilderError(f"无法解析 clean task_id: {task_id!r}")
+        raise CleanTaskBuilderError(f"无法解析 Stage5 task_id: {task_id!r}")
     seed_from_task = int(match.group("seed"))
     seed_raw = source.get("seed")
     try:
@@ -750,9 +802,15 @@ def _parse_task_identity(source: Mapping[str, Any]) -> dict[str, Any]:
         raise CleanTaskBuilderError(f"freeze source.seed 非法: {seed_raw!r}") from exc
     if seed != seed_from_task:
         raise CleanTaskBuilderError(f"freeze source.seed 与 task_id 不一致: {task_id!r}")
+    if seed not in {520, 521, 522}:
+        raise CleanTaskBuilderError(f"freeze source.seed 不属于正式种子集合: {seed}")
+    task_condition = match.group("condition")
     noise_tag = source.get("noise_tag")
-    if noise_tag != CONDITION:
-        raise CleanTaskBuilderError(f"检测到非 clean 轨迹混入: {task_id!r}, noise_tag={noise_tag!r}")
+    if task_condition != condition or noise_tag != condition:
+        raise CleanTaskBuilderError(
+            f"condition 身份不一致: {task_id!r}, task={task_condition!r}, "
+            f"noise_tag={noise_tag!r}, expected={condition!r}"
+        )
     return {
         "task_id": task_id,
         "algorithm_slug": match.group("algorithm_slug"),
@@ -761,25 +819,40 @@ def _parse_task_identity(source: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _validate_clean_payload(source: Mapping[str, Any], payload: Mapping[str, Any]) -> None:
+def _validate_condition_payload(
+    source: Mapping[str, Any], payload: Mapping[str, Any], *, condition: str
+) -> None:
     train_label_noise = payload.get("train_label_noise")
     if not isinstance(train_label_noise, Mapping):
+        if condition != CONDITION:
+            raise CleanTaskBuilderError(
+                f"{source.get('task_id')}: noise 结果缺少 train_label_noise 契约"
+            )
         return
-    if bool(train_label_noise.get("enabled")) or bool(train_label_noise.get("requested")):
+    enabled = train_label_noise.get("enabled")
+    requested = train_label_noise.get("requested")
+    if not isinstance(enabled, bool) or not isinstance(requested, bool):
         raise CleanTaskBuilderError(
-            f"{source.get('task_id')}: train_label_noise 标记显示不是 clean"
+            f"{source.get('task_id')}: train_label_noise enabled/requested 必须为布尔值"
+        )
+    expected_enabled = condition != CONDITION
+    if enabled != expected_enabled or requested != expected_enabled:
+        raise CleanTaskBuilderError(
+            f"{source.get('task_id')}: train_label_noise enabled/requested 与 {condition} 不一致"
         )
     sigma = train_label_noise.get("sigma")
     if isinstance(sigma, bool):
         raise CleanTaskBuilderError(f"{source.get('task_id')}: sigma 非法")
-    if sigma not in (None, 0, 0.0):
-        try:
-            if float(sigma) != 0.0:
-                raise CleanTaskBuilderError(
-                    f"{source.get('task_id')}: sigma={sigma!r}，不是 clean 结果"
-                )
-        except (TypeError, ValueError) as exc:
-            raise CleanTaskBuilderError(f"{source.get('task_id')}: sigma 非法") from exc
+    try:
+        parsed_sigma = 0.0 if sigma is None and condition == CONDITION else float(sigma)
+    except (TypeError, ValueError) as exc:
+        raise CleanTaskBuilderError(f"{source.get('task_id')}: sigma 非法") from exc
+    if not math.isfinite(parsed_sigma) or not math.isclose(
+        parsed_sigma, CONDITION_SIGMA[condition], rel_tol=0.0, abs_tol=1e-12
+    ):
+        raise CleanTaskBuilderError(
+            f"{source.get('task_id')}: sigma={sigma!r} 与 {condition} 契约不一致"
+        )
 
 
 def _gt_logical_id(dataset_id: str, *, suffix: str | None = None) -> str:
@@ -787,10 +860,10 @@ def _gt_logical_id(dataset_id: str, *, suffix: str | None = None) -> str:
     return f"{logical_id}::{suffix}" if suffix is not None else logical_id
 
 
-def _pred_logical_id(identity: Mapping[str, Any]) -> str:
+def _pred_logical_id(identity: Mapping[str, Any], *, condition: str = CONDITION) -> str:
     return (
         f"{PRED_TASK_TYPE}::{identity['algorithm_slug']}::g{identity['dataset_index']}"
-        f"::s{identity['seed']}::{CONDITION}"
+        f"::s{identity['seed']}::{condition}"
     )
 
 
@@ -802,6 +875,7 @@ def _build_task_definition(
     request: dict[str, Any],
     evidence_hash: str,
     contract: PromptSchemaBundle,
+    condition: str = CONDITION,
 ) -> PlannedTask:
     normalized_input = _build_contract_input(
         request=request,
@@ -823,7 +897,7 @@ def _build_task_definition(
         evaluation_key=task_key,
         logical_id=logical_id,
         task_type=task_type,
-        condition=CONDITION,
+        condition=condition,
         priority=priority,
         input_hash=input_hash,
         prompt_version=contract.prompt_version,
@@ -849,6 +923,7 @@ def _no_call_record(
     request_context: dict[str, Any],
     evidence_hash: str,
     contract: PromptSchemaBundle,
+    condition: str = CONDITION,
 ) -> dict[str, Any]:
     normalized_input = _build_contract_input(
         request=request_context,
@@ -859,7 +934,7 @@ def _no_call_record(
         "phase": phase,
         "logical_id": logical_id,
         "task_type": task_type,
-        "condition": CONDITION,
+        "condition": condition,
         "reason": reason,
         "input_hash": _sha256_json(normalized_input),
         "evidence_hash": evidence_hash,
@@ -869,6 +944,106 @@ def _no_call_record(
         "schema_sha256": contract.schema_sha256,
         "request_context": request_context,
         "status": "planned_no_call",
+    }
+
+
+def _materialize_no_call_record(
+    record: Mapping[str, Any],
+    *,
+    contract: PromptSchemaBundle,
+    evidence_dir: Path,
+    write_evidence: bool,
+) -> dict[str, Any]:
+    logical_id = str(record["logical_id"])
+    task_type = str(record["task_type"])
+    phase = str(record["phase"])
+    condition = str(record["condition"])
+    reason = str(record["reason"])
+    source_evidence_hash = str(record["evidence_hash"])
+    request_context = dict(
+        _require_mapping(record["request_context"], context=f"{logical_id}.request_context")
+    )
+    request_context.pop("evidence_hash", None)
+    dependencies: tuple[str, ...] = ()
+    evidence_payload = {
+        "schema_version": "symbolic_non_applicable.v1",
+        "logical_id": logical_id,
+        "task_type": task_type,
+        "phase": phase,
+        "condition": condition,
+        "reason": reason,
+        "dependencies": list(dependencies),
+        "request_context": request_context,
+        "source_evidence_hash": source_evidence_hash,
+    }
+    evidence_bytes = _canonical_json(evidence_payload).encode("utf-8")
+    evidence_sha256 = _sha256_bytes(evidence_bytes)
+    request = {**request_context, "evidence_hash": evidence_sha256}
+    normalized_input = _build_contract_input(
+        request=request,
+        prompt_sha256=contract.prompt_sha256,
+        schema_sha256=contract.schema_sha256,
+    )
+    priority = GT_PRIORITY if task_type == GT_TASK_TYPE else PRED_PRIORITY
+    task_key = _evaluation_key_with_hashes(
+        task_type=task_type,
+        logical_id=logical_id,
+        prompt_version=contract.prompt_version,
+        prompt_sha256=contract.prompt_sha256,
+        schema_version=contract.schema_version,
+        schema_sha256=contract.schema_sha256,
+        normalized_input=normalized_input,
+        evidence_hash=evidence_sha256,
+    )
+    task_spec = TaskSpec(
+        evaluation_key=task_key,
+        logical_id=logical_id,
+        task_type=task_type,
+        condition=condition,
+        priority=priority,
+        input_hash=_sha256_json(normalized_input),
+        prompt_version=contract.prompt_version,
+        schema_version=contract.schema_version,
+        dependencies=dependencies,
+    )
+    evidence_path = (evidence_dir / f"{task_key}.json").resolve()
+    if write_evidence:
+        _atomic_write_bytes(evidence_path, evidence_bytes)
+        if _sha256_file(evidence_path) != evidence_sha256:
+            raise CleanTaskBuilderError(f"{logical_id}: non_applicable 证据文件 SHA 漂移")
+    return {
+        "phase": phase,
+        "logical_id": logical_id,
+        "task_type": task_type,
+        "condition": condition,
+        "priority": priority,
+        "reason": reason,
+        "evaluation_key": task_key,
+        "input_hash": task_spec.input_hash,
+        "evidence_hash": evidence_sha256,
+        "evidence_path": str(evidence_path),
+        "evidence_sha256": evidence_sha256,
+        "source_evidence_hash": source_evidence_hash,
+        "prompt_version": contract.prompt_version,
+        "prompt_sha256": contract.prompt_sha256,
+        "schema_version": contract.schema_version,
+        "schema_sha256": contract.schema_sha256,
+        "dependencies": list(dependencies),
+        "prompt_path": contract.prompt_path,
+        "schema_path": contract.schema_path,
+        "prompt_template": contract.prompt_template,
+        "schema_content": contract.schema,
+        "normalized_input": normalized_input,
+        "request": request,
+        "request_context": request_context,
+        "task_spec": json.loads(task_spec.canonical_json()),
+        "rendered_prompt": render_prompt(
+            contract.prompt_template,
+            request,
+            contract.schema,
+        ),
+        "evidence_payload": evidence_payload,
+        "status": "planned_non_applicable",
     }
 
 
@@ -1013,9 +1188,10 @@ def _build_pred_task(
     ground_truth_targets: Mapping[str, str],
     recovery_entries: Mapping[str, Mapping[str, Any]],
     dataset_probes: Mapping[str, Mapping[str, Any]],
+    condition: str = CONDITION,
 ) -> tuple[PlannedTask | None, dict[str, Any] | None]:
     source = _require_mapping(freeze_row.get("source"), context="freeze source")
-    identity = _parse_task_identity(source)
+    identity = _parse_task_identity(source, condition=condition)
     result = _require_mapping(freeze_row.get("result"), context=f"{identity['task_id']} result")
     raw_text = result.get("raw_text")
     if not isinstance(raw_text, str) or not raw_text:
@@ -1026,7 +1202,7 @@ def _build_pred_task(
         raise CleanTaskBuilderError(f"{identity['task_id']}: result raw sha256 校验失败")
     payload = json.loads(raw_text)
     payload = dict(_require_mapping(payload, context=f"{identity['task_id']} raw payload"))
-    _validate_clean_payload(source, payload)
+    _validate_condition_payload(source, payload, condition=condition)
     artifact = payload.get("canonical_artifact")
     if not isinstance(artifact, Mapping):
         artifact = {}
@@ -1060,6 +1236,7 @@ def _build_pred_task(
         ),
         feature_names=feature_names,
         recovery_entries=recovery_entries,
+        allow_missing_parameter_recovery=condition != CONDITION,
     )
     expression = formula_resolution.semantic_expression
     variable_mapping = formula_resolution.variable_mapping
@@ -1127,14 +1304,14 @@ def _build_pred_task(
         },
     }
     evidence_hash = _sha256_json(evidence_payload)
-    logical_id = _pred_logical_id(identity)
+    logical_id = _pred_logical_id(identity, condition=condition)
     request_context = {
         "dataset_id": source.get("dataset_id"),
         "dataset_index": f"g{identity['dataset_index']}",
         "algorithm": source.get("algorithm"),
         "algorithm_slug": identity["algorithm_slug"],
         "seed": identity["seed"],
-        "noise_tag": CONDITION,
+        "noise_tag": condition,
         "task_id": identity["task_id"],
         "variables": variables,
         "allowed_functions": allowed_functions,
@@ -1185,6 +1362,7 @@ def _build_pred_task(
             request_context=request_context,
             evidence_hash=evidence_hash,
             contract=contract,
+            condition=condition,
         )
         return None, no_call
     task = _build_task_definition(
@@ -1194,8 +1372,43 @@ def _build_pred_task(
         request=request_context,
         evidence_hash=evidence_hash,
         contract=contract,
+        condition=condition,
     )
     return task, None
+
+
+def _build_pred_task_chunk(
+    payload: tuple[
+        Sequence[Mapping[str, Any]],
+        PromptSchemaBundle,
+        Mapping[str, Sequence[str]],
+        Mapping[str, str],
+        Mapping[str, Mapping[str, Any]],
+        Mapping[str, Mapping[str, Any]],
+        str,
+    ],
+) -> list[tuple[PlannedTask | None, dict[str, Any] | None]]:
+    (
+        rows,
+        contract,
+        ground_truth_variables,
+        ground_truth_targets,
+        recovery_entries,
+        dataset_probes,
+        condition,
+    ) = payload
+    return [
+        _build_pred_task(
+            row,
+            contract=contract,
+            ground_truth_variables=ground_truth_variables,
+            ground_truth_targets=ground_truth_targets,
+            recovery_entries=recovery_entries,
+            dataset_probes=dataset_probes,
+            condition=condition,
+        )
+        for row in rows
+    ]
 
 
 def _load_pred_freeze_rows(
@@ -1203,6 +1416,7 @@ def _load_pred_freeze_rows(
     *,
     expected_pred_count: int | None,
     repo_root: Path,
+    condition: str = CONDITION,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     pattern = freeze_glob
     if not Path(pattern).is_absolute():
@@ -1219,10 +1433,10 @@ def _load_pred_freeze_rows(
     for path in paths:
         for row in _iter_gzip_jsonl(path):
             source = _require_mapping(row.get("source"), context=f"{path} source")
-            identity = _parse_task_identity(source)
+            identity = _parse_task_identity(source, condition=condition)
             clean_key = (
                 f"{identity['algorithm_slug']}::g{identity['dataset_index']}"
-                f"::s{identity['seed']}::{CONDITION}"
+                f"::s{identity['seed']}::{condition}"
             )
             clean_keys.append(clean_key)
             result = _require_mapping(row.get("result"), context=f"{identity['task_id']} result")
@@ -1257,11 +1471,11 @@ def _load_pred_freeze_rows(
     duplicate_count = len(clean_keys) - len(unique_clean_keys)
     if expected_pred_count is not None and len(rows) != expected_pred_count:
         raise CleanTaskBuilderError(
-            f"clean freeze 行数不符: 期望 {expected_pred_count}，实际 {len(rows)}"
+            f"{condition} freeze 行数不符: 期望 {expected_pred_count}，实际 {len(rows)}"
         )
     if expected_pred_count is not None and len(unique_clean_keys) != expected_pred_count:
         raise CleanTaskBuilderError(
-            f"clean key 唯一数不符: 期望 {expected_pred_count}，实际 {len(unique_clean_keys)}"
+            f"{condition} key 唯一数不符: 期望 {expected_pred_count}，实际 {len(unique_clean_keys)}"
         )
     if raw_sha_valid != len(rows):
         raise CleanTaskBuilderError(
@@ -1292,9 +1506,19 @@ def build_clean_task_plan(
     repo_root: Path | None = None,
     gt_prompt_path: Path | None = None,
     gt_logical_id_suffix: str | None = None,
+    condition: str = CONDITION,
+    non_applicable_evidence_dir: Path | None = None,
+    write_non_applicable_evidence: bool = False,
+    build_workers: int = 1,
 ) -> tuple[list[PlannedTask], dict[str, Any]]:
     if phase not in TASK_PHASES:
         raise CleanTaskBuilderError(f"未知 phase: {phase!r}")
+    if condition not in SUPPORTED_CONDITIONS:
+        raise CleanTaskBuilderError(f"未知 condition: {condition!r}")
+    if isinstance(build_workers, bool) or build_workers <= 0:
+        raise CleanTaskBuilderError("build_workers 必须为正整数")
+    if condition != CONDITION and phase != "pred":
+        raise CleanTaskBuilderError("noise 条件只允许 phase=pred；Ground Truth 必须复用 clean GT")
     if gt_logical_id_suffix is not None and not re.fullmatch(
         r"[a-z0-9][a-z0-9._-]*", gt_logical_id_suffix
     ):
@@ -1315,7 +1539,19 @@ def build_clean_task_plan(
     probes_path = (
         dataset_probes_jsonl or (repo_root / DEFAULT_DATASET_PROBES_JSONL)
     ).resolve()
-    pred_glob = freeze_glob or DEFAULT_FREEZE_GLOB
+    if non_applicable_evidence_dir is None:
+        non_applicable_evidence_dir = (
+            repo_root / DEFAULT_NON_APPLICABLE_EVIDENCE_DIR
+            if condition == CONDITION
+            else repo_root
+            / STAGE_ROOT_RELATIVE
+            / f"reports/{condition}_pred_simplify_non_applicable"
+        )
+    non_applicable_evidence_dir = non_applicable_evidence_dir.resolve()
+    pred_glob = freeze_glob or _default_pred_freeze_glob(
+        condition,
+        repo_root=repo_root,
+    )
 
     gt_rows = _read_jsonl(gt_path)
     if expected_gt_count is not None and len(gt_rows) != expected_gt_count:
@@ -1348,13 +1584,18 @@ def build_clean_task_plan(
 
     needs_pred = phase in {"pred", "all"}
     if needs_pred:
-        recovery_entries, recovery_manifest_sha256 = load_formula_recovery_manifest(
-            recovery_path
-        )
+        if condition == CONDITION or formula_recovery_json is not None:
+            recovery_entries, recovery_manifest_sha256 = load_formula_recovery_manifest(
+                recovery_path,
+                expected_condition=condition,
+            )
+        else:
+            recovery_entries, recovery_manifest_sha256 = {}, None
         pred_rows, pred_validation = _load_pred_freeze_rows(
             pred_glob,
             expected_pred_count=expected_pred_count,
             repo_root=repo_root,
+            condition=condition,
         )
     else:
         recovery_entries = {}
@@ -1370,7 +1611,7 @@ def build_clean_task_plan(
     pred_tasks: list[PlannedTask] = []
     no_call_records: list[dict[str, Any]] = []
 
-    for index, row in enumerate(gt_rows, start=1):
+    for index, row in enumerate(gt_rows if condition == CONDITION else [], start=1):
         task, no_call = _build_gt_task(
             row,
             index=index,
@@ -1384,15 +1625,44 @@ def build_clean_task_plan(
             no_call_records.append(no_call)
 
     if needs_pred:
-        for row in pred_rows:
-            task, no_call = _build_pred_task(
-                row,
-                contract=contract,
-                ground_truth_variables=ground_truth_variables,
-                ground_truth_targets=ground_truth_targets,
-                recovery_entries=recovery_entries,
-                dataset_probes=dataset_probes,
+        if build_workers == 1:
+            pred_results = _build_pred_task_chunk(
+                (
+                    pred_rows,
+                    contract,
+                    ground_truth_variables,
+                    ground_truth_targets,
+                    recovery_entries,
+                    dataset_probes,
+                    condition,
+                )
             )
+        else:
+            worker_count = min(build_workers, max(1, len(pred_rows)))
+            chunk_size = max(1, (len(pred_rows) + worker_count - 1) // worker_count)
+            chunks = [
+                pred_rows[index : index + chunk_size]
+                for index in range(0, len(pred_rows), chunk_size)
+            ]
+            chunk_payloads = [
+                (
+                    chunk,
+                    contract,
+                    ground_truth_variables,
+                    ground_truth_targets,
+                    recovery_entries,
+                    dataset_probes,
+                    condition,
+                )
+                for chunk in chunks
+            ]
+            with ProcessPoolExecutor(max_workers=worker_count) as executor:
+                pred_results = [
+                    result
+                    for chunk_results in executor.map(_build_pred_task_chunk, chunk_payloads)
+                    for result in chunk_results
+                ]
+        for task, no_call in pred_results:
             if task is not None:
                 pred_tasks.append(task)
             if no_call is not None:
@@ -1406,6 +1676,15 @@ def build_clean_task_plan(
         selected_tasks = [*gt_tasks, *pred_tasks]
     selected_tasks.sort(key=lambda item: (item.priority, item.logical_id))
     no_call_records.sort(key=lambda item: (item["phase"], item["logical_id"]))
+    no_call_records = [
+        _materialize_no_call_record(
+            item,
+            contract=contract,
+            evidence_dir=non_applicable_evidence_dir,
+            write_evidence=write_non_applicable_evidence,
+        )
+        for item in no_call_records
+    ]
     gt_no_call_count = sum(1 for item in no_call_records if item["phase"] == "gt")
     pred_no_call_count = sum(1 for item in no_call_records if item["phase"] == "pred")
     pred_request_contexts = [task.request for task in pred_tasks]
@@ -1427,7 +1706,7 @@ def build_clean_task_plan(
     unused_recovery_ids = sorted(set(recovery_entries) - set(used_recovery_ids))
     if needs_pred and expected_pred_count == 2250 and unused_recovery_ids:
         raise CleanTaskBuilderError(
-            f"全量 clean 构建存在未消费公式恢复记录: {unused_recovery_ids}"
+            f"全量 {condition} 构建存在未消费公式恢复记录: {unused_recovery_ids}"
         )
 
     report = {
@@ -1462,23 +1741,32 @@ def build_clean_task_plan(
                 "dataset_count": len(dataset_probes),
                 "schema_version": DATASET_PROBE_SCHEMA_VERSION,
             },
-            "noise_condition": CONDITION,
+            "noise_condition": condition,
+            "build_workers": build_workers,
         },
         "planning_counts": {
             "gt_simplify_total": len(gt_tasks),
             "pred_simplify_total": len(pred_tasks),
             "future_equivalence_max": FUTURE_EQUIVALENCE_MAX,
-            "future_structure_max": FUTURE_STRUCTURE_MAX,
+            "future_structure_max": FUTURE_STRUCTURE_MAX if condition == CONDITION else 0,
             "clean_total_max": len(gt_tasks)
             + len(pred_tasks)
+            + len(no_call_records)
             + FUTURE_EQUIVALENCE_MAX
-            + FUTURE_STRUCTURE_MAX,
+            + (FUTURE_STRUCTURE_MAX if condition == CONDITION else 0),
+            "condition_total_max": len(gt_tasks)
+            + len(pred_tasks)
+            + len(no_call_records)
+            + FUTURE_EQUIVALENCE_MAX
+            + (FUTURE_STRUCTURE_MAX if condition == CONDITION else 0),
             "selected_phase_task_count": len(selected_tasks),
+            "selected_phase_logical_task_count": len(selected_tasks) + len(no_call_records),
             "no_call_count": len(no_call_records),
             "gt_no_call_count": gt_no_call_count,
             "pred_no_call_count": pred_no_call_count,
         },
         "no_call_counts": {"gt": gt_no_call_count, "pred": pred_no_call_count},
+        "non_applicable_evidence_dir": str(non_applicable_evidence_dir),
         "no_call_records": no_call_records,
     }
     return selected_tasks, report
@@ -1488,6 +1776,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     repo_root = _repo_root()
     parser = argparse.ArgumentParser(description="构建 Stage5 clean simplify Claude 任务")
     parser.add_argument("--phase", choices=TASK_PHASES, default="all")
+    parser.add_argument("--condition", choices=SUPPORTED_CONDITIONS, default=CONDITION)
     parser.add_argument(
         "--ground-truth-jsonl",
         type=Path,
@@ -1496,7 +1785,8 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--formula-recovery-json",
         type=Path,
-        default=repo_root / DEFAULT_FORMULA_RECOVERY_JSON,
+        default=None,
+        help="可选的条件专属公式恢复清单；clean 未传时使用默认清单",
     )
     parser.add_argument(
         "--dataset-probes-jsonl",
@@ -1505,8 +1795,8 @@ def build_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--freeze-glob",
-        default=DEFAULT_FREEZE_GLOB,
-        help="相对仓库根目录的 clean freeze glob",
+        default=None,
+        help="可选 freeze glob；未传时按 condition 选择",
     )
     parser.add_argument(
         "--gt-prompt-path",
@@ -1522,11 +1812,35 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output-jsonl",
         type=Path,
-        default=repo_root / DEFAULT_OUTPUT_JSONL,
-        help="任务 JSONL 输出路径；dry-run 时忽略",
+        default=None,
+        help="任务 JSONL 输出路径；未传时按 condition 选择，dry-run 时忽略",
+    )
+    parser.add_argument(
+        "--non-applicable-index-jsonl",
+        type=Path,
+        default=None,
+        help="no-call 任务索引；未传时按 condition 选择",
+    )
+    parser.add_argument(
+        "--full-plan-jsonl",
+        type=Path,
+        default=None,
+        help="供冻结索引使用的 callable+non-applicable 全计划；禁止交给 API runner",
+    )
+    parser.add_argument(
+        "--non-applicable-evidence-dir",
+        type=Path,
+        default=None,
+        help="no-call 审计证据目录；未传时按 condition 选择",
     )
     parser.add_argument("--expected-gt-count", type=int, default=50)
     parser.add_argument("--expected-pred-count", type=int, default=2250)
+    parser.add_argument(
+        "--build-workers",
+        type=int,
+        default=1,
+        help="预测任务确定性构建进程数；正式机建议 3 以保留 CPU 余量",
+    )
     parser.add_argument(
         "--report",
         nargs="?",
@@ -1543,6 +1857,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.report == "-" and not args.dry_run:
         raise CleanTaskBuilderError("非 dry-run 模式下 --report 输出到 stdout 会污染 JSONL")
+    if args.non_applicable_evidence_dir is not None:
+        non_applicable_evidence_dir = args.non_applicable_evidence_dir.resolve()
+    elif args.condition == CONDITION:
+        non_applicable_evidence_dir = (_repo_root() / DEFAULT_NON_APPLICABLE_EVIDENCE_DIR).resolve()
+    else:
+        non_applicable_evidence_dir = (
+            _repo_root()
+            / STAGE_ROOT_RELATIVE
+            / f"reports/{args.condition}_pred_simplify_non_applicable"
+        ).resolve()
     tasks, report = build_clean_task_plan(
         phase=args.phase,
         ground_truth_jsonl=args.ground_truth_jsonl,
@@ -1553,14 +1877,69 @@ def main(argv: list[str] | None = None) -> int:
         expected_pred_count=args.expected_pred_count,
         gt_prompt_path=args.gt_prompt_path,
         gt_logical_id_suffix=args.gt_logical_id_suffix,
+        condition=args.condition,
+        non_applicable_evidence_dir=non_applicable_evidence_dir,
+        write_non_applicable_evidence=not args.dry_run,
+        build_workers=args.build_workers,
     )
-    if args.report and args.report != "-":
-        _write_json(Path(args.report), report)
     if args.dry_run:
+        if args.report and args.report != "-":
+            _write_json(Path(args.report), report)
         print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
     task_rows = [task.to_json_record() for task in tasks]
-    _write_jsonl(args.output_jsonl.resolve(), task_rows)
+    if args.output_jsonl is not None:
+        output_jsonl = args.output_jsonl
+    elif args.condition == CONDITION:
+        output_jsonl = _repo_root() / DEFAULT_OUTPUT_JSONL
+    else:
+        output_jsonl = (
+            _repo_root()
+            / STAGE_ROOT_RELATIVE
+            / f"reports/{args.condition}_pred_simplify_tasks.jsonl"
+        )
+    if args.non_applicable_index_jsonl is not None:
+        non_applicable_index_jsonl = args.non_applicable_index_jsonl.resolve()
+    elif args.condition == CONDITION:
+        non_applicable_index_jsonl = (
+            _repo_root() / DEFAULT_NON_APPLICABLE_INDEX_JSONL
+        ).resolve()
+    else:
+        non_applicable_index_jsonl = (
+            _repo_root()
+            / STAGE_ROOT_RELATIVE
+            / f"reports/{args.condition}_pred_simplify_non_applicable.jsonl"
+        ).resolve()
+    if args.full_plan_jsonl is not None:
+        full_plan_jsonl = args.full_plan_jsonl.resolve()
+    elif args.condition == CONDITION:
+        full_plan_jsonl = (_repo_root() / DEFAULT_FULL_PLAN_JSONL).resolve()
+    else:
+        full_plan_jsonl = (
+            _repo_root()
+            / STAGE_ROOT_RELATIVE
+            / f"reports/{args.condition}_pred_simplify_full_plan.jsonl"
+        ).resolve()
+    _write_jsonl(output_jsonl.resolve(), task_rows)
+    _write_jsonl(non_applicable_index_jsonl, report["no_call_records"])
+    full_plan_rows = [*task_rows, *report["no_call_records"]]
+    full_plan_rows.sort(key=lambda item: (int(item["priority"]), str(item["logical_id"])))
+    _write_jsonl(full_plan_jsonl, full_plan_rows)
+    report["outputs"] = {
+        "callable_plan_jsonl": str(output_jsonl.resolve()),
+        "callable_plan_sha256": _sha256_file(output_jsonl.resolve()),
+        "callable_plan_row_count": len(task_rows),
+        "non_applicable_index_jsonl": str(non_applicable_index_jsonl),
+        "non_applicable_index_sha256": _sha256_file(non_applicable_index_jsonl),
+        "non_applicable_row_count": len(report["no_call_records"]),
+        "non_applicable_evidence_dir": str(non_applicable_evidence_dir),
+        "full_plan_jsonl": str(full_plan_jsonl),
+        "full_plan_sha256": _sha256_file(full_plan_jsonl),
+        "full_plan_row_count": len(full_plan_rows),
+        "full_plan_usage": "frozen_index_only_never_api_runner",
+    }
+    if args.report and args.report != "-":
+        _write_json(Path(args.report), report)
     if args.report == "-":
         print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0

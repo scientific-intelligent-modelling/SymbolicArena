@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import threading
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import (
     PredecessorAttemptManifest,
     StateContractError,
+    TaskRetirement,
     TaskSpec,
     TaskSupersession,
     TaskStateStore,
@@ -69,6 +71,54 @@ def _table_count(path: Path, table: str) -> int:
         row = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
     assert row is not None
     return int(row[0])
+
+
+def test_write_transactions_are_serialized_within_one_store(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=10)
+    first_entered = threading.Event()
+    release_first = threading.Event()
+    second_entered = threading.Event()
+
+    class FakeConnection:
+        def execute(self, _statement: str) -> None:
+            return None
+
+        def commit(self) -> None:
+            return None
+
+        def rollback(self) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(store, "_connect", lambda: FakeConnection())
+
+    def hold_first_transaction() -> None:
+        with store._write_transaction():
+            first_entered.set()
+            assert release_first.wait(timeout=2.0)
+
+    def enter_second_transaction() -> None:
+        assert first_entered.wait(timeout=2.0)
+        with store._write_transaction():
+            second_entered.set()
+
+    first = threading.Thread(target=hold_first_transaction)
+    second = threading.Thread(target=enter_second_transaction)
+    first.start()
+    second.start()
+    assert first_entered.wait(timeout=2.0)
+    assert not second_entered.wait(timeout=0.1)
+    release_first.set()
+    first.join(timeout=2.0)
+    second.join(timeout=2.0)
+    assert not first.is_alive()
+    assert not second.is_alive()
+    assert second_entered.is_set()
 
 
 def _write_legacy_state_v2_db(path: Path) -> None:
@@ -901,6 +951,113 @@ def test_supersession_batch_is_atomic_idempotent_and_tracks_summary(tmp_path: Pa
     assert int(superseded_events["count"]) == 1
 
 
+def test_retire_exhausted_versions_unblocks_priority_gate_with_frozen_replacement(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(
+        state_db,
+        attempt_cap=20,
+        logical_task_cap=4,
+        max_attempts_per_task=1,
+    )
+    base_id = "pred_simplify::alg::g0001::s520::clean"
+    exhausted_specs = (
+        TaskSpec(
+            evaluation_key="pred_v0",
+            logical_id=f"{base_id}::v0",
+            task_type="pred_simplify",
+            condition="clean",
+            priority=20,
+            input_hash="input-v0",
+            prompt_version="simplify.v0",
+            schema_version="simplify.v1",
+            dependencies=(),
+        ),
+        TaskSpec(
+            evaluation_key="pred_v1",
+            logical_id=base_id,
+            task_type="pred_simplify",
+            condition="clean",
+            priority=20,
+            input_hash="input-v1",
+            prompt_version="simplify.v1",
+            schema_version="simplify.v1",
+            dependencies=(),
+        ),
+    )
+    for index, spec in enumerate(exhausted_specs):
+        store.register_task(spec, now=1.0 + index)
+        lease = store.reserve_attempt(spec.evaluation_key, now=3.0 + index)
+        store.finish_failure(
+            lease.attempt_id,
+            error_class="validation_failed",
+            retryable=False,
+            now=5.0 + index,
+        )
+
+    replacement = TaskSpec(
+        evaluation_key="pred_v2",
+        logical_id=f"{base_id}::v2",
+        task_type="pred_simplify",
+        condition="clean",
+        priority=20,
+        input_hash="input-v2",
+        prompt_version="simplify.v2",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+    store.register_task(replacement, now=7.0)
+    replacement_lease = store.reserve_attempt("pred_v2", now=8.0)
+    store.freeze_result(
+        replacement_lease.attempt_id,
+        result_path="llm/frozen/pred_v2.json",
+        result_sha256="sha-pred-v2",
+        now=9.0,
+    )
+    equivalence = TaskSpec(
+        evaluation_key="eq",
+        logical_id="equivalence::alg::g0001::s520::clean",
+        task_type="equivalence",
+        condition="clean",
+        priority=30,
+        input_hash="input-eq",
+        prompt_version="equivalence.v1",
+        schema_version="equivalence.v1",
+        dependencies=("pred_v2",),
+    )
+    store.register_task(equivalence, now=10.0)
+    with pytest.raises(StateContractError, match="低优先级阶段尚未完成"):
+        store.reserve_attempt("eq", now=11.0)
+
+    store.retire_exhausted_tasks(
+        tuple(
+            TaskRetirement(
+                exhausted_evaluation_key=spec.evaluation_key,
+                replacement=replacement,
+                identity=f"retire::{spec.evaluation_key}::pred_v2",
+                reason="当前正式计划已有同逻辑冻结结果",
+                exhausted_plan_sha256=f"plan::{spec.evaluation_key}",
+                replacement_plan_sha256="plan::pred_v2",
+            )
+            for spec in exhausted_specs
+        ),
+        now=12.0,
+    )
+
+    lease = store.reserve_attempt("eq", now=13.0)
+    assert lease.attempt_number == 1
+    assert store.task_state("pred_v0") == "superseded"
+    assert store.task_state("pred_v1") == "superseded"
+    assert store.state_summary()["logical_tasks"] == {
+        "active": 2,
+        "historical": 4,
+        "superseded": 2,
+        "state_counts": {"frozen": 1, "running": 1, "superseded": 2},
+    }
+    assert _table_count(state_db, "task_retirements") == 2
+
+
 def test_supersession_batch_rejects_drift_and_rolls_back_entire_batch(tmp_path: Path) -> None:
     state_db = tmp_path / "state.sqlite3"
     store = TaskStateStore(state_db, attempt_cap=10)
@@ -1404,3 +1561,45 @@ def test_invalid_superseded_without_binding_remains_active_for_cap_and_summary(
     with pytest.raises(StateContractError, match="逻辑任务预算"):
         store.register_task(task("c"), now=3.0)
     assert store.next_ready_key(allowed_conditions=("clean",)) == "a_v2"
+
+
+def test_logical_task_cap_counts_versioned_recovery_as_same_identity(
+    tmp_path: Path,
+) -> None:
+    store = TaskStateStore(
+        tmp_path / "versioned-cap.sqlite3",
+        attempt_cap=10,
+        logical_task_cap=1,
+    )
+    base_logical_id = "pred_simplify::demo::g0001::s520::noise005"
+    predecessor = TaskSpec(
+        evaluation_key="pred-v1",
+        logical_id=base_logical_id,
+        task_type="pred_simplify",
+        condition="noise005",
+        priority=20,
+        input_hash="input-v1",
+        prompt_version="simplify.v1",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+    replacement = TaskSpec(
+        evaluation_key="pred-v2",
+        logical_id=f"{base_logical_id}::v2",
+        task_type="pred_simplify",
+        condition="noise005",
+        priority=20,
+        input_hash="input-v2",
+        prompt_version="simplify.recovery.v1",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+    store.register_task(predecessor, now=1.0)
+
+    store.register_task(replacement, now=2.0)
+
+    summary = store.state_summary()
+    assert summary["logical_tasks"]["historical"] == 2
+    assert summary["logical_tasks"]["active"] == 1
+    with pytest.raises(StateContractError, match="逻辑任务预算"):
+        store.register_task(task("new-identity", condition="noise005"), now=3.0)

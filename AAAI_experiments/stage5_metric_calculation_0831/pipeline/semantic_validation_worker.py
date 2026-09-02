@@ -133,6 +133,22 @@ def validate_simplify_semantics_payload(
     ):
         raise SymbolicEvidenceError("simplify request.allowed_functions 缺失或无效")
     probe_points, probe_source, probe_sample_sha256 = _validated_probe_contract(request)
+    deterministic = request.get("deterministic_evidence")
+    artifact: Mapping[str, object] | None = None
+    if deterministic is not None:
+        if not isinstance(deterministic, Mapping):
+            raise SymbolicEvidenceError("deterministic_evidence 必须是对象")
+        artifact_value = deterministic.get("symbolic_artifact")
+        if not isinstance(artifact_value, Mapping):
+            raise SymbolicEvidenceError("deterministic_evidence.symbolic_artifact 缺失")
+        artifact = artifact_value
+    construction_mode = (
+        artifact.get("construction_mode", "evaluated")
+        if artifact is not None
+        else "evaluated"
+    )
+    if construction_mode not in {"evaluated", "unevaluated_large_ast"}:
+        raise SymbolicEvidenceError("请求中的 symbolic artifact construction_mode 非法")
     evidence = validate_simplification(
         original=original,
         simplified=simplified,
@@ -142,14 +158,9 @@ def validate_simplify_semantics_payload(
         probe_points=probe_points,
         probe_source=probe_source,
         probe_sample_sha256=probe_sample_sha256,
+        original_construction_mode=str(construction_mode),
     )
-    deterministic = request.get("deterministic_evidence")
-    if deterministic is not None:
-        if not isinstance(deterministic, Mapping):
-            raise SymbolicEvidenceError("deterministic_evidence 必须是对象")
-        artifact = deterministic.get("symbolic_artifact")
-        if not isinstance(artifact, Mapping):
-            raise SymbolicEvidenceError("deterministic_evidence.symbolic_artifact 缺失")
+    if artifact is not None:
         if artifact.get("artifact_sha256") != evidence.get("original_sha256"):
             raise SymbolicEvidenceError("请求中的 symbolic artifact 与原公式不一致")
         if list(artifact.get("variables", [])) != sorted(

@@ -16,7 +16,7 @@
 - 带 ID/OOD/SYM 性能修正的旧 STAB；
 - 将 ROB 或 ROBU 放入正式六轴。
 
-本文件只准备后续 Goal 的执行路径。当前不启动远程采集、不调用 Claude Code，也不开始计算指标。
+本文件定义 Goal 的执行路径；正式大模型任务通过双渠道 Anthropic Messages API 直接执行，不再经过 Claude Code CLI。
 
 ## 2. 冻结的实验范围
 
@@ -209,28 +209,28 @@ Claude 调用前，为每条公式生成并冻结：
 - 除法、对数、根号、幂等保护算子的语义假设；
 - tree distance、变量 F1、算子 F1 的输入证据。
 
-这些证据必须交给 Claude，但不能替代任何文档规定的强制 Claude 调用。
+这些证据必须交给 Opus5，但不能替代任何文档规定的强制大模型调用。
 
-## 7. 阶段 2：Claude Code 控制面
+## 7. 阶段 2：双渠道 Opus5 API 控制面
 
 ### 7.1 固定调用契约
 
-每次调用都是独立单轮：
+每次调用都是独立、无状态、非流式的 Messages API 请求：
 
 ```text
-model: claude-opus-5[1m]
+model: claude-opus-5
 effort: xhigh
-tools: disabled
-max turns: 1
-session persistence: disabled
-settings source: user only
+stream: false
+thinking: adaptive
+transport: Anthropic Messages API
+channels: routify, yapi
 ```
 
-命令参数必须与指标文档一致。每个进程在隔离 scratch 目录中运行，只接收准备好的表达式和确定性证据。
+请求参数必须与指标文档一致。每个请求只接收准备好的表达式、确定性证据和版本化输出 Schema；不启用工具或会话。
 
 API token 不得写入 manifest、日志、prompt、命令输出、Git 文件或最终报告。正式批处理前应轮换此前在对话中暴露过的 token。
 
-控制器同时记录请求模型和实际解析模型。只要出现模型、effort、工具、会话或 settings source 不符，就打开全局熔断器；这不是普通单任务重试。
+控制器同时记录请求模型和实际响应模型。只要出现模型、effort、响应类型或传输契约不符，就打开全局熔断器；这不是普通单任务重试。首次请求按稳定哈希分配渠道，可重试请求轮换到另一渠道。
 
 ### 7.2 稳定任务 ID 与指纹
 
@@ -311,8 +311,8 @@ prompt、schema、表达式、证据、模型或 effort 任一变化都会产生
 
 - 进程超时；
 - HTTP 408/429 或临时 5xx；
-- Claude CLI 非零退出，但不包括已明确分类为 `prompt_too_long` 的确定性请求错误；
-- stdout 为空或被截断；
+- HTTP 传输错误，但不包括认证失败或确定性的请求契约错误；
+- 非流式响应为空或被截断；
 - 外层 JSON 无效；
 - 缺失 `structured_output`；
 - 严格 Schema 不通过；
@@ -320,7 +320,7 @@ prompt、schema、表达式、证据、模型或 effort 任一变化都会产生
 - 返回公式使用未声明变量或不支持函数；
 - 确定性反例表明 claimed simplification 改变了原公式。
 
-重试使用指数退避和 jitter。单次硬超时根据 canary 的 p99 延迟校准，低于已配置的 50 分钟 API timeout，并且最多 30 分钟。
+重试使用指数退避和 jitter。正式请求当前单次硬超时为 300 秒；首次失败后最多再重试两次，并轮换 API 渠道。
 
 ### 8.2 不重试状态
 
@@ -477,10 +477,10 @@ stage5_metric_calculation_0831/
 - 2250 条 clean EFF 轨迹均能按冻结 adapter 契约重建；
 - 所有必需 clean Claude 任务 accepted 或合法 non-applicable；
 - 物理尝试总数不超过 23700；
-- accepted 调用不存在 model、effort、tools、turn 或 session 违规；
+- accepted 调用不存在 model、effort、stream、响应类型或渠道身份违规；
 - 新正式表不含 ROB、旧 OOD retention、median-first、EFF proxy 或旧 STAB 修正；
 - 最终表恰好 15 个算法和 6 个正式轴；
-- 每个分数单元都可反查来源 checksum、确定性证据和 Claude task ID；
+- 每个分数单元都可反查来源 checksum、确定性证据和 Opus5 API task ID；
 - 从冻结产物离线重跑聚合，输出 checksum 完全一致；
 - clean 正式评测中 unresolved evaluator failure 为 0。
 
@@ -492,7 +492,7 @@ stage5_metric_calculation_0831/
 
 1. 冻结并审计全部必需输入；
 2. 独立实现新六轴及测试，不使用旧指标代理；
-3. 按固定单轮契约执行全部强制 Claude 任务；
+3. 按固定非流式单轮 API 契约执行全部强制 Opus5 任务；
 4. 物理尝试始终不超过 23700，并保留每次 attempt；
 5. 使用 clean 结果计算 ID、OOD、SYM、MIN、EFF、STAB；
 6. 将 noisy 产物单独作为补充诊断；
@@ -507,8 +507,8 @@ stage5_metric_calculation_0831/
 SymbolicArena_SixAxis_Revised.md 和 EXECUTION_PLAN.md，冻结并审计 AAAI Stage 4
 的 6750 条最终结果、50 条 Ground Truth 以及 2250 条 clean 运行的 180 分钟轨迹，
 实现并执行新的 ID/OOD/SYM/MIN/EFF/STAB 计算管线。所有文档规定的大模型化简与
-裁决都必须使用 claude-opus-5[1m]、xhigh、禁用工具、禁用会话持久化的 Claude Code
-独立单轮调用；逻辑任务最多 15800，物理尝试硬上限 23700，每任务首次加最多两次
+裁决都必须使用 `claude-opus-5`、`xhigh`、`stream=false` 的双渠道 Anthropic Messages API
+独立单轮请求；逻辑任务最多 15800，物理尝试硬上限 23700，每任务首次加最多两次
 失败重试，并支持幂等断点续跑和完整审计。不得复用旧六轴代理定义，不得用缺失轨迹
 伪造 EFF。最终产出可复现的 15 算法六轴表、任务和运行级明细、补充噪声诊断、覆盖率、
 重试、成本、冲突、来源校验报告、必要图表与自动化测试，并按仓库约定提交。

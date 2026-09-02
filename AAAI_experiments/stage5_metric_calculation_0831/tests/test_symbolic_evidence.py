@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 import json
 from pathlib import Path
+import time
 
 import pytest
 
@@ -69,7 +70,7 @@ def _iter_clean_prediction_payloads() -> list[dict[str, object]]:
         ("__import__('os').system('id')", {"x0"}, set()),
         ("(lambda x: x)(x0)", {"x0"}, set()),
         ("obj.attr", {"x0"}, set()),
-        ("items[0]", {"items"}, set()),
+        ("items[x0]", {"items", "x0"}, set()),
         ("[x for x in data]", {"data"}, set()),
     ],
 )
@@ -130,6 +131,80 @@ def test_artifact_hash_is_stable() -> None:
     assert first["canonical_expression"] == second["canonical_expression"]
     assert first["canonical_tree"] == second["canonical_tree"]
     assert first["constants_abstracted_tree_fingerprint"] == second["constants_abstracted_tree_fingerprint"]
+
+
+def test_build_symbolic_artifact_supports_numpy_log1p_exactly() -> None:
+    artifact = build_symbolic_artifact(
+        "np.log1p(x0)",
+        allowed_variables={"x0"},
+        allowed_functions={"log1p"},
+    )
+
+    assert artifact["canonical_expression"] == "log(x0 + 1)"
+    assert artifact["function_set"] == ("log1p",)
+
+
+def test_build_symbolic_artifact_supports_numpy_cosh() -> None:
+    artifact = build_symbolic_artifact(
+        "np.cosh(x0)",
+        allowed_variables={"x0"},
+        allowed_functions={"cosh"},
+    )
+
+    assert artifact["canonical_expression"] == "cosh(x0)"
+    assert artifact["function_set"] == ("cosh",)
+
+
+def test_build_symbolic_artifact_preserves_numpy_mean_as_opaque() -> None:
+    artifact = build_symbolic_artifact(
+        "np.mean(x0)",
+        allowed_variables={"x0"},
+        allowed_functions={"mean"},
+    )
+
+    assert artifact["canonical_expression"] == "mean(x0)"
+    assert artifact["function_set"] == ("mean",)
+
+
+def test_build_symbolic_artifact_preserves_numpy_linalg_norm_as_opaque() -> None:
+    artifact = build_symbolic_artifact(
+        "np.linalg.norm(x0)",
+        allowed_variables={"x0"},
+        allowed_functions={"norm"},
+    )
+
+    assert artifact["canonical_expression"] == "norm(x0)"
+    assert artifact["function_set"] == ("norm",)
+
+
+def test_build_symbolic_artifact_preserves_static_input_index_as_opaque() -> None:
+    artifact = build_symbolic_artifact(
+        "x2[1] - x3[0]",
+        allowed_variables={"x2", "x3"},
+        allowed_functions=set(),
+    )
+
+    assert artifact["canonical_expression"] == "index(x2, 1) - index(x3, 0)"
+    assert artifact["function_set"] == ("index",)
+
+
+def test_build_symbolic_artifact_supports_scalar_numpy_clip_exactly() -> None:
+    artifact = build_symbolic_artifact(
+        "np.clip(x0, -1, 1)",
+        allowed_variables={"x0"},
+        allowed_functions={"clip"},
+    )
+
+    assert artifact["canonical_expression"] == "Min(1, Max(-1, x0))"
+    assert artifact["function_set"] == ("clip",)
+
+    lower_bounded = build_symbolic_artifact(
+        "np.clip(x0, a_min=0, a_max=None)",
+        allowed_variables={"x0"},
+        allowed_functions={"clip"},
+    )
+    assert lower_bounded["canonical_expression"] == "Max(0, x0)"
+    assert lower_bounded["function_set"] == ("clip",)
 
 
 def test_tree_distance_similarity_and_f1_are_deterministic() -> None:
@@ -220,6 +295,124 @@ def test_build_pair_evidence_never_upgrades_probe_only_match_to_equivalent(
     assert evidence["probe_count"] > 0
     assert evidence["numeric_probes"]
     assert any("复杂度超过符号证明阈值" in item for item in evidence["symbolic_difference"]["assumptions"])
+
+
+def test_build_pair_evidence_times_out_expensive_symbolic_proof(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_simplify = symbolic_evidence.sp.simplify
+
+    def slow_simplify(expression):
+        time.sleep(0.2)
+        return original_simplify(expression)
+
+    monkeypatch.setattr(symbolic_evidence.sp, "simplify", slow_simplify)
+    monkeypatch.setattr(symbolic_evidence, "SYMBOLIC_PROOF_TIMEOUT_SECONDS", 0.01)
+
+    evidence = build_pair_evidence(
+        lhs="x0 * (x1 + x2)",
+        rhs="x0 * x1 + x0 * x2",
+        allowed_variables={"x0", "x1", "x2"},
+        allowed_functions=set(),
+        seed=23,
+    )
+
+    assert evidence["decision"] == "undetermined"
+    assert any(
+        "符号证明超时" in item
+        for item in evidence["symbolic_difference"]["assumptions"]
+    )
+
+
+def test_build_pair_evidence_times_out_expensive_numeric_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_real_to_float = symbolic_evidence._sympy_real_to_float
+
+    def slow_real_to_float(value, *, digits=50):
+        time.sleep(0.2)
+        return original_real_to_float(value, digits=digits)
+
+    monkeypatch.setattr(symbolic_evidence, "_sympy_real_to_float", slow_real_to_float)
+    monkeypatch.setattr(symbolic_evidence, "SYMBOLIC_PROOF_NODE_LIMIT", 1)
+    monkeypatch.setattr(symbolic_evidence, "NUMERIC_PROBE_TIMEOUT_SECONDS", 0.01)
+
+    started_at = time.monotonic()
+    evidence = build_pair_evidence(
+        lhs="x0 + 1",
+        rhs="x0 + 2",
+        allowed_variables={"x0"},
+        allowed_functions=set(),
+        seed=23,
+    )
+
+    assert time.monotonic() - started_at < 0.5
+    assert evidence["decision"] == "undetermined"
+    assert evidence["symbolic_difference"]["skipped_probe_reasons"] == {
+        "numeric_probe_timeout": 1
+    }
+    assert any(
+        "数值探针超时" in item
+        for item in evidence["symbolic_difference"]["assumptions"]
+    )
+
+
+def test_build_pair_evidence_limits_total_numeric_probe_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_real_to_float = symbolic_evidence._sympy_real_to_float
+
+    def moderately_slow_real_to_float(value, *, digits=50):
+        time.sleep(0.006)
+        return original_real_to_float(value, digits=digits)
+
+    monkeypatch.setattr(
+        symbolic_evidence,
+        "_sympy_real_to_float",
+        moderately_slow_real_to_float,
+    )
+    monkeypatch.setattr(symbolic_evidence, "SYMBOLIC_PROOF_NODE_LIMIT", 1)
+    monkeypatch.setattr(symbolic_evidence, "NUMERIC_PROBE_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr(symbolic_evidence, "NUMERIC_PROBE_TOTAL_TIMEOUT_SECONDS", 0.03)
+
+    started_at = time.monotonic()
+    evidence = build_pair_evidence(
+        lhs="x0 * (x1 + x2)",
+        rhs="x0 * x1 + x0 * x2",
+        allowed_variables={"x0", "x1", "x2"},
+        allowed_functions=set(),
+        seed=23,
+    )
+
+    assert time.monotonic() - started_at < 0.1
+    assert evidence["decision"] == "undetermined"
+    assert evidence["symbolic_difference"]["skipped_probe_reasons"] == {
+        "numeric_probe_timeout": 1
+    }
+
+
+def test_build_pair_evidence_can_skip_tree_distance_for_structure_phase(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("结构裁决不应计算高复杂度树编辑距离")
+
+    monkeypatch.setattr(symbolic_evidence, "_ordered_tree_edit_distance", fail_if_called)
+
+    evidence = build_pair_evidence(
+        lhs="x0 * (x1 + x2)",
+        rhs="x0 * x1 + x0 * x2",
+        allowed_variables={"x0", "x1", "x2"},
+        allowed_functions=set(),
+        seed=23,
+        include_tree_distance=False,
+    )
+
+    assert evidence["tree"] == {
+        "computed": False,
+        "normalized_edit_distance": None,
+        "tree_similarity": None,
+    }
 
 
 def test_build_pair_evidence_external_probes_preserve_undetermined_and_record_skips(
@@ -431,6 +624,37 @@ def test_validate_simplification_accepts_exact_decimal_rebuild_for_drsr_g0031() 
     assert evidence["probe_source"] == "dataset_probes_v1"
 
 
+def test_pair_evidence_skips_expensive_exact_decimal_rebuild(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline import symbolic_evidence
+
+    def reject_exact_decimal(*args: object, **kwargs: object) -> None:
+        raise AssertionError("通用 pair evidence 不应执行高风险精确小数重建")
+
+    monkeypatch.setattr(symbolic_evidence, "_build_exact_decimal_pair", reject_exact_decimal)
+    evidence = symbolic_evidence.build_pair_evidence(
+        "x1*x2 + sin((x1 - 1)*(x2 - 1))",
+        (
+            "-0.4938247615860779*x1**2 + 2.082683469582711*x1*x2 "
+            "- 0.6380172051626938*x1 + 0.03572694110233234*x2**2 "
+            "- 0.2119782419543728*x2 + 1.2333719555333358*sin(x1) "
+            "+ 1.5117991637749062*cos(x2) - 1.0065012927817525 "
+            "+ 0.014447767606811525*exp(-5.892973355471428*x1*x2)"
+        ),
+        allowed_variables={"x1", "x2"},
+        allowed_functions={"sin", "cos", "exp"},
+        seed=520,
+        probe_points=[
+            {"split": "id_test", "row_index": 0, "values": {"x1": 0.5, "x2": 1.5}},
+        ],
+        probe_source="dataset_probes_v1",
+        probe_sample_sha256="e" * 64,
+    )
+
+    assert evidence["decision"] in {"not_equivalent", "undetermined"}
+
+
 def test_validate_simplification_accepts_high_precision_probe_recheck_for_dso_g0036() -> None:
     evidence = validate_simplification(
         original="x0*(-x1 + exp(x1 - x1/sin(x0 + x1 - (-x0 + x1*(x0 + (x0 - exp(2*x0))/x0))/x0**2)))",
@@ -529,6 +753,38 @@ def test_piecewise_abs_aliases_preserve_literal_where_semantics() -> None:
     assert evidence["symbolic_decision"] == "equivalent"
 
 
+def test_where_accepts_bitwise_conjunction_of_comparisons() -> None:
+    artifact = build_symbolic_artifact(
+        "where((x0 >= -2) & (x0 <= -1), 1, 0)",
+        allowed_variables={"x0"},
+        allowed_functions={"where"},
+    )
+
+    assert artifact["variables"] == ("x0",)
+    assert "Piecewise" in artifact["canonical_expression"]
+
+
+def test_nan_literal_is_preserved_as_nonfinite_symbolic_constant() -> None:
+    artifact = build_symbolic_artifact(
+        "nan",
+        allowed_variables={"x0"},
+        allowed_functions=set(),
+    )
+
+    assert artifact["canonical_expression"] == "nan"
+    assert artifact["variables"] == ()
+
+
+def test_inverse_sine_and_cosine_functions_are_supported() -> None:
+    artifact = build_symbolic_artifact(
+        "arccos(x0) + arcsin(x0)",
+        allowed_variables={"x0"},
+        allowed_functions={"arccos", "arcsin"},
+    )
+
+    assert artifact["function_set"] == ("arccos", "arcsin")
+
+
 def test_comparison_indicator_allows_equivalent_explicit_piecewise_notation() -> None:
     evidence = validate_simplification(
         original="2*x0 - 0.5*(x0 >= 1e-6)",
@@ -560,3 +816,49 @@ def test_special_function_identity_is_equivalent_via_artifact_short_circuit() ->
     assert evidence["symbolic_decision"] == "equivalent"
     assert evidence["proof_basis"] == "artifact_identity"
     assert evidence["probe_count"] == 0
+
+
+def test_large_nested_radical_avoids_sympy_assumption_explosion() -> None:
+    expression = (
+        "0.000979 - 2.783098*tanh(tanh((0.923697*x0 + 0.238334*x2)"
+        "/sqrt((1.989044*x0 - 0.760356*x2)**2 + 1)))/sqrt(tanh((0.923697*x0 "
+        "+ 0.238334*x2)/(sqrt((1.772454*x0 - (exp(0.895912*x2) - "
+        "cos(1.772454*x0))/sqrt((1.772454*x0 - 0.238334*x2)**2 + 1))**2 + 1)"
+        "*((0.238334*x2 + exp(0.895912*x2) - cos(1.772454*x0))**2 + 1)))**2 + 1)"
+    )
+
+    artifact = build_symbolic_artifact(
+        expression,
+        allowed_variables={"x0", "x2"},
+        allowed_functions={"cos", "exp", "sqrt", "tanh"},
+    )
+
+    assert artifact["variables"] == ("x0", "x2")
+    assert artifact["function_set"] == ("cos", "exp", "sqrt", "tanh")
+    assert artifact["construction_mode"] == "unevaluated_large_ast"
+
+
+def test_legacy_evaluated_artifact_hash_can_be_revalidated() -> None:
+    expression = " + ".join(
+        f"{index + 1}*x0**{index % 3 + 1}" for index in range(32)
+    )
+    automatic = build_symbolic_artifact(expression, allowed_variables={"x0"})
+    legacy = build_symbolic_artifact(
+        expression,
+        allowed_variables={"x0"},
+        evaluate_expressions=True,
+    )
+
+    evidence = validate_simplification(
+        original=expression,
+        simplified=expression,
+        allowed_variables={"x0"},
+        allowed_functions=set(),
+        seed=520,
+        original_construction_mode="evaluated",
+    )
+
+    assert automatic["construction_mode"] == "unevaluated_large_ast"
+    assert legacy["construction_mode"] == "evaluated"
+    assert automatic["artifact_sha256"] != legacy["artifact_sha256"]
+    assert evidence["original_sha256"] == legacy["artifact_sha256"]

@@ -11,7 +11,7 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, Collection, Mapping, Sequence
+from typing import Any, Callable, Collection, Iterator, Mapping, Sequence
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     evaluation_key,
@@ -43,6 +43,7 @@ PRED_SIMPLIFY_TASK_TYPE = "pred_simplify"
 EQUIVALENCE_TASK_TYPE = "equivalence"
 STRUCTURE_TASK_TYPE = "stab_structure"
 CONDITION = "clean"
+SUPPORTED_CONDITIONS = ("clean", "noise001", "noise005")
 EQUIVALENCE_PRIORITY = 30
 STRUCTURE_PRIORITY = 40
 SEEDS = (520, 521, 522)
@@ -51,7 +52,8 @@ SEED_PAIRS = ((520, 521), (520, 522), (521, 522))
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
 PRED_LOGICAL_ID_RE = re.compile(
-    r"^pred_simplify::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::clean(?:::(v[1-9]\d*))?$"
+    r"^pred_simplify::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::"
+    r"(clean|noise001|noise005)(?:::(v[1-9]\d*))?$"
 )
 EQUIVALENCE_GT_UNAVAILABLE = "upstream_gt_unavailable"
 EQUIVALENCE_PRED_UNAVAILABLE = "upstream_pred_unavailable"
@@ -269,11 +271,11 @@ def _parse_gt_logical_id(logical_id: str) -> tuple[str, str | None]:
     return match.group(1), match.group(2)
 
 
-def _parse_pred_logical_id(logical_id: str) -> tuple[str, str, int, str | None]:
+def _parse_pred_logical_id(logical_id: str) -> tuple[str, str, int, str, str | None]:
     match = PRED_LOGICAL_ID_RE.fullmatch(logical_id)
     if match is None:
         raise SymbolicTaskBuilderError(f"pred logical_id 非 canonical: {logical_id!r}")
-    return match.group(1), match.group(2), int(match.group(3)), match.group(4)
+    return match.group(1), match.group(2), int(match.group(3)), match.group(4), match.group(5)
 
 
 def _resolve_maybe_relative(path_text: str, *, repo_root: Path) -> Path:
@@ -354,6 +356,7 @@ def _task_from_request(
     evidence_hash: str,
     contract: PromptSchemaBundle,
     dependencies: tuple[str, ...],
+    condition: str = CONDITION,
 ) -> PlannedTask:
     normalized_input = {
         "request": dict(request),
@@ -375,7 +378,7 @@ def _task_from_request(
         evaluation_key=task_key,
         logical_id=logical_id,
         task_type=task_type,
-        condition=CONDITION,
+        condition=condition,
         priority=priority,
         input_hash=input_hash,
         prompt_version=contract.prompt_version,
@@ -413,14 +416,16 @@ def _load_simplify_plan_rows(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def _simplify_plan_record(row: Mapping[str, Any]) -> dict[str, Any]:
+def _simplify_plan_record(
+    row: Mapping[str, Any], *, expected_pred_condition: str = CONDITION
+) -> dict[str, Any]:
     logical_id = _require_string(row.get("logical_id"), context="simplify_plan.logical_id")
     task_type = _require_string(row.get("task_type"), context=f"{logical_id}.task_type")
     request = dict(_require_mapping(row.get("request"), context=f"{logical_id}.request"))
     condition = _require_string(row.get("condition"), context=f"{logical_id}.condition")
-    if condition != CONDITION:
-        raise SymbolicTaskBuilderError(f"{logical_id} 的 condition 必须为 {CONDITION}")
     if task_type == GT_SIMPLIFY_TASK_TYPE:
+        if condition != CONDITION:
+            raise SymbolicTaskBuilderError(f"{logical_id} 的 GT condition 必须为 clean")
         dataset_id = _validate_gt_dataset_id(
             _require_string(request.get("dataset_id"), context=f"{logical_id}.dataset_id"),
             context=f"{logical_id}.dataset_id",
@@ -434,6 +439,10 @@ def _simplify_plan_record(row: Mapping[str, Any]) -> dict[str, Any]:
         if logical_suffix is not None:
             expected_logical_id = f"{expected_logical_id}::{logical_suffix}"
     elif task_type == PRED_SIMPLIFY_TASK_TYPE:
+        if condition != expected_pred_condition:
+            raise SymbolicTaskBuilderError(
+                f"{logical_id} 的 condition 必须为 {expected_pred_condition}"
+            )
         algorithm_slug = _require_string(
             request.get("algorithm_slug"),
             context=f"{logical_id}.algorithm_slug",
@@ -447,26 +456,31 @@ def _simplify_plan_record(row: Mapping[str, Any]) -> dict[str, Any]:
         seed = _require_int(request.get("seed"), context=f"{logical_id}.seed")
         if seed not in SEED_SET:
             raise SymbolicTaskBuilderError(f"{logical_id}.seed 必须属于 {SEEDS}")
-        if request.get("noise_tag") != CONDITION:
-            raise SymbolicTaskBuilderError(f"{logical_id}.noise_tag 必须为 {CONDITION}")
-        expected_task_id = f"{algorithm_slug}_s{seed}_{CONDITION}_{dataset_index}"
+        if request.get("noise_tag") != expected_pred_condition:
+            raise SymbolicTaskBuilderError(
+                f"{logical_id}.noise_tag 必须为 {expected_pred_condition}"
+            )
+        expected_task_id = f"{algorithm_slug}_s{seed}_{expected_pred_condition}_{dataset_index}"
         task_id = _require_string(request.get("task_id"), context=f"{logical_id}.task_id")
         if task_id != expected_task_id:
             raise SymbolicTaskBuilderError(
                 f"{logical_id}.task_id 漂移: {task_id!r} != {expected_task_id!r}"
             )
-        parsed_algorithm_slug, parsed_dataset_index, parsed_seed, logical_suffix = (
+        parsed_algorithm_slug, parsed_dataset_index, parsed_seed, parsed_condition, logical_suffix = (
             _parse_pred_logical_id(logical_id)
         )
-        if (parsed_algorithm_slug, parsed_dataset_index, parsed_seed) != (
+        if (parsed_algorithm_slug, parsed_dataset_index, parsed_seed, parsed_condition) != (
             algorithm_slug,
             dataset_index,
             seed,
+            expected_pred_condition,
         ):
             raise SymbolicTaskBuilderError(
                 f"simplify plan logical_id 非 canonical: {logical_id!r} 与 request 身份不一致"
             )
-        expected_logical_id = _pred_logical_id(algorithm_slug, dataset_index, seed)
+        expected_logical_id = _pred_logical_id(
+            algorithm_slug, dataset_index, seed, condition=expected_pred_condition
+        )
         if logical_suffix is not None:
             expected_logical_id = f"{expected_logical_id}::{logical_suffix}"
     else:
@@ -594,6 +608,7 @@ def _load_frozen_index(
     expected_task_type: str,
     plan_by_logical_id: Mapping[str, SimplifyPlanRecord],
     expected_plan_sha256: str,
+    expected_condition: str,
 ) -> dict[str, FrozenSimplifyRecord]:
     rows = _read_jsonl(path)
     result: dict[str, FrozenSimplifyRecord] = {}
@@ -624,6 +639,11 @@ def _load_frozen_index(
             )
         if task_type != plan_record.task_type:
             raise SymbolicTaskBuilderError(f"{logical_id} 的 task_type 与 simplify plan 不一致")
+        row_condition = _require_string(row.get("condition"), context=f"{logical_id}.condition")
+        if row_condition != expected_condition:
+            raise SymbolicTaskBuilderError(
+                f"{logical_id} frozen condition 应为 {expected_condition}，实际为 {row_condition}"
+            )
         state = _require_string(row.get("state"), context=f"{logical_id}.state")
         if state not in {"frozen", "non_applicable"}:
             raise SymbolicTaskBuilderError(f"{logical_id} frozen index state 非法: {state}")
@@ -698,8 +718,10 @@ def _structure_logical_id(algorithm_slug: str, dataset_index: str, seed_a: int, 
     return f"{STRUCTURE_TASK_TYPE}::{algorithm_slug}::{dataset_index}::s{left}-s{right}"
 
 
-def _pred_logical_id(algorithm_slug: str, dataset_index: str, seed: int) -> str:
-    return f"{PRED_SIMPLIFY_TASK_TYPE}::{algorithm_slug}::{dataset_index}::s{seed}::{CONDITION}"
+def _pred_logical_id(
+    algorithm_slug: str, dataset_index: str, seed: int, *, condition: str = CONDITION
+) -> str:
+    return f"{PRED_SIMPLIFY_TASK_TYPE}::{algorithm_slug}::{dataset_index}::s{seed}::{condition}"
 
 
 def _parse_bool(value: object, *, context: str) -> bool:
@@ -713,8 +735,10 @@ def _parse_bool(value: object, *, context: str) -> bool:
     raise SymbolicTaskBuilderError(f"{context} 必须是 true/false")
 
 
-def _run_logical_key(algorithm: str, dataset_id: str, seed: int) -> str:
-    return f"{algorithm}::{dataset_id}::s{seed}::{CONDITION}"
+def _run_logical_key(
+    algorithm: str, dataset_id: str, seed: int, *, condition: str = CONDITION
+) -> str:
+    return f"{algorithm}::{dataset_id}::s{seed}::{condition}"
 
 
 def _load_numeric_validity(
@@ -722,6 +746,7 @@ def _load_numeric_validity(
     *,
     pred_plan_by_logical_id: Mapping[str, SimplifyPlanRecord],
     expected_row_count: int | None,
+    condition: str = CONDITION,
 ) -> tuple[dict[str, NumericValidityRecord], dict[str, Any]]:
     required_fields = {
         "logical_key",
@@ -759,14 +784,18 @@ def _load_numeric_validity(
                 seed = int(seed_text)
             except ValueError as exc:
                 raise SymbolicTaskBuilderError(f"{path}:{line_number}.seed 必须是整数") from exc
-            expected_logical_key = _run_logical_key(algorithm, dataset_id, seed)
+            expected_logical_key = _run_logical_key(
+                algorithm, dataset_id, seed, condition=condition
+            )
             if logical_key != expected_logical_key:
                 raise SymbolicTaskBuilderError(
                     f"{path}:{line_number}.logical_key 不一致: {logical_key!r} != {expected_logical_key!r}"
                 )
             noise_tag = _require_string(row.get("noise_tag"), context=f"{path}:{line_number}.noise_tag")
-            if noise_tag != CONDITION:
-                raise SymbolicTaskBuilderError(f"{path}:{line_number}.noise_tag 必须为 clean")
+            if noise_tag != condition:
+                raise SymbolicTaskBuilderError(
+                    f"{path}:{line_number}.noise_tag 必须为 {condition}"
+                )
             record = NumericValidityRecord(
                 logical_key=logical_key,
                 algorithm=algorithm,
@@ -873,11 +902,15 @@ def _split_simplify_plan_rows(
     simplify_plan_jsonl: Path | None,
     gt_plan_jsonl: Path | None,
     pred_plan_jsonl: Path | None,
+    condition: str = CONDITION,
 ) -> tuple[dict[str, SimplifyPlanRecord], dict[str, SimplifyPlanRecord], Path, Path]:
     if simplify_plan_jsonl is not None:
         if gt_plan_jsonl is not None or pred_plan_jsonl is not None:
             raise SymbolicTaskBuilderError("不能同时传 simplify_plan_jsonl 与 gt/pred 分离 plan")
-        rows = [_simplify_plan_record(row) for row in _load_simplify_plan_rows(simplify_plan_jsonl)]
+        rows = [
+            _simplify_plan_record(row, expected_pred_condition=condition)
+            for row in _load_simplify_plan_rows(simplify_plan_jsonl)
+        ]
         gt_rows = [row for row in rows if row["task_type"] == GT_SIMPLIFY_TASK_TYPE]
         pred_rows = [row for row in rows if row["task_type"] == PRED_SIMPLIFY_TASK_TYPE]
         return (
@@ -888,8 +921,14 @@ def _split_simplify_plan_rows(
         )
     if gt_plan_jsonl is None or pred_plan_jsonl is None:
         raise SymbolicTaskBuilderError("必须提供 simplify_plan_jsonl，或同时提供 gt_plan_jsonl 与 pred_plan_jsonl")
-    gt_rows = [_simplify_plan_record(row) for row in _load_simplify_plan_rows(gt_plan_jsonl)]
-    pred_rows = [_simplify_plan_record(row) for row in _load_simplify_plan_rows(pred_plan_jsonl)]
+    gt_rows = [
+        _simplify_plan_record(row, expected_pred_condition=condition)
+        for row in _load_simplify_plan_rows(gt_plan_jsonl)
+    ]
+    pred_rows = [
+        _simplify_plan_record(row, expected_pred_condition=condition)
+        for row in _load_simplify_plan_rows(pred_plan_jsonl)
+    ]
     return (
         _as_plan_records(gt_rows, expected_task_type=GT_SIMPLIFY_TASK_TYPE),
         _as_plan_records(pred_rows, expected_task_type=PRED_SIMPLIFY_TASK_TYPE),
@@ -940,6 +979,24 @@ def _request_allowed_functions(request: Mapping[str, Any], *, context: str) -> l
     if raw is None:
         return []
     return _require_string_list(raw, context=f"{context}.allowed_functions")
+
+
+def _pair_allowed_functions(
+    plan_record: SimplifyPlanRecord,
+    frozen_record: FrozenSimplifyRecord,
+) -> set[str]:
+    allowed = set(
+        _request_allowed_functions(
+            plan_record.request,
+            context=plan_record.logical_id,
+        )
+    )
+    expression = frozen_record.effective_expression or ""
+    if re.search(r"\b(?:Piecewise|where)\s*\(", expression):
+        # 上游 simplify 语义校验已证明该 Piecewise 来自合法比较表达式；
+        # 下游 parser 使用 canonical 名称 where 表示同一节点。
+        allowed.add("where")
+    return allowed
 
 
 def _phase_task_type(phase: str) -> str:
@@ -1006,6 +1063,31 @@ def _symbolic_artifact_sha(request: Mapping[str, Any], *, context: str) -> str |
     return None
 
 
+def _source_result_sha256(
+    request: Mapping[str, Any],
+    *,
+    context: str,
+    required: bool = False,
+) -> str | None:
+    raw = request.get("ast_source_evidence")
+    if raw is None:
+        if required:
+            raise SymbolicTaskBuilderError(f"{context}.ast_source_evidence 缺失")
+        return None
+    evidence = _require_mapping(raw, context=f"{context}.ast_source_evidence")
+    value = evidence.get("result_raw_sha256")
+    if value is None:
+        if required:
+            raise SymbolicTaskBuilderError(
+                f"{context}.ast_source_evidence.result_raw_sha256 缺失"
+            )
+        return None
+    return _require_sha256(
+        value,
+        context=f"{context}.ast_source_evidence.result_raw_sha256",
+    )
+
+
 def _shared_probe_bundle(
     left_request: Mapping[str, Any],
     right_request: Mapping[str, Any],
@@ -1048,6 +1130,10 @@ def _upstream_binding(
             request,
             context=plan_record.logical_id,
         ),
+        "source_result_sha256": _source_result_sha256(
+            request,
+            context=plan_record.logical_id,
+        ),
         "frozen_plan_sha256": frozen_record.plan_sha256,
         "frozen_logical_id": frozen_record.logical_id,
         "frozen_evaluation_key": frozen_record.evaluation_key,
@@ -1081,8 +1167,8 @@ def _build_full_pair_evidence(
     shared_probe = _shared_probe_bundle(left_plan.request, right_plan.request, context=logical_id)
     variables = shared_probe["variables"]
     allowed_functions = sorted(
-        set(_request_allowed_functions(left_plan.request, context=left_plan.logical_id))
-        | set(_request_allowed_functions(right_plan.request, context=right_plan.logical_id))
+        _pair_allowed_functions(left_plan, left_frozen)
+        | _pair_allowed_functions(right_plan, right_frozen)
     )
     pair_domain_assumptions = {
         "lhs": _request_domain_assumptions(
@@ -1106,6 +1192,7 @@ def _build_full_pair_evidence(
             probe_points=shared_probe["probe_points"],
             probe_source=str(shared_probe["probe_source"]),
             probe_sample_sha256=str(shared_probe["probe_sample_sha256"]),
+            include_tree_distance=phase == "equivalence",
         )
     except SymbolicEvidenceError as exc:
         raise SymbolicTaskBuilderError(f"{logical_id} 构建 pair evidence 失败: {exc}") from exc
@@ -1143,13 +1230,14 @@ def _build_non_applicable_evidence(
     reason: str,
     dependencies: tuple[str, ...],
     request_context: Mapping[str, Any],
+    condition: str = CONDITION,
 ) -> dict[str, Any]:
     return {
         "schema_version": "symbolic_non_applicable.v1",
         "logical_id": logical_id,
         "task_type": task_type,
         "phase": phase,
-        "condition": CONDITION,
+        "condition": condition,
         "reason": reason,
         "dependencies": list(dependencies),
         "request_context": dict(request_context),
@@ -1179,6 +1267,7 @@ def _materialize_non_applicable_evidence(
     dependencies: tuple[str, ...],
     contract: PromptSchemaBundle,
     write_evidence: bool,
+    condition: str = CONDITION,
 ) -> dict[str, Any]:
     evidence_payload = _build_non_applicable_evidence(
         logical_id=logical_id,
@@ -1187,6 +1276,7 @@ def _materialize_non_applicable_evidence(
         reason=reason,
         dependencies=dependencies,
         request_context=request_context,
+        condition=condition,
     )
     evidence_bytes = _canonical_json_bytes(evidence_payload)
     evidence_sha256 = _sha256_bytes(evidence_bytes)
@@ -1224,6 +1314,7 @@ def _materialize_non_applicable_evidence(
         dependencies=dependencies,
         evidence_path=str(evidence_path),
         evidence_sha256=evidence_sha256,
+        condition=condition,
     )
 
 
@@ -1240,6 +1331,7 @@ def _no_call_record(
     dependencies: tuple[str, ...],
     evidence_path: str,
     evidence_sha256: str,
+    condition: str = CONDITION,
 ) -> dict[str, Any]:
     normalized_input = {
         "request": dict(request),
@@ -1260,7 +1352,7 @@ def _no_call_record(
         evaluation_key=task_key,
         logical_id=logical_id,
         task_type=task_type,
-        condition=CONDITION,
+        condition=condition,
         priority=EQUIVALENCE_PRIORITY if task_type == EQUIVALENCE_TASK_TYPE else STRUCTURE_PRIORITY,
         input_hash=_sha256_json(normalized_input),
         prompt_version=contract.prompt_version,
@@ -1276,7 +1368,7 @@ def _no_call_record(
         "phase": phase,
         "logical_id": logical_id,
         "task_type": task_type,
-        "condition": CONDITION,
+        "condition": condition,
         "priority": task_spec.priority,
         "reason": reason,
         "evaluation_key": task_key,
@@ -1379,9 +1471,18 @@ def build_symbolic_task_plan(
     expected_pred_count: int | None = 2250,
     expected_pair_count: int | None = 2250,
     write_non_applicable_evidence: bool = True,
+    task_sink: Callable[[PlannedTask], None] | None = None,
+    retain_tasks: bool = True,
+    condition: str = CONDITION,
 ) -> tuple[list[PlannedTask], dict[str, Any]]:
     if phase not in PLAN_PHASES:
         raise SymbolicTaskBuilderError(f"未知 phase: {phase!r}")
+    if condition not in SUPPORTED_CONDITIONS:
+        raise SymbolicTaskBuilderError(f"未知 condition: {condition!r}")
+    if condition != CONDITION and phase != "equivalence":
+        raise SymbolicTaskBuilderError(
+            "noise 条件只允许 phase=equivalence；STAB structure 仅使用 clean"
+        )
     if gt_frozen_summary_json is None or pred_frozen_summary_json is None:
         raise SymbolicTaskBuilderError("gt_frozen_summary_json 与 pred_frozen_summary_json 为必填")
     if clean_run_metrics_csv is None:
@@ -1395,6 +1496,7 @@ def build_symbolic_task_plan(
         simplify_plan_jsonl=simplify_plan_jsonl,
         gt_plan_jsonl=gt_plan_jsonl,
         pred_plan_jsonl=pred_plan_jsonl,
+        condition=condition,
     )
     gt_plan_by_dataset: dict[str, SimplifyPlanRecord] = {}
     for row in gt_plan_by_logical_id.values():
@@ -1423,17 +1525,20 @@ def build_symbolic_task_plan(
         expected_task_type=GT_SIMPLIFY_TASK_TYPE,
         plan_by_logical_id=gt_plan_by_logical_id,
         expected_plan_sha256=gt_plan_sha256,
+        expected_condition=CONDITION,
     )
     pred_frozen = _load_frozen_index(
         pred_frozen_index_jsonl,
         expected_task_type=PRED_SIMPLIFY_TASK_TYPE,
         plan_by_logical_id=pred_plan_by_logical_id,
         expected_plan_sha256=pred_plan_sha256,
+        expected_condition=condition,
     )
     numeric_validity_by_logical_id, numeric_validity_report = _load_numeric_validity(
         clean_run_metrics_csv.resolve(),
         pred_plan_by_logical_id=pred_plan_by_logical_id,
         expected_row_count=expected_pred_count,
+        condition=condition,
     )
     non_applicable_dir = non_applicable_evidence_dir.resolve()
     derived_structure_pairs = _structure_pairs_from_pred_groups(pred_groups)
@@ -1461,8 +1566,23 @@ def build_symbolic_task_plan(
     equivalence_tasks: list[PlannedTask] = []
     structure_tasks: list[PlannedTask] = []
     no_call_records: list[dict[str, Any]] = []
+    task_counts = {EQUIVALENCE_TASK_TYPE: 0, STRUCTURE_TASK_TYPE: 0}
+    task_logical_ids = {EQUIVALENCE_TASK_TYPE: set(), STRUCTURE_TASK_TYPE: set()}
 
-    for logical_id in sorted(pred_plan_by_logical_id):
+    def record_task(task: PlannedTask, bucket: list[PlannedTask]) -> None:
+        task_counts[task.task_type] += 1
+        task_logical_ids[task.task_type].add(task.logical_id)
+        if retain_tasks:
+            bucket.append(task)
+        if task_sink is not None:
+            task_sink(task)
+
+    equivalence_source_ids = (
+        sorted(pred_plan_by_logical_id)
+        if phase in {"all", "equivalence"}
+        else []
+    )
+    for logical_id in equivalence_source_ids:
         pred_plan = pred_plan_by_logical_id[logical_id]
         pred_request = dict(pred_plan.request)
         dataset_id = _require_string(pred_request.get("dataset_id"), context=f"{logical_id}.dataset_id")
@@ -1476,9 +1596,16 @@ def build_symbolic_task_plan(
         gt_record = gt_frozen[gt_plan.logical_id]
         pred_record = pred_frozen[logical_id]
         numeric_record = numeric_validity_by_logical_id[logical_id]
-        if pred_record.result_sha256 is not None and numeric_record.result_sha256 != pred_record.result_sha256:
-            raise SymbolicTaskBuilderError(f"{logical_id} 的 numeric result_sha256 与 frozen result 不一致")
-        eq_logical_id = f"{EQUIVALENCE_TASK_TYPE}::{algorithm_slug}::{dataset_index}::s{seed}::{CONDITION}"
+        source_result_sha256 = _source_result_sha256(
+            pred_plan.request,
+            context=logical_id,
+            required=True,
+        )
+        if numeric_record.result_sha256 != source_result_sha256:
+            raise SymbolicTaskBuilderError(
+                f"{logical_id} 的 numeric result_sha256 与 pred plan 源结果不一致"
+            )
+        eq_logical_id = f"{EQUIVALENCE_TASK_TYPE}::{algorithm_slug}::{dataset_index}::s{seed}::{condition}"
         dependencies = (gt_record.evaluation_key, pred_record.evaluation_key)
         request_context = {
             "dataset_id": dataset_id,
@@ -1486,9 +1613,12 @@ def build_symbolic_task_plan(
             "algorithm": algorithm,
             "algorithm_slug": algorithm_slug,
             "seed": seed,
-            "noise_tag": CONDITION,
+            "noise_tag": condition,
             "variables": list(pred_request.get("variables", [])),
-            "allowed_functions": list(pred_request.get("allowed_functions", [])),
+            "allowed_functions": sorted(
+                _pair_allowed_functions(gt_plan, gt_record)
+                | _pair_allowed_functions(pred_plan, pred_record)
+            ),
             "ground_truth_logical_id": gt_plan.logical_id,
             "ground_truth_plan_evaluation_key": gt_plan.evaluation_key,
             "ground_truth_frozen_plan_sha256": gt_record.plan_sha256,
@@ -1522,6 +1652,7 @@ def build_symbolic_task_plan(
                     dependencies=dependencies,
                     request_context=request_context,
                     write_evidence=write_non_applicable_evidence,
+                    condition=condition,
                 )
             )
             continue
@@ -1543,7 +1674,7 @@ def build_symbolic_task_plan(
             "deterministic_evidence": evidence_payload,
             "evidence_hash": evidence_hash,
         }
-        equivalence_tasks.append(
+        record_task(
             _task_from_request(
                 logical_id=eq_logical_id,
                 task_type=EQUIVALENCE_TASK_TYPE,
@@ -1552,10 +1683,17 @@ def build_symbolic_task_plan(
                 evidence_hash=evidence_hash,
                 contract=equivalence_contract,
                 dependencies=dependencies,
-            )
+                condition=condition,
+            ),
+            equivalence_tasks,
         )
 
-    for group, seed_a, seed_b in derived_structure_pairs:
+    structure_source_pairs = (
+        derived_structure_pairs
+        if phase in {"all", "structure"}
+        else []
+    )
+    for group, seed_a, seed_b in structure_source_pairs:
         logical_id = _structure_logical_id(group.algorithm_slug, group.dataset_index, seed_a, seed_b)
         pred_plan_a = group.by_seed[seed_a]
         pred_plan_b = group.by_seed[seed_b]
@@ -1563,10 +1701,24 @@ def build_symbolic_task_plan(
         pred_record_b = pred_frozen[pred_plan_b.logical_id]
         numeric_a = numeric_validity_by_logical_id[pred_plan_a.logical_id]
         numeric_b = numeric_validity_by_logical_id[pred_plan_b.logical_id]
-        if pred_record_a.result_sha256 is not None and pred_record_a.result_sha256 != numeric_a.result_sha256:
-            raise SymbolicTaskBuilderError(f"{pred_plan_a.logical_id} 的 numeric result_sha256 与 frozen result 不一致")
-        if pred_record_b.result_sha256 is not None and pred_record_b.result_sha256 != numeric_b.result_sha256:
-            raise SymbolicTaskBuilderError(f"{pred_plan_b.logical_id} 的 numeric result_sha256 与 frozen result 不一致")
+        source_result_sha_a = _source_result_sha256(
+            pred_plan_a.request,
+            context=pred_plan_a.logical_id,
+            required=True,
+        )
+        source_result_sha_b = _source_result_sha256(
+            pred_plan_b.request,
+            context=pred_plan_b.logical_id,
+            required=True,
+        )
+        if numeric_a.result_sha256 != source_result_sha_a:
+            raise SymbolicTaskBuilderError(
+                f"{pred_plan_a.logical_id} 的 numeric result_sha256 与 pred plan 源结果不一致"
+            )
+        if numeric_b.result_sha256 != source_result_sha_b:
+            raise SymbolicTaskBuilderError(
+                f"{pred_plan_b.logical_id} 的 numeric result_sha256 与 pred plan 源结果不一致"
+            )
         dependencies = (pred_record_a.evaluation_key, pred_record_b.evaluation_key)
         request_context = {
             "dataset_id": group.dataset_id,
@@ -1574,6 +1726,10 @@ def build_symbolic_task_plan(
             "algorithm": group.algorithm,
             "algorithm_slug": group.algorithm_slug,
             "noise_tag": CONDITION,
+            "allowed_functions": sorted(
+                _pair_allowed_functions(pred_plan_a, pred_record_a)
+                | _pair_allowed_functions(pred_plan_b, pred_record_b)
+            ),
             "seed_a": seed_a,
             "seed_b": seed_b,
             "prediction_a_logical_id": pred_plan_a.logical_id,
@@ -1616,6 +1772,7 @@ def build_symbolic_task_plan(
                     dependencies=dependencies,
                     request_context=request_context,
                     write_evidence=write_non_applicable_evidence,
+                    condition=condition,
                 )
             )
             continue
@@ -1638,7 +1795,7 @@ def build_symbolic_task_plan(
             "deterministic_pair_evidence": evidence_payload,
             "evidence_hash": evidence_hash,
         }
-        structure_tasks.append(
+        record_task(
             _task_from_request(
                 logical_id=logical_id,
                 task_type=STRUCTURE_TASK_TYPE,
@@ -1647,7 +1804,9 @@ def build_symbolic_task_plan(
                 evidence_hash=evidence_hash,
                 contract=structure_contract,
                 dependencies=dependencies,
-            )
+                condition=condition,
+            ),
+            structure_tasks,
         )
 
     if phase == "equivalence":
@@ -1660,9 +1819,17 @@ def build_symbolic_task_plan(
     no_call_records.sort(key=lambda item: (item["phase"], item["logical_id"]))
     equivalence_no_call_count = sum(1 for row in no_call_records if row["phase"] == "equivalence")
     structure_no_call_count = sum(1 for row in no_call_records if row["phase"] == "structure")
-    if len(equivalence_tasks) + equivalence_no_call_count != (expected_pred_count or len(pred_plan_by_logical_id)):
+    if (
+        phase in {"all", "equivalence"}
+        and task_counts[EQUIVALENCE_TASK_TYPE] + equivalence_no_call_count
+        != (expected_pred_count or len(pred_plan_by_logical_id))
+    ):
         raise SymbolicTaskBuilderError("equivalence callable+no-call 总数不闭合")
-    if len(structure_tasks) + structure_no_call_count != (expected_pair_count or len(derived_structure_pairs)):
+    if (
+        phase in {"all", "structure"}
+        and task_counts[STRUCTURE_TASK_TYPE] + structure_no_call_count
+        != (expected_pair_count or len(derived_structure_pairs))
+    ):
         raise SymbolicTaskBuilderError("structure callable+no-call 总数不闭合")
     report = {
         "phase": phase,
@@ -1705,21 +1872,23 @@ def build_symbolic_task_plan(
             "required_seed_set": list(SEEDS),
             "required_seed_pairs": [list(item) for item in SEED_PAIRS],
             "clean_run_metrics": numeric_validity_report,
-            "equivalence_unique_logical_ids": len({task.logical_id for task in equivalence_tasks}),
-            "structure_unique_logical_ids": len({task.logical_id for task in structure_tasks}),
+            "equivalence_unique_logical_ids": len(task_logical_ids[EQUIVALENCE_TASK_TYPE]),
+            "structure_unique_logical_ids": len(task_logical_ids[STRUCTURE_TASK_TYPE]),
         },
         "planning_counts": {
-            "equivalence_total": len(equivalence_tasks),
-            "structure_total": len(structure_tasks),
-            "selected_phase_task_count": len(selected_tasks),
+            "equivalence_total": task_counts[EQUIVALENCE_TASK_TYPE],
+            "structure_total": task_counts[STRUCTURE_TASK_TYPE],
+            "selected_phase_task_count": sum(task_counts.values()),
             "no_call_count": len(no_call_records),
             "equivalence_no_call_count": equivalence_no_call_count,
             "structure_no_call_count": structure_no_call_count,
-            "equivalence_closed_total": len(equivalence_tasks) + equivalence_no_call_count,
-            "structure_closed_total": len(structure_tasks) + structure_no_call_count,
+            "equivalence_closed_total": task_counts[EQUIVALENCE_TASK_TYPE] + equivalence_no_call_count,
+            "structure_closed_total": task_counts[STRUCTURE_TASK_TYPE] + structure_no_call_count,
         },
         "no_call_records": no_call_records,
     }
+    if condition != CONDITION:
+        report["condition"] = condition
     return selected_tasks, report
 
 
@@ -1741,6 +1910,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pred-plan-jsonl", type=Path)
     parser.add_argument("--repo-root", type=Path, default=repo_root)
     parser.add_argument("--phase", choices=PLAN_PHASES, default="all")
+    parser.add_argument("--condition", choices=SUPPORTED_CONDITIONS, default=CONDITION)
     parser.add_argument("--expected-gt-count", type=int, default=50)
     parser.add_argument("--expected-pred-count", type=int, default=2250)
     parser.add_argument("--expected-pair-count", type=int, default=2250)
@@ -1762,6 +1932,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--structure-output-jsonl", type=Path)
     parser.add_argument("--structure-non-applicable-index-jsonl", type=Path)
     parser.add_argument("--structure-full-plan-jsonl", type=Path)
+    parser.add_argument(
+        "--stream-tasks",
+        action="store_true",
+        help="逐任务写盘，避免正式大计划在内存中保留全部证据",
+    )
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args(argv)
 
@@ -1840,10 +2015,141 @@ def _materialize_phase_outputs(
     return phase_outputs
 
 
+def _iter_jsonl_rows(path: Path) -> Iterator[dict[str, Any]]:
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise SymbolicTaskBuilderError(
+                    f"{path}:{line_number} JSONL 解析失败: {exc}"
+                ) from exc
+            yield dict(_require_mapping(payload, context=f"{path}:{line_number}"))
+
+
+def _atomic_write_jsonl_iter(path: Path, rows: Iterator[Mapping[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", delete=False) as handle:
+        for row in rows:
+            handle.write(_canonical_json_bytes(row))
+        tmp_path = Path(handle.name)
+    tmp_path.replace(path)
+
+
+def _copy_file_atomic(source: Path, destination: Path) -> None:
+    if source.resolve() == destination.resolve():
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with source.open("rb") as source_handle:
+        with NamedTemporaryFile(
+            dir=destination.parent,
+            prefix=f".{destination.name}.",
+            delete=False,
+        ) as destination_handle:
+            for chunk in iter(lambda: source_handle.read(1024 * 1024), b""):
+                destination_handle.write(chunk)
+            tmp_path = Path(destination_handle.name)
+    tmp_path.replace(destination)
+
+
+def _plan_sort_key(row: Mapping[str, Any]) -> tuple[int, str]:
+    return int(row["priority"]), str(row["logical_id"])
+
+
+def _merge_streamed_full_plan(
+    callable_path: Path,
+    no_call_rows: Sequence[Mapping[str, Any]],
+    output_path: Path,
+) -> None:
+    def merged_rows() -> Iterator[Mapping[str, Any]]:
+        task_iterator = _iter_jsonl_rows(callable_path)
+        no_call_iterator = iter(sorted(no_call_rows, key=_plan_sort_key))
+        task_row = next(task_iterator, None)
+        no_call_row = next(no_call_iterator, None)
+        while task_row is not None or no_call_row is not None:
+            if no_call_row is None or (
+                task_row is not None
+                and _plan_sort_key(task_row) <= _plan_sort_key(no_call_row)
+            ):
+                assert task_row is not None
+                yield task_row
+                task_row = next(task_iterator, None)
+            else:
+                yield no_call_row
+                no_call_row = next(no_call_iterator, None)
+
+    _atomic_write_jsonl_iter(output_path, merged_rows())
+
+
+def _materialize_streamed_phase_outputs(
+    *,
+    callable_path: Path,
+    no_call_records: Sequence[Mapping[str, Any]],
+    args: argparse.Namespace,
+) -> dict[str, dict[str, Any]]:
+    if args.phase == "all":
+        raise SymbolicTaskBuilderError("--stream-tasks 目前要求显式选择单个 phase")
+    phase = str(args.phase)
+    if phase == "equivalence":
+        output_callable = args.equivalence_output_jsonl
+        output_non_applicable = args.equivalence_non_applicable_index_jsonl
+        output_full = args.equivalence_full_plan_jsonl
+    else:
+        output_callable = args.structure_output_jsonl
+        output_non_applicable = args.structure_non_applicable_index_jsonl
+        output_full = args.structure_full_plan_jsonl
+    if output_callable is None:
+        return {}
+    assert output_non_applicable is not None
+    assert output_full is not None
+    selected_no_calls = _phase_no_call_records(no_call_records, phase=phase)
+    _copy_file_atomic(callable_path, output_callable)
+    _write_jsonl(output_non_applicable, selected_no_calls)
+    _merge_streamed_full_plan(callable_path, selected_no_calls, output_full)
+    callable_count = sum(1 for _ in _iter_jsonl_rows(callable_path))
+    return {
+        phase: {
+            "phase": phase,
+            "callable_task_count": callable_count,
+            "non_applicable_count": len(selected_no_calls),
+            "full_plan_count": callable_count + len(selected_no_calls),
+            "callable_output_jsonl": str(output_callable.resolve()),
+            "callable_output_sha256": _sha256_file(output_callable),
+            "non_applicable_index_jsonl": str(output_non_applicable.resolve()),
+            "non_applicable_index_sha256": _sha256_file(output_non_applicable),
+            "full_plan_jsonl": str(output_full.resolve()),
+            "full_plan_sha256": _sha256_file(output_full),
+        }
+    }
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    stream_handle: Any | None = None
+    stream_tmp_path: Path | None = None
     try:
         _validate_phase_materialization_request(args)
+        if args.stream_tasks and args.phase == "all":
+            raise SymbolicTaskBuilderError("--stream-tasks 目前要求显式选择单个 phase")
+        task_sink: Callable[[PlannedTask], None] | None = None
+        if args.stream_tasks and not args.dry_run:
+            args.output_jsonl.parent.mkdir(parents=True, exist_ok=True)
+            stream_handle = NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=args.output_jsonl.parent,
+                prefix=f".{args.output_jsonl.name}.",
+                delete=False,
+            )
+            stream_tmp_path = Path(stream_handle.name)
+
+            def task_sink(task: PlannedTask) -> None:
+                assert stream_handle is not None
+                stream_handle.write(_canonical_json(_task_json_record(task)))
+                stream_handle.write("\n")
+
         tasks, report = build_symbolic_task_plan(
             gt_frozen_index_jsonl=args.gt_frozen_index_jsonl.resolve(),
             pred_frozen_index_jsonl=args.pred_frozen_index_jsonl.resolve(),
@@ -1862,23 +2168,45 @@ def main(argv: Sequence[str] | None = None) -> int:
             expected_pred_count=args.expected_pred_count,
             expected_pair_count=args.expected_pair_count,
             write_non_applicable_evidence=not args.dry_run,
+            task_sink=task_sink,
+            retain_tasks=not args.stream_tasks,
+            condition=args.condition,
         )
     except SymbolicTaskBuilderError as exc:
+        if stream_handle is not None:
+            stream_handle.close()
+        if stream_tmp_path is not None:
+            stream_tmp_path.unlink(missing_ok=True)
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
+    finally:
+        if stream_handle is not None and not stream_handle.closed:
+            stream_handle.close()
     if args.dry_run:
         print(json.dumps(report["planning_counts"], ensure_ascii=False, sort_keys=True))
         return 0
     selected_no_call_records = _phase_no_call_records(report["no_call_records"], phase=args.phase)
-    _write_jsonl(args.output_jsonl, [_task_json_record(task) for task in tasks])
+    if args.stream_tasks:
+        assert stream_tmp_path is not None
+        stream_tmp_path.replace(args.output_jsonl)
+    else:
+        _write_jsonl(args.output_jsonl, [_task_json_record(task) for task in tasks])
     _write_jsonl(args.non_applicable_index_jsonl, selected_no_call_records)
-    phase_outputs = _materialize_phase_outputs(
-        tasks=tasks,
-        no_call_records=report["no_call_records"],
-        args=args,
-    )
+    if args.stream_tasks:
+        phase_outputs = _materialize_streamed_phase_outputs(
+            callable_path=args.output_jsonl,
+            no_call_records=report["no_call_records"],
+            args=args,
+        )
+    else:
+        phase_outputs = _materialize_phase_outputs(
+            tasks=tasks,
+            no_call_records=report["no_call_records"],
+            args=args,
+        )
     if phase_outputs:
         report["phase_outputs"] = phase_outputs
+    report["stream_tasks"] = bool(args.stream_tasks)
     _write_json(args.report_json, report)
     print(json.dumps(report["planning_counts"], ensure_ascii=False, sort_keys=True))
     return 0

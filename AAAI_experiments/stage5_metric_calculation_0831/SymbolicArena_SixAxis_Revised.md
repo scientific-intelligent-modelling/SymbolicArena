@@ -114,46 +114,42 @@ Unlike the previous implementation, the revised formal scores do not first take 
 
 ---
 
-## 2.1 Mandatory Claude Code Single-Turn Contract
+## 2.1 Mandatory Direct Opus5 API Single-Turn Contract
 
-All LLM-assisted operations in the complete symbolic-processing pipeline are mandatory Claude Code evaluations. Claude Code is not restricted to difficult cases and is not used merely as an optional fallback.
+All LLM-assisted operations in the complete symbolic-processing pipeline are mandatory direct Opus5 API evaluations. The LLM is not restricted to difficult cases and is not used merely as an optional fallback.
 
 The mandatory coverage is:
 
-1. each of the 50 original Ground Truth expressions receives an independent single-turn Claude Code simplification;
-2. every run across `clean`, `noise001`, and `noise005` with a non-empty final expression receives an independent single-turn Claude Code simplification, covering up to 6750 final expressions;
-3. every simplified experiment final expression receives an independent single-turn Claude Code equivalence adjudication against its frozen simplified Ground Truth reference;
-4. every valid clean seed pair used by the formal STAB axis receives an independent single-turn Claude Code structural-consistency adjudication.
+1. each of the 50 original Ground Truth expressions receives an independent single-turn Opus5 API simplification;
+2. every run across `clean`, `noise001`, and `noise005` with a non-empty final expression receives an independent single-turn Opus5 API simplification, covering up to 6750 final expressions;
+3. every simplified experiment final expression receives an independent single-turn Opus5 API equivalence adjudication against its frozen simplified Ground Truth reference;
+4. every valid clean seed pair used by the formal STAB axis receives an independent single-turn Opus5 API structural-consistency adjudication.
 
 The same frozen simplified prediction is reused by SYM, MIN, and STAB. Reusing this artifact avoids contradictory simplifications without reducing LLM coverage.
 
-Every Claude Code invocation must:
+Every API invocation must:
 
-- use the configured `claude-opus-5[1m]` model with `effortLevel=xhigh`;
-- be stateless and limited to one turn;
-- disable all Claude Code tools;
-- disable session persistence;
+- request `claude-opus-5` with `output_config.effort=xhigh`;
+- use `stream=false` and remain stateless;
+- use the Anthropic Messages API directly, without Claude Code or tools;
 - require a versioned JSON Schema response;
 - receive only the explicitly prepared expression payload and deterministic evidence;
-- record the raw input, prompt version, input hash, raw output, parsed output, model metadata, token usage, latency, retry history, and terminal status.
+- record the input, prompt version, input hash, parsed text output, response hash, model metadata, token usage, latency, retry history, and terminal status. Internal thinking content is redacted from persistent artifacts.
 
 The required invocation pattern is equivalent to:
 
-```bash
-claude --print \
-  --safe-mode \
-  --setting-sources user \
-  --model 'claude-opus-5[1m]' \
-  --effort xhigh \
-  --tools "" \
-  --max-turns 1 \
-  --no-session-persistence \
-  --output-format json \
-  --json-schema '<versioned-schema>' \
-  '<versioned-prompt-and-expression-payload>'
+```json
+{
+  "model": "claude-opus-5",
+  "stream": false,
+  "max_tokens": 6144,
+  "thinking": {"type": "adaptive"},
+  "output_config": {"effort": "xhigh"},
+  "messages": [{"role": "user", "content": "<versioned-prompt-and-payload>"}]
+}
 ```
 
-SymPy checks, independent numerical probes, canonical-tree parsing, and other deterministic procedures remain mandatory evidence sources. They do not replace the Claude Code call. When a Claude Code call must be retried because of transport failure or schema-invalid output, every attempt is retained and the first schema-valid terminal result is frozen according to the versioned retry policy.
+SymPy checks, independent numerical probes, canonical-tree parsing, and other deterministic procedures remain mandatory evidence sources. They do not replace the Opus5 API call. When a request must be retried because of transport failure or schema-invalid output, every attempt is retained and the first schema-valid terminal result is frozen according to the versioned retry policy.
 
 With complete valid coverage, the symbolic pipeline requires:
 
@@ -169,7 +165,7 @@ With complete valid coverage, the symbolic pipeline requires:
 15800
 \]
 
-independent single-turn Claude Code evaluations. The formal six-axis scores still consume only clean runs, while the LLM artifacts for `noise001` and `noise005` are retained for supplementary diagnostics. Runs without a final expression and seed pairs containing such a run are recorded explicitly as missing or inconsistent rather than silently omitted.
+independent single-turn Opus5 API evaluations. The formal six-axis scores still consume only clean runs, while the LLM artifacts for `noise001` and `noise005` are retained for supplementary diagnostics. Runs without a final expression and seed pairs containing such a run are recorded explicitly as missing or inconsistent rather than silently omitted.
 
 ---
 
@@ -268,10 +264,10 @@ f^{ref}
 where:
 
 - \(f^{gt}\): original Ground Truth expression;
-- \(\mathcal{S}(\cdot)\): unified expression-simplification procedure that requires an independent single-turn Claude Code simplification;
+- \(\mathcal{S}(\cdot)\): unified expression-simplification procedure that requires an independent single-turn Opus5 API simplification;
 - \(f^{ref}\): simplified Ground Truth reference expression.
 
-Each of the 50 Ground Truth simplifications is executed once under the versioned Claude Code contract, reviewed against deterministic symbolic evidence, and frozen before any predicted expression is evaluated. All algorithms and all seeds use the same frozen reference for a given task.
+Each of the 50 Ground Truth simplifications is executed once under the versioned single-turn API contract, reviewed against deterministic symbolic evidence, and frozen before any predicted expression is evaluated. All algorithms and all seeds use the same frozen reference for a given task.
 
 For the predicted expression \(\hat f\),
 
@@ -286,7 +282,7 @@ where:
 - \(\hat f\): final expression returned by the SR algorithm;
 - \(\tilde f\): simplified predicted expression.
 
-Every non-empty final expression from all 6750 experiment runs is processed by an independent Claude Code single-turn simplification. This requirement applies even when deterministic parsing or simplification already succeeds. Formal SYM uses the 2250 clean results, while noisy-run symbolic artifacts remain supplementary. Only final expressions are processed by the symbolic pipeline; minute-level search snapshots are not evaluated with SYM.
+Every non-empty final expression from all 6750 experiment runs is processed by an independent Opus5 API single-turn simplification. This requirement applies even when deterministic parsing or simplification already succeeds. Formal SYM uses the 2250 clean results, while noisy-run symbolic artifacts remain supplementary. Only final expressions are processed by the symbolic pipeline; minute-level search snapshots are not evaluated with SYM.
 
 ---
 
@@ -314,9 +310,9 @@ The equivalence procedure requires all of the following evidence:
 
 - symbolic algebraic checking;
 - independent numerical equivalence checking;
-- an independent single-turn Claude Code equivalence judgment.
+- an independent single-turn Opus5 API equivalence judgment.
 
-Claude Code adjudicates every available final expression across `clean`, `noise001`, and `noise005` against the corresponding frozen Ground Truth reference, not only difficult cases. Formal SYM uses only clean adjudications. Symbolic and numerical checks are included in every adjudication record as evidence and do not eliminate the mandatory Claude Code call.
+Opus5 adjudicates every available final expression across `clean`, `noise001`, and `noise005` against the corresponding frozen Ground Truth reference, not only difficult cases. Formal SYM uses only clean adjudications. Symbolic and numerical checks are included in every adjudication record as evidence and do not eliminate the mandatory API call.
 
 ---
 
@@ -445,7 +441,7 @@ The predicted expression is also simplified:
 \mathcal{S}\left(\hat f\right).
 \]
 
-The simplification procedure requires Claude Code to identify a concise mathematical form for every non-empty final expression across all 6750 runs. Formal MIN uses the 2250 clean results. MIN reuses exactly the frozen Claude-simplified Ground Truth and prediction produced by the common symbolic pipeline; it does not run a competing simplification of the same expression.
+The simplification procedure requires Opus5 to identify a concise mathematical form for every non-empty final expression across all 6750 runs. Formal MIN uses the 2250 clean results. MIN reuses exactly the frozen Opus5-simplified Ground Truth and prediction produced by the common symbolic pipeline; it does not run a competing simplification of the same expression.
 
 Only final expressions are evaluated by MIN. Minute-level search snapshots are not passed to the LLM-assisted simplification procedure.
 
@@ -791,9 +787,9 @@ I^{struct}_{ij}
 \end{cases}
 \]
 
-Structural consistency is assessed from the frozen Claude-simplified final expressions shared with the SYM/MIN symbolic-processing pipeline. Every valid clean seed pair receives an independent single-turn Claude Code structural-consistency adjudication.
+Structural consistency is assessed from the frozen Opus5-simplified final expressions shared with the SYM/MIN symbolic-processing pipeline. Every valid clean seed pair receives an independent single-turn Opus5 API structural-consistency adjudication.
 
-A pair is considered structurally consistent when Claude Code judges that the final expressions are mathematically equivalent or share the same canonical symbolic structure, using deterministic equivalence and canonical-tree evidence supplied with the request.
+A pair is considered structurally consistent when Opus5 judges that the final expressions are mathematically equivalent or share the same canonical symbolic structure, using deterministic equivalence and canonical-tree evidence supplied with the request.
 
 If either seed does not produce a valid final expression, the pair is treated as inconsistent.
 
@@ -857,7 +853,7 @@ The geometric mean requires numerical, output-validity, and symbolic-structure c
 |---|---:|---:|---:|---:|---:|---:|
 | Clean final expression | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | Minute-level best-so-far trajectory | ✓ | ✓ |  |  | ✓ |  |
-| Mandatory Claude Code single-turn processing |  |  | Every run; clean scored | Every run; clean scored |  | Every valid clean seed pair |
+| Mandatory Opus5 API single-turn processing |  |  | Every run; clean scored | Every run; clean scored |  | Every valid clean seed pair |
 | noise001 / noise005 runs | Supplementary only | Supplementary only | LLM artifacts only | LLM artifacts only |  |  |
 
 The key computational separation is:
@@ -878,7 +874,7 @@ and
 ID,\ OOD,\ SYM,\ MIN,\ STAB.
 \]
 
-Mandatory Claude Code processing is applied to all 50 Ground Truth expressions, every available final expression across all 6750 runs, every corresponding final-expression equivalence adjudication, and every valid clean STAB seed pair. It is not applied to minute-level search snapshots.
+Mandatory Opus5 API processing is applied to all 50 Ground Truth expressions, every available final expression across all 6750 runs, every corresponding final-expression equivalence adjudication, and every valid clean STAB seed pair. It is not applied to minute-level search snapshots.
 
 ---
 
@@ -897,7 +893,7 @@ These correspond to:
 - 1% training-label noise;
 - 5% training-label noise.
 
-They are reported separately as supplementary robustness diagnostics and do not require minute-level SYM or MIN evaluation. Their final expressions still receive the same mandatory single-turn Claude Code simplification and equivalence adjudication as clean runs, but those symbolic outputs do not enter the formal six-axis leaderboard.
+They are reported separately as supplementary robustness diagnostics and do not require minute-level SYM or MIN evaluation. Their final expressions still receive the same mandatory single-turn Opus5 API simplification and equivalence adjudication as clean runs, but those symbolic outputs do not enter the formal six-axis leaderboard.
 
 The complete experiment therefore contains:
 

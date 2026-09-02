@@ -1,4 +1,4 @@
-"""从 equivalence plan 物化 clean_pred_vs_gt_evidence.jsonl。"""
+"""从 equivalence plan 物化指定条件的 pred_vs_gt_evidence.jsonl。"""
 
 from __future__ import annotations
 
@@ -20,10 +20,16 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan im
 STAGE_ROOT_RELATIVE = Path("AAAI_experiments/stage5_metric_calculation_0831")
 DEFAULT_OUTPUT_JSONL = STAGE_ROOT_RELATIVE / "results/clean_pred_vs_gt_evidence.jsonl"
 DEFAULT_REPORT_JSON = STAGE_ROOT_RELATIVE / "reports/clean_pred_vs_gt_evidence.json"
-EQUIVALENCE_LOGICAL_ID_RE = re.compile(r"^equivalence::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::clean$")
+SUPPORTED_CONDITIONS = {"clean", "noise001", "noise005"}
+EQUIVALENCE_LOGICAL_ID_RE = re.compile(
+    r"^equivalence::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::"
+    r"(clean|noise001|noise005)"
+    r"(?:::v[1-9]\d*)?$"
+)
 GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
 PRED_LOGICAL_ID_RE = re.compile(
-    r"^pred_simplify::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::clean(?:::v[1-9]\d*)?$"
+    r"^pred_simplify::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::"
+    r"(clean|noise001|noise005)(?:::v[1-9]\d*)?$"
 )
 
 
@@ -133,10 +139,32 @@ def _require_sha256(value: object, *, context: str) -> str:
     return text
 
 
-def _parse_equivalence_logical_id(logical_id: str) -> tuple[str, str, int]:
+def _binding_effective_expression(binding: Mapping[str, Any], *, context: str) -> str:
+    """返回符号比对实际使用的表达式，包括 LLM unable 后的原式回退。"""
+    effective_expression = binding.get("frozen_effective_expression")
+    if effective_expression is not None:
+        return _require_string(
+            effective_expression,
+            context=f"{context}.frozen_effective_expression",
+        )
+    return _require_string(
+        binding.get("frozen_simplified_expression"),
+        context=f"{context}.frozen_simplified_expression",
+    )
+
+
+def _parse_equivalence_logical_id(
+    logical_id: str,
+    *,
+    expected_condition: str,
+) -> tuple[str, str, int]:
     match = EQUIVALENCE_LOGICAL_ID_RE.fullmatch(logical_id)
     if match is None:
         raise MaterializePredVsGtEvidenceError(f"equivalence logical_id 非 canonical: {logical_id!r}")
+    if match.group(4) != expected_condition:
+        raise MaterializePredVsGtEvidenceError(
+            f"equivalence logical_id condition 漂移: {match.group(4)!r} != {expected_condition!r}"
+        )
     return match.group(1), match.group(2), int(match.group(3))
 
 
@@ -147,15 +175,23 @@ def _parse_gt_logical_id(logical_id: str) -> str:
     return match.group(1)
 
 
-def _parse_pred_logical_id(logical_id: str) -> tuple[str, str, int]:
+def _parse_pred_logical_id(
+    logical_id: str,
+    *,
+    expected_condition: str,
+) -> tuple[str, str, int]:
     match = PRED_LOGICAL_ID_RE.fullmatch(logical_id)
     if match is None:
         raise MaterializePredVsGtEvidenceError(f"pred logical_id 非 canonical: {logical_id!r}")
+    if match.group(4) != expected_condition:
+        raise MaterializePredVsGtEvidenceError(
+            f"pred logical_id condition 漂移: {match.group(4)!r} != {expected_condition!r}"
+        )
     return match.group(1), match.group(2), int(match.group(3))
 
 
-def _logical_key(algorithm: str, dataset_id: str, seed: int) -> str:
-    return f"{algorithm}::{dataset_id}::s{seed}::clean"
+def _logical_key(algorithm: str, dataset_id: str, seed: int, condition: str) -> str:
+    return f"{algorithm}::{dataset_id}::s{seed}::{condition}"
 
 
 def materialize_pred_vs_gt_evidence(
@@ -163,8 +199,13 @@ def materialize_pred_vs_gt_evidence(
     equivalence_plan_jsonl: Path,
     output_jsonl: Path,
     report_json: Path,
+    condition: str = "clean",
     expected_row_count: int | None = None,
 ) -> dict[str, Any]:
+    if condition not in SUPPORTED_CONDITIONS:
+        raise MaterializePredVsGtEvidenceError(
+            f"condition 只允许 {sorted(SUPPORTED_CONDITIONS)}"
+        )
     raw_plan, rows = _read_jsonl_rows(equivalence_plan_jsonl)
     plan_sha256 = _sha256_bytes(raw_plan)
     output_rows: list[dict[str, Any]] = []
@@ -180,8 +221,13 @@ def materialize_pred_vs_gt_evidence(
             raise MaterializePredVsGtEvidenceError(str(exc)) from exc
         if planned.definition.task_spec.task_type != "equivalence":
             raise MaterializePredVsGtEvidenceError(f"{context} task_type 必须为 equivalence")
+        if planned.definition.task_spec.condition != condition:
+            raise MaterializePredVsGtEvidenceError(
+                f"{context} condition 漂移: "
+                f"{planned.definition.task_spec.condition!r} != {condition!r}"
+            )
         logical_id = planned.logical_id
-        _parse_equivalence_logical_id(logical_id)
+        _parse_equivalence_logical_id(logical_id, expected_condition=condition)
         request = planned.definition.request
         deterministic_evidence = request.get("deterministic_evidence")
         if deterministic_evidence is None:
@@ -212,6 +258,14 @@ def materialize_pred_vs_gt_evidence(
             evidence.get("pair_evidence"),
             context=f"{context}.pair_evidence",
         )
+        lhs_artifact = _require_mapping(
+            pair_evidence.get("lhs_artifact"),
+            context=f"{context}.pair_evidence.lhs_artifact",
+        )
+        rhs_artifact = _require_mapping(
+            pair_evidence.get("rhs_artifact"),
+            context=f"{context}.pair_evidence.rhs_artifact",
+        )
         lhs_binding = _require_mapping(evidence.get("lhs_binding"), context=f"{context}.lhs_binding")
         rhs_binding = _require_mapping(evidence.get("rhs_binding"), context=f"{context}.rhs_binding")
         if _require_string(lhs_binding.get("role"), context=f"{context}.lhs_binding.role") != "lhs":
@@ -222,7 +276,10 @@ def materialize_pred_vs_gt_evidence(
         gt_logical_id = _require_string(lhs_binding.get("frozen_logical_id"), context=f"{context}.lhs_binding.frozen_logical_id")
         pred_logical_id = _require_string(rhs_binding.get("frozen_logical_id"), context=f"{context}.rhs_binding.frozen_logical_id")
         dataset_id = _parse_gt_logical_id(gt_logical_id)
-        algorithm_slug, dataset_index, seed = _parse_pred_logical_id(pred_logical_id)
+        algorithm_slug, dataset_index, seed = _parse_pred_logical_id(
+            pred_logical_id,
+            expected_condition=condition,
+        )
         request_algorithm_slug = _require_string(request.get("algorithm_slug"), context=f"{context}.request.algorithm_slug")
         request_dataset_index = _require_string(request.get("dataset_index"), context=f"{context}.request.dataset_index")
         request_seed = _require_int(request.get("seed"), context=f"{context}.request.seed")
@@ -235,7 +292,7 @@ def materialize_pred_vs_gt_evidence(
         if _require_string(request.get("dataset_id"), context=f"{context}.request.dataset_id") != dataset_id:
             raise MaterializePredVsGtEvidenceError(f"{context} dataset_id 与 GT logical_id 漂移")
         algorithm = _require_string(request.get("algorithm"), context=f"{context}.request.algorithm")
-        logical_key = _logical_key(algorithm, dataset_id, seed)
+        logical_key = _logical_key(algorithm, dataset_id, seed, condition)
         if logical_key in seen_logical_keys:
             raise MaterializePredVsGtEvidenceError(f"出现重复 logical_key: {logical_key}")
         seen_logical_keys.add(logical_key)
@@ -247,23 +304,23 @@ def materialize_pred_vs_gt_evidence(
                 "pred_logical_id": pred_logical_id,
                 "evidence_hash": evidence_sha256,
                 "ground_truth": {
-                    "simplified_expression": _require_string(
-                        lhs_binding.get("frozen_simplified_expression"),
-                        context=f"{context}.lhs_binding.frozen_simplified_expression",
+                    "simplified_expression": _binding_effective_expression(
+                        lhs_binding,
+                        context=f"{context}.lhs_binding",
                     ),
                     "artifact_sha256": _require_sha256(
-                        lhs_binding.get("plan_symbolic_artifact_sha256"),
-                        context=f"{context}.lhs_binding.plan_symbolic_artifact_sha256",
+                        lhs_artifact.get("artifact_sha256"),
+                        context=f"{context}.pair_evidence.lhs_artifact.artifact_sha256",
                     ),
                 },
                 "prediction": {
-                    "simplified_expression": _require_string(
-                        rhs_binding.get("frozen_simplified_expression"),
-                        context=f"{context}.rhs_binding.frozen_simplified_expression",
+                    "simplified_expression": _binding_effective_expression(
+                        rhs_binding,
+                        context=f"{context}.rhs_binding",
                     ),
                     "artifact_sha256": _require_sha256(
-                        rhs_binding.get("plan_symbolic_artifact_sha256"),
-                        context=f"{context}.rhs_binding.plan_symbolic_artifact_sha256",
+                        rhs_artifact.get("artifact_sha256"),
+                        context=f"{context}.pair_evidence.rhs_artifact.artifact_sha256",
                     ),
                 },
                 "tree": {
@@ -296,15 +353,17 @@ def materialize_pred_vs_gt_evidence(
         )
 
     output_rows.sort(key=lambda item: item["logical_key"])
-    if expected_row_count is not None and len(output_rows) != expected_row_count:
+    closed_row_count = callable_count + skipped_non_applicable_count
+    if expected_row_count is not None and closed_row_count != expected_row_count:
         raise MaterializePredVsGtEvidenceError(
-            f"evidence 行数不符: 期望 {expected_row_count}，实际 {len(output_rows)}"
+            f"计划闭环行数不符: 期望 {expected_row_count}，实际 {closed_row_count}"
         )
 
     _write_jsonl(output_jsonl, output_rows)
     report = {
         "status": "ok",
         "contract_ok": True,
+        "condition": condition,
         "inputs": {
             "equivalence_plan_jsonl": str(equivalence_plan_jsonl.resolve()),
             "equivalence_plan_sha256": plan_sha256,
@@ -316,6 +375,10 @@ def materialize_pred_vs_gt_evidence(
             "evidence_jsonl_row_count": len(output_rows),
         },
         "counts": {
+            "closed_row_count": closed_row_count,
+            "callable_evidence_row_count": callable_count,
+            "skipped_non_applicable_count": skipped_non_applicable_count,
+            # 保留旧字段，避免既有聚合与审计脚本失效。
             "callable_row_count": callable_count,
             "skipped_non_applicable_row_count": skipped_non_applicable_count,
         },
@@ -327,21 +390,26 @@ def materialize_pred_vs_gt_evidence(
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     repo_root = _repo_root()
     stage_root = repo_root / STAGE_ROOT_RELATIVE
-    parser = argparse.ArgumentParser(description="从 equivalence plan 物化 clean_pred_vs_gt_evidence.jsonl")
+    parser = argparse.ArgumentParser(description="从 equivalence plan 物化 pred_vs_gt_evidence.jsonl")
     parser.add_argument("--equivalence-plan-jsonl", type=Path, required=True)
-    parser.add_argument("--output-jsonl", type=Path, default=stage_root / DEFAULT_OUTPUT_JSONL.relative_to(STAGE_ROOT_RELATIVE))
-    parser.add_argument("--report-json", type=Path, default=stage_root / DEFAULT_REPORT_JSON.relative_to(STAGE_ROOT_RELATIVE))
+    parser.add_argument("--condition", choices=sorted(SUPPORTED_CONDITIONS), default="clean")
+    parser.add_argument("--output-jsonl", type=Path)
+    parser.add_argument("--report-json", type=Path)
     parser.add_argument("--expected-row-count", type=int)
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    stage_root = _repo_root() / STAGE_ROOT_RELATIVE
+    output_jsonl = args.output_jsonl or stage_root / f"results/{args.condition}_pred_vs_gt_evidence.jsonl"
+    report_json = args.report_json or stage_root / f"reports/{args.condition}_pred_vs_gt_evidence.json"
     try:
         report = materialize_pred_vs_gt_evidence(
             equivalence_plan_jsonl=args.equivalence_plan_jsonl.resolve(),
-            output_jsonl=args.output_jsonl.resolve(),
-            report_json=args.report_json.resolve(),
+            output_jsonl=output_jsonl.resolve(),
+            report_json=report_json.resolve(),
+            condition=args.condition,
             expected_row_count=args.expected_row_count,
         )
     except MaterializePredVsGtEvidenceError as exc:

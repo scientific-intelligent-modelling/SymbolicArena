@@ -963,6 +963,7 @@ def execute_plan(
             submitted_task_count = 0
             completed_task_count = 0
             total_cost_usd = 0.0
+            total_cost_cny = 0.0
             stopped_by_circuit_breaker = False
             stopped_by_fatal_error = False
             fatal_error: str | None = None
@@ -1003,6 +1004,8 @@ def execute_plan(
                                 result_counts["failure"] += 1
                             if not result.from_cache and result.total_cost_usd is not None:
                                 total_cost_usd += float(result.total_cost_usd)
+                            if not result.from_cache and result.total_cost_cny is not None:
+                                total_cost_cny += float(result.total_cost_cny)
                         completed_task_count += 1
                         report_payload = _build_report(
                             loaded_plan=loaded_plan,
@@ -1025,6 +1028,7 @@ def execute_plan(
                             error=fatal_error,
                         )
                         report_payload["total_cost_usd"] = total_cost_usd
+                        report_payload["total_cost_cny"] = total_cost_cny
                         report_payload["lock_path"] = str(run_lock.path)
                         report_payload["lock_owner"] = dict(run_lock.owner)
                         _atomic_write_json(report_path, report_payload)
@@ -1063,6 +1067,7 @@ def execute_plan(
                 error=fatal_error,
             )
             final_report["total_cost_usd"] = total_cost_usd
+            final_report["total_cost_cny"] = total_cost_cny
             final_report["lock_path"] = str(run_lock.path)
             final_report["lock_owner"] = dict(run_lock.owner)
             _atomic_write_json(report_path, final_report)

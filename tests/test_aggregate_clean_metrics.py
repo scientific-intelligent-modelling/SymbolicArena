@@ -23,6 +23,10 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
     evaluation_key,
     render_prompt,
 )
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import (
+    LLM_SIMPLIFIED_EXPRESSION,
+    ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE,
+)
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.metrics import (
     efficiency_from_qualities,
     minimality_score,
@@ -275,23 +279,36 @@ def _write_frozen_group(
                 "structured_output": spec["structured_output"],
             }
             _write_json(result_path, result_payload)
-            index_rows.append(
-                {
-                    "plan_sha256": plan_sha256,
-                    "evaluation_key": evaluation_key_value,
-                    "logical_id": logical_id,
-                    "task_type": task_type,
-                    "condition": "clean",
-                    "priority": int(plan_row["priority"]),
-                    "state": "frozen",
-                    "attempt_id": f"attempt::{evaluation_key_value}",
-                    "result_path": str(result_path.resolve()),
-                    "result_sha256": _sha256_file(result_path),
-                    "structured_output": spec["structured_output"],
-                    "non_applicable": None,
-                    "exhausted": None,
-                }
-            )
+            index_row = {
+                "plan_sha256": plan_sha256,
+                "evaluation_key": evaluation_key_value,
+                "logical_id": logical_id,
+                "task_type": task_type,
+                "condition": "clean",
+                "priority": int(plan_row["priority"]),
+                "state": "frozen",
+                "attempt_id": f"attempt::{evaluation_key_value}",
+                "result_path": str(result_path.resolve()),
+                "result_sha256": _sha256_file(result_path),
+                "structured_output": spec["structured_output"],
+                "non_applicable": None,
+                "exhausted": None,
+            }
+            if task_type in {"gt_simplify", "pred_simplify"}:
+                structured_output = dict(spec["structured_output"])
+                if structured_output["outcome"] == "unable":
+                    index_row["effective_expression"] = plan_row["request"][
+                        "original_expression"
+                    ]
+                    index_row["expression_resolution"] = (
+                        ORIGINAL_IDENTITY_FALLBACK_AFTER_LLM_UNABLE
+                    )
+                else:
+                    index_row["effective_expression"] = structured_output[
+                        "simplified_expression"
+                    ]
+                    index_row["expression_resolution"] = LLM_SIMPLIFIED_EXPRESSION
+            index_rows.append(index_row)
         elif spec["state"] == "non_applicable":
             reason = str(spec["reason"])
             evidence_path = tmp_path / "non_applicable" / name / f"{evaluation_key_value}.json"

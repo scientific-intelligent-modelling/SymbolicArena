@@ -399,6 +399,7 @@ class ClaudeRunResult:
     usage: JsonDict | None
     total_cost_usd: float | None
     claude_version: str | None
+    total_cost_cny: float | None = None
 
 
 class ClaudeRunnerCircuitBreaker(RuntimeError):
@@ -482,7 +483,9 @@ class ClaudeRunner:
         )
         command = self._build_and_validate_command(definition.schema)
         cumulative_cost_usd = 0.0
+        cumulative_cost_cny = 0.0
         has_cost = False
+        has_cost_cny = False
 
         while True:
             cached = self._load_existing_frozen(definition.task_spec.evaluation_key)
@@ -508,13 +511,20 @@ class ClaudeRunner:
             if result.total_cost_usd is not None:
                 cumulative_cost_usd += float(result.total_cost_usd)
                 has_cost = True
+            if result.total_cost_cny is not None:
+                cumulative_cost_cny += float(result.total_cost_cny)
+                has_cost_cny = True
             if result.state == "retry_wait":
                 delay = self._backoff_delay(lease.attempt_number)
                 if delay > 0:
                     self.sleep_fn(delay)
                 continue
-            if has_cost:
-                return replace(result, total_cost_usd=cumulative_cost_usd)
+            if has_cost or has_cost_cny:
+                return replace(
+                    result,
+                    total_cost_usd=cumulative_cost_usd if has_cost else None,
+                    total_cost_cny=cumulative_cost_cny if has_cost_cny else None,
+                )
             return result
 
     def _verify_task_definition(self, definition: TaskDefinition) -> tuple[str, str]:
@@ -1102,6 +1112,7 @@ class ClaudeRunner:
             usage=dict(metadata["usage"]) if isinstance(metadata.get("usage"), Mapping) else None,
             total_cost_usd=float(metadata["total_cost_usd"]) if isinstance(metadata.get("total_cost_usd"), (int, float)) else None,
             claude_version=str(metadata["claude_version"]) if isinstance(metadata.get("claude_version"), str) else None,
+            total_cost_cny=float(metadata["estimated_cost_cny"]) if isinstance(metadata.get("estimated_cost_cny"), (int, float)) else None,
         )
 
     def _load_existing_frozen(self, evaluation_key: str) -> ClaudeRunResult | None:
@@ -1147,6 +1158,7 @@ class ClaudeRunner:
             usage=usage,
             total_cost_usd=float(metadata["total_cost_usd"]) if isinstance(metadata, Mapping) and isinstance(metadata.get("total_cost_usd"), (int, float)) else None,
             claude_version=str(metadata["claude_version"]) if isinstance(metadata, Mapping) and isinstance(metadata.get("claude_version"), str) else None,
+            total_cost_cny=float(metadata["estimated_cost_cny"]) if isinstance(metadata, Mapping) and isinstance(metadata.get("estimated_cost_cny"), (int, float)) else None,
         )
 
     def _backoff_delay(self, attempt_number: int) -> float:

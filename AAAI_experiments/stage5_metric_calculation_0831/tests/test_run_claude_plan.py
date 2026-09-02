@@ -293,6 +293,7 @@ class FakeRunner:
             usage=None,
             total_cost_usd=total_cost_usd,
             claude_version="fake-claude 1.0",
+            total_cost_cny=total_cost_usd * 10,
         )
 
 
@@ -486,6 +487,7 @@ def test_cached_resume_skips_runner_and_counts_cache(tmp_path: Path) -> None:
     assert report["result_counts"]["cache"] == 1
     assert report["result_counts"]["success"] == 1
     assert report["total_cost_usd"] == pytest.approx(0.1)
+    assert report["total_cost_cny"] == pytest.approx(1.0)
     assert report["state_distribution"] == {"frozen": 2}
     assert report["attempts_reserved_total"] == 2
 

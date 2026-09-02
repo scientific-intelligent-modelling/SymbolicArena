@@ -215,6 +215,7 @@ def _simplify_plan_row(
     priority: int,
     request: dict[str, Any],
 ) -> dict[str, Any]:
+    condition = "clean" if task_type == "gt_simplify" else str(request["noise_tag"])
     prompt_path = repo_root / "AAAI_experiments/stage5_metric_calculation_0831/config/prompts/simplify.v1.txt"
     schema_path = repo_root / "AAAI_experiments/stage5_metric_calculation_0831/config/schemas/simplify.v1.json"
     prompt_template = prompt_path.read_text(encoding="utf-8")
@@ -241,7 +242,7 @@ def _simplify_plan_row(
         "evaluation_key": key,
         "logical_id": logical_id,
         "task_type": task_type,
-        "condition": "clean",
+        "condition": condition,
         "priority": priority,
         "input_hash": input_hash,
         "prompt_version": "simplify.v1",
@@ -296,6 +297,7 @@ def _pred_request(
     algorithm: str,
     algorithm_slug: str,
     seed: int,
+    condition: str = "clean",
 ) -> dict[str, Any]:
     variables = ["x0", "x1"]
     probe = _dataset_probe(dataset_id, variables)
@@ -306,8 +308,8 @@ def _pred_request(
         "algorithm": algorithm,
         "algorithm_slug": algorithm_slug,
         "seed": seed,
-        "noise_tag": "clean",
-        "task_id": f"{algorithm_slug}_s{seed}_clean_{dataset_index}",
+        "noise_tag": condition,
+        "task_id": f"{algorithm_slug}_s{seed}_{condition}_{dataset_index}",
         "variables": variables,
         "allowed_functions": ["add"],
         "expression": expression,
@@ -322,7 +324,12 @@ def _pred_request(
             "symbolic_artifact": _symbolic_artifact(expression, variables),
             "domain_assumptions": _domain_assumptions(),
         },
-        "ast_source_evidence": {"selected_expression_source": "equation"},
+        "ast_source_evidence": {
+            "selected_expression_source": "equation",
+            "result_raw_sha256": _sha256_text(
+                f"source-result::{algorithm_slug}::{dataset_index}::{seed}"
+            ),
+        },
         "evidence_hash": f"pred-evidence::{algorithm_slug}::{dataset_index}::{seed}",
     }
 
@@ -340,6 +347,7 @@ def _frozen_index_row(
     result_sha256: str | None = None,
     effective_expression: str | None = None,
     expression_resolution: str | None = None,
+    condition: str = "clean",
 ) -> dict[str, Any]:
     if state == "frozen" and structured_output is not None and effective_expression is None:
         outcome = structured_output.get("outcome")
@@ -352,7 +360,7 @@ def _frozen_index_row(
         "logical_id": logical_id,
         "task_type": task_type,
         "task_kind": "simplify",
-        "condition": "clean",
+        "condition": condition,
         "priority": priority,
         "state": state,
         "attempt_id": None,
@@ -405,6 +413,7 @@ def _make_fixture(
     full_counts: bool,
     gt_unavailable_dataset: str | None = None,
     pred_overrides: dict[tuple[str, str, int], dict[str, Any]] | None = None,
+    condition: str = "clean",
 ) -> dict[str, Any]:
     repo_root = tmp_path / "repo"
     _write_contract(repo_root)
@@ -436,7 +445,7 @@ def _make_fixture(
                 pred_rows.append(
                     _simplify_plan_row(
                         repo_root,
-                        logical_id=f"pred_simplify::{algorithm_slug}::{dataset_index}::s{seed}::clean",
+                        logical_id=f"pred_simplify::{algorithm_slug}::{dataset_index}::s{seed}::{condition}",
                         task_type="pred_simplify",
                         priority=20,
                         request=_pred_request(
@@ -445,6 +454,7 @@ def _make_fixture(
                             algorithm=algorithm,
                             algorithm_slug=algorithm_slug,
                             seed=seed,
+                            condition=condition,
                         ),
                     )
                 )
@@ -510,6 +520,12 @@ def _make_fixture(
         outcome = override.get("outcome", "simplified")
         valid_output = bool(override.get("valid_output", True))
         result_sha256 = str(override.get("result_sha256", _result_sha(request["seed"], row_index)))
+        source_result_sha256 = str(
+            override.get(
+                "source_result_sha256",
+                request["ast_source_evidence"]["result_raw_sha256"],
+            )
+        )
 
         if state == "non_applicable":
             pred_frozen_rows.append(
@@ -521,6 +537,7 @@ def _make_fixture(
                     priority=20,
                     state="non_applicable",
                     reason="pred_missing",
+                    condition=condition,
                 )
             )
             pred_non_applicable_count += 1
@@ -549,6 +566,7 @@ def _make_fixture(
                     result_sha256=result_sha256,
                     effective_expression=effective_expression,
                     expression_resolution=expression_resolution,
+                    condition=condition,
                     structured_output={
                         "outcome": outcome,
                         "simplified_expression": simplified_expression,
@@ -562,14 +580,14 @@ def _make_fixture(
             pred_frozen_count += 1
         numeric_rows.append(
             {
-                "logical_key": f"{request['algorithm']}::{request['dataset_id']}::s{request['seed']}::clean",
+                "logical_key": f"{request['algorithm']}::{request['dataset_id']}::s{request['seed']}::{condition}",
                 "algorithm": request["algorithm"],
                 "dataset_id": request["dataset_id"],
                 "seed": str(request["seed"]),
-                "noise_tag": "clean",
+                "noise_tag": condition,
                 "task_id": request["task_id"],
                 "host": "fixture-host",
-                "result_sha256": result_sha256,
+                "result_sha256": source_result_sha256,
                 "valid_output": str(valid_output).lower(),
                 "formula_source": "canonical_artifact",
                 "id_nmse": "0.1",
@@ -632,6 +650,59 @@ def _make_fixture(
         "non_applicable_index_jsonl": tmp_path / "clean_symbolic_non_applicable.jsonl",
         "non_applicable_evidence_dir": tmp_path / "clean_symbolic_non_applicable",
     }
+
+
+@pytest.mark.parametrize("condition", ["noise001", "noise005"])
+def test_noise_symbolic_plan_reuses_clean_gt_and_builds_equivalence_only(
+    tmp_path: Path, condition: str
+) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
+        SymbolicTaskBuilderError,
+        build_symbolic_task_plan,
+    )
+
+    fixture = _make_fixture(tmp_path, full_counts=True, condition=condition)
+    tasks, report = build_symbolic_task_plan(
+        gt_frozen_index_jsonl=fixture["gt_frozen"],
+        pred_frozen_index_jsonl=fixture["pred_frozen"],
+        gt_frozen_summary_json=fixture["gt_summary"],
+        pred_frozen_summary_json=fixture["pred_summary"],
+        gt_plan_jsonl=fixture["gt_plan"],
+        pred_plan_jsonl=fixture["pred_plan"],
+        clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+        non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+        repo_root=fixture["repo_root"],
+        expected_gt_count=50,
+        expected_pred_count=2250,
+        expected_pair_count=None,
+        condition=condition,
+        phase="equivalence",
+    )
+
+    assert len(tasks) == 2250
+    assert all(task.task_type == "equivalence" for task in tasks)
+    assert all(task.condition == condition for task in tasks)
+    assert all(task.logical_id.endswith(f"::{condition}") for task in tasks)
+    assert all(task.request["ground_truth_logical_id"].startswith("gt_simplify::") for task in tasks)
+    assert report["condition"] == condition
+    assert report["planning_counts"]["structure_total"] == 0
+
+    with pytest.raises(SymbolicTaskBuilderError, match="noise 条件只允许 phase=equivalence"):
+        build_symbolic_task_plan(
+            gt_frozen_index_jsonl=fixture["gt_frozen"],
+            pred_frozen_index_jsonl=fixture["pred_frozen"],
+            gt_frozen_summary_json=fixture["gt_summary"],
+            pred_frozen_summary_json=fixture["pred_summary"],
+            gt_plan_jsonl=fixture["gt_plan"],
+            pred_plan_jsonl=fixture["pred_plan"],
+            clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+            non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+            repo_root=fixture["repo_root"],
+            expected_gt_count=50,
+            expected_pred_count=2250,
+            condition=condition,
+            phase="structure",
+        )
 
 
 def test_full_plan_uses_numeric_validity_and_closes_2250_per_phase(tmp_path: Path) -> None:
@@ -720,6 +791,109 @@ def test_full_plan_uses_numeric_validity_and_closes_2250_per_phase(tmp_path: Pat
         assert evidence_path.stem == row["evaluation_key"]
         assert _sha256_file(evidence_path) == row["evidence_sha256"]
         assert row["request"]["evidence_hash"] == row["evidence_sha256"]
+
+
+def test_numeric_result_sha_binds_to_source_result_not_frozen_llm_artifact(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
+        build_symbolic_task_plan,
+    )
+
+    fixture = _make_fixture(tmp_path, full_counts=False)
+    tasks, _ = build_symbolic_task_plan(
+        gt_frozen_index_jsonl=fixture["gt_frozen"],
+        pred_frozen_index_jsonl=fixture["pred_frozen"],
+        gt_frozen_summary_json=fixture["gt_summary"],
+        pred_frozen_summary_json=fixture["pred_summary"],
+        gt_plan_jsonl=fixture["gt_plan"],
+        pred_plan_jsonl=fixture["pred_plan"],
+        clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+        non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+        repo_root=fixture["repo_root"],
+        expected_gt_count=1,
+        expected_pred_count=3,
+        expected_pair_count=3,
+    )
+
+    task = next(item for item in tasks if item.logical_id == "equivalence::alg00::g0001::s520::clean")
+    expected_source_sha = task.request["deterministic_evidence"]["rhs_binding"][
+        "source_result_sha256"
+    ]
+    assert task.request["prediction_result_sha256"] == expected_source_sha
+    assert (
+        task.request["deterministic_evidence"]["rhs_binding"]["frozen_result_sha256"]
+        != expected_source_sha
+    )
+
+
+def test_equivalence_phase_does_not_build_structure_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline import symbolic_task_builder
+
+    fixture = _make_fixture(tmp_path, full_counts=False)
+    original = symbolic_task_builder.build_pair_evidence
+
+    def reject_structure_pair(*args: Any, seed: int, **kwargs: Any) -> dict[str, Any]:
+        if seed > 1000:
+            raise AssertionError("equivalence phase 不应构建 structure pair evidence")
+        return original(*args, seed=seed, **kwargs)
+
+    monkeypatch.setattr(symbolic_task_builder, "build_pair_evidence", reject_structure_pair)
+    tasks, report = symbolic_task_builder.build_symbolic_task_plan(
+        gt_frozen_index_jsonl=fixture["gt_frozen"],
+        pred_frozen_index_jsonl=fixture["pred_frozen"],
+        gt_frozen_summary_json=fixture["gt_summary"],
+        pred_frozen_summary_json=fixture["pred_summary"],
+        gt_plan_jsonl=fixture["gt_plan"],
+        pred_plan_jsonl=fixture["pred_plan"],
+        clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+        non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+        phase="equivalence",
+        repo_root=fixture["repo_root"],
+        expected_gt_count=1,
+        expected_pred_count=3,
+        expected_pair_count=3,
+    )
+
+    assert len(tasks) == 3
+    assert {task.task_type for task in tasks} == {"equivalence"}
+    assert report["planning_counts"]["structure_total"] == 0
+
+
+def test_pair_evidence_accepts_upstream_validated_piecewise_expression(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
+        build_symbolic_task_plan,
+    )
+
+    fixture = _make_fixture(
+        tmp_path,
+        full_counts=False,
+        pred_overrides={
+            ("alg00", "g0001", 520): {
+                "simplified_expression": "Piecewise((x0, x0 > 0), (x1, True))",
+            }
+        },
+    )
+    tasks, report = build_symbolic_task_plan(
+        gt_frozen_index_jsonl=fixture["gt_frozen"],
+        pred_frozen_index_jsonl=fixture["pred_frozen"],
+        gt_frozen_summary_json=fixture["gt_summary"],
+        pred_frozen_summary_json=fixture["pred_summary"],
+        gt_plan_jsonl=fixture["gt_plan"],
+        pred_plan_jsonl=fixture["pred_plan"],
+        clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+        non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+        phase="equivalence",
+        repo_root=fixture["repo_root"],
+        expected_gt_count=1,
+        expected_pred_count=3,
+        expected_pair_count=3,
+    )
+
+    task = next(item for item in tasks if item.logical_id.endswith("::s520::clean"))
+    assert "where" in task.request["allowed_functions"]
+    assert report["planning_counts"]["equivalence_total"] == 3
 
 
 def test_equivalence_gt_unavailable_uses_frozen_reason_enum(tmp_path: Path) -> None:
@@ -1211,6 +1385,48 @@ def test_cli_materializes_phase_specific_callable_no_call_and_full_plans(tmp_pat
     assert report["phase_outputs"]["structure"]["callable_task_count"] == 3
     assert report["phase_outputs"]["structure"]["non_applicable_count"] == 0
     assert report["phase_outputs"]["structure"]["full_plan_count"] == 3
+
+
+def test_cli_streams_single_phase_callable_and_full_plan(tmp_path: Path) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import load_plan_jsonl
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import main
+
+    fixture = _make_fixture(tmp_path, full_counts=False)
+    callable_jsonl = tmp_path / "equivalence_callable.jsonl"
+    non_applicable_jsonl = tmp_path / "equivalence_non_applicable.jsonl"
+    full_plan_jsonl = tmp_path / "equivalence_full_plan.jsonl"
+    report_json = tmp_path / "equivalence_report.json"
+    exit_code = main(
+        [
+            "--gt-frozen-index-jsonl", str(fixture["gt_frozen"]),
+            "--pred-frozen-index-jsonl", str(fixture["pred_frozen"]),
+            "--gt-frozen-summary-json", str(fixture["gt_summary"]),
+            "--pred-frozen-summary-json", str(fixture["pred_summary"]),
+            "--gt-plan-jsonl", str(fixture["gt_plan"]),
+            "--pred-plan-jsonl", str(fixture["pred_plan"]),
+            "--clean-run-metrics-csv", str(fixture["clean_run_metrics_csv"]),
+            "--repo-root", str(fixture["repo_root"]),
+            "--phase", "equivalence",
+            "--expected-gt-count", "1",
+            "--expected-pred-count", "3",
+            "--expected-pair-count", "3",
+            "--output-jsonl", str(callable_jsonl),
+            "--non-applicable-index-jsonl", str(non_applicable_jsonl),
+            "--non-applicable-evidence-dir", str(fixture["non_applicable_evidence_dir"]),
+            "--report-json", str(report_json),
+            "--equivalence-output-jsonl", str(callable_jsonl),
+            "--equivalence-non-applicable-index-jsonl", str(non_applicable_jsonl),
+            "--equivalence-full-plan-jsonl", str(full_plan_jsonl),
+            "--stream-tasks",
+        ]
+    )
+
+    assert exit_code == 0
+    assert len(load_plan_jsonl(callable_jsonl).entries) == 3
+    assert len(load_plan_jsonl(full_plan_jsonl).entries) == 3
+    report = json.loads(report_json.read_text(encoding="utf-8"))
+    assert report["stream_tasks"] is True
+    assert report["phase_outputs"]["equivalence"]["full_plan_count"] == 3
 
 
 def test_cli_rejects_partial_phase_materialization_request(tmp_path: Path) -> None:

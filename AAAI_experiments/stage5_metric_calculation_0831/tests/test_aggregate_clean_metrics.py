@@ -18,6 +18,9 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline import aggregate_c
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.aggregate_clean_metrics import (
     AggregateCleanMetricsError,
     _load_frozen_index_rows,
+    _parse_run_logical_id,
+    _parse_structure_logical_id,
+    _validate_simplify_structured_output,
     aggregate_clean_metrics,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.metrics import (
@@ -747,6 +750,36 @@ def test_aggregate_clean_metrics_accepts_pred_v2_logical_id(
         run_rows = list(csv.DictReader(handle))
     run_520 = next(row for row in run_rows if row["seed"] == "520")
     assert run_520["pred_logical_id"] == pred_logical_id
+
+
+def test_symbolic_logical_id_parsers_accept_successor_versions() -> None:
+    assert _parse_run_logical_id(
+        "equivalence::algoa::g0001::s520::clean::v2",
+        expected_prefix="equivalence",
+    ) == ("algoa", "g0001", 520)
+    assert _parse_structure_logical_id(
+        "stab_structure::algoa::g0001::s520-s521::v2"
+    ) == ("algoa", "g0001", (520, 521))
+
+
+def test_validate_simplify_normalizes_edge_whitespace_consistently() -> None:
+    expression, state = _validate_simplify_structured_output(
+        {
+            "structured_output": {
+                "outcome": "simplified",
+                "simplified_expression": "x0 + x1 ",
+                "equivalence_assessment": "preserved",
+            },
+            "effective_expression": "x0 + x1 ",
+            "expression_resolution": LLM_SIMPLIFIED_EXPRESSION,
+        },
+        logical_id="pred_simplify::algoa::g0001::s520::clean",
+        plan_request={"original_expression": "x0 + x1"},
+        allow_missing=True,
+    )
+
+    assert expression == "x0 + x1"
+    assert state == "frozen"
 
 
 def test_aggregate_clean_metrics_accepts_gt_unable_with_original_identity_fallback(
