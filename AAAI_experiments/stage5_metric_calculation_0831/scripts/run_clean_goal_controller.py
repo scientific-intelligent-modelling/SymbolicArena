@@ -30,11 +30,11 @@ FROZEN_DIR = STAGE_ROOT / "llm/frozen_v2"
 PREDECESSOR_MANIFEST = STAGE_ROOT / "manifests/predecessor_attempts_v1.json"
 
 GT_PLAN = REPORTS_DIR / "clean_gt_simplify_tasks_v2.jsonl"
-PRED_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks_active_v2.jsonl"
+PRED_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks_active_v3.jsonl"
 GT_INDEX = RESULTS_DIR / "clean_gt_simplify_frozen_index_v2.jsonl"
 GT_SUMMARY = REPORTS_DIR / "clean_gt_simplify_frozen_index_v2_summary.json"
-PRED_INDEX = RESULTS_DIR / "clean_pred_simplify_frozen_index_active_v2.jsonl"
-PRED_SUMMARY = REPORTS_DIR / "clean_pred_simplify_frozen_index_active_v2_summary.json"
+PRED_INDEX = RESULTS_DIR / "clean_pred_simplify_frozen_index_active_v3.jsonl"
+PRED_SUMMARY = REPORTS_DIR / "clean_pred_simplify_frozen_index_active_v3_summary.json"
 EQ_PLAN = REPORTS_DIR / "clean_equivalence_tasks.jsonl"
 EQ_NON_APPLICABLE = REPORTS_DIR / "clean_equivalence_non_applicable.jsonl"
 EQ_FULL_PLAN = REPORTS_DIR / "clean_equivalence_full_plan.jsonl"
@@ -48,11 +48,11 @@ STRUCT_REGISTER_REPORT = REPORTS_DIR / "clean_structure_register_report.json"
 STRUCT_INDEX = REPORTS_DIR / "clean_structure_frozen_index.jsonl"
 STRUCT_SUMMARY = REPORTS_DIR / "clean_structure_frozen_index_summary.json"
 SYMBOLIC_PLAN_REPORT = REPORTS_DIR / "clean_symbolic_task_plan.json"
-PRED_RECOVERED_REPORT = REPORTS_DIR / "clean_pred_active_v2_recovered_attempts.json"
-PRED_EXHAUSTED_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v2_exhausted_audit.jsonl"
-PRED_EXHAUSTED_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v2_exhausted_audit_report.json"
-PRED_FROZEN_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v2_frozen_audit.jsonl"
-PRED_FROZEN_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v2_frozen_audit_report.json"
+PRED_RECOVERED_REPORT = REPORTS_DIR / "clean_pred_active_v3_recovered_attempts.json"
+PRED_EXHAUSTED_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v3_exhausted_audit.jsonl"
+PRED_EXHAUSTED_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v3_exhausted_audit_report.json"
+PRED_FROZEN_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v3_frozen_audit.jsonl"
+PRED_FROZEN_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v3_frozen_audit_report.json"
 EQ_RECOVERED_REPORT = REPORTS_DIR / "clean_equivalence_recovered_attempts.json"
 STRUCT_RECOVERED_REPORT = REPORTS_DIR / "clean_structure_recovered_attempts.json"
 EVIDENCE_JSONL = RESULTS_DIR / "clean_pred_vs_gt_evidence.jsonl"
@@ -556,8 +556,6 @@ def main() -> int:
             return 0
 
     _wait_for_task_terminal("pred_simplify", plan_path=PRED_PLAN)
-    _materialize_recovered_attempts(PRED_PLAN, PRED_RECOVERED_REPORT)
-    _audit_and_promote_pred_exhausted()
     _build_pred_index()
     _audit_pred_frozen()
 

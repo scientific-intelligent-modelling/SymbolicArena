@@ -37,7 +37,7 @@ def test_controller_uses_active_v2_inputs_and_cpu_headroom() -> None:
     controller = _load_controller()
 
     assert controller.GT_PLAN.name == "clean_gt_simplify_tasks_v2.jsonl"
-    assert controller.PRED_PLAN.name == "clean_pred_simplify_tasks_active_v2.jsonl"
+    assert controller.PRED_PLAN.name == "clean_pred_simplify_tasks_active_v3.jsonl"
     assert controller.GT_INDEX.name == "clean_gt_simplify_frozen_index_v2.jsonl"
     assert controller.WORKERS == 8
     assert controller.CLAUDE_RESOURCE_PREFIX == [
