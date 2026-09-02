@@ -22,7 +22,9 @@ DEFAULT_OUTPUT_JSONL = STAGE_ROOT_RELATIVE / "results/clean_pred_vs_gt_evidence.
 DEFAULT_REPORT_JSON = STAGE_ROOT_RELATIVE / "reports/clean_pred_vs_gt_evidence.json"
 EQUIVALENCE_LOGICAL_ID_RE = re.compile(r"^equivalence::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::clean$")
 GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
-PRED_LOGICAL_ID_RE = re.compile(r"^pred_simplify::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::clean$")
+PRED_LOGICAL_ID_RE = re.compile(
+    r"^pred_simplify::([a-z0-9_]+)::(g\d{4})::s(520|521|522)::clean(?:::v[1-9]\d*)?$"
+)
 
 
 class MaterializePredVsGtEvidenceError(RuntimeError):
