@@ -29,6 +29,10 @@
    - **统一去看**：
      [EXPERIMENT_HYPERPARAMETERS.md](/home/family/workplace/scientific-intelligent-modelling/.codex/EXPERIMENT_HYPERPARAMETERS.md)
 
+6. Routify 的 RPM 配额按模型分别计算。
+   - 多模型混合并发时，分别统计每个模型的请求速率和 `429`，不得把不同模型的 RPM 相加后与单模型上限比较。
+   - 若某个模型自身接近上限，只对该模型限流，不对其它模型施加无依据的全局限流。
+
 ## 数据与路径约定
 
 ### 远程项目根目录
