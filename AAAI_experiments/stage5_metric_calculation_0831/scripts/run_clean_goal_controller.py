@@ -29,12 +29,12 @@ ATTEMPTS_DIR = STAGE_ROOT / "llm/attempts_v2"
 FROZEN_DIR = STAGE_ROOT / "llm/frozen_v2"
 PREDECESSOR_MANIFEST = STAGE_ROOT / "manifests/predecessor_attempts_v1.json"
 
-GT_PLAN = REPORTS_DIR / "clean_gt_simplify_tasks.jsonl"
-PRED_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks.jsonl"
-GT_INDEX = REPORTS_DIR / "clean_gt_frozen_index.jsonl"
-GT_SUMMARY = REPORTS_DIR / "clean_gt_frozen_index_summary.json"
-PRED_INDEX = REPORTS_DIR / "clean_pred_frozen_index.jsonl"
-PRED_SUMMARY = REPORTS_DIR / "clean_pred_frozen_index_summary.json"
+GT_PLAN = REPORTS_DIR / "clean_gt_simplify_tasks_v2.jsonl"
+PRED_PLAN = REPORTS_DIR / "clean_pred_simplify_tasks_active_v2.jsonl"
+GT_INDEX = RESULTS_DIR / "clean_gt_simplify_frozen_index_v2.jsonl"
+GT_SUMMARY = REPORTS_DIR / "clean_gt_simplify_frozen_index_v2_summary.json"
+PRED_INDEX = RESULTS_DIR / "clean_pred_simplify_frozen_index_active_v2.jsonl"
+PRED_SUMMARY = REPORTS_DIR / "clean_pred_simplify_frozen_index_active_v2_summary.json"
 EQ_PLAN = REPORTS_DIR / "clean_equivalence_tasks.jsonl"
 EQ_NON_APPLICABLE = REPORTS_DIR / "clean_equivalence_non_applicable.jsonl"
 EQ_FULL_PLAN = REPORTS_DIR / "clean_equivalence_full_plan.jsonl"
@@ -48,9 +48,11 @@ STRUCT_REGISTER_REPORT = REPORTS_DIR / "clean_structure_register_report.json"
 STRUCT_INDEX = REPORTS_DIR / "clean_structure_frozen_index.jsonl"
 STRUCT_SUMMARY = REPORTS_DIR / "clean_structure_frozen_index_summary.json"
 SYMBOLIC_PLAN_REPORT = REPORTS_DIR / "clean_symbolic_task_plan.json"
-PRED_RECOVERED_REPORT = REPORTS_DIR / "clean_pred_recovered_attempts.json"
-PRED_EXHAUSTED_AUDIT_JSONL = REPORTS_DIR / "clean_pred_exhausted_audit.jsonl"
-PRED_EXHAUSTED_AUDIT_REPORT = REPORTS_DIR / "clean_pred_exhausted_audit_report.json"
+PRED_RECOVERED_REPORT = REPORTS_DIR / "clean_pred_active_v2_recovered_attempts.json"
+PRED_EXHAUSTED_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v2_exhausted_audit.jsonl"
+PRED_EXHAUSTED_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v2_exhausted_audit_report.json"
+PRED_FROZEN_AUDIT_JSONL = REPORTS_DIR / "clean_pred_active_v2_frozen_audit.jsonl"
+PRED_FROZEN_AUDIT_REPORT = REPORTS_DIR / "clean_pred_active_v2_frozen_audit_report.json"
 EQ_RECOVERED_REPORT = REPORTS_DIR / "clean_equivalence_recovered_attempts.json"
 STRUCT_RECOVERED_REPORT = REPORTS_DIR / "clean_structure_recovered_attempts.json"
 EVIDENCE_JSONL = RESULTS_DIR / "clean_pred_vs_gt_evidence.jsonl"
@@ -64,6 +66,9 @@ MATERIALIZE_RECOVERED_MODULE = (
 AUDIT_EXHAUSTED_MODULE = (
     "AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications"
 )
+AUDIT_FROZEN_MODULE = (
+    "AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_frozen_simplifications"
+)
 PROMOTE_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.promote_revalidated_attempt"
 FROZEN_INDEX_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index"
 SYMBOLIC_BUILDER_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder"
@@ -72,8 +77,9 @@ EVIDENCE_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.mate
 AGGREGATE_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.aggregate_clean_metrics"
 
 BATCH_LIMIT = 256
-WORKERS = 16
+WORKERS = 8
 POLL_SECONDS = 30
+CLAUDE_RESOURCE_PREFIX = ["nice", "-n", "5", "taskset", "-c", "0-3,6-9"]
 
 
 class GoalControllerError(RuntimeError):
@@ -211,6 +217,7 @@ def _drive_plan_batches(*, plan_path: Path, task_type: str, report_prefix: str) 
             continue
         report_path = _next_batch_report(report_prefix)
         cmd = [
+            *CLAUDE_RESOURCE_PREFIX,
             sys.executable,
             "-m",
             RUN_CLAUDE_MODULE,
@@ -282,6 +289,8 @@ def _audit_and_promote_pred_exhausted() -> None:
             _rel(PRED_EXHAUSTED_AUDIT_JSONL),
             "--report-json",
             _rel(PRED_EXHAUSTED_AUDIT_REPORT),
+            "--semantic-timeout-seconds",
+            "300",
         ]
     )
     rows = _read_jsonl(PRED_EXHAUSTED_AUDIT_JSONL)
@@ -326,7 +335,7 @@ def _audit_and_promote_pred_exhausted() -> None:
                 "--predecessor-attempt-manifest",
                 _rel(PREDECESSOR_MANIFEST),
                 "--audit-reason",
-                "clean_pred_exhausted_revalidation_20260901",
+                "clean_pred_active_v2_exhausted_revalidation_20260902",
                 "--report-json",
                 _rel(report_path),
             ]
@@ -358,6 +367,35 @@ def _build_pred_index() -> None:
     exhausted = int(summary.get("state_counts", {}).get("exhausted", 0))
     if exhausted:
         raise GoalControllerError(f"pred frozen index 仍有 exhausted={exhausted}，不能进入 clean 正式聚合")
+
+
+def _audit_pred_frozen() -> None:
+    _run(
+        [
+            *CLAUDE_RESOURCE_PREFIX,
+            sys.executable,
+            "-m",
+            AUDIT_FROZEN_MODULE,
+            "--plan-jsonl",
+            _rel(PRED_PLAN),
+            "--state-db",
+            _rel(STATE_DB),
+            "--attempts-dir",
+            _rel(ATTEMPTS_DIR),
+            "--frozen-dir",
+            _rel(FROZEN_DIR),
+            "--output-jsonl",
+            _rel(PRED_FROZEN_AUDIT_JSONL),
+            "--report-json",
+            _rel(PRED_FROZEN_AUDIT_REPORT),
+            "--expected-plan-count",
+            "2250",
+            "--semantic-timeout-seconds",
+            "90",
+            "--workers",
+            str(WORKERS),
+        ]
+    )
 
 
 def _build_symbolic_plans() -> None:
@@ -521,16 +559,17 @@ def main() -> int:
     _materialize_recovered_attempts(PRED_PLAN, PRED_RECOVERED_REPORT)
     _audit_and_promote_pred_exhausted()
     _build_pred_index()
+    _audit_pred_frozen()
 
     _build_symbolic_plans()
 
     _register_symbolic(EQ_PLAN, EQ_NON_APPLICABLE, EQ_REGISTER_REPORT)
-    _drive_plan_batches(plan_path=EQ_PLAN, task_type="equivalence", report_prefix="clean_equivalence_w16")
+    _drive_plan_batches(plan_path=EQ_PLAN, task_type="equivalence", report_prefix="clean_equivalence_w8")
     _materialize_recovered_attempts(EQ_PLAN, EQ_RECOVERED_REPORT)
     _build_final_index(EQ_FULL_PLAN, EQ_INDEX, EQ_SUMMARY)
 
     _register_symbolic(STRUCT_PLAN, STRUCT_NON_APPLICABLE, STRUCT_REGISTER_REPORT)
-    _drive_plan_batches(plan_path=STRUCT_PLAN, task_type="stab_structure", report_prefix="clean_structure_w16")
+    _drive_plan_batches(plan_path=STRUCT_PLAN, task_type="stab_structure", report_prefix="clean_structure_w8")
     _materialize_recovered_attempts(STRUCT_PLAN, STRUCT_RECOVERED_REPORT)
     _build_final_index(STRUCT_FULL_PLAN, STRUCT_INDEX, STRUCT_SUMMARY)
 
