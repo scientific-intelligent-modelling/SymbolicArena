@@ -52,6 +52,7 @@ def _build_promoted_frozen_case(
     *,
     promotion_mode: str | None,
     metadata_mode: str | None,
+    logical_id: str = "gt_simplify::demo",
 ) -> dict[str, object]:
     prompt_path = STAGE_ROOT / "config/prompts/simplify.v1.txt"
     schema_path = STAGE_ROOT / "config/schemas/simplify.v1.json"
@@ -73,7 +74,6 @@ def _build_promoted_frozen_case(
         "schema_sha256": schema_sha256,
     }
     input_hash = _sha256_text(canonical_json(normalized_input))
-    logical_id = "gt_simplify::demo"
     task_key = evaluation_key(
         task_type="gt_simplify",
         logical_id=logical_id,
@@ -546,14 +546,15 @@ def test_promoted_tail_fenced_json_frozen_can_be_revalidated(tmp_path: Path) -> 
     assert row["promoted_without_new_model_call"] is True
 
 
-def test_active_plan_audit_ignores_registered_predecessor_tasks(tmp_path: Path) -> None:
+def test_active_plan_audit_ignores_exhausted_version_predecessor_tasks(tmp_path: Path) -> None:
     case = _build_promoted_frozen_case(
         tmp_path,
         promotion_mode="tail_fenced_json_object",
         metadata_mode="tail_fenced_json_object",
+        logical_id="gt_simplify::demo::v2",
     )
     plan_row = json.loads(Path(case["plan_path"]).read_text(encoding="utf-8"))
-    predecessor_logical_id = "gt_simplify::demo_predecessor"
+    predecessor_logical_id = "gt_simplify::demo"
     predecessor_key = evaluation_key(
         task_type="gt_simplify",
         logical_id=predecessor_logical_id,
@@ -585,29 +586,6 @@ def test_active_plan_audit_ignores_registered_predecessor_tasks(tmp_path: Path) 
             retryable=True,
             now=100.5 + index,
         )
-    successor_key = str(plan_row["evaluation_key"])
-    successor_logical_id = str(plan_row["logical_id"])
-    with sqlite3.connect(case["state_db"]) as connection:
-        connection.execute(
-            """INSERT INTO task_supersessions(
-                   predecessor_evaluation_key, successor_evaluation_key,
-                   predecessor_logical_id, successor_logical_id,
-                   identity, reason, predecessor_plan_sha256,
-                   successor_plan_sha256, superseded_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                predecessor_key,
-                successor_key,
-                predecessor_logical_id,
-                successor_logical_id,
-                "gt::demo",
-                "unit_test_recovery",
-                "a" * 64,
-                _sha256_file(Path(case["plan_path"])),
-                200.0,
-            ),
-        )
-
     report = audit_frozen_simplifications(
         plan_jsonl=case["plan_path"],
         state_db=case["state_db"],
@@ -623,7 +601,7 @@ def test_active_plan_audit_ignores_registered_predecessor_tasks(tmp_path: Path) 
     assert report["status"] == "ok"
     assert report["database_task_count"] == 1
     assert report["ignored_task_count"] == 1
-    assert report["ignored_registered_predecessor_count"] == 1
+    assert report["ignored_exhausted_predecessor_count"] == 1
 
 
 def test_promoted_tail_fenced_json_without_mode_marker_fails(tmp_path: Path) -> None:

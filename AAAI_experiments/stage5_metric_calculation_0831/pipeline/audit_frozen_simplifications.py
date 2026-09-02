@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sqlite3
 import sys
 from collections import Counter
@@ -37,10 +38,18 @@ from .run_claude_plan import (
 
 
 JsonDict = dict[str, object]
+_VERSIONED_LOGICAL_ID_RE = re.compile(r"^(.*?)(?:::v([1-9]\d*))?$")
 
 
 class FrozenSimplificationAuditError(RuntimeError):
     """冻结 simplify 复核无法形成可信输入快照。"""
+
+
+def _logical_lineage(logical_id: str) -> tuple[str, int]:
+    match = _VERSIONED_LOGICAL_ID_RE.fullmatch(logical_id)
+    if match is None:
+        raise FrozenSimplificationAuditError(f"logical_id 版本格式无效: {logical_id!r}")
+    return match.group(1), int(match.group(2) or 1)
 
 
 _TAIL_FENCED_JSON_MODE = "tail_fenced_json_object"
@@ -573,13 +582,37 @@ def audit_frozen_simplifications(
     plan_keys = {entry.evaluation_key for entry in loaded_plan.entries}
     extra_keys = sorted(set(by_key) - plan_keys)
     ignored_registered_predecessor_count = 0
+    ignored_exhausted_predecessor_count = 0
     if extra_keys and not audit_superseded_plan:
-        unknown_extra_keys = sorted(set(extra_keys) - registered_predecessor_keys)
+        plan_versions: dict[str, int] = {}
+        for entry in loaded_plan.entries:
+            base_id, version = _logical_lineage(entry.logical_id)
+            if base_id in plan_versions:
+                raise FrozenSimplificationAuditError(
+                    f"当前 plan 存在重复版本身份: {base_id!r}"
+                )
+            plan_versions[base_id] = version
+        inferred_exhausted_keys: set[str] = set()
+        for key in extra_keys:
+            row = by_key[key]
+            base_id, version = _logical_lineage(str(row["logical_id"]))
+            if (
+                row["state"] == "exhausted"
+                and int(row["attempt_count"]) == 3
+                and row["frozen_attempt_id"] is None
+                and plan_versions.get(base_id, 0) > version
+            ):
+                inferred_exhausted_keys.add(key)
+        allowed_extra_keys = registered_predecessor_keys | inferred_exhausted_keys
+        unknown_extra_keys = sorted(set(extra_keys) - allowed_extra_keys)
         if unknown_extra_keys:
             raise FrozenSimplificationAuditError(
                 f"状态库存在 {len(unknown_extra_keys)} 个未登记 successor 的同类任务"
             )
-        ignored_registered_predecessor_count = len(extra_keys)
+        ignored_registered_predecessor_count = len(
+            set(extra_keys) & registered_predecessor_keys
+        )
+        ignored_exhausted_predecessor_count = len(inferred_exhausted_keys)
         ignored_rows.extend(by_key.pop(key) for key in extra_keys)
     elif extra_keys:
         raise FrozenSimplificationAuditError(
@@ -648,6 +681,7 @@ def audit_frozen_simplifications(
         "database_same_type_condition_count": len(all_state_rows),
         "ignored_task_count": len(ignored_rows),
         "ignored_registered_predecessor_count": ignored_registered_predecessor_count,
+        "ignored_exhausted_predecessor_count": ignored_exhausted_predecessor_count,
         "ignored_task_keys_sha256": _sha256_json(
             sorted(str(row["evaluation_key"]) for row in ignored_rows)
         ),
