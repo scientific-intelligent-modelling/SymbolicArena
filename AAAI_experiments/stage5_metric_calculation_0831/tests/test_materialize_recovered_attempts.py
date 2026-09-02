@@ -164,3 +164,43 @@ def test_rejects_conflicting_existing_recovery_artifact(tmp_path: Path) -> None:
             attempts_dir=attempts_dir,
             report_json=tmp_path / "report.json",
         )
+
+
+def test_ignores_lease_expired_attempts_outside_current_plan(tmp_path: Path) -> None:
+    original_plan, state_db, _, expired_attempt_id = _prepare_expired_attempt(tmp_path)
+    row = json.loads(original_plan.read_text(encoding="utf-8"))
+    logical_id = "pred_simplify::demo::g0001::s521::clean"
+    task_key = evaluation_key(
+        task_type="pred_simplify",
+        logical_id=logical_id,
+        prompt_version=str(row["prompt_version"]),
+        schema_version=str(row["schema_version"]),
+        prompt_sha256=str(row["prompt_sha256"]),
+        schema_sha256=str(row["schema_sha256"]),
+        normalized_input=row["normalized_input"],
+        evidence_hash=str(row["request"]["evidence_hash"]),
+    )
+    spec = dict(row["task_spec"])
+    spec.update({"evaluation_key": task_key, "logical_id": logical_id})
+    row.update(
+        {
+            "evaluation_key": task_key,
+            "logical_id": logical_id,
+            "task_spec": spec,
+        }
+    )
+    TaskStateStore(state_db).register_task(TaskSpec(**spec))
+    current_plan = tmp_path / "current-plan.jsonl"
+    current_plan.write_text(canonical_json(row) + "\n", encoding="utf-8")
+
+    attempts_dir = tmp_path / "attempts"
+    report = materialize_recovered_attempts(
+        plan_jsonl=current_plan,
+        state_db=state_db,
+        attempts_dir=attempts_dir,
+        report_json=tmp_path / "report.json",
+    )
+
+    assert report["eligible_count"] == 0
+    assert report["ignored_outside_plan_count"] == 1
+    assert not (attempts_dir / f"{expired_attempt_id}.json").exists()

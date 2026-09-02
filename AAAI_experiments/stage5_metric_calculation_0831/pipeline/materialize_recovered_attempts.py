@@ -190,13 +190,13 @@ def materialize_recovered_attempts(
         artifacts: list[JsonDict] = []
         created_count = 0
         reused_count = 0
+        ignored_outside_plan_count = 0
         for row in rows:
             evaluation_key = str(row["evaluation_key"])
             entry = by_key.get(evaluation_key)
             if entry is None:
-                raise RecoveredAttemptAuditError(
-                    f"lease_expired attempt 不在 plan 中: {row['attempt_id']}"
-                )
+                ignored_outside_plan_count += 1
+                continue
             definition = entry.definition
             if row["logical_id"] != entry.logical_id:
                 raise RecoveredAttemptAuditError(f"{row['attempt_id']}.logical_id 漂移")
@@ -262,6 +262,7 @@ def materialize_recovered_attempts(
         "eligible_count": len(artifacts),
         "created_count": created_count,
         "reused_count": reused_count,
+        "ignored_outside_plan_count": ignored_outside_plan_count,
         "artifacts": artifacts,
     }
     report_path = Path(report_json).resolve()
