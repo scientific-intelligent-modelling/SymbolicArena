@@ -325,6 +325,42 @@ def test_validate_simplification_accepts_equivalent_result() -> None:
     assert evidence["probe_count"] > 0
 
 
+def test_validate_simplification_short_circuits_exact_source_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expression = (
+        "x4/x5 + (x4/x5 + (-x2/(x5*(x1 + x2/x5 + 2*x3 + log(sqrt(x5)))) "
+        "- x2/(x5*(x1 + 2*x3)) + 2*x4/x5))*sin(sqrt(log(x3)))"
+    )
+
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("精确源码一致时不应进入高成本等价验证")
+
+    monkeypatch.setattr(symbolic_evidence, "_equivalence_core", fail_if_called)
+    evidence = validate_simplification(
+        original=expression,
+        simplified=expression,
+        allowed_variables={"x1", "x2", "x3", "x4", "x5"},
+        allowed_functions={"log", "sin", "sqrt"},
+        seed=520,
+        probe_points=[
+            {
+                "split": "id_test",
+                "row_index": 0,
+                "values": {"x1": 1.0, "x2": 2.0, "x3": 3.0, "x4": 4.0, "x5": 5.0},
+            }
+        ],
+        probe_source="dataset_probes_v1",
+        probe_sample_sha256="a" * 64,
+    )
+
+    assert evidence["decision"] == "equivalent"
+    assert evidence["symbolic_decision"] == "equivalent"
+    assert evidence["proof_basis"] == "artifact_identity"
+    assert evidence["probe_count"] == 0
+    assert evidence["original_sha256"] == evidence["simplified_sha256"]
+
+
 def test_validate_simplification_rejects_counterexample() -> None:
     with pytest.raises(SimplificationContractError) as exc_info:
         validate_simplification(

@@ -1482,6 +1482,36 @@ def validate_simplification(
         allowed_variables=allowed_variables,
         allowed_functions=allowed_functions,
     )
+    if original == simplified:
+        normalized_points = (
+            _normalize_external_probe_points(probe_points)
+            if probe_points is not None
+            else []
+        )
+        normalized_probe_points_sha256 = _probe_sample_sha256(normalized_points)
+        return {
+            "decision": "equivalent",
+            "symbolic_decision": "equivalent",
+            "proof_basis": "artifact_identity",
+            "probe_seed": seed,
+            "probe_source": probe_source or (
+                "external" if probe_points is not None else "not_run_source_identity"
+            ),
+            "probe_sample_sha256": probe_sample_sha256 or normalized_probe_points_sha256,
+            "normalized_probe_points_sha256": normalized_probe_points_sha256,
+            "probe_count": 0,
+            "skipped_probe_count": 0,
+            "skipped_probe_reasons": {},
+            "skipped_probes": [],
+            "probe_hash": _sha256_text(_canonical_json([])),
+            "max_abs_error": None,
+            "max_rel_error": None,
+            "max_tolerance": None,
+            "numeric_probes": [],
+            "assumptions": [],
+            "original_sha256": original_artifact["artifact_sha256"],
+            "simplified_sha256": original_artifact["artifact_sha256"],
+        }
     simplified_allowed_functions = set(allowed_functions)
     # 比较表达式在 canonical tree 中会成为 Piecewise(1/0)。允许模型使用
     # 等价的显式 Piecewise 记法，但不放宽其它新函数。
