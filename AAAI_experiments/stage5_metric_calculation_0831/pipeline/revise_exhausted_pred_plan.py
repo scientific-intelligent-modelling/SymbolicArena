@@ -17,11 +17,30 @@ from .state import TaskSpec
 
 
 JsonDict = dict[str, object]
-_SUFFIX_PATTERN = re.compile(r"[a-z0-9][a-z0-9._-]*")
+_SUFFIX_PATTERN = re.compile(r"v[1-9]\d*")
+_PRED_LOGICAL_ID_PATTERN = re.compile(
+    r"^(pred_simplify::[a-z0-9_]+::g\d{4}::s(?:520|521|522)::clean)(?:::(v[1-9]\d*))?$"
+)
 
 
 class ReviseExhaustedPredPlanError(RuntimeError):
     """predecessor 状态或 successor 计划不满足冻结契约。"""
+
+
+def _successor_logical_id(predecessor_logical_id: str, logical_id_suffix: str) -> str:
+    match = _PRED_LOGICAL_ID_PATTERN.fullmatch(predecessor_logical_id)
+    if match is None:
+        raise ReviseExhaustedPredPlanError(
+            f"predecessor logical_id 非 canonical: {predecessor_logical_id!r}"
+        )
+    successor_version = int(logical_id_suffix[1:])
+    predecessor_suffix = match.group(2)
+    predecessor_version = int(predecessor_suffix[1:]) if predecessor_suffix is not None else 1
+    if successor_version <= predecessor_version:
+        raise ReviseExhaustedPredPlanError(
+            f"successor 版本必须递增: v{predecessor_version} -> {logical_id_suffix}"
+        )
+    return f"{match.group(1)}::{logical_id_suffix}"
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -84,7 +103,7 @@ def _successor_row(
     logical_id_suffix: str,
 ) -> JsonDict:
     old_logical_id = str(predecessor["logical_id"])
-    logical_id = f"{old_logical_id}::{logical_id_suffix}"
+    logical_id = _successor_logical_id(old_logical_id, logical_id_suffix)
     request = predecessor["request"]
     schema = predecessor["schema_content"]
     schema_sha256 = str(predecessor["schema_sha256"])
@@ -147,6 +166,8 @@ def revise_exhausted_pred_plan(
 ) -> JsonDict:
     if not _SUFFIX_PATTERN.fullmatch(logical_id_suffix):
         raise ReviseExhaustedPredPlanError("logical_id_suffix 格式无效")
+    if int(logical_id_suffix[1:]) < 2:
+        raise ReviseExhaustedPredPlanError("logical_id_suffix 必须从 v2 开始")
     predecessor_path = Path(predecessor_plan_jsonl).resolve()
     try:
         loaded = load_plan_jsonl(predecessor_path)

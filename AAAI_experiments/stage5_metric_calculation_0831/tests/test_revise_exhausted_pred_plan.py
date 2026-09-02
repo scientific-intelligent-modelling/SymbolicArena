@@ -4,6 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import (
     canonical_json,
     evaluation_key,
@@ -95,9 +97,22 @@ def _plan_row(logical_id: str) -> dict[str, object]:
     }
 
 
-def test_revises_only_exhausted_tasks_with_new_prompt_fingerprint(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("predecessor_suffix", "successor_suffix"),
+    [(None, "v2"), ("v2", "v3")],
+)
+def test_revises_only_exhausted_tasks_with_new_prompt_fingerprint(
+    tmp_path: Path,
+    predecessor_suffix: str | None,
+    successor_suffix: str,
+) -> None:
     frozen_row = _plan_row("pred_simplify::demo::g0001::s520::clean")
-    exhausted_row = _plan_row("pred_simplify::demo::g0001::s521::clean")
+    exhausted_base_id = "pred_simplify::demo::g0001::s521::clean"
+    exhausted_row = _plan_row(
+        exhausted_base_id
+        if predecessor_suffix is None
+        else f"{exhausted_base_id}::{predecessor_suffix}"
+    )
     predecessor_plan = tmp_path / "predecessor.jsonl"
     predecessor_plan.write_text(
         canonical_json(frozen_row) + "\n" + canonical_json(exhausted_row) + "\n",
@@ -137,7 +152,7 @@ def test_revises_only_exhausted_tasks_with_new_prompt_fingerprint(tmp_path: Path
         recovery_prompt_path=recovery_prompt,
         output_jsonl=output_plan,
         report_json=report_path,
-        logical_id_suffix="v2",
+        logical_id_suffix=successor_suffix,
         expected_task_count=2,
         expected_exhausted_count=1,
     )
@@ -145,7 +160,7 @@ def test_revises_only_exhausted_tasks_with_new_prompt_fingerprint(tmp_path: Path
     loaded = load_plan_jsonl(output_plan)
     by_logical_id = {entry.logical_id: entry for entry in loaded.entries}
     assert frozen_row["logical_id"] in by_logical_id
-    successor_id = f"{exhausted_row['logical_id']}::v2"
+    successor_id = f"{exhausted_base_id}::{successor_suffix}"
     assert successor_id in by_logical_id
     successor = by_logical_id[successor_id]
     assert successor.evaluation_key != exhausted_row["evaluation_key"]
