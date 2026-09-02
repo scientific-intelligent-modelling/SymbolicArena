@@ -498,8 +498,10 @@ def _patch_fixture_contract(
                 "expression": "x0 + x1",
                 "original_expression": "x0 + x1 + 0",
             }
-        for seed in (520, 521, 522):
-            plan_requests_by_logical_id[f"pred_simplify::algoa::g0001::s{seed}::clean"] = {
+        for row in rows_by_type["pred_simplify"]:
+            logical_id = str(row["logical_id"])
+            seed = int(logical_id.split("::s", maxsplit=1)[1].split("::", maxsplit=1)[0])
+            plan_requests_by_logical_id[logical_id] = {
                 "dataset_id": "demo_ds",
                 "dataset_index": "g0001",
                 "seed": seed,
@@ -707,6 +709,44 @@ def test_aggregate_clean_metrics_accepts_gt_v2_logical_id(
     with Path(kwargs["clean_run_csv"]).open("r", encoding="utf-8", newline="") as handle:
         run_rows = list(csv.DictReader(handle))
     assert {row["gt_logical_id"] for row in run_rows} == {"gt_simplify::demo_ds::v2"}
+
+
+def test_aggregate_clean_metrics_accepts_pred_v2_logical_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    pred_logical_id = "pred_simplify::algoa::g0001::s520::clean::v2"
+
+    plan_rows = [
+        json.loads(line)
+        for line in paths["simplify_plan_jsonl"].read_text(encoding="utf-8").splitlines()
+    ]
+    plan_rows[0]["logical_id"] = pred_logical_id
+    _write_jsonl(paths["simplify_plan_jsonl"], plan_rows)
+
+    pred_rows = [
+        json.loads(line)
+        for line in paths["pred_index_jsonl"].read_text(encoding="utf-8").splitlines()
+    ]
+    pred_rows[0]["logical_id"] = pred_logical_id
+    _write_jsonl(paths["pred_index_jsonl"], pred_rows)
+
+    evidence_rows = [
+        json.loads(line)
+        for line in paths["evidence_jsonl"].read_text(encoding="utf-8").splitlines()
+    ]
+    evidence_rows[0]["pred_logical_id"] = pred_logical_id
+    _write_jsonl(paths["evidence_jsonl"], evidence_rows)
+    _patch_fixture_contract(monkeypatch, paths, tmp_path)
+
+    kwargs = _aggregate_kwargs(paths, tmp_path)
+    aggregate_clean_metrics(**kwargs)
+
+    with Path(kwargs["clean_run_csv"]).open("r", encoding="utf-8", newline="") as handle:
+        run_rows = list(csv.DictReader(handle))
+    run_520 = next(row for row in run_rows if row["seed"] == "520")
+    assert run_520["pred_logical_id"] == pred_logical_id
 
 
 def test_aggregate_clean_metrics_accepts_gt_unable_with_original_identity_fallback(

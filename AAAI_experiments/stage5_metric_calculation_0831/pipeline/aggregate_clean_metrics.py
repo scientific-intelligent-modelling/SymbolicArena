@@ -56,7 +56,7 @@ STRUCTURE_DECISIONS = {
 }
 STRUCTURE_NO_CALL_REASONS = {"invalid_seed_or_expression"}
 GT_LOGICAL_ID_RE = re.compile(r"^gt_simplify::([^:]+)(?:::(v2))?$")
-RUN_LOGICAL_ID_RE_TEMPLATE = r"^{prefix}::([a-z0-9_]+)::(g\d{{4}})::s(520|521|522)::clean$"
+RUN_LOGICAL_ID_RE_TEMPLATE = r"^{prefix}::([a-z0-9_]+)::(g\d{{4}})::s(520|521|522)::clean{suffix}$"
 STRUCTURE_LOGICAL_ID_RE = re.compile(
     r"^stab_structure::([a-z0-9_]+)::(g\d{4})::s(520|521|522)-s?(520|521|522)$"
 )
@@ -175,7 +175,13 @@ def _parse_gt_logical_id(logical_id: str) -> str:
 
 
 def _parse_run_logical_id(logical_id: str, *, expected_prefix: str) -> tuple[str, str, int]:
-    pattern = re.compile(RUN_LOGICAL_ID_RE_TEMPLATE.format(prefix=re.escape(expected_prefix)))
+    suffix = r"(?:::v[1-9]\d*)?" if expected_prefix == "pred_simplify" else ""
+    pattern = re.compile(
+        RUN_LOGICAL_ID_RE_TEMPLATE.format(
+            prefix=re.escape(expected_prefix),
+            suffix=suffix,
+        )
+    )
     match = pattern.fullmatch(logical_id)
     if match is None:
         _raise(f"无法解析 {expected_prefix} logical_id: {logical_id!r}")
@@ -978,9 +984,9 @@ def _load_pred_simplify_identity_map(
             seed = int(request.get("seed"))
         except (TypeError, ValueError) as exc:
             raise AggregateCleanMetricsError(f"{logical_id}.request.seed 非法") from exc
-        expected_logical_id = f"pred_simplify::{algorithm_slug}::{dataset_index}::s{seed}::{NOISE_TAG}"
-        if logical_id != expected_logical_id:
-            _raise(f"simplify plan logical_id 不匹配: {logical_id!r} != {expected_logical_id!r}")
+        parsed_identity = _parse_run_logical_id(logical_id, expected_prefix="pred_simplify")
+        if parsed_identity != (algorithm_slug, dataset_index, seed):
+            _raise(f"simplify plan logical_id 与 request 身份不匹配: {logical_id!r}")
         key = (algorithm_slug, dataset_index, seed)
         if key in identity_map:
             _raise(f"simplify plan 出现重复 pred 身份映射: {logical_id}")
@@ -1074,6 +1080,8 @@ def _build_pred_index(
             seed=seed,
             logical_id=logical_id,
         )
+        if logical_id != identity["logical_id"]:
+            _raise(f"{logical_id} 不是 pred simplify plan 的 active logical_id")
         expression, state = _select_simplified_expression(
             row,
             logical_id=logical_id,
@@ -1231,6 +1239,8 @@ def _parse_evidence_key(
             seed=seed,
             logical_id=pred_logical_id,
         )
+        if pred_logical_id != identity["logical_id"]:
+            _raise(f"{pred_logical_id} 不是 pred simplify plan 的 active logical_id")
         key_value = str(identity["numeric_logical_key"])
     pred_logical_id = _optional_nonempty_string(row.get("pred_logical_id"))
     if pred_logical_id is not None:
@@ -1245,6 +1255,8 @@ def _parse_evidence_key(
             seed=seed,
             logical_id=pred_logical_id,
         )
+        if pred_logical_id != identity["logical_id"]:
+            _raise(f"{pred_logical_id} 不是 pred simplify plan 的 active logical_id")
         expected_key = str(identity["numeric_logical_key"])
         if key_value != expected_key:
             _raise(f"deterministic evidence logical_key 漂移: {key_value!r} != {expected_key!r}")
