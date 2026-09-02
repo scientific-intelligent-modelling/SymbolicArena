@@ -244,8 +244,11 @@ def test_recommends_first_strictly_revalidated_attempt(tmp_path: Path) -> None:
         output_jsonl=tmp_path / "audit.jsonl",
         report_json=tmp_path / "report.json",
         semantic_timeout_seconds=20.0,
+        logical_ids=[logical_id],
     )
     assert report["exhausted_task_count"] == 1
+    assert report["total_exhausted_task_count"] == 1
+    assert report["requested_logical_ids"] == [logical_id]
     assert report["promotable_task_count"] == 1
     assert report["model_invoked"] is False
     assert report["state_db_mutated"] is False

@@ -450,9 +450,15 @@ def audit_exhausted_simplifications(
     output_jsonl: str | Path,
     report_json: str | Path,
     semantic_timeout_seconds: float = 90.0,
+    logical_ids: Sequence[str] = (),
 ) -> JsonDict:
     if semantic_timeout_seconds <= 0:
         raise ExhaustedSimplificationAuditError("semantic_timeout_seconds 必须为正数")
+    requested_logical_ids = tuple(str(item) for item in logical_ids)
+    if any(not item for item in requested_logical_ids):
+        raise ExhaustedSimplificationAuditError("logical_ids 不得包含空字符串")
+    if len(set(requested_logical_ids)) != len(requested_logical_ids):
+        raise ExhaustedSimplificationAuditError("logical_ids 不得重复")
     try:
         loaded_plan = load_plan_jsonl(plan_jsonl)
     except PlanContractError as exc:
@@ -474,7 +480,7 @@ def audit_exhausted_simplifications(
     task_rows: list[JsonDict] = []
     attempt_status_counts: dict[str, int] = {}
     try:
-        exhausted = connection.execute(
+        all_exhausted = connection.execute(
             """SELECT evaluation_key, logical_id, task_type, condition_name,
                       attempt_count, last_error_class
                FROM tasks
@@ -482,6 +488,21 @@ def audit_exhausted_simplifications(
                ORDER BY logical_id""",
             (only_task_type, only_condition),
         ).fetchall()
+        if requested_logical_ids:
+            exhausted_by_logical_id = {
+                str(task["logical_id"]): task for task in all_exhausted
+            }
+            missing = sorted(set(requested_logical_ids) - set(exhausted_by_logical_id))
+            if missing:
+                raise ExhaustedSimplificationAuditError(
+                    f"请求的 logical_id 当前不是 exhausted: {missing}"
+                )
+            exhausted = [
+                exhausted_by_logical_id[logical_id]
+                for logical_id in requested_logical_ids
+            ]
+        else:
+            exhausted = list(all_exhausted)
         for task in exhausted:
             evaluation_key = str(task["evaluation_key"])
             entry = by_key.get(evaluation_key)
@@ -574,6 +595,8 @@ def audit_exhausted_simplifications(
             Path(__file__).with_name("symbolic_evidence.py")
         ),
         "semantic_timeout_seconds": float(semantic_timeout_seconds),
+        "requested_logical_ids": list(requested_logical_ids),
+        "total_exhausted_task_count": len(all_exhausted),
         "exhausted_task_count": len(task_rows),
         "promotable_task_count": sum(row["resolution"] == "promotable" for row in task_rows),
         "unresolved_task_count": sum(row["resolution"] == "unresolved" for row in task_rows),
@@ -594,6 +617,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-jsonl", type=Path, required=True)
     parser.add_argument("--report-json", type=Path, required=True)
     parser.add_argument("--semantic-timeout-seconds", type=float, default=90.0)
+    parser.add_argument("--logical-id", action="append", default=[])
     return parser.parse_args(argv)
 
 
@@ -607,6 +631,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_jsonl=args.output_jsonl,
             report_json=args.report_json,
             semantic_timeout_seconds=args.semantic_timeout_seconds,
+            logical_ids=args.logical_id,
         )
     except ExhaustedSimplificationAuditError as exc:
         print(str(exc), file=sys.stderr)
