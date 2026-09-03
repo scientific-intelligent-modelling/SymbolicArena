@@ -1,0 +1,2732 @@
+{
+  "api_request": {
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "content": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"log\",\"sin\"],\"dataset_id\":\"strogatz_vdp1\",\"dataset_index\":\"g0032\",\"deterministic_evidence\":{\"allowed_functions\":[\"log\",\"sin\"],\"allowed_variables\":[\"x\",\"y\"],\"evidence_sha256\":\"4e14ca3819225571e8cc1ea2195013825a97a9895254078e27e18212e8eabe73\",\"lhs_binding\":{\"frozen_effective_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))\",\"frozen_evaluation_key\":\"4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0032::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"3ab3c0c73b33ebd9af7acdb98b207122cfba500311193f14a6ffe396e205a97b\",\"lhs_artifact\":{\"artifact_sha256\":\"a119f9f39c6a5bdc4a46e3e09fa2f70445541b647630719037d4da291751e2fd\",\"canonical_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*x - 0.87*y)))*log(sin(x - sin(sin(y))))\",\"constants_abstracted_tree_fingerprint\":\"4898f9f81c571ec7729531903f0e2da03b8db96d694e9a132ff5dbfc02f1ff2b\",\"construction_mode\":\"evaluated\",\"function_set\":[\"log\",\"sin\"],\"node_count\":37,\"operator_set\":[\"add\",\"log\",\"mul\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"x\",\"y\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720\",\"operator\":{\"f1\":0.8888888888888888},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b\",\"probe_seed\":520521,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"86af03bc34ddc3574aef665a3f63310575cc50be6eec38056f94b9d35da616ed\",\"constants_abstracted_tree_fingerprint\":\"68b8b9043d8457142a6ec250662be36bd9f2e9b19d3f35729c9cb0d6ef763a8c\",\"construction_mode\":\"evaluated\",\"function_set\":[\"log\",\"sin\"],\"node_count\":68,\"operator_set\":[\"add\",\"log\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"x\",\"y\"]},\"skipped_probe_count\":12,\"skipped_probe_reasons\":{\"both_nonfinite\":5,\"numeric_probe_timeout\":1,\"simplified_nonfinite\":6},\"symbolic_difference\":{\"assumptions\":[\"表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。\",\"数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":12,\"skipped_probe_reasons\":{\"both_nonfinite\":5,\"numeric_probe_timeout\":1,\"simplified_nonfinite\":6}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.6,\"tree_similarity\":0.4},\"variable\":{\"f1\":1.0}},\"pair_seed\":520521,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y\",\"frozen_evaluation_key\":\"b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0032::s521::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))\",\"effective_prediction_b_expression\":\"-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y\",\"effort\":\"xhigh\",\"evidence_hash\":\"4e14ca3819225571e8cc1ea2195013825a97a9895254078e27e18212e8eabe73\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0032::s520::clean\",\"prediction_a_plan_evaluation_key\":\"4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629\",\"prediction_a_result_sha256\":\"be125a18b33e8eefeb712fc5b6f024268066b8bdbe9e45b66928fb53a551fa09\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0032\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0032::s521::clean\",\"prediction_b_plan_evaluation_key\":\"b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e\",\"prediction_b_result_sha256\":\"008d8eba96a5e9127ec7b32a7183e4ee3ca278c506f99a108efed8f95dccc459\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s521_clean_g0032\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":521,\"simplified_prediction_a_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))\",\"simplified_prediction_b_expression\":\"-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-5",
+    "output_config": {
+      "effort": "xhigh"
+    },
+    "stream": false,
+    "system": "You are a strict mathematical benchmark evaluator.\nAll domain assumptions, declared variables/functions, instantiated constants, and output-schema rules supplied by the user are hard constraints.\nNever add assumptions from physical interpretation, typical parameter signs, or observed probe ranges.\nJudge preservation in the declared number system, not in a broader complex domain.\nIf an expression has no valid value in the declared real-valued domain, or relies on undeclared symbolic entities, follow the task's unable/undetermined rule rather than treating textual identity as sufficient.\nReturn only the requested JSON object, with no additional properties or prose.",
+    "thinking": {
+      "type": "adaptive"
+    }
+  },
+  "api_response": {
+    "content": [
+      {
+        "block_sha256": "b0db478c08dadc93175be6eabca8a6bf1b09e9c38b5476a33f94701c6d5b0db1",
+        "original_type": "thinking",
+        "redacted": true,
+        "type": "redacted_thinking"
+      },
+      {
+        "text": "{\"decision\":\"different_structure\",\"confidence\":0.94,\"brief_reason\":\"The two frozen expressions differ in canonical form and size: A is a single product (37 nodes, operators add/log/mul/sin) built from log(sin(x - sin(sin(y)))) times a sine-containing factor, while B is a multi-term sum (68 nodes) including pow and division with nested log(log(...)) terms. Constants-abstracted tree fingerprints differ and tree similarity is only 0.4, so no shared canonical structure. No equivalence proof or supporting numeric agreement exists (probe count 0, all probes skipped/nonfinite), and B additionally contains real-domain-invalid subterms such as log(-1.451*x) alongside log(x), so equivalence cannot hold generally.\"}",
+        "type": "text"
+      }
+    ],
+    "id": "msg_vrtx_011Ceg3hysi82sExPvGKchJ9",
+    "model": "claude-opus-5",
+    "role": "assistant",
+    "routify_response": {
+      "ak_quota": {
+        "api_key": "[REDACTED]",
+        "current_rpm": 3,
+        "rpm_limit": 600,
+        "status": "NORMAL"
+      },
+      "is_fall_back_triggered": false,
+      "model_name": "claude-opus-5",
+      "provider_code_md5": "3a33c9",
+      "request_id": "9f3d443f838641bc8769ab8d47e42592",
+      "status": 200,
+      "success": true,
+      "trace_id": "212aa73e17884175583373890e0c6f"
+    },
+    "stop_details": null,
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 4087,
+      "output_tokens": 413,
+      "output_tokens_details": {
+        "thinking_tokens": 149
+      }
+    }
+  },
+  "attempt_id": "d547cbae483edf5773ed323e706b6016a43931fc738ef5dcd487bf553f8e3544.a01",
+  "evaluation_key": "d547cbae483edf5773ed323e706b6016a43931fc738ef5dcd487bf553f8e3544",
+  "metadata": {
+    "api_base_url": "https://routify-pub.alibaba-inc.com/protocol/anthropic",
+    "api_channel": "routify",
+    "api_endpoint": "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages",
+    "api_request_sha256": "6860429660483805466b248199bff9dfe9889be72c7e790c58fd0803eca73ef1",
+    "api_response_sha256": "f51135a0c274120c36bd330f9f6d5afb860b70dc1a0310a4337b1a0a888b87a0",
+    "attempt_id": "d547cbae483edf5773ed323e706b6016a43931fc738ef5dcd487bf553f8e3544.a01",
+    "attempt_number": 1,
+    "error_class": null,
+    "estimated_cost_cny": 0.018456,
+    "evaluation_key": "d547cbae483edf5773ed323e706b6016a43931fc738ef5dcd487bf553f8e3544",
+    "finished_at": 1788417585.2506375,
+    "http_status": 200,
+    "lease_expires_at": 1788417917.6438205,
+    "logical_id": "stab_structure::gplearn::g0032::s520-s521",
+    "persisted_api_response_sha256": "ee041f6cf91d97643bf67e21d34ad95c3c0994a0e767bcae812e47500b235409",
+    "prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/structure.v1.txt",
+    "prompt_sha256": "64940c7ff791772bef05f5e9641ee8de54ef91b8e203b5860ef07982ec13d8c9",
+    "raw_response_sha256": "5b1d1f7c9bef5da5cd83c23dffa7201528fee68256eb2f6ae230d2b908b336a5",
+    "rendered_prompt_sha256": "d0eabd486ed8ecabc560b543e5898c6cd5be14fe5c7a741fbee404f9a8a8d99d",
+    "request_sha256": "7aa58824a1854a52b207d0ccdda4c3c6f5d41046992f68ec0821b63ea3e85544",
+    "requested_effort": "xhigh",
+    "requested_model": "claude-opus-5",
+    "response_headers": {
+      "request-id": "req_vrtx_011Ceg3hy2cQ2ADfsf69zAKz"
+    },
+    "response_metadata": {
+      "content_types": [
+        "thinking",
+        "text"
+      ],
+      "message_id": "msg_vrtx_011Ceg3hysi82sExPvGKchJ9",
+      "model": "claude-opus-5",
+      "stop_reason": "end_turn",
+      "stop_sequence": null
+    },
+    "response_model": "claude-opus-5",
+    "retryable": false,
+    "schema_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/schemas/structure.v1.json",
+    "schema_sha256": "f38e475728bb4be46c61ce1e92c65e8032ef37a337f72ae083ce7f54ba841347",
+    "started_at": 1788417558.198464,
+    "stream": false,
+    "system_prompt_sha256": "55f871abfb0308c60d2d354e24c209eb44ce9268f0ca6877bce4c55822922aca",
+    "tariff_cny_per_million_tokens": {
+      "cache_read": 0.3,
+      "input": 3.0,
+      "output": 15.0
+    },
+    "task_kind": "structure",
+    "task_type": "stab_structure",
+    "timeout_seconds": 300.0,
+    "transport_version": "anthropic_messages_nonstream_dual_channel.v1",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 4087,
+      "output_tokens": 413,
+      "output_tokens_details": {
+        "thinking_tokens": 149
+      }
+    },
+    "wall_latency_seconds": 27.054451756179333
+  },
+  "output_text": "{\"decision\":\"different_structure\",\"confidence\":0.94,\"brief_reason\":\"The two frozen expressions differ in canonical form and size: A is a single product (37 nodes, operators add/log/mul/sin) built from log(sin(x - sin(sin(y)))) times a sine-containing factor, while B is a multi-term sum (68 nodes) including pow and division with nested log(log(...)) terms. Constants-abstracted tree fingerprints differ and tree similarity is only 0.4, so no shared canonical structure. No equivalence proof or supporting numeric agreement exists (probe count 0, all probes skipped/nonfinite), and B additionally contains real-domain-invalid subterms such as log(-1.451*x) alongside log(x), so equivalence cannot hold generally.\"}",
+  "prompt": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"log\",\"sin\"],\"dataset_id\":\"strogatz_vdp1\",\"dataset_index\":\"g0032\",\"deterministic_evidence\":{\"allowed_functions\":[\"log\",\"sin\"],\"allowed_variables\":[\"x\",\"y\"],\"evidence_sha256\":\"4e14ca3819225571e8cc1ea2195013825a97a9895254078e27e18212e8eabe73\",\"lhs_binding\":{\"frozen_effective_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))\",\"frozen_evaluation_key\":\"4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0032::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"3ab3c0c73b33ebd9af7acdb98b207122cfba500311193f14a6ffe396e205a97b\",\"lhs_artifact\":{\"artifact_sha256\":\"a119f9f39c6a5bdc4a46e3e09fa2f70445541b647630719037d4da291751e2fd\",\"canonical_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*x - 0.87*y)))*log(sin(x - sin(sin(y))))\",\"constants_abstracted_tree_fingerprint\":\"4898f9f81c571ec7729531903f0e2da03b8db96d694e9a132ff5dbfc02f1ff2b\",\"construction_mode\":\"evaluated\",\"function_set\":[\"log\",\"sin\"],\"node_count\":37,\"operator_set\":[\"add\",\"log\",\"mul\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"x\",\"y\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720\",\"operator\":{\"f1\":0.8888888888888888},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b\",\"probe_seed\":520521,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"86af03bc34ddc3574aef665a3f63310575cc50be6eec38056f94b9d35da616ed\",\"constants_abstracted_tree_fingerprint\":\"68b8b9043d8457142a6ec250662be36bd9f2e9b19d3f35729c9cb0d6ef763a8c\",\"construction_mode\":\"evaluated\",\"function_set\":[\"log\",\"sin\"],\"node_count\":68,\"operator_set\":[\"add\",\"log\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"x\",\"y\"]},\"skipped_probe_count\":12,\"skipped_probe_reasons\":{\"both_nonfinite\":5,\"numeric_probe_timeout\":1,\"simplified_nonfinite\":6},\"symbolic_difference\":{\"assumptions\":[\"表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。\",\"数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":12,\"skipped_probe_reasons\":{\"both_nonfinite\":5,\"numeric_probe_timeout\":1,\"simplified_nonfinite\":6}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.6,\"tree_similarity\":0.4},\"variable\":{\"f1\":1.0}},\"pair_seed\":520521,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y\",\"frozen_evaluation_key\":\"b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0032::s521::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))\",\"effective_prediction_b_expression\":\"-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y\",\"effort\":\"xhigh\",\"evidence_hash\":\"4e14ca3819225571e8cc1ea2195013825a97a9895254078e27e18212e8eabe73\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0032::s520::clean\",\"prediction_a_plan_evaluation_key\":\"4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629\",\"prediction_a_result_sha256\":\"be125a18b33e8eefeb712fc5b6f024268066b8bdbe9e45b66928fb53a551fa09\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0032\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0032::s521::clean\",\"prediction_b_plan_evaluation_key\":\"b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e\",\"prediction_b_result_sha256\":\"008d8eba96a5e9127ec7b32a7183e4ee3ca278c506f99a108efed8f95dccc459\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s521_clean_g0032\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":521,\"simplified_prediction_a_expression\":\"(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))\",\"simplified_prediction_b_expression\":\"-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+  "request": {
+    "algorithm": "gplearn",
+    "algorithm_slug": "gplearn",
+    "allowed_functions": [
+      "log",
+      "sin"
+    ],
+    "dataset_id": "strogatz_vdp1",
+    "dataset_index": "g0032",
+    "deterministic_evidence": {
+      "allowed_functions": [
+        "log",
+        "sin"
+      ],
+      "allowed_variables": [
+        "x",
+        "y"
+      ],
+      "evidence_sha256": "4e14ca3819225571e8cc1ea2195013825a97a9895254078e27e18212e8eabe73",
+      "lhs_binding": {
+        "frozen_effective_expression": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))",
+        "frozen_evaluation_key": "4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629",
+        "frozen_logical_id": "pred_simplify::gplearn::g0032::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "3ab3c0c73b33ebd9af7acdb98b207122cfba500311193f14a6ffe396e205a97b",
+        "lhs_artifact": {
+          "artifact_sha256": "a119f9f39c6a5bdc4a46e3e09fa2f70445541b647630719037d4da291751e2fd",
+          "canonical_expression": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*x - 0.87*y)))*log(sin(x - sin(sin(y))))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Integer",
+                        "value": "Integer(-3)"
+                      },
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "NegativeOne",
+                                                "value": "Integer(-1)"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Float",
+                                                        "value": "Float('18.867924528301899', precision=53)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('y')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "sin"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          }
+                                        ],
+                                        "type": "add"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "add"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Float",
+                                            "value": "Float('0.87', precision=53)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Float",
+                                            "value": "Float('-0.87', precision=53)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  }
+                                ],
+                                "type": "log"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('y')"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "Constant"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('y')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "sin"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          }
+                                        ],
+                                        "type": "add"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "add"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  }
+                                ],
+                                "type": "log"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('y')"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "4898f9f81c571ec7729531903f0e2da03b8db96d694e9a132ff5dbfc02f1ff2b",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "log",
+            "sin"
+          ],
+          "node_count": 37,
+          "operator_set": [
+            "add",
+            "log",
+            "mul",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))",
+          "variables": [
+            "x",
+            "y"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.8888888888888888
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b",
+        "probe_seed": 520521,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "86af03bc34ddc3574aef665a3f63310575cc50be6eec38056f94b9d35da616ed",
+          "canonical_expression": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Integer",
+                    "value": "Integer(3)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Integer",
+                        "value": "Integer(2)"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Integer",
+                        "value": "Integer(3)"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.34599999999999997', precision=53)"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              },
+                              {
+                                "type": "Integer",
+                                "value": "Integer(2)"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Float",
+                                    "value": "Float('1.4513788098693801', precision=53)"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Integer",
+                    "value": "Integer(-2)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('x')"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Float",
+                    "value": "Float('-1.2820512820512799', precision=53)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('x')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Float",
+                        "value": "Float('0.88700000000000001', precision=53)"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.4513788098693801', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.2820512820512799', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Float",
+                                    "value": "Float('1.4513788098693801', precision=53)"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Float",
+                                            "value": "Float('-1.4513788098693801', precision=53)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "log"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "add"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Constant"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Constant"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Constant"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('x')"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('x')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Constant"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "log"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "add"
+          },
+          "constants_abstracted_tree_fingerprint": "68b8b9043d8457142a6ec250662be36bd9f2e9b19d3f35729c9cb0d6ef763a8c",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "log",
+            "sin"
+          ],
+          "node_count": 68,
+          "operator_set": [
+            "add",
+            "log",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+          "variables": [
+            "x",
+            "y"
+          ]
+        },
+        "skipped_probe_count": 12,
+        "skipped_probe_reasons": {
+          "both_nonfinite": 5,
+          "numeric_probe_timeout": 1,
+          "simplified_nonfinite": 6
+        },
+        "skipped_probes": [
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 1,
+            "split": "id_test",
+            "values": {
+              "x": "0.95144727705810395",
+              "y": "-0.0460624487466888"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 6,
+            "split": "id_test",
+            "values": {
+              "x": "1.1738313845599699",
+              "y": "0.136694925567695"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 9,
+            "split": "id_test",
+            "values": {
+              "x": "0.99259202726117923",
+              "y": "-0.0196992981441605"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 17,
+            "split": "id_test",
+            "values": {
+              "x": "-0.68438449571056292",
+              "y": "0.15247972762752601"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 19,
+            "split": "id_test",
+            "values": {
+              "x": "1.1901764672078301",
+              "y": "0.76935540171138594"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 21,
+            "split": "id_test",
+            "values": {
+              "x": "-0.90538386838459195",
+              "y": "0.072004703806244505"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 28,
+            "split": "id_test",
+            "values": {
+              "x": "1.2142681880100299",
+              "y": "0.18144796928671489"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 30,
+            "split": "id_test",
+            "values": {
+              "x": "-0.88904753721047891",
+              "y": "-0.18353081176759101"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 18,
+            "split": "ood_test",
+            "values": {
+              "x": "2.0304416066583442",
+              "y": "-0.22778490332249723"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 331,
+            "split": "ood_test",
+            "values": {
+              "x": "-1.2589344063291976",
+              "y": "-0.23753994417548985"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 420,
+            "split": "ood_test",
+            "values": {
+              "x": "-1.3512683227360578",
+              "y": "-0.22701419569279505"
+            }
+          },
+          {
+            "reason": "numeric_probe_timeout",
+            "row_index": 534,
+            "split": "ood_test",
+            "values": {
+              "x": "-1.241279401228512",
+              "y": "0.98106510227025745"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。",
+            "数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 12,
+          "skipped_probe_reasons": {
+            "both_nonfinite": 5,
+            "numeric_probe_timeout": 1,
+            "simplified_nonfinite": 6
+          },
+          "skipped_probes": [
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 1,
+              "split": "id_test",
+              "values": {
+                "x": "0.95144727705810395",
+                "y": "-0.0460624487466888"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 6,
+              "split": "id_test",
+              "values": {
+                "x": "1.1738313845599699",
+                "y": "0.136694925567695"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 9,
+              "split": "id_test",
+              "values": {
+                "x": "0.99259202726117923",
+                "y": "-0.0196992981441605"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 17,
+              "split": "id_test",
+              "values": {
+                "x": "-0.68438449571056292",
+                "y": "0.15247972762752601"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 19,
+              "split": "id_test",
+              "values": {
+                "x": "1.1901764672078301",
+                "y": "0.76935540171138594"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 21,
+              "split": "id_test",
+              "values": {
+                "x": "-0.90538386838459195",
+                "y": "0.072004703806244505"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 28,
+              "split": "id_test",
+              "values": {
+                "x": "1.2142681880100299",
+                "y": "0.18144796928671489"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 30,
+              "split": "id_test",
+              "values": {
+                "x": "-0.88904753721047891",
+                "y": "-0.18353081176759101"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 18,
+              "split": "ood_test",
+              "values": {
+                "x": "2.0304416066583442",
+                "y": "-0.22778490332249723"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 331,
+              "split": "ood_test",
+              "values": {
+                "x": "-1.2589344063291976",
+                "y": "-0.23753994417548985"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 420,
+              "split": "ood_test",
+              "values": {
+                "x": "-1.3512683227360578",
+                "y": "-0.22701419569279505"
+              }
+            },
+            {
+              "reason": "numeric_probe_timeout",
+              "row_index": 534,
+              "split": "ood_test",
+              "values": {
+                "x": "-1.241279401228512",
+                "y": "0.98106510227025745"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.6,
+          "tree_similarity": 0.4
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520521,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+        "frozen_evaluation_key": "b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e",
+        "frozen_logical_id": "pred_simplify::gplearn::g0032::s521::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "deterministic_pair_evidence": {
+      "allowed_functions": [
+        "log",
+        "sin"
+      ],
+      "allowed_variables": [
+        "x",
+        "y"
+      ],
+      "evidence_sha256": "4e14ca3819225571e8cc1ea2195013825a97a9895254078e27e18212e8eabe73",
+      "lhs_binding": {
+        "frozen_effective_expression": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))",
+        "frozen_evaluation_key": "4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629",
+        "frozen_logical_id": "pred_simplify::gplearn::g0032::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "3ab3c0c73b33ebd9af7acdb98b207122cfba500311193f14a6ffe396e205a97b",
+        "lhs_artifact": {
+          "artifact_sha256": "a119f9f39c6a5bdc4a46e3e09fa2f70445541b647630719037d4da291751e2fd",
+          "canonical_expression": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*x - 0.87*y)))*log(sin(x - sin(sin(y))))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Integer",
+                        "value": "Integer(-3)"
+                      },
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "NegativeOne",
+                                                "value": "Integer(-1)"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Float",
+                                                        "value": "Float('18.867924528301899', precision=53)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('y')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "sin"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          }
+                                        ],
+                                        "type": "add"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "add"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Float",
+                                            "value": "Float('0.87', precision=53)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Float",
+                                            "value": "Float('-0.87', precision=53)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  }
+                                ],
+                                "type": "log"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('y')"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "Constant"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('y')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "sin"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          }
+                                        ],
+                                        "type": "add"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "add"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('y')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  }
+                                ],
+                                "type": "log"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('y')"
+                                      }
+                                    ],
+                                    "type": "sin"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "4898f9f81c571ec7729531903f0e2da03b8db96d694e9a132ff5dbfc02f1ff2b",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "log",
+            "sin"
+          ],
+          "node_count": 37,
+          "operator_set": [
+            "add",
+            "log",
+            "mul",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))",
+          "variables": [
+            "x",
+            "y"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.8888888888888888
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b",
+        "probe_seed": 520521,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "86af03bc34ddc3574aef665a3f63310575cc50be6eec38056f94b9d35da616ed",
+          "canonical_expression": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Integer",
+                    "value": "Integer(3)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Integer",
+                        "value": "Integer(2)"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Integer",
+                        "value": "Integer(3)"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.34599999999999997', precision=53)"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              },
+                              {
+                                "type": "Integer",
+                                "value": "Integer(2)"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Float",
+                                    "value": "Float('1.4513788098693801', precision=53)"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Integer",
+                    "value": "Integer(-2)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('x')"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Float",
+                    "value": "Float('-1.2820512820512799', precision=53)"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('x')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Float",
+                        "value": "Float('0.88700000000000001', precision=53)"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.4513788098693801', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.2820512820512799', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Float",
+                                    "value": "Float('1.4513788098693801', precision=53)"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Float",
+                                            "value": "Float('-1.4513788098693801', precision=53)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "log"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "add"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Constant"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      },
+                      {
+                        "type": "Constant"
+                      }
+                    ],
+                    "type": "pow"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Constant"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('y')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('x')"
+                      }
+                    ],
+                    "type": "log"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('x')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Constant"
+                                  },
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('x')"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('x')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "log"
+                                  }
+                                ],
+                                "type": "mul"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('x')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('x')"
+                          }
+                        ],
+                        "type": "log"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "add"
+          },
+          "constants_abstracted_tree_fingerprint": "68b8b9043d8457142a6ec250662be36bd9f2e9b19d3f35729c9cb0d6ef763a8c",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "log",
+            "sin"
+          ],
+          "node_count": 68,
+          "operator_set": [
+            "add",
+            "log",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+          "variables": [
+            "x",
+            "y"
+          ]
+        },
+        "skipped_probe_count": 12,
+        "skipped_probe_reasons": {
+          "both_nonfinite": 5,
+          "numeric_probe_timeout": 1,
+          "simplified_nonfinite": 6
+        },
+        "skipped_probes": [
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 1,
+            "split": "id_test",
+            "values": {
+              "x": "0.95144727705810395",
+              "y": "-0.0460624487466888"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 6,
+            "split": "id_test",
+            "values": {
+              "x": "1.1738313845599699",
+              "y": "0.136694925567695"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 9,
+            "split": "id_test",
+            "values": {
+              "x": "0.99259202726117923",
+              "y": "-0.0196992981441605"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 17,
+            "split": "id_test",
+            "values": {
+              "x": "-0.68438449571056292",
+              "y": "0.15247972762752601"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 19,
+            "split": "id_test",
+            "values": {
+              "x": "1.1901764672078301",
+              "y": "0.76935540171138594"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 21,
+            "split": "id_test",
+            "values": {
+              "x": "-0.90538386838459195",
+              "y": "0.072004703806244505"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 28,
+            "split": "id_test",
+            "values": {
+              "x": "1.2142681880100299",
+              "y": "0.18144796928671489"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 30,
+            "split": "id_test",
+            "values": {
+              "x": "-0.88904753721047891",
+              "y": "-0.18353081176759101"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 18,
+            "split": "ood_test",
+            "values": {
+              "x": "2.0304416066583442",
+              "y": "-0.22778490332249723"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 331,
+            "split": "ood_test",
+            "values": {
+              "x": "-1.2589344063291976",
+              "y": "-0.23753994417548985"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 420,
+            "split": "ood_test",
+            "values": {
+              "x": "-1.3512683227360578",
+              "y": "-0.22701419569279505"
+            }
+          },
+          {
+            "reason": "numeric_probe_timeout",
+            "row_index": 534,
+            "split": "ood_test",
+            "values": {
+              "x": "-1.241279401228512",
+              "y": "0.98106510227025745"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。",
+            "数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "8713546332a761c9a4d713804b523395682b72864e6b8e4ce589eeb50d89b720",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "a2f18c096207cd9627a374c291aa39d4545c200fc1471296655a82716b76224b",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 12,
+          "skipped_probe_reasons": {
+            "both_nonfinite": 5,
+            "numeric_probe_timeout": 1,
+            "simplified_nonfinite": 6
+          },
+          "skipped_probes": [
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 1,
+              "split": "id_test",
+              "values": {
+                "x": "0.95144727705810395",
+                "y": "-0.0460624487466888"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 6,
+              "split": "id_test",
+              "values": {
+                "x": "1.1738313845599699",
+                "y": "0.136694925567695"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 9,
+              "split": "id_test",
+              "values": {
+                "x": "0.99259202726117923",
+                "y": "-0.0196992981441605"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 17,
+              "split": "id_test",
+              "values": {
+                "x": "-0.68438449571056292",
+                "y": "0.15247972762752601"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 19,
+              "split": "id_test",
+              "values": {
+                "x": "1.1901764672078301",
+                "y": "0.76935540171138594"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 21,
+              "split": "id_test",
+              "values": {
+                "x": "-0.90538386838459195",
+                "y": "0.072004703806244505"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 28,
+              "split": "id_test",
+              "values": {
+                "x": "1.2142681880100299",
+                "y": "0.18144796928671489"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 30,
+              "split": "id_test",
+              "values": {
+                "x": "-0.88904753721047891",
+                "y": "-0.18353081176759101"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 18,
+              "split": "ood_test",
+              "values": {
+                "x": "2.0304416066583442",
+                "y": "-0.22778490332249723"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 331,
+              "split": "ood_test",
+              "values": {
+                "x": "-1.2589344063291976",
+                "y": "-0.23753994417548985"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 420,
+              "split": "ood_test",
+              "values": {
+                "x": "-1.3512683227360578",
+                "y": "-0.22701419569279505"
+              }
+            },
+            {
+              "reason": "numeric_probe_timeout",
+              "row_index": 534,
+              "split": "ood_test",
+              "values": {
+                "x": "-1.241279401228512",
+                "y": "0.98106510227025745"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.6,
+          "tree_similarity": 0.4
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520521,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+        "frozen_evaluation_key": "b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e",
+        "frozen_logical_id": "pred_simplify::gplearn::g0032::s521::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "effective_prediction_a_expression": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))",
+    "effective_prediction_b_expression": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+    "effort": "xhigh",
+    "evidence_hash": "4e14ca3819225571e8cc1ea2195013825a97a9895254078e27e18212e8eabe73",
+    "model": "claude-opus-5",
+    "noise_tag": "clean",
+    "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+    "prediction_a_expression_resolution": "llm_simplified_expression",
+    "prediction_a_frozen_evaluation_key": "4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629",
+    "prediction_a_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_a_logical_id": "pred_simplify::gplearn::g0032::s520::clean",
+    "prediction_a_plan_evaluation_key": "4e1ec6af63739d4f2c0809850cb18cdd2d23d69911d09e896bfc8d5704a64629",
+    "prediction_a_result_sha256": "be125a18b33e8eefeb712fc5b6f024268066b8bdbe9e45b66928fb53a551fa09",
+    "prediction_a_simplify_status": "simplified",
+    "prediction_a_task_id": "gplearn_s520_clean_g0032",
+    "prediction_a_valid_output": true,
+    "prediction_b_expression_resolution": "llm_simplified_expression",
+    "prediction_b_frozen_evaluation_key": "b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e",
+    "prediction_b_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_b_logical_id": "pred_simplify::gplearn::g0032::s521::clean",
+    "prediction_b_plan_evaluation_key": "b8537935e1764ed70fd1fc83910294a0bc7c3da6c1379e210ca46e38f515856e",
+    "prediction_b_result_sha256": "008d8eba96a5e9127ec7b32a7183e4ee3ca278c506f99a108efed8f95dccc459",
+    "prediction_b_simplify_status": "simplified",
+    "prediction_b_task_id": "gplearn_s521_clean_g0032",
+    "prediction_b_valid_output": true,
+    "seed_a": 520,
+    "seed_b": 521,
+    "simplified_prediction_a_expression": "(-3*y + sin(x + (y + sin(y - sin(18.8679245283019*y)))*log(0.87*(x - y))))*log(sin(x - sin(sin(y))))",
+    "simplified_prediction_b_expression": "-1.28205128205128*x*(1.28205128205128*x*(1.45137880986938*x*log(-1.45137880986938*x) + x)*log(x) + 0.887 + 1.45137880986938*y/x)*sin(log(x)) - y**3*log(0.346*y**2*log(x)*log(1.45137880986938*x)) - y**2*log(log(x)) - 2*y*log(x) - y*log(log(y)) + 3*y",
+    "stream": false
+  },
+  "validation": {
+    "error_class": null,
+    "error_message": null,
+    "ok": true,
+    "structured_output": {
+      "brief_reason": "The two frozen expressions differ in canonical form and size: A is a single product (37 nodes, operators add/log/mul/sin) built from log(sin(x - sin(sin(y)))) times a sine-containing factor, while B is a multi-term sum (68 nodes) including pow and division with nested log(log(...)) terms. Constants-abstracted tree fingerprints differ and tree similarity is only 0.4, so no shared canonical structure. No equivalence proof or supporting numeric agreement exists (probe count 0, all probes skipped/nonfinite), and B additionally contains real-domain-invalid subterms such as log(-1.451*x) alongside log(x), so equivalence cannot hold generally.",
+      "confidence": 0.94,
+      "decision": "different_structure"
+    }
+  }
+}

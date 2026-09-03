@@ -523,6 +523,13 @@ def build_eff_preparation(
             }
         )
 
+    formal_eff_ready = (
+        full_contract_checked
+        and expected_tasks is not None
+        and len(rows) == expected_tasks
+        and missing_points_after_repairs == 0
+        and not unresolved
+    )
     report = {
         "condition": NOISE_TAG,
         "horizon": HORIZON,
@@ -543,6 +550,7 @@ def build_eff_preparation(
             "audited_repair_points": audited_repair_points,
             "future_backfill_ignored_points": future_backfill_ignored_points,
             "checkpoint_normalization_points": checkpoint_normalization_points,
+            "formal_eff_ready": formal_eff_ready,
             "m_eff_min": min((row["m_eff"] for row in rows), default=0.0),
             "m_eff_max": max((row["m_eff"] for row in rows), default=0.0),
         },
@@ -666,6 +674,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 "unresolved_run_count": 1,
                 "full_contract_checked": args.limit_runs is None,
                 "limit_runs": args.limit_runs,
+                "formal_eff_ready": False,
             },
             "unresolved": [{"logical_key": "__fatal__", "reason": str(exc)}],
         }

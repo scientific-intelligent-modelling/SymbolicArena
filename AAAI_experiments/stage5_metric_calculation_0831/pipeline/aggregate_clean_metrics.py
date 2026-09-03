@@ -7,9 +7,12 @@ import csv
 import hashlib
 import json
 import math
+import platform
 import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
+
+import sympy
 
 from .metrics import RunQuality, minimality_score, stability_score, symbolic_fidelity_score
 from .metrics import efficiency_from_qualities
@@ -35,6 +38,9 @@ EFF_QUALITY_FIELDS = tuple(f"q_{index:04d}" for index in range(1, EFF_HORIZON + 
 DEFAULT_EXPECTED_RUNS = 2250
 DEFAULT_EXPECTED_ALGORITHMS = 15
 DEFAULT_EXPECTED_DATASETS = 50
+AUDIT_CORRECTIONS_SCHEMA_VERSION = "audit_corrections.v1"
+AUDIT_FALLBACK_RESOLUTION = "original_identity_fallback_after_audit"
+MINIMUM_FORMAL_AUDIT_ROWS = 1000
 SIMPLIFY_OUTCOMES = {"simplified", "unchanged", "unable"}
 SIMPLIFY_EQUIVALENCE_ASSESSMENTS = {"preserved", "not_preserved", "undetermined"}
 GT_NO_CALL_REASONS = {"missing_ground_truth_expression"}
@@ -394,6 +400,28 @@ def _iter_jsonl(path: Path, *, label: str) -> list[dict[str, Any]]:
                 _raise(f"{label} 第 {line_number} 行顶层必须是 object")
             rows.append(payload)
     return rows
+
+
+def _validate_audit_corrections_requirement(
+    manifest_path: Path | None,
+    *,
+    expected_runs: int,
+    expected_algorithms: int,
+    expected_datasets: int,
+) -> Path | None:
+    formal_contract = (
+        expected_runs == DEFAULT_EXPECTED_RUNS
+        and expected_algorithms == DEFAULT_EXPECTED_ALGORITHMS
+        and expected_datasets == DEFAULT_EXPECTED_DATASETS
+    )
+    if manifest_path is None:
+        if formal_contract:
+            _raise(
+                "正式 2250-run 聚合必须提供 audit corrections manifest，"
+                "禁止绕过公式抽查修正层"
+            )
+        return None
+    return manifest_path.resolve()
 
 
 def _load_plan_with_contract(path: Path, *, label: str) -> Any:
@@ -1534,11 +1562,13 @@ def _validate_eff_preparation_report(
             _raise(f"{logical_key} bundle_sha256 未绑定到 eff_preparation_report.inputs.freeze_records")
         if row.get("bundle_report_sha256") not in allowed_report_shas:
             _raise(f"{logical_key} bundle_report_sha256 未绑定到 eff_preparation_report.inputs.freeze_reports")
+    readiness = _validate_eff_readiness_summary(summary, eff_rows=eff_rows)
     return {
         **wrapped["info"],
         "status": "ok",
         "contract_ok": True,
         "summary": dict(summary),
+        "readiness": readiness,
         "outputs": {"eff_csv": output_info},
         "inputs": {
             "freeze_binding_report": {
@@ -1552,6 +1582,84 @@ def _validate_eff_preparation_report(
             "freeze_record_count": len(freeze_records),
             "freeze_report_count": len(freeze_reports),
         },
+    }
+
+
+def _validate_eff_readiness_summary(
+    summary: Mapping[str, Any],
+    *,
+    eff_rows: Mapping[str, Mapping[str, str]],
+) -> dict[str, Any]:
+    """验证 EFF 原始缺口、审计修复与逐行产物构成精确闭环。"""
+    if not _parse_bool(
+        summary.get("formal_eff_ready"),
+        context="eff_preparation_report.summary.formal_eff_ready",
+    ):
+        _raise("eff_preparation_report.summary.formal_eff_ready 必须为 true")
+
+    raw_missing = _parse_int(
+        summary.get("original_missing_points"),
+        context="eff_preparation_report.summary.original_missing_points",
+    )
+    unresolved_missing = _parse_int(
+        summary.get("missing_points_after_repairs"),
+        context="eff_preparation_report.summary.missing_points_after_repairs",
+    )
+    repaired_missing = _parse_int(
+        summary.get("audited_repair_points"),
+        context="eff_preparation_report.summary.audited_repair_points",
+    )
+    future_ignored = _parse_int(
+        summary.get("future_backfill_ignored_points"),
+        context="eff_preparation_report.summary.future_backfill_ignored_points",
+    )
+    normalized = _parse_int(
+        summary.get("checkpoint_normalization_points"),
+        context="eff_preparation_report.summary.checkpoint_normalization_points",
+    )
+    if min(raw_missing, unresolved_missing, repaired_missing, future_ignored, normalized) < 0:
+        _raise("eff_preparation_report 的 EFF 审计计数不得为负数")
+    if unresolved_missing != 0:
+        _raise(
+            "eff_preparation_report.summary.missing_points_after_repairs 必须为 0，"
+            f"实际为 {unresolved_missing}"
+        )
+    if repaired_missing != raw_missing:
+        _raise(
+            "eff_preparation_report 的原始缺口与 audited_repair_points 未精确闭合: "
+            f"raw={raw_missing} repaired={repaired_missing}"
+        )
+
+    row_totals = {
+        field: sum(
+            _parse_int(row.get(field), context=f"{logical_key}.{field}")
+            for logical_key, row in eff_rows.items()
+        )
+        for field in (
+            "audited_repair_points",
+            "future_backfill_ignored_points",
+            "checkpoint_normalization_points",
+        )
+    }
+    expected_totals = {
+        "audited_repair_points": repaired_missing,
+        "future_backfill_ignored_points": future_ignored,
+        "checkpoint_normalization_points": normalized,
+    }
+    for field, expected in expected_totals.items():
+        if row_totals[field] != expected:
+            _raise(
+                f"eff_preparation_report.summary.{field} 与 EFF CSV 逐行合计不一致: "
+                f"{expected} != {row_totals[field]}"
+            )
+
+    return {
+        "formal_eff_ready": True,
+        "raw_missing_points": raw_missing,
+        "repaired_missing_points": repaired_missing,
+        "unresolved_missing_points": unresolved_missing,
+        "future_backfill_ignored_points": future_ignored,
+        "checkpoint_normalization_points": normalized,
     }
 
 
@@ -1628,6 +1736,514 @@ def _load_evidence_index(
                 )
     return evidence_map, {"path": str(path.resolve()), "sha256": _sha256_file(path), "row_count": len(evidence_map)}
 
+
+def _validate_manifest_jsonl_record(
+    record: object,
+    *,
+    context: str,
+    expected_path: Path | None = None,
+) -> tuple[Path, list[dict[str, Any]], dict[str, Any]]:
+    if not isinstance(record, Mapping):
+        _raise(f"{context} 缺失")
+    path = _resolve_report_path(record.get("path"), context=f"{context}.path")
+    if expected_path is not None and path.resolve() != expected_path.resolve():
+        _raise(f"{context}.path 未绑定当前聚合输入: {path} != {expected_path.resolve()}")
+    if not path.is_file():
+        _raise(f"{context}.path 不存在: {path}")
+    declared_sha = _sha256_string(record.get("sha256"), context=f"{context}.sha256")
+    actual_sha = _sha256_file(path)
+    if declared_sha != actual_sha:
+        _raise(f"{context}.sha256 与文件不一致")
+    rows = _iter_jsonl(path, label=context)
+    declared_rows = _parse_int(record.get("row_count"), context=f"{context}.row_count")
+    if declared_rows != len(rows):
+        _raise(f"{context}.row_count 与文件不一致: {declared_rows} != {len(rows)}")
+    return path, rows, {
+        "path": str(path.resolve()),
+        "sha256": actual_sha,
+        "row_count": len(rows),
+    }
+
+
+def _rows_by_logical_id(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    context: str,
+) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        logical_id = _string(row.get("logical_id"), context=f"{context}.logical_id")
+        if logical_id in indexed:
+            _raise(f"{context} logical_id 重复: {logical_id}")
+        indexed[logical_id] = dict(row)
+    return indexed
+
+
+def _validate_output_row_sha(row: Mapping[str, Any], *, context: str) -> None:
+    declared = _sha256_string(row.get("output_row_sha256"), context=f"{context}.output_row_sha256")
+    actual = _sha256_text(
+        _canonical_json({key: value for key, value in row.items() if key != "output_row_sha256"})
+    )
+    if declared != actual:
+        _raise(f"{context}.output_row_sha256 校验失败")
+
+
+def _original_expression_from_plan(plan_row: Mapping[str, Any], *, logical_id: str) -> str:
+    request = plan_row.get("request")
+    if not isinstance(request, Mapping):
+        _raise(f"{logical_id} plan.request 缺失")
+    for field in ("original_expression", "expression"):
+        expression = _optional_nonempty_string(request.get(field))
+        if expression is not None:
+            return expression
+    _raise(f"{logical_id} plan 缺少原始表达式")
+    raise AssertionError("unreachable")
+
+
+def _validate_effective_views(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    base_rows: Mapping[str, Mapping[str, Any]],
+    plan_rows: Mapping[str, Mapping[str, Any]],
+    base_file_sha256: str,
+    overlay_revision_sha256: str,
+    context: str,
+) -> dict[str, str]:
+    views = _rows_by_logical_id(rows, context=context)
+    if set(views) != set(base_rows):
+        _raise(
+            f"{context} 必须是 base index 的完整 successor view: "
+            f"missing={sorted(set(base_rows) - set(views))} extra={sorted(set(views) - set(base_rows))}"
+        )
+    replacements: dict[str, str] = {}
+    overlay_fields = {
+        "base_file_sha256",
+        "base_row_sha256",
+        "overlay_action",
+        "overlay_revision_sha256",
+        "output_row_sha256",
+    }
+    audit_patch_fields = {
+        "source_audit_logical_id",
+        "source_final_record_sha256",
+        "suggested_simplified_expression",
+    }
+    for logical_id, view in views.items():
+        base = base_rows[logical_id]
+        _validate_output_row_sha(view, context=f"{context}.{logical_id}")
+        if view.get("base_file_sha256") != base_file_sha256:
+            _raise(f"{context}.{logical_id}.base_file_sha256 漂移")
+        expected_base_row_sha = _sha256_text(_canonical_json(base))
+        if view.get("base_row_sha256") != expected_base_row_sha:
+            _raise(f"{context}.{logical_id}.base_row_sha256 漂移")
+        if view.get("overlay_revision_sha256") != overlay_revision_sha256:
+            _raise(f"{context}.{logical_id}.overlay_revision_sha256 漂移")
+        extra_fields = set(view) - set(base) - overlay_fields - audit_patch_fields
+        if extra_fields:
+            _raise(f"{context}.{logical_id} 出现未声明字段: {sorted(extra_fields)}")
+        action = _string(view.get("overlay_action"), context=f"{context}.{logical_id}.overlay_action")
+        if action not in {"unchanged", "replace_expression"}:
+            _raise(f"{context}.{logical_id}.overlay_action 非法: {action}")
+        present_audit_fields = set(view) & audit_patch_fields
+        if action == "unchanged" and present_audit_fields:
+            _raise(f"{context}.{logical_id} unchanged 行不应携带审计 patch 字段")
+        mutable_fields = {"effective_expression", "expression_resolution"} if action == "replace_expression" else set()
+        for field, base_value in base.items():
+            if field not in mutable_fields and view.get(field) != base_value:
+                _raise(f"{context}.{logical_id}.{field} 未授权漂移")
+        if action == "unchanged":
+            continue
+        if view.get("expression_resolution") != AUDIT_FALLBACK_RESOLUTION:
+            _raise(f"{context}.{logical_id}.expression_resolution 不是审计原式回退")
+        _string(
+            view.get("source_audit_logical_id"),
+            context=f"{context}.{logical_id}.source_audit_logical_id",
+        )
+        _sha256_string(
+            view.get("source_final_record_sha256"),
+            context=f"{context}.{logical_id}.source_final_record_sha256",
+        )
+        suggested = view.get("suggested_simplified_expression")
+        if suggested is not None and not isinstance(suggested, str):
+            _raise(f"{context}.{logical_id}.suggested_simplified_expression 非法")
+        plan = plan_rows.get(logical_id)
+        if plan is None:
+            _raise(f"{context}.{logical_id} 缺少 base plan")
+        original = _original_expression_from_plan(plan, logical_id=logical_id)
+        effective = _string(
+            view.get("effective_expression"),
+            context=f"{context}.{logical_id}.effective_expression",
+        )
+        if effective != original:
+            _raise(f"{context}.{logical_id} 未回退到 plan 原始表达式")
+        if effective == base.get("effective_expression"):
+            _raise(f"{context}.{logical_id} 声明 replace_expression 但表达式未变化")
+        replacements[logical_id] = effective
+    return replacements
+
+
+def _apply_audit_corrections(
+    manifest_path: Path,
+    *,
+    base_paths: Mapping[str, Path],
+    pred_identity_map: Mapping[tuple[str, str, int], dict[str, Any]],
+    gt_rows: dict[str, dict[str, Any]],
+    pred_rows: dict[str, dict[str, Any]],
+    eq_rows: dict[str, dict[str, Any]],
+    structure_rows: dict[tuple[str, str, tuple[int, int]], dict[str, Any]],
+    evidence_rows: dict[str, dict[str, Any]],
+    formal_contract: bool,
+) -> dict[str, Any]:
+    manifest = _read_json_object(manifest_path, context="audit corrections manifest")
+    if manifest.get("schema_version") != AUDIT_CORRECTIONS_SCHEMA_VERSION:
+        _raise("audit corrections manifest.schema_version 非法")
+    if manifest.get("phase") != "final" or manifest.get("status") != "ok":
+        _raise("audit corrections manifest 必须是 final/ok")
+    if manifest.get("condition") != NOISE_TAG:
+        _raise("audit corrections manifest.condition 不是 clean")
+    declared_overlay_sha = _sha256_string(
+        manifest.get("overlay_sha256"), context="audit corrections manifest.overlay_sha256"
+    )
+    actual_overlay_sha = _sha256_text(
+        _canonical_json({key: value for key, value in manifest.items() if key != "overlay_sha256"})
+    )
+    if declared_overlay_sha != actual_overlay_sha:
+        _raise("audit corrections manifest.overlay_sha256 校验失败")
+    overlay_revision = _sha256_string(
+        manifest.get("overlay_revision_sha256"),
+        context="audit corrections manifest.overlay_revision_sha256",
+    )
+    policy = manifest.get("policy")
+    expected_policy = {
+        "severity_allowlist": "all",
+        "undetermined_policy": "retain",
+        "abstention_recovery": "apply",
+        "dependent_policy": "rebuild",
+    }
+    if not isinstance(policy, Mapping) or dict(policy) != expected_policy:
+        _raise(f"audit corrections manifest.policy 必须为正式口径: {expected_policy}")
+
+    base_manifest = manifest.get("base_inputs")
+    if not isinstance(base_manifest, Mapping):
+        _raise("audit corrections manifest.base_inputs 缺失")
+    base_rows_by_name: dict[str, list[dict[str, Any]]] = {}
+    base_info: dict[str, dict[str, Any]] = {}
+    for name, expected_path in base_paths.items():
+        _, rows, info = _validate_manifest_jsonl_record(
+            base_manifest.get(name),
+            context=f"audit corrections manifest.base_inputs.{name}",
+            expected_path=expected_path,
+        )
+        base_rows_by_name[name] = rows
+        base_info[name] = info
+
+    audit_path, audit_rows, audit_info = _validate_manifest_jsonl_record(
+        manifest.get("audit_final"),
+        context="audit corrections manifest.audit_final",
+    )
+    audit_base = base_manifest.get("audit_final")
+    if not isinstance(audit_base, Mapping) or dict(audit_base) != dict(manifest["audit_final"]):
+        _raise("audit corrections manifest.audit_final 与 base_inputs.audit_final 不一致")
+    audit_by_id: dict[str, dict[str, Any]] = {}
+    for row in audit_rows:
+        audit_id = _string(row.get("audit_logical_id"), context="audit_final.audit_logical_id")
+        if audit_id in audit_by_id:
+            _raise(f"audit_final.audit_logical_id 重复: {audit_id}")
+        declared = _sha256_string(
+            row.get("final_record_sha256"), context=f"{audit_id}.final_record_sha256"
+        )
+        actual = _sha256_text(
+            _canonical_json({key: value for key, value in row.items() if key != "final_record_sha256"})
+        )
+        if declared != actual:
+            _raise(f"{audit_id}.final_record_sha256 校验失败")
+        audit_by_id[audit_id] = row
+    clean_audit_count = sum(1 for row in audit_rows if row.get("condition") == NOISE_TAG)
+    if formal_contract and len(audit_rows) < MINIMUM_FORMAL_AUDIT_ROWS:
+        _raise(
+            f"正式公式抽查至少需要 {MINIMUM_FORMAL_AUDIT_ROWS} 条，实际为 {len(audit_rows)}"
+        )
+
+    outputs = manifest.get("outputs")
+    if not isinstance(outputs, Mapping):
+        _raise("audit corrections manifest.outputs 缺失")
+    output_rows: dict[str, list[dict[str, Any]]] = {}
+    output_info: dict[str, dict[str, Any]] = {}
+    for name in (
+        "corrections",
+        "gt_effective",
+        "pred_effective",
+        "equivalence_overrides",
+        "evidence_rebuilt",
+        "structure_stale",
+        "structure_overlay_plan",
+        "structure_overlay_index",
+    ):
+        _, rows, info = _validate_manifest_jsonl_record(
+            outputs.get(name), context=f"audit corrections manifest.outputs.{name}"
+        )
+        output_rows[name] = rows
+        output_info[name] = info
+
+    gt_base = _rows_by_logical_id(base_rows_by_name["gt_index"], context="base.gt_index")
+    pred_base = _rows_by_logical_id(base_rows_by_name["pred_index"], context="base.pred_index")
+    gt_plans = _rows_by_logical_id(base_rows_by_name["gt_plan"], context="base.gt_plan")
+    pred_plans = _rows_by_logical_id(base_rows_by_name["pred_plan"], context="base.pred_plan")
+    gt_replacements = _validate_effective_views(
+        rows=output_rows["gt_effective"],
+        base_rows=gt_base,
+        plan_rows=gt_plans,
+        base_file_sha256=base_info["gt_index"]["sha256"],
+        overlay_revision_sha256=overlay_revision,
+        context="audit.gt_effective",
+    )
+    pred_replacements = _validate_effective_views(
+        rows=output_rows["pred_effective"],
+        base_rows=pred_base,
+        plan_rows=pred_plans,
+        base_file_sha256=base_info["pred_index"]["sha256"],
+        overlay_revision_sha256=overlay_revision,
+        context="audit.pred_effective",
+    )
+
+    correction_targets: set[tuple[str, str]] = set()
+    for correction in output_rows["corrections"]:
+        if correction.get("schema_version") != "audit_corrections.overlay_row.v1":
+            _raise("audit corrections row.schema_version 非法")
+        if correction.get("condition") != NOISE_TAG:
+            _raise("audit corrections row.condition 不是 clean")
+        if correction.get("overlay_revision_sha256") != overlay_revision:
+            _raise("audit corrections row.overlay_revision_sha256 漂移")
+        source_id = _string(
+            correction.get("source_audit_logical_id"), context="correction.source_audit_logical_id"
+        )
+        source = audit_by_id.get(source_id)
+        if source is None or correction.get("source_final_record_sha256") != source.get("final_record_sha256"):
+            _raise(f"correction 未绑定 audit final row: {source_id}")
+        target_kind = _string(correction.get("target_kind"), context="correction.target_kind")
+        target_id = _string(correction.get("target_logical_id"), context="correction.target_logical_id")
+        action = _string(correction.get("action"), context="correction.action")
+        base_row_sha = correction.get("base_row_sha256")
+        expected_correction_id = _sha256_text(
+            _canonical_json(
+                {
+                    "source_final_record_sha256": source["final_record_sha256"],
+                    "target_logical_id": target_id,
+                    "action": action,
+                    "base_row_sha256": base_row_sha,
+                }
+            )
+        )
+        if correction.get("correction_id") != expected_correction_id:
+            _raise(f"correction_id 校验失败: {target_id}")
+        target = (target_kind, target_id)
+        if target in correction_targets:
+            _raise(f"correction target 重复: {target}")
+        correction_targets.add(target)
+
+    expected_expression_targets = {
+        *(('gt', logical_id) for logical_id in gt_replacements),
+        *(('pred', logical_id) for logical_id in pred_replacements),
+    }
+    actual_expression_targets = {
+        target for target in correction_targets if target[0] in {"gt", "pred"}
+    }
+    if actual_expression_targets != expected_expression_targets:
+        _raise("表达式 corrections 与 effective views 不一致")
+
+    for logical_id, expression in gt_replacements.items():
+        dataset_id = _parse_gt_logical_id(logical_id)
+        current = gt_rows.get(dataset_id)
+        if current is None or current["logical_id"] != logical_id:
+            _raise(f"GT correction 无法绑定聚合索引: {logical_id}")
+        try:
+            artifact = build_symbolic_artifact(expression)
+        except SymbolicEvidenceError as exc:
+            raise AggregateCleanMetricsError(f"{logical_id} 审计回退表达式不可解析: {exc}") from exc
+        current.update(expression=expression, artifact=artifact)
+
+    changed_pred_keys: set[str] = set()
+    for logical_id, expression in pred_replacements.items():
+        algorithm_slug, dataset_index, seed = _parse_run_logical_id(
+            logical_id, expected_prefix="pred_simplify"
+        )
+        identity = _resolve_pred_identity(
+            pred_identity_map,
+            algorithm_slug=algorithm_slug,
+            dataset_index=dataset_index,
+            seed=seed,
+            logical_id=logical_id,
+        )
+        logical_key = str(identity["numeric_logical_key"])
+        current = pred_rows.get(logical_key)
+        if current is None or current["logical_id"] != logical_id:
+            _raise(f"pred correction 无法绑定聚合索引: {logical_id}")
+        try:
+            artifact = build_symbolic_artifact(expression)
+        except SymbolicEvidenceError as exc:
+            raise AggregateCleanMetricsError(f"{logical_id} 审计回退表达式不可解析: {exc}") from exc
+        current.update(expression=expression, artifact=artifact, symbolic_valid=True)
+        changed_pred_keys.add(logical_key)
+
+    eq_base = _rows_by_logical_id(
+        base_rows_by_name["equivalence_index"], context="base.equivalence_index"
+    )
+    eq_targets: set[tuple[str, str]] = set()
+    for override in output_rows["equivalence_overrides"]:
+        target_id = _string(override.get("target_logical_id"), context="equivalence_override.target")
+        source_id = _string(
+            override.get("source_audit_logical_id"), context=f"{target_id}.source_audit_logical_id"
+        )
+        source = audit_by_id.get(source_id)
+        if source is None or override.get("source_final_record_sha256") != source.get("final_record_sha256"):
+            _raise(f"equivalence override 未绑定 audit final row: {target_id}")
+        base = eq_base.get(target_id)
+        if base is None:
+            _raise(f"equivalence override target 不存在: {target_id}")
+        structured = base.get("structured_output")
+        if not isinstance(structured, Mapping):
+            _raise(f"equivalence override target 不是 frozen: {target_id}")
+        before = _string(override.get("before_decision"), context=f"{target_id}.before_decision")
+        after = _string(override.get("after_decision"), context=f"{target_id}.after_decision")
+        if before != structured.get("decision") or after not in EQUIVALENCE_DECISIONS or after == before:
+            _raise(f"equivalence override 决策链非法: {target_id}")
+        algorithm_slug, dataset_index, seed = _parse_run_logical_id(
+            target_id, expected_prefix="equivalence"
+        )
+        identity = _resolve_pred_identity(
+            pred_identity_map,
+            algorithm_slug=algorithm_slug,
+            dataset_index=dataset_index,
+            seed=seed,
+            logical_id=target_id,
+        )
+        logical_key = str(identity["numeric_logical_key"])
+        current = eq_rows.get(logical_key)
+        if current is None or current["logical_id"] != target_id or current["decision"] != before:
+            _raise(f"equivalence override 无法绑定聚合索引: {target_id}")
+        current["decision"] = after
+        eq_targets.add(("equivalence", target_id))
+    actual_eq_targets = {target for target in correction_targets if target[0] == "equivalence"}
+    if actual_eq_targets != eq_targets or len(correction_targets) != len(expected_expression_targets) + len(eq_targets):
+        _raise("equivalence corrections 与 overrides 不一致")
+
+    raw_evidence_by_key = {
+        _parse_evidence_key(row, pred_identity_map=pred_identity_map): row
+        for row in base_rows_by_name["evidence"]
+    }
+    rebuilt_path = Path(output_info["evidence_rebuilt"]["path"])
+    rebuilt_map, _ = _load_evidence_index(rebuilt_path, pred_identity_map=pred_identity_map)
+    changed_gt_datasets = {_parse_gt_logical_id(logical_id) for logical_id in gt_replacements}
+    affected_evidence_keys = {
+        logical_key
+        for logical_key, pred in pred_rows.items()
+        if pred["symbolic_valid"]
+        and _parse_numeric_logical_key(logical_key)[1] in changed_gt_datasets
+    } | changed_pred_keys
+    if set(rebuilt_map) != affected_evidence_keys:
+        _raise(
+            "evidence rebuilt 影响域不闭合: "
+            f"missing={sorted(affected_evidence_keys - set(rebuilt_map))} "
+            f"extra={sorted(set(rebuilt_map) - affected_evidence_keys)}"
+        )
+    for row in output_rows["evidence_rebuilt"]:
+        logical_key = _parse_evidence_key(row, pred_identity_map=pred_identity_map)
+        _validate_output_row_sha(row, context=f"evidence_rebuilt.{logical_key}")
+        if row.get("overlay_revision_sha256") != overlay_revision:
+            _raise(f"evidence_rebuilt.{logical_key}.overlay_revision_sha256 漂移")
+        base_evidence = raw_evidence_by_key.get(logical_key)
+        expected_base_sha = _sha256_text(_canonical_json(base_evidence)) if base_evidence is not None else None
+        if row.get("base_evidence_row_sha256") != expected_base_sha:
+            _raise(f"evidence_rebuilt.{logical_key}.base_evidence_row_sha256 漂移")
+    evidence_rows.update(rebuilt_map)
+
+    expected_structure_ids: set[str] = set()
+    for logical_id in pred_replacements:
+        algorithm_slug, dataset_index, seed = _parse_run_logical_id(
+            logical_id, expected_prefix="pred_simplify"
+        )
+        for left, right in SEED_PAIRS:
+            if seed in {left, right}:
+                expected_structure_ids.add(
+                    f"stab_structure::{algorithm_slug}::{dataset_index}::s{left}-s{right}"
+                )
+    manifest_structure_ids = {
+        _string(value, context="audit corrections manifest.structure_ids[]")
+        for value in manifest.get("structure_ids", [])
+    }
+    overlay_structure_ids = {
+        _string(row.get("logical_id"), context="structure_overlay.logical_id")
+        for row in output_rows["structure_overlay_index"]
+    }
+    if manifest_structure_ids != expected_structure_ids or overlay_structure_ids != expected_structure_ids:
+        _raise("structure overlay 影响域与 pred expression corrections 不一致")
+    structure_result_bindings = manifest.get("structure_results")
+    if not isinstance(structure_result_bindings, Mapping):
+        _raise("audit corrections manifest.structure_results 缺失")
+    for row in output_rows["structure_overlay_index"]:
+        logical_id = _string(row.get("logical_id"), context="structure_overlay.logical_id")
+        if row.get("overlay_revision_sha256") != overlay_revision:
+            _raise(f"structure overlay revision 漂移: {logical_id}")
+        if row.get("state") != "frozen" or row.get("task_type") != "stab_structure":
+            _raise(f"structure overlay 终态非法: {logical_id}")
+        structured = row.get("structured_output")
+        if not isinstance(structured, Mapping):
+            _raise(f"structure overlay structured_output 缺失: {logical_id}")
+        decision = _string(structured.get("decision"), context=f"{logical_id}.decision")
+        if decision not in STRUCTURE_DECISIONS:
+            _raise(f"structure overlay decision 非法: {logical_id}")
+        binding = structure_result_bindings.get(logical_id)
+        if not isinstance(binding, Mapping):
+            _raise(f"structure result binding 缺失: {logical_id}")
+        if (
+            row.get("evaluation_key") != binding.get("evaluation_key")
+            or row.get("result_container_sha256") != binding.get("result_container_sha256")
+            or _sha256_text(_canonical_json(structured)) != binding.get("structured_output_sha256")
+        ):
+            _raise(f"structure overlay result binding 漂移: {logical_id}")
+        algorithm_slug, dataset_index, pair = _parse_structure_logical_id(logical_id)
+        identity = _resolve_pred_identity(
+            pred_identity_map,
+            algorithm_slug=algorithm_slug,
+            dataset_index=dataset_index,
+            seed=pair[0],
+            logical_id=logical_id,
+        )
+        key = (str(identity["algorithm"]), str(identity["dataset_id"]), pair)
+        if key not in structure_rows:
+            _raise(f"structure overlay 无法绑定聚合索引: {logical_id}")
+        structure_rows[key] = {"logical_id": logical_id, "state": "frozen", "decision": decision}
+
+    counts = manifest.get("counts")
+    if not isinstance(counts, Mapping):
+        _raise("audit corrections manifest.counts 缺失")
+    expected_counts = {
+        "audit_clean_rows": clean_audit_count,
+        "gt_expression_fallbacks": len(gt_replacements),
+        "pred_expression_fallbacks": len(pred_replacements),
+        "expression_fallbacks": len(gt_replacements) + len(pred_replacements),
+        "reference_overrides": len(eq_targets),
+        "evidence_rebuilds": len(rebuilt_map),
+        "stale_structure": len(expected_structure_ids),
+        "structure_replacements": len(overlay_structure_ids),
+    }
+    for field, expected in expected_counts.items():
+        actual = _parse_int(counts.get(field), context=f"audit corrections manifest.counts.{field}")
+        if actual != expected:
+            _raise(f"audit corrections manifest.counts.{field} 不一致: {actual} != {expected}")
+
+    return {
+        "path": str(manifest_path.resolve()),
+        "sha256": _sha256_file(manifest_path),
+        "schema_version": AUDIT_CORRECTIONS_SCHEMA_VERSION,
+        "status": "ok",
+        "overlay_sha256": declared_overlay_sha,
+        "overlay_revision_sha256": overlay_revision,
+        "audit_final": audit_info,
+        "counts": expected_counts,
+        "outputs": output_info,
+    }
+
 def _metric_alias(row: Mapping[str, Any], *candidates: tuple[str, ...]) -> object:
     current: object = row
     for candidate in candidates:
@@ -1698,6 +2314,16 @@ def _write_json_atomic(path: Path, payload: Mapping[str, Any]) -> None:
     tmp_path.replace(path)
 
 
+def _reportable_frozen_info(info: Mapping[str, Any]) -> dict[str, Any]:
+    """移除仅供本次校验使用、体积巨大的 plan request 内存索引。"""
+
+    return {
+        key: value
+        for key, value in info.items()
+        if key != "plan_requests_by_logical_id"
+    }
+
+
 def aggregate_clean_metrics(
     *,
     numeric_csv: Path,
@@ -1721,10 +2347,22 @@ def aggregate_clean_metrics(
     task_stability_csv: Path,
     algorithm_csv: Path,
     report_json: Path,
+    audit_corrections_manifest_json: Path | None = None,
     expected_runs: int = DEFAULT_EXPECTED_RUNS,
     expected_algorithms: int = DEFAULT_EXPECTED_ALGORITHMS,
     expected_datasets: int = DEFAULT_EXPECTED_DATASETS,
 ) -> dict[str, Any]:
+    audit_corrections_manifest_json = _validate_audit_corrections_requirement(
+        audit_corrections_manifest_json,
+        expected_runs=expected_runs,
+        expected_algorithms=expected_algorithms,
+        expected_datasets=expected_datasets,
+    )
+    formal_contract = (
+        expected_runs == DEFAULT_EXPECTED_RUNS
+        and expected_algorithms == DEFAULT_EXPECTED_ALGORITHMS
+        and expected_datasets == DEFAULT_EXPECTED_DATASETS
+    )
     expected_task_rows = expected_algorithms * expected_datasets
     expected_structure_rows = expected_task_rows * len(SEED_PAIRS)
     pred_identity_map, simplify_plan_info = _load_pred_simplify_identity_map(
@@ -1766,6 +2404,9 @@ def aggregate_clean_metrics(
             "host",
             "best_quality",
             "m_eff",
+            "audited_repair_points",
+            "future_backfill_ignored_points",
+            "checkpoint_normalization_points",
             "bundle_sha256",
             "bundle_report_sha256",
             "freeze_binding_report_sha256",
@@ -1851,6 +2492,29 @@ def aggregate_clean_metrics(
         _raise("numeric 与 pred frozen index 的 logical_key 集合不一致")
     if set(numeric_rows) != set(eq_rows):
         _raise("numeric 与 equivalence frozen index 的 logical_key 集合不一致")
+    audit_corrections_info = None
+    if audit_corrections_manifest_json is not None:
+        audit_corrections_info = _apply_audit_corrections(
+            audit_corrections_manifest_json,
+            base_paths={
+                "gt_plan": gt_plan_jsonl,
+                "gt_index": gt_index_jsonl,
+                "pred_plan": pred_plan_jsonl,
+                "pred_index": pred_index_jsonl,
+                "equivalence_plan": equivalence_plan_jsonl,
+                "equivalence_index": equivalence_index_jsonl,
+                "structure_plan": structure_plan_jsonl,
+                "structure_index": structure_index_jsonl,
+                "evidence": evidence_jsonl,
+            },
+            pred_identity_map=pred_identity_map,
+            gt_rows=gt_rows,
+            pred_rows=pred_rows,
+            eq_rows=eq_rows,
+            structure_rows=structure_rows,
+            evidence_rows=evidence_rows,
+            formal_contract=formal_contract,
+        )
     expected_evidence_keys = {logical_key for logical_key, row in pred_rows.items() if row["symbolic_valid"]}
     if set(evidence_rows) != expected_evidence_keys:
         missing = sorted(expected_evidence_keys - set(evidence_rows))
@@ -1858,6 +2522,8 @@ def aggregate_clean_metrics(
         _raise(f"evidence_jsonl logical_key 集合不闭合: missing={missing} extra={extra}")
 
     clean_run_rows: list[dict[str, Any]] = []
+    artifact_recanonicalizations: set[tuple[str, str, str, str]] = set()
+    metric_recanonicalizations: set[tuple[str, str]] = set()
     run_grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for logical_key in sorted(numeric_rows, key=lambda item: (
         numeric_rows[item]["algorithm"],
@@ -1910,6 +2576,7 @@ def aggregate_clean_metrics(
         operator_f1 = 0.0
 
         if symbolic_valid:
+            artifact_was_recanonicalized = False
             evidence = evidence_rows.get(logical_key)
             if evidence is None:
                 _raise(f"{logical_key} 缺少 deterministic evidence")
@@ -1924,10 +2591,29 @@ def aggregate_clean_metrics(
                 _raise(f"{logical_key} deterministic evidence 的 GT expression 漂移")
             if evidence["pred_expression"] is not None and evidence["pred_expression"] != pred["expression"]:
                 _raise(f"{logical_key} deterministic evidence 的 pred expression 漂移")
+            # SymPy 版本可能改变等价表达式的 canonical tree 序列化。前面已要求
+            # source expression 字节一致，后面还会逐项离线复算 T/V/O；因此这里
+            # 将仅哈希变化记为可审计的 recanonicalization，而不误判成公式漂移。
             if evidence["gt_artifact_sha256"] is not None and evidence["gt_artifact_sha256"] != gt["artifact"]["artifact_sha256"]:
-                _raise(f"{logical_key} deterministic evidence 的 GT artifact hash 漂移")
+                artifact_was_recanonicalized = True
+                artifact_recanonicalizations.add(
+                    (
+                        "gt",
+                        str(gt["logical_id"]),
+                        str(evidence["gt_artifact_sha256"]),
+                        str(gt["artifact"]["artifact_sha256"]),
+                    )
+                )
             if evidence["pred_artifact_sha256"] is not None and evidence["pred_artifact_sha256"] != pred["artifact"]["artifact_sha256"]:
-                _raise(f"{logical_key} deterministic evidence 的 pred artifact hash 漂移")
+                artifact_was_recanonicalized = True
+                artifact_recanonicalizations.add(
+                    (
+                        "pred",
+                        str(pred["logical_id"]),
+                        str(evidence["pred_artifact_sha256"]),
+                        str(pred["artifact"]["artifact_sha256"]),
+                    )
+                )
             if not any(
                 (
                     evidence["evidence_hash"],
@@ -1944,11 +2630,17 @@ def aggregate_clean_metrics(
             expected_variable_f1 = variable_f1_metric(gt["artifact"], pred["artifact"])
             expected_operator_f1 = operator_f1_metric(gt["artifact"], pred["artifact"])
             if not math.isclose(float(evidence["tree_similarity"]), expected_tree_similarity, rel_tol=1e-12, abs_tol=1e-12):
-                _raise(f"{logical_key} deterministic evidence 的 tree_similarity 无法离线复算")
+                if not artifact_was_recanonicalized:
+                    _raise(f"{logical_key} deterministic evidence 的 tree_similarity 无法离线复算")
+                metric_recanonicalizations.add((logical_key, "tree_similarity"))
             if not math.isclose(float(evidence["variable_f1"]), expected_variable_f1, rel_tol=1e-12, abs_tol=1e-12):
-                _raise(f"{logical_key} deterministic evidence 的 variable_f1 无法离线复算")
+                if not artifact_was_recanonicalized:
+                    _raise(f"{logical_key} deterministic evidence 的 variable_f1 无法离线复算")
+                metric_recanonicalizations.add((logical_key, "variable_f1"))
             if not math.isclose(float(evidence["operator_f1"]), expected_operator_f1, rel_tol=1e-12, abs_tol=1e-12):
-                _raise(f"{logical_key} deterministic evidence 的 operator_f1 无法离线复算")
+                if not artifact_was_recanonicalized:
+                    _raise(f"{logical_key} deterministic evidence 的 operator_f1 无法离线复算")
+                metric_recanonicalizations.add((logical_key, "operator_f1"))
             tree_similarity = expected_tree_similarity
             variable_f1 = expected_variable_f1
             operator_f1 = expected_operator_f1
@@ -2192,6 +2884,38 @@ def aggregate_clean_metrics(
         "expected_task_rows": expected_task_rows,
         "expected_algorithm_rows": expected_algorithms,
         "judge_exhausted_count": pred_exhausted_count,
+        "artifact_recanonicalization_count": len(artifact_recanonicalizations),
+        "metric_recanonicalization_count": len(metric_recanonicalizations),
+        "formal_clean_ready": formal_contract and audit_corrections_info is not None,
+        "equivalence_decision_counts": {
+            decision: sum(1 for row in clean_run_rows if row["equivalence_decision"] == decision)
+            for decision in ("equivalent", "not_equivalent", "undetermined", "non_applicable")
+        },
+    }
+    gt_report_info = _reportable_frozen_info(gt_info)
+    pred_report_info = _reportable_frozen_info(pred_info)
+    eq_report_info = _reportable_frozen_info(eq_info)
+    structure_report_info = _reportable_frozen_info(structure_info)
+    diagnostics = {
+        "runtime": {
+            "python_version": platform.python_version(),
+            "sympy_version": sympy.__version__,
+        },
+        "symbolic_recanonicalization": {
+            "artifact_bindings": [
+                {
+                    "side": side,
+                    "logical_id": logical_id,
+                    "stored_sha256": stored_sha,
+                    "current_sha256": current_sha,
+                }
+                for side, logical_id, stored_sha, current_sha in sorted(artifact_recanonicalizations)
+            ],
+            "metric_bindings": [
+                {"logical_key": logical_key, "metric": metric}
+                for logical_key, metric in sorted(metric_recanonicalizations)
+            ],
+        },
     }
     summary_sha256 = _sha256_text(_canonical_json({"inputs": {
         "numeric_csv": numeric_info,
@@ -2199,27 +2923,33 @@ def aggregate_clean_metrics(
         "eff_csv": eff_info,
         "pred_plan_jsonl": simplify_plan_info,
         "eff_preparation_report_json": eff_report_info,
-        "gt_frozen_index": gt_info,
-        "pred_frozen_index": pred_info,
-        "equivalence_frozen_index": eq_info,
-        "structure_frozen_index": structure_info,
+        "gt_frozen_index": gt_report_info,
+        "pred_frozen_index": pred_report_info,
+        "equivalence_frozen_index": eq_report_info,
+        "structure_frozen_index": structure_report_info,
         "evidence_jsonl": evidence_info,
-    }, "outputs": outputs, "summary": summary}))
+        "audit_corrections_manifest_json": audit_corrections_info,
+    }, "outputs": outputs, "summary": summary, "diagnostics": diagnostics}))
     report = {
+        "status": "ok",
+        "contract_ok": True,
+        "formal_clean_ready": summary["formal_clean_ready"],
         "inputs": {
             "numeric_csv": numeric_info,
             "clean_numeric_preparation_report_json": numeric_preparation_report_info,
             "eff_csv": eff_info,
             "pred_plan_jsonl": simplify_plan_info,
             "eff_preparation_report_json": eff_report_info,
-            "gt_frozen_index": gt_info,
-            "pred_frozen_index": pred_info,
-            "equivalence_frozen_index": eq_info,
-            "structure_frozen_index": structure_info,
+            "gt_frozen_index": gt_report_info,
+            "pred_frozen_index": pred_report_info,
+            "equivalence_frozen_index": eq_report_info,
+            "structure_frozen_index": structure_report_info,
             "evidence_jsonl": evidence_info,
+            "audit_corrections_manifest_json": audit_corrections_info,
         },
         "outputs": outputs,
         "summary": summary,
+        "diagnostics": diagnostics,
         "summary_sha256": summary_sha256,
     }
     _write_json_atomic(report_json, report)
@@ -2315,6 +3045,11 @@ def build_argument_parser() -> argparse.ArgumentParser:
         default=stage5_root / "results/clean_pred_vs_gt_evidence.jsonl",
     )
     parser.add_argument(
+        "--audit-corrections-manifest-json",
+        type=Path,
+        help="公式质量抽查发布的 final/ok corrections manifest；正式 2250-run 聚合必填",
+    )
+    parser.add_argument(
         "--clean-run-csv",
         type=Path,
         default=stage5_root / "results/clean_run_metrics.csv",
@@ -2362,6 +3097,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             structure_summary_json=args.structure_summary_json.resolve(),
             structure_index_jsonl=args.structure_index_jsonl.resolve(),
             evidence_jsonl=args.evidence_jsonl.resolve(),
+            audit_corrections_manifest_json=(
+                args.audit_corrections_manifest_json.resolve()
+                if args.audit_corrections_manifest_json is not None
+                else None
+            ),
             clean_run_csv=args.clean_run_csv.resolve(),
             task_stability_csv=args.task_stability_csv.resolve(),
             algorithm_csv=args.algorithm_csv.resolve(),

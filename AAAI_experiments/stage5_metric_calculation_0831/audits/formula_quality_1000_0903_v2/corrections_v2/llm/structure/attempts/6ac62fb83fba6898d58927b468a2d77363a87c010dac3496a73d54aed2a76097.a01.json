@@ -1,0 +1,2545 @@
+{
+  "api_request": {
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "content": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"sin\",\"sqrt\"],\"dataset_id\":\"II.11.27_1_0\",\"dataset_index\":\"g0014\",\"deterministic_evidence\":{\"allowed_functions\":[\"sin\",\"sqrt\"],\"allowed_variables\":[\"Pol\",\"n\",\"epsilon\",\"Ef\"],\"evidence_sha256\":\"898e33b4164f9204fc7d43fc790d814eb2ce776663c17a2855742ae9a0b8017c\",\"lhs_binding\":{\"frozen_effective_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n\",\"frozen_evaluation_key\":\"7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0014::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"b5e871312d5257be0e0efd378fca192fe831381f11650c267719ba8ffccfc400\",\"lhs_artifact\":{\"artifact_sha256\":\"9faefa1e46e24f81f02a00bd25971841871286feccd9fd184e8a6e5bb9c3ff8d\",\"canonical_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(Ef**2*epsilon**2*sqrt(Ef*epsilon*(-Ef - sin(0.201761205388945*Ef**2*epsilon*sqrt(-Ef*epsilon) - Pol))**(1/4))))**(1/4)/n\",\"constants_abstracted_tree_fingerprint\":\"5ffaaca14bac9d5add2afd5cfe10ab65eb62bd72ea7df314e6e2142690dad5d7\",\"construction_mode\":\"evaluated\",\"function_set\":[\"sin\",\"sqrt\"],\"node_count\":48,\"operator_set\":[\"add\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"Ef\",\"Pol\",\"epsilon\",\"n\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07\",\"operator\":{\"f1\":0.8571428571428571},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba\",\"probe_seed\":520522,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"b500fbe99df8a3402acd0e6bcd7b64cbf5cd2581cab02902d95390af3748411a\",\"canonical_expression\":\"(3.7037037037037*Pol**2/(Pol + 0.481481481481481)**2 + Pol)/(n*(2*Ef*epsilon + 0.13*Ef/Pol + 1.54 + 0.27/Ef))\",\"constants_abstracted_tree_fingerprint\":\"1e663cd96010e6c557798044ba194e8fea3a663f2c1ace40c1c8f6687ae43318\",\"construction_mode\":\"evaluated\",\"function_set\":[],\"node_count\":35,\"operator_set\":[\"add\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"Ef\",\"Pol\",\"epsilon\",\"n\"]},\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":15},\"symbolic_difference\":{\"assumptions\":[\"符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。\",\"数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":15}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.46987951807228917,\"tree_similarity\":0.5301204819277108},\"variable\":{\"f1\":1.0}},\"pair_seed\":520522,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))\",\"frozen_evaluation_key\":\"da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0014::s522::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n\",\"effective_prediction_b_expression\":\"(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))\",\"effort\":\"xhigh\",\"evidence_hash\":\"898e33b4164f9204fc7d43fc790d814eb2ce776663c17a2855742ae9a0b8017c\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0014::s520::clean\",\"prediction_a_plan_evaluation_key\":\"7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28\",\"prediction_a_result_sha256\":\"7feaff1219e877366a2c9cb4f0140bbb40c82ac21dc5a5d0f31da3bea9f7f39c\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0014\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0014::s522::clean\",\"prediction_b_plan_evaluation_key\":\"da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b\",\"prediction_b_result_sha256\":\"65eb2a19ff2bdc51d417425679f6d40bd92fddf33a71af197111662988c9c4e1\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s522_clean_g0014\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":522,\"simplified_prediction_a_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n\",\"simplified_prediction_b_expression\":\"(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-5",
+    "output_config": {
+      "effort": "xhigh"
+    },
+    "stream": false,
+    "system": "You are a strict mathematical benchmark evaluator.\nAll domain assumptions, declared variables/functions, instantiated constants, and output-schema rules supplied by the user are hard constraints.\nNever add assumptions from physical interpretation, typical parameter signs, or observed probe ranges.\nJudge preservation in the declared number system, not in a broader complex domain.\nIf an expression has no valid value in the declared real-valued domain, or relies on undeclared symbolic entities, follow the task's unable/undetermined rule rather than treating textual identity as sufficient.\nReturn only the requested JSON object, with no additional properties or prose.",
+    "thinking": {
+      "type": "adaptive"
+    }
+  },
+  "api_response": {
+    "content": [
+      {
+        "text": "```json\n{\"decision\":\"different_structure\",\"confidence\":0.93,\"brief_reason\":\"Equivalence is not established (symbolic proof timed out, all probes skipped as nonfinite/timeout, so no supporting numeric agreement). Structurally the two differ fundamentally: A is a nested radical expression using sin and multiple fractional powers (operator set add/mul/pow/sin, function set {sin, sqrt}, 48 nodes), while B is a pure rational function with no transcendental or radical operators (operator set add/mul/pow, empty function set, 35 nodes). Constants-abstracted tree fingerprints differ and tree similarity is only 0.53, so abstracting constants cannot reconcile them; the sin subtree and fourth-root nesting in A have no counterpart in B.\"}\n```",
+        "type": "text"
+      }
+    ],
+    "id": "msg_e21bbb5bdb80441985fc10f34bc1c895",
+    "model": "claude-opus-5",
+    "role": "assistant",
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 96
+      },
+      "cache_creation_input_tokens": 96,
+      "cache_read_input_tokens": 2035,
+      "inference_geo": "not_available",
+      "input_tokens": 11,
+      "output_tokens": 209,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    }
+  },
+  "attempt_id": "6ac62fb83fba6898d58927b468a2d77363a87c010dac3496a73d54aed2a76097.a01",
+  "evaluation_key": "6ac62fb83fba6898d58927b468a2d77363a87c010dac3496a73d54aed2a76097",
+  "metadata": {
+    "api_base_url": "https://yapi.click",
+    "api_channel": "yapi",
+    "api_endpoint": "https://yapi.click/v1/messages",
+    "api_request_sha256": "27e935fb0cd2ff7cc5d11750c6e79c562feb09825ba67b2775ae2f9c5defbd09",
+    "api_response_sha256": "5aab114a66f64603fb5ff55a3901d5db5874994bb2cdbbaefc5571651555cb02",
+    "attempt_id": "6ac62fb83fba6898d58927b468a2d77363a87c010dac3496a73d54aed2a76097.a01",
+    "attempt_number": 1,
+    "error_class": null,
+    "estimated_cost_cny": 0.0037785,
+    "evaluation_key": "6ac62fb83fba6898d58927b468a2d77363a87c010dac3496a73d54aed2a76097",
+    "finished_at": 1788417572.560857,
+    "http_status": 200,
+    "lease_expires_at": 1788417917.4621017,
+    "logical_id": "stab_structure::gplearn::g0014::s520-s522",
+    "persisted_api_response_sha256": "5aab114a66f64603fb5ff55a3901d5db5874994bb2cdbbaefc5571651555cb02",
+    "prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/structure.v1.txt",
+    "prompt_sha256": "64940c7ff791772bef05f5e9641ee8de54ef91b8e203b5860ef07982ec13d8c9",
+    "raw_response_sha256": "5aab114a66f64603fb5ff55a3901d5db5874994bb2cdbbaefc5571651555cb02",
+    "rendered_prompt_sha256": "5c7f9a00aab2ed3f8862b4082308cea2ad5ab85437b0df76765fe982df110528",
+    "request_sha256": "5e3a8946f7fd843a7f9775f7cada9d45c61974711c5c393f8f831b12a3939074",
+    "requested_effort": "xhigh",
+    "requested_model": "claude-opus-5",
+    "response_headers": {},
+    "response_metadata": {
+      "content_types": [
+        "text"
+      ],
+      "message_id": "msg_e21bbb5bdb80441985fc10f34bc1c895",
+      "model": "claude-opus-5",
+      "stop_reason": "end_turn",
+      "stop_sequence": null
+    },
+    "response_model": "claude-opus-5",
+    "retryable": false,
+    "schema_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/schemas/structure.v1.json",
+    "schema_sha256": "f38e475728bb4be46c61ce1e92c65e8032ef37a337f72ae083ce7f54ba841347",
+    "started_at": 1788417557.8318322,
+    "stream": false,
+    "system_prompt_sha256": "55f871abfb0308c60d2d354e24c209eb44ce9268f0ca6877bce4c55822922aca",
+    "tariff_cny_per_million_tokens": {
+      "cache_read": 0.3,
+      "input": 3.0,
+      "output": 15.0
+    },
+    "task_kind": "structure",
+    "task_type": "stab_structure",
+    "timeout_seconds": 300.0,
+    "transport_version": "anthropic_messages_nonstream_dual_channel.v1",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 96
+      },
+      "cache_creation_input_tokens": 96,
+      "cache_read_input_tokens": 2035,
+      "inference_geo": "not_available",
+      "input_tokens": 11,
+      "output_tokens": 209,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "wall_latency_seconds": 14.730060757137835
+  },
+  "output_text": "```json\n{\"decision\":\"different_structure\",\"confidence\":0.93,\"brief_reason\":\"Equivalence is not established (symbolic proof timed out, all probes skipped as nonfinite/timeout, so no supporting numeric agreement). Structurally the two differ fundamentally: A is a nested radical expression using sin and multiple fractional powers (operator set add/mul/pow/sin, function set {sin, sqrt}, 48 nodes), while B is a pure rational function with no transcendental or radical operators (operator set add/mul/pow, empty function set, 35 nodes). Constants-abstracted tree fingerprints differ and tree similarity is only 0.53, so abstracting constants cannot reconcile them; the sin subtree and fourth-root nesting in A have no counterpart in B.\"}\n```",
+  "prompt": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"sin\",\"sqrt\"],\"dataset_id\":\"II.11.27_1_0\",\"dataset_index\":\"g0014\",\"deterministic_evidence\":{\"allowed_functions\":[\"sin\",\"sqrt\"],\"allowed_variables\":[\"Pol\",\"n\",\"epsilon\",\"Ef\"],\"evidence_sha256\":\"898e33b4164f9204fc7d43fc790d814eb2ce776663c17a2855742ae9a0b8017c\",\"lhs_binding\":{\"frozen_effective_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n\",\"frozen_evaluation_key\":\"7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0014::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"b5e871312d5257be0e0efd378fca192fe831381f11650c267719ba8ffccfc400\",\"lhs_artifact\":{\"artifact_sha256\":\"9faefa1e46e24f81f02a00bd25971841871286feccd9fd184e8a6e5bb9c3ff8d\",\"canonical_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(Ef**2*epsilon**2*sqrt(Ef*epsilon*(-Ef - sin(0.201761205388945*Ef**2*epsilon*sqrt(-Ef*epsilon) - Pol))**(1/4))))**(1/4)/n\",\"constants_abstracted_tree_fingerprint\":\"5ffaaca14bac9d5add2afd5cfe10ab65eb62bd72ea7df314e6e2142690dad5d7\",\"construction_mode\":\"evaluated\",\"function_set\":[\"sin\",\"sqrt\"],\"node_count\":48,\"operator_set\":[\"add\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"Ef\",\"Pol\",\"epsilon\",\"n\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07\",\"operator\":{\"f1\":0.8571428571428571},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba\",\"probe_seed\":520522,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"b500fbe99df8a3402acd0e6bcd7b64cbf5cd2581cab02902d95390af3748411a\",\"canonical_expression\":\"(3.7037037037037*Pol**2/(Pol + 0.481481481481481)**2 + Pol)/(n*(2*Ef*epsilon + 0.13*Ef/Pol + 1.54 + 0.27/Ef))\",\"constants_abstracted_tree_fingerprint\":\"1e663cd96010e6c557798044ba194e8fea3a663f2c1ace40c1c8f6687ae43318\",\"construction_mode\":\"evaluated\",\"function_set\":[],\"node_count\":35,\"operator_set\":[\"add\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"Ef\",\"Pol\",\"epsilon\",\"n\"]},\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":15},\"symbolic_difference\":{\"assumptions\":[\"符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。\",\"数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":15}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.46987951807228917,\"tree_similarity\":0.5301204819277108},\"variable\":{\"f1\":1.0}},\"pair_seed\":520522,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))\",\"frozen_evaluation_key\":\"da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0014::s522::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n\",\"effective_prediction_b_expression\":\"(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))\",\"effort\":\"xhigh\",\"evidence_hash\":\"898e33b4164f9204fc7d43fc790d814eb2ce776663c17a2855742ae9a0b8017c\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0014::s520::clean\",\"prediction_a_plan_evaluation_key\":\"7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28\",\"prediction_a_result_sha256\":\"7feaff1219e877366a2c9cb4f0140bbb40c82ac21dc5a5d0f31da3bea9f7f39c\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0014\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0014::s522::clean\",\"prediction_b_plan_evaluation_key\":\"da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b\",\"prediction_b_result_sha256\":\"65eb2a19ff2bdc51d417425679f6d40bd92fddf33a71af197111662988c9c4e1\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s522_clean_g0014\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":522,\"simplified_prediction_a_expression\":\"0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n\",\"simplified_prediction_b_expression\":\"(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+  "request": {
+    "algorithm": "gplearn",
+    "algorithm_slug": "gplearn",
+    "allowed_functions": [
+      "sin",
+      "sqrt"
+    ],
+    "dataset_id": "II.11.27_1_0",
+    "dataset_index": "g0014",
+    "deterministic_evidence": {
+      "allowed_functions": [
+        "sin",
+        "sqrt"
+      ],
+      "allowed_variables": [
+        "Pol",
+        "n",
+        "epsilon",
+        "Ef"
+      ],
+      "evidence_sha256": "898e33b4164f9204fc7d43fc790d814eb2ce776663c17a2855742ae9a0b8017c",
+      "lhs_binding": {
+        "frozen_effective_expression": "0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n",
+        "frozen_evaluation_key": "7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28",
+        "frozen_logical_id": "pred_simplify::gplearn::g0014::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "b5e871312d5257be0e0efd378fca192fe831381f11650c267719ba8ffccfc400",
+        "lhs_artifact": {
+          "artifact_sha256": "9faefa1e46e24f81f02a00bd25971841871286feccd9fd184e8a6e5bb9c3ff8d",
+          "canonical_expression": "0.661676201472356*sqrt(Pol)*(Pol/(Ef**2*epsilon**2*sqrt(Ef*epsilon*(-Ef - sin(0.201761205388945*Ef**2*epsilon*sqrt(-Ef*epsilon) - Pol))**(1/4))))**(1/4)/n",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Float",
+                "value": "Float('0.66167620147235595', precision=53)"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "type": "Half",
+                    "value": "Rational(1, 2)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('Pol')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(-2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(-2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('epsilon')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "NegativeOne",
+                                            "value": "Integer(-1)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('Ef')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "NegativeOne",
+                                            "value": "Integer(-1)"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "NegativeOne",
+                                                        "value": "Integer(-1)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('Pol')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Float",
+                                                        "value": "Float('0.20176120538894499', precision=53)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('epsilon')"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('Ef')"
+                                                          },
+                                                          {
+                                                            "type": "Integer",
+                                                            "value": "Integer(2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "type": "NegativeOne",
+                                                                "value": "Integer(-1)"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('Ef')"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('epsilon')"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Half",
+                                                            "value": "Rational(1, 2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "add"
+                                              }
+                                            ],
+                                            "type": "sin"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "type": "Rational",
+                                    "value": "Rational(1, 4)"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "type": "Rational",
+                            "value": "Rational(-1, 2)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Rational",
+                    "value": "Rational(1, 4)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Constant"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('Pol')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('epsilon')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('Ef')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('Pol')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('epsilon')"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('Ef')"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "type": "Constant"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('Ef')"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('epsilon')"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "add"
+                                              }
+                                            ],
+                                            "type": "sin"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "type": "Constant"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "5ffaaca14bac9d5add2afd5cfe10ab65eb62bd72ea7df314e6e2142690dad5d7",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "sin",
+            "sqrt"
+          ],
+          "node_count": 48,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n",
+          "variables": [
+            "Ef",
+            "Pol",
+            "epsilon",
+            "n"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.8571428571428571
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba",
+        "probe_seed": 520522,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "b500fbe99df8a3402acd0e6bcd7b64cbf5cd2581cab02902d95390af3748411a",
+          "canonical_expression": "(3.7037037037037*Pol**2/(Pol + 0.481481481481481)**2 + Pol)/(n*(2*Ef*epsilon + 0.13*Ef/Pol + 1.54 + 0.27/Ef))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Float",
+                        "value": "Float('1.54', precision=53)"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.27000000000000002', precision=53)"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.13', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              },
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Float",
+                        "value": "Float('3.7037037037037037', precision=53)"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Pol')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.48148148148148145', precision=53)"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(-2)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "add"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Pol')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "add"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "1e663cd96010e6c557798044ba194e8fea3a663f2c1ace40c1c8f6687ae43318",
+          "construction_mode": "evaluated",
+          "function_set": [],
+          "node_count": 35,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))",
+          "variables": [
+            "Ef",
+            "Pol",
+            "epsilon",
+            "n"
+          ]
+        },
+        "skipped_probe_count": 16,
+        "skipped_probe_reasons": {
+          "numeric_probe_timeout": 1,
+          "original_nonfinite": 15
+        },
+        "skipped_probes": [
+          {
+            "reason": "original_nonfinite",
+            "row_index": 969,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.2781864404678345",
+              "Pol": "2.4973535537719727",
+              "epsilon": "1.250818133354187",
+              "n": "0.43514391779899597"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 3702,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.1985551118850708",
+              "Pol": "0.43077293038368225",
+              "epsilon": "1.3833388090133667",
+              "n": "0.81755834817886353"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 5417,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.1912864446640015",
+              "Pol": "3.3166089057922363",
+              "epsilon": "1.2738850116729736",
+              "n": "0.4005761444568634"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 13178,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.82386314868927",
+              "Pol": "1.37290358543396",
+              "epsilon": "1.9076042175292969",
+              "n": "0.38094067573547363"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 13360,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.013399600982666",
+              "Pol": "2.8213906288146973",
+              "epsilon": "1.1785780191421509",
+              "n": "0.67572981119155884"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 14555,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.6778614521026611",
+              "Pol": "4.88525390625",
+              "epsilon": "1.3762191534042358",
+              "n": "0.51962846517562866"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 16901,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.4640213251113892",
+              "Pol": "3.4572579860687256",
+              "epsilon": "1.3020257949829102",
+              "n": "0.89471918344497681"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 19855,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.379513144493103",
+              "Pol": "2.7185983657836914",
+              "epsilon": "1.378432035446167",
+              "n": "0.22689849138259888"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 363,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.95691369039875607",
+              "Pol": "-0.018421880145137765",
+              "epsilon": "0.97143545522840002",
+              "n": "-0.007295331437080152"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 5966,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.028334954833682",
+              "Pol": "-0.19376672182845334",
+              "epsilon": "0.95245329725237649",
+              "n": "1.0053760102931011"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 6343,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.0003073769725734",
+              "Pol": "5.0509141093722407",
+              "epsilon": "0.97603885936711554",
+              "n": "1.0050417098547035"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 7190,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.98646467741165877",
+              "Pol": "-0.14004486342222097",
+              "epsilon": "2.0255111831556634",
+              "n": "-0.022763403323925614"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 8941,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.95758393282353715",
+              "Pol": "5.1113070452156562",
+              "epsilon": "2.0229753937235229",
+              "n": "1.0017941479178907"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 13849,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.97145446742376318",
+              "Pol": "5.1928857467395932",
+              "epsilon": "0.99622565756775749",
+              "n": "1.0411559650528361"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 16619,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.0080825228614074",
+              "Pol": "-0.057054262709660741",
+              "epsilon": "0.97664507035946757",
+              "n": "-0.020305612161324513"
+            }
+          },
+          {
+            "reason": "numeric_probe_timeout",
+            "row_index": 19792,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.0282583922312116",
+              "Pol": "-0.21121699901549629",
+              "epsilon": "0.95187706523815896",
+              "n": "1.0256629255055214"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。",
+            "数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 16,
+          "skipped_probe_reasons": {
+            "numeric_probe_timeout": 1,
+            "original_nonfinite": 15
+          },
+          "skipped_probes": [
+            {
+              "reason": "original_nonfinite",
+              "row_index": 969,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.2781864404678345",
+                "Pol": "2.4973535537719727",
+                "epsilon": "1.250818133354187",
+                "n": "0.43514391779899597"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 3702,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.1985551118850708",
+                "Pol": "0.43077293038368225",
+                "epsilon": "1.3833388090133667",
+                "n": "0.81755834817886353"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 5417,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.1912864446640015",
+                "Pol": "3.3166089057922363",
+                "epsilon": "1.2738850116729736",
+                "n": "0.4005761444568634"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 13178,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.82386314868927",
+                "Pol": "1.37290358543396",
+                "epsilon": "1.9076042175292969",
+                "n": "0.38094067573547363"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 13360,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.013399600982666",
+                "Pol": "2.8213906288146973",
+                "epsilon": "1.1785780191421509",
+                "n": "0.67572981119155884"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 14555,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.6778614521026611",
+                "Pol": "4.88525390625",
+                "epsilon": "1.3762191534042358",
+                "n": "0.51962846517562866"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 16901,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.4640213251113892",
+                "Pol": "3.4572579860687256",
+                "epsilon": "1.3020257949829102",
+                "n": "0.89471918344497681"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 19855,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.379513144493103",
+                "Pol": "2.7185983657836914",
+                "epsilon": "1.378432035446167",
+                "n": "0.22689849138259888"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 363,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.95691369039875607",
+                "Pol": "-0.018421880145137765",
+                "epsilon": "0.97143545522840002",
+                "n": "-0.007295331437080152"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 5966,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.028334954833682",
+                "Pol": "-0.19376672182845334",
+                "epsilon": "0.95245329725237649",
+                "n": "1.0053760102931011"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 6343,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.0003073769725734",
+                "Pol": "5.0509141093722407",
+                "epsilon": "0.97603885936711554",
+                "n": "1.0050417098547035"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 7190,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.98646467741165877",
+                "Pol": "-0.14004486342222097",
+                "epsilon": "2.0255111831556634",
+                "n": "-0.022763403323925614"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 8941,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.95758393282353715",
+                "Pol": "5.1113070452156562",
+                "epsilon": "2.0229753937235229",
+                "n": "1.0017941479178907"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 13849,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.97145446742376318",
+                "Pol": "5.1928857467395932",
+                "epsilon": "0.99622565756775749",
+                "n": "1.0411559650528361"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 16619,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.0080825228614074",
+                "Pol": "-0.057054262709660741",
+                "epsilon": "0.97664507035946757",
+                "n": "-0.020305612161324513"
+              }
+            },
+            {
+              "reason": "numeric_probe_timeout",
+              "row_index": 19792,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.0282583922312116",
+                "Pol": "-0.21121699901549629",
+                "epsilon": "0.95187706523815896",
+                "n": "1.0256629255055214"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.46987951807228917,
+          "tree_similarity": 0.5301204819277108
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520522,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))",
+        "frozen_evaluation_key": "da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b",
+        "frozen_logical_id": "pred_simplify::gplearn::g0014::s522::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "deterministic_pair_evidence": {
+      "allowed_functions": [
+        "sin",
+        "sqrt"
+      ],
+      "allowed_variables": [
+        "Pol",
+        "n",
+        "epsilon",
+        "Ef"
+      ],
+      "evidence_sha256": "898e33b4164f9204fc7d43fc790d814eb2ce776663c17a2855742ae9a0b8017c",
+      "lhs_binding": {
+        "frozen_effective_expression": "0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n",
+        "frozen_evaluation_key": "7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28",
+        "frozen_logical_id": "pred_simplify::gplearn::g0014::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "b5e871312d5257be0e0efd378fca192fe831381f11650c267719ba8ffccfc400",
+        "lhs_artifact": {
+          "artifact_sha256": "9faefa1e46e24f81f02a00bd25971841871286feccd9fd184e8a6e5bb9c3ff8d",
+          "canonical_expression": "0.661676201472356*sqrt(Pol)*(Pol/(Ef**2*epsilon**2*sqrt(Ef*epsilon*(-Ef - sin(0.201761205388945*Ef**2*epsilon*sqrt(-Ef*epsilon) - Pol))**(1/4))))**(1/4)/n",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Float",
+                "value": "Float('0.66167620147235595', precision=53)"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "type": "Half",
+                    "value": "Rational(1, 2)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('Pol')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(-2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(-2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('epsilon')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "NegativeOne",
+                                            "value": "Integer(-1)"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('Ef')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "NegativeOne",
+                                            "value": "Integer(-1)"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "NegativeOne",
+                                                        "value": "Integer(-1)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('Pol')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Float",
+                                                        "value": "Float('0.20176120538894499', precision=53)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('epsilon')"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('Ef')"
+                                                          },
+                                                          {
+                                                            "type": "Integer",
+                                                            "value": "Integer(2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "type": "NegativeOne",
+                                                                "value": "Integer(-1)"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('Ef')"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('epsilon')"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Half",
+                                                            "value": "Rational(1, 2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "add"
+                                              }
+                                            ],
+                                            "type": "sin"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "type": "Rational",
+                                    "value": "Rational(1, 4)"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "type": "Rational",
+                            "value": "Rational(-1, 2)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Rational",
+                    "value": "Rational(1, 4)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Constant"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('Pol')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('epsilon')"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('Ef')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('Pol')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('epsilon')"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('Ef')"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "type": "Constant"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('Ef')"
+                                                              },
+                                                              {
+                                                                "type": "Symbol",
+                                                                "value": "Symbol('epsilon')"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  }
+                                                ],
+                                                "type": "add"
+                                              }
+                                            ],
+                                            "type": "sin"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "type": "Constant"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "5ffaaca14bac9d5add2afd5cfe10ab65eb62bd72ea7df314e6e2142690dad5d7",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "sin",
+            "sqrt"
+          ],
+          "node_count": 48,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n",
+          "variables": [
+            "Ef",
+            "Pol",
+            "epsilon",
+            "n"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.8571428571428571
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba",
+        "probe_seed": 520522,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "b500fbe99df8a3402acd0e6bcd7b64cbf5cd2581cab02902d95390af3748411a",
+          "canonical_expression": "(3.7037037037037*Pol**2/(Pol + 0.481481481481481)**2 + Pol)/(n*(2*Ef*epsilon + 0.13*Ef/Pol + 1.54 + 0.27/Ef))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Float",
+                        "value": "Float('1.54', precision=53)"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.27000000000000002', precision=53)"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.13', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              },
+                              {
+                                "type": "NegativeOne",
+                                "value": "Integer(-1)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Float",
+                        "value": "Float('3.7037037037037037', precision=53)"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Pol')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.48148148148148145', precision=53)"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(-2)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "add"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('n')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Ef')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('epsilon')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Ef')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('Pol')"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Constant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('Pol')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('Pol')"
+                              }
+                            ],
+                            "type": "add"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "add"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "1e663cd96010e6c557798044ba194e8fea3a663f2c1ace40c1c8f6687ae43318",
+          "construction_mode": "evaluated",
+          "function_set": [],
+          "node_count": 35,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))",
+          "variables": [
+            "Ef",
+            "Pol",
+            "epsilon",
+            "n"
+          ]
+        },
+        "skipped_probe_count": 16,
+        "skipped_probe_reasons": {
+          "numeric_probe_timeout": 1,
+          "original_nonfinite": 15
+        },
+        "skipped_probes": [
+          {
+            "reason": "original_nonfinite",
+            "row_index": 969,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.2781864404678345",
+              "Pol": "2.4973535537719727",
+              "epsilon": "1.250818133354187",
+              "n": "0.43514391779899597"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 3702,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.1985551118850708",
+              "Pol": "0.43077293038368225",
+              "epsilon": "1.3833388090133667",
+              "n": "0.81755834817886353"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 5417,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.1912864446640015",
+              "Pol": "3.3166089057922363",
+              "epsilon": "1.2738850116729736",
+              "n": "0.4005761444568634"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 13178,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.82386314868927",
+              "Pol": "1.37290358543396",
+              "epsilon": "1.9076042175292969",
+              "n": "0.38094067573547363"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 13360,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.013399600982666",
+              "Pol": "2.8213906288146973",
+              "epsilon": "1.1785780191421509",
+              "n": "0.67572981119155884"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 14555,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.6778614521026611",
+              "Pol": "4.88525390625",
+              "epsilon": "1.3762191534042358",
+              "n": "0.51962846517562866"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 16901,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.4640213251113892",
+              "Pol": "3.4572579860687256",
+              "epsilon": "1.3020257949829102",
+              "n": "0.89471918344497681"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 19855,
+            "split": "id_test",
+            "values": {
+              "Ef": "1.379513144493103",
+              "Pol": "2.7185983657836914",
+              "epsilon": "1.378432035446167",
+              "n": "0.22689849138259888"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 363,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.95691369039875607",
+              "Pol": "-0.018421880145137765",
+              "epsilon": "0.97143545522840002",
+              "n": "-0.007295331437080152"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 5966,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.028334954833682",
+              "Pol": "-0.19376672182845334",
+              "epsilon": "0.95245329725237649",
+              "n": "1.0053760102931011"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 6343,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.0003073769725734",
+              "Pol": "5.0509141093722407",
+              "epsilon": "0.97603885936711554",
+              "n": "1.0050417098547035"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 7190,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.98646467741165877",
+              "Pol": "-0.14004486342222097",
+              "epsilon": "2.0255111831556634",
+              "n": "-0.022763403323925614"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 8941,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.95758393282353715",
+              "Pol": "5.1113070452156562",
+              "epsilon": "2.0229753937235229",
+              "n": "1.0017941479178907"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 13849,
+            "split": "ood_test",
+            "values": {
+              "Ef": "0.97145446742376318",
+              "Pol": "5.1928857467395932",
+              "epsilon": "0.99622565756775749",
+              "n": "1.0411559650528361"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 16619,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.0080825228614074",
+              "Pol": "-0.057054262709660741",
+              "epsilon": "0.97664507035946757",
+              "n": "-0.020305612161324513"
+            }
+          },
+          {
+            "reason": "numeric_probe_timeout",
+            "row_index": 19792,
+            "split": "ood_test",
+            "values": {
+              "Ef": "2.0282583922312116",
+              "Pol": "-0.21121699901549629",
+              "epsilon": "0.95187706523815896",
+              "n": "1.0256629255055214"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。",
+            "数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "c4c437caf2ae7761a707aedd8672c229c81ae3a1b6215fb827523be6a6aece07",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "cd0e0560dd4ee416731d7479a08690c0719932da8567c6eea844d2232467dcba",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 16,
+          "skipped_probe_reasons": {
+            "numeric_probe_timeout": 1,
+            "original_nonfinite": 15
+          },
+          "skipped_probes": [
+            {
+              "reason": "original_nonfinite",
+              "row_index": 969,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.2781864404678345",
+                "Pol": "2.4973535537719727",
+                "epsilon": "1.250818133354187",
+                "n": "0.43514391779899597"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 3702,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.1985551118850708",
+                "Pol": "0.43077293038368225",
+                "epsilon": "1.3833388090133667",
+                "n": "0.81755834817886353"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 5417,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.1912864446640015",
+                "Pol": "3.3166089057922363",
+                "epsilon": "1.2738850116729736",
+                "n": "0.4005761444568634"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 13178,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.82386314868927",
+                "Pol": "1.37290358543396",
+                "epsilon": "1.9076042175292969",
+                "n": "0.38094067573547363"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 13360,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.013399600982666",
+                "Pol": "2.8213906288146973",
+                "epsilon": "1.1785780191421509",
+                "n": "0.67572981119155884"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 14555,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.6778614521026611",
+                "Pol": "4.88525390625",
+                "epsilon": "1.3762191534042358",
+                "n": "0.51962846517562866"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 16901,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.4640213251113892",
+                "Pol": "3.4572579860687256",
+                "epsilon": "1.3020257949829102",
+                "n": "0.89471918344497681"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 19855,
+              "split": "id_test",
+              "values": {
+                "Ef": "1.379513144493103",
+                "Pol": "2.7185983657836914",
+                "epsilon": "1.378432035446167",
+                "n": "0.22689849138259888"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 363,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.95691369039875607",
+                "Pol": "-0.018421880145137765",
+                "epsilon": "0.97143545522840002",
+                "n": "-0.007295331437080152"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 5966,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.028334954833682",
+                "Pol": "-0.19376672182845334",
+                "epsilon": "0.95245329725237649",
+                "n": "1.0053760102931011"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 6343,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.0003073769725734",
+                "Pol": "5.0509141093722407",
+                "epsilon": "0.97603885936711554",
+                "n": "1.0050417098547035"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 7190,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.98646467741165877",
+                "Pol": "-0.14004486342222097",
+                "epsilon": "2.0255111831556634",
+                "n": "-0.022763403323925614"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 8941,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.95758393282353715",
+                "Pol": "5.1113070452156562",
+                "epsilon": "2.0229753937235229",
+                "n": "1.0017941479178907"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 13849,
+              "split": "ood_test",
+              "values": {
+                "Ef": "0.97145446742376318",
+                "Pol": "5.1928857467395932",
+                "epsilon": "0.99622565756775749",
+                "n": "1.0411559650528361"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 16619,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.0080825228614074",
+                "Pol": "-0.057054262709660741",
+                "epsilon": "0.97664507035946757",
+                "n": "-0.020305612161324513"
+              }
+            },
+            {
+              "reason": "numeric_probe_timeout",
+              "row_index": 19792,
+              "split": "ood_test",
+              "values": {
+                "Ef": "2.0282583922312116",
+                "Pol": "-0.21121699901549629",
+                "epsilon": "0.95187706523815896",
+                "n": "1.0256629255055214"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.46987951807228917,
+          "tree_similarity": 0.5301204819277108
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520522,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))",
+        "frozen_evaluation_key": "da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b",
+        "frozen_logical_id": "pred_simplify::gplearn::g0014::s522::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "effective_prediction_a_expression": "0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n",
+    "effective_prediction_b_expression": "(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))",
+    "effort": "xhigh",
+    "evidence_hash": "898e33b4164f9204fc7d43fc790d814eb2ce776663c17a2855742ae9a0b8017c",
+    "model": "claude-opus-5",
+    "noise_tag": "clean",
+    "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+    "prediction_a_expression_resolution": "llm_simplified_expression",
+    "prediction_a_frozen_evaluation_key": "7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28",
+    "prediction_a_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_a_logical_id": "pred_simplify::gplearn::g0014::s520::clean",
+    "prediction_a_plan_evaluation_key": "7bb2cf2881815df43b4534bc8ffdadc7eab533f3e4c5f947a07edd629160fc28",
+    "prediction_a_result_sha256": "7feaff1219e877366a2c9cb4f0140bbb40c82ac21dc5a5d0f31da3bea9f7f39c",
+    "prediction_a_simplify_status": "simplified",
+    "prediction_a_task_id": "gplearn_s520_clean_g0014",
+    "prediction_a_valid_output": true,
+    "prediction_b_expression_resolution": "llm_simplified_expression",
+    "prediction_b_frozen_evaluation_key": "da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b",
+    "prediction_b_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_b_logical_id": "pred_simplify::gplearn::g0014::s522::clean",
+    "prediction_b_plan_evaluation_key": "da5833f602f73bac8f145f285547512def0a25208cf135a02bd12376653e739b",
+    "prediction_b_result_sha256": "65eb2a19ff2bdc51d417425679f6d40bd92fddf33a71af197111662988c9c4e1",
+    "prediction_b_simplify_status": "simplified",
+    "prediction_b_task_id": "gplearn_s522_clean_g0014",
+    "prediction_b_valid_output": true,
+    "seed_a": 520,
+    "seed_b": 522,
+    "simplified_prediction_a_expression": "0.661676201472356*sqrt(Pol)*(Pol/(epsilon**2*Ef**2*sqrt(epsilon*Ef*(-Ef + sin(Pol - 0.201761205388945*epsilon*Ef**2*sqrt(-epsilon*Ef)))**(1/4))))**(1/4)/n",
+    "simplified_prediction_b_expression": "(Pol + 0.27*Pol**2/(0.27*Pol + 0.13)**2)/(n*(2*Ef*epsilon + 1.54 + 0.27/Ef + 0.13*Ef/Pol))",
+    "stream": false
+  },
+  "validation": {
+    "error_class": null,
+    "error_message": null,
+    "ok": true,
+    "structured_output": {
+      "brief_reason": "Equivalence is not established (symbolic proof timed out, all probes skipped as nonfinite/timeout, so no supporting numeric agreement). Structurally the two differ fundamentally: A is a nested radical expression using sin and multiple fractional powers (operator set add/mul/pow/sin, function set {sin, sqrt}, 48 nodes), while B is a pure rational function with no transcendental or radical operators (operator set add/mul/pow, empty function set, 35 nodes). Constants-abstracted tree fingerprints differ and tree similarity is only 0.53, so abstracting constants cannot reconcile them; the sin subtree and fourth-root nesting in A have no counterpart in B.",
+      "confidence": 0.93,
+      "decision": "different_structure"
+    }
+  }
+}

@@ -1,0 +1,3139 @@
+{
+  "api_request": {
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "content": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"dataset_id\":\"feynman_II_15_4\",\"dataset_index\":\"g0024\",\"deterministic_evidence\":{\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"allowed_variables\":[\"mom\",\"B\",\"theta\"],\"evidence_sha256\":\"6871505b1694a34a3a8ee55a78abedf709f712a3add77b5d4f0c7aa021385fe9\",\"lhs_binding\":{\"frozen_effective_expression\":\"-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))\",\"frozen_evaluation_key\":\"8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0024::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"c13dc4d2a2576fe81f3ea08b65a7bb837842cfb37955f479bcba655c29935665\",\"lhs_artifact\":{\"artifact_sha256\":\"b9ec8da38f7f51fbd844f85cf231df38c581a64bf41937ef721cd8fbe9788cb1\",\"canonical_expression\":\"(-(((0.944814860959031*sqrt((((-theta)*log(mom**2))*cos(theta))/(sqrt((-theta)*sqrt(((theta*log(mom))*sin(sqrt(theta*cos(theta))*cos(theta)))*sin((((0.426916502374879*sqrt(B*mom))*sqrt((theta*sqrt(log(mom)))*cos(theta)))*cos(theta))/log(mom)))))))*((B*(0.452*mom) + 0.491022996469811) - I*pi) + log(mom)) + sin(0.672309452558864*sqrt(B*mom))))*sin(((0.426916502374879*sqrt(B*mom))*cos(theta))/(sqrt(log(mom))))\",\"constants_abstracted_tree_fingerprint\":\"d30200f4899d20714b497e9a0c663ed9b15fdd1e01ce8a08cf6e60fae75835e9\",\"construction_mode\":\"unevaluated_large_ast\",\"function_set\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"node_count\":117,\"operator_set\":[\"add\",\"cos\",\"log\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"B\",\"mom\",\"theta\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f\",\"operator\":{\"f1\":0.6666666666666666},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e\",\"probe_seed\":520521,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"f727fffdd5727345a0d8f30ebbc0e433624972bcd2ba80ba0b4b80c5b8824e2b\",\"canonical_expression\":\"mom*sqrt(B**2*cos(theta)**2)\",\"constants_abstracted_tree_fingerprint\":\"b1ea766be380c2ef7a8eaff688263062a4f5b901cf4eb578e0ae8bf4cfdb27cb\",\"construction_mode\":\"evaluated\",\"function_set\":[\"cos\",\"sqrt\"],\"node_count\":12,\"operator_set\":[\"cos\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"B\",\"mom\",\"theta\"]},\"skipped_probe_count\":10,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":9},\"symbolic_difference\":{\"assumptions\":[\"表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。\",\"数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":10,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":9}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.8294573643410853,\"tree_similarity\":0.1705426356589147},\"variable\":{\"f1\":1.0}},\"pair_seed\":520521,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"mom*sqrt((B*cos(theta))**2)\",\"frozen_evaluation_key\":\"f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0024::s521::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))\",\"effective_prediction_b_expression\":\"mom*sqrt((B*cos(theta))**2)\",\"effort\":\"xhigh\",\"evidence_hash\":\"6871505b1694a34a3a8ee55a78abedf709f712a3add77b5d4f0c7aa021385fe9\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0024::s520::clean\",\"prediction_a_plan_evaluation_key\":\"8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616\",\"prediction_a_result_sha256\":\"b6b471128529e7f93ed2980384087755e743169790788191be786e47b3479547\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0024\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0024::s521::clean\",\"prediction_b_plan_evaluation_key\":\"f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2\",\"prediction_b_result_sha256\":\"ee5cbb03ff4247a1c4bb0ad145e7bbaf9976c4d1f2f25a98c0ef7c30e4eecac5\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s521_clean_g0024\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":521,\"simplified_prediction_a_expression\":\"-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))\",\"simplified_prediction_b_expression\":\"mom*sqrt((B*cos(theta))**2)\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-5",
+    "output_config": {
+      "effort": "xhigh"
+    },
+    "stream": false,
+    "system": "You are a strict mathematical benchmark evaluator.\nAll domain assumptions, declared variables/functions, instantiated constants, and output-schema rules supplied by the user are hard constraints.\nNever add assumptions from physical interpretation, typical parameter signs, or observed probe ranges.\nJudge preservation in the declared number system, not in a broader complex domain.\nIf an expression has no valid value in the declared real-valued domain, or relies on undeclared symbolic entities, follow the task's unable/undetermined rule rather than treating textual identity as sufficient.\nReturn only the requested JSON object, with no additional properties or prose.",
+    "thinking": {
+      "type": "adaptive"
+    }
+  },
+  "api_response": {
+    "content": [
+      {
+        "text": "```json\n{\"decision\":\"undetermined\",\"confidence\":0.74,\"brief_reason\":\"LHS carries an undeclared symbolic entity (imaginary unit I in the -I*pi term), so it has no valid value in the declared real-valued domain over {mom, B, theta} with {cos, log, sin, sqrt}; canonical structure cannot be legitimately abstracted or compared under the declared number system. Deterministic evidence also yields no usable support: zero successful probes (9 nonfinite, 1 timeout), proof_basis none, symbolic simplify skipped above the complexity threshold, and no counterexample. Structural indicators (117 vs 12 nodes, differing fingerprints, tree similarity 0.17) suggest divergence but rest on an expression that is invalid in the declared domain, so the undetermined rule governs.\"}\n```",
+        "type": "text"
+      }
+    ],
+    "id": "msg_4e2c36eb0e9e481bab5417c813f78e46",
+    "model": "claude-opus-5",
+    "role": "assistant",
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 102
+      },
+      "cache_creation_input_tokens": 102,
+      "cache_read_input_tokens": 2184,
+      "inference_geo": "not_available",
+      "input_tokens": 12,
+      "output_tokens": 212,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    }
+  },
+  "attempt_id": "c6f40be65d9b2da5b04a40acbb278abae624df25afb7d389ca0ca68412fbba6c.a02",
+  "evaluation_key": "c6f40be65d9b2da5b04a40acbb278abae624df25afb7d389ca0ca68412fbba6c",
+  "metadata": {
+    "api_base_url": "https://yapi.click",
+    "api_channel": "yapi",
+    "api_endpoint": "https://yapi.click/v1/messages",
+    "api_request_sha256": "f30d23afee7cd2989648f272258fc1292bde6fa0e388bccf019aae5ad4fd04bc",
+    "api_response_sha256": "21ab43132e73fca675fd7d5ea25856991253f8c66629d9ecd3df2b6bc8d1f2d5",
+    "attempt_id": "c6f40be65d9b2da5b04a40acbb278abae624df25afb7d389ca0ca68412fbba6c.a02",
+    "attempt_number": 2,
+    "error_class": null,
+    "estimated_cost_cny": 0.0038712,
+    "evaluation_key": "c6f40be65d9b2da5b04a40acbb278abae624df25afb7d389ca0ca68412fbba6c",
+    "finished_at": 1788417611.450124,
+    "http_status": 200,
+    "lease_expires_at": 1788417957.80206,
+    "logical_id": "stab_structure::gplearn::g0024::s520-s521",
+    "persisted_api_response_sha256": "21ab43132e73fca675fd7d5ea25856991253f8c66629d9ecd3df2b6bc8d1f2d5",
+    "prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/structure.v1.txt",
+    "prompt_sha256": "64940c7ff791772bef05f5e9641ee8de54ef91b8e203b5860ef07982ec13d8c9",
+    "raw_response_sha256": "21ab43132e73fca675fd7d5ea25856991253f8c66629d9ecd3df2b6bc8d1f2d5",
+    "rendered_prompt_sha256": "fb1165cb65d9f0c91876208cafeb06e513aa1c677e6ba4b7c333a285552acbf1",
+    "request_sha256": "3ae39356c1a4744f8d322a01b7232f517a7e02c056e2b628bd9b3c71f302d836",
+    "requested_effort": "xhigh",
+    "requested_model": "claude-opus-5",
+    "response_headers": {},
+    "response_metadata": {
+      "content_types": [
+        "text"
+      ],
+      "message_id": "msg_4e2c36eb0e9e481bab5417c813f78e46",
+      "model": "claude-opus-5",
+      "stop_reason": "end_turn",
+      "stop_sequence": null
+    },
+    "response_model": "claude-opus-5",
+    "retryable": false,
+    "schema_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/schemas/structure.v1.json",
+    "schema_sha256": "f38e475728bb4be46c61ce1e92c65e8032ef37a337f72ae083ce7f54ba841347",
+    "started_at": 1788417597.8853881,
+    "stream": false,
+    "system_prompt_sha256": "55f871abfb0308c60d2d354e24c209eb44ce9268f0ca6877bce4c55822922aca",
+    "tariff_cny_per_million_tokens": {
+      "cache_read": 0.3,
+      "input": 3.0,
+      "output": 15.0
+    },
+    "task_kind": "structure",
+    "task_type": "stab_structure",
+    "timeout_seconds": 300.0,
+    "transport_version": "anthropic_messages_nonstream_dual_channel.v1",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 102
+      },
+      "cache_creation_input_tokens": 102,
+      "cache_read_input_tokens": 2184,
+      "inference_geo": "not_available",
+      "input_tokens": 12,
+      "output_tokens": 212,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "wall_latency_seconds": 13.56584682688117
+  },
+  "output_text": "```json\n{\"decision\":\"undetermined\",\"confidence\":0.74,\"brief_reason\":\"LHS carries an undeclared symbolic entity (imaginary unit I in the -I*pi term), so it has no valid value in the declared real-valued domain over {mom, B, theta} with {cos, log, sin, sqrt}; canonical structure cannot be legitimately abstracted or compared under the declared number system. Deterministic evidence also yields no usable support: zero successful probes (9 nonfinite, 1 timeout), proof_basis none, symbolic simplify skipped above the complexity threshold, and no counterexample. Structural indicators (117 vs 12 nodes, differing fingerprints, tree similarity 0.17) suggest divergence but rest on an expression that is invalid in the declared domain, so the undetermined rule governs.\"}\n```",
+  "prompt": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"dataset_id\":\"feynman_II_15_4\",\"dataset_index\":\"g0024\",\"deterministic_evidence\":{\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"allowed_variables\":[\"mom\",\"B\",\"theta\"],\"evidence_sha256\":\"6871505b1694a34a3a8ee55a78abedf709f712a3add77b5d4f0c7aa021385fe9\",\"lhs_binding\":{\"frozen_effective_expression\":\"-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))\",\"frozen_evaluation_key\":\"8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0024::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"c13dc4d2a2576fe81f3ea08b65a7bb837842cfb37955f479bcba655c29935665\",\"lhs_artifact\":{\"artifact_sha256\":\"b9ec8da38f7f51fbd844f85cf231df38c581a64bf41937ef721cd8fbe9788cb1\",\"canonical_expression\":\"(-(((0.944814860959031*sqrt((((-theta)*log(mom**2))*cos(theta))/(sqrt((-theta)*sqrt(((theta*log(mom))*sin(sqrt(theta*cos(theta))*cos(theta)))*sin((((0.426916502374879*sqrt(B*mom))*sqrt((theta*sqrt(log(mom)))*cos(theta)))*cos(theta))/log(mom)))))))*((B*(0.452*mom) + 0.491022996469811) - I*pi) + log(mom)) + sin(0.672309452558864*sqrt(B*mom))))*sin(((0.426916502374879*sqrt(B*mom))*cos(theta))/(sqrt(log(mom))))\",\"constants_abstracted_tree_fingerprint\":\"d30200f4899d20714b497e9a0c663ed9b15fdd1e01ce8a08cf6e60fae75835e9\",\"construction_mode\":\"unevaluated_large_ast\",\"function_set\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"node_count\":117,\"operator_set\":[\"add\",\"cos\",\"log\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"B\",\"mom\",\"theta\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f\",\"operator\":{\"f1\":0.6666666666666666},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e\",\"probe_seed\":520521,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"f727fffdd5727345a0d8f30ebbc0e433624972bcd2ba80ba0b4b80c5b8824e2b\",\"canonical_expression\":\"mom*sqrt(B**2*cos(theta)**2)\",\"constants_abstracted_tree_fingerprint\":\"b1ea766be380c2ef7a8eaff688263062a4f5b901cf4eb578e0ae8bf4cfdb27cb\",\"construction_mode\":\"evaluated\",\"function_set\":[\"cos\",\"sqrt\"],\"node_count\":12,\"operator_set\":[\"cos\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"B\",\"mom\",\"theta\"]},\"skipped_probe_count\":10,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":9},\"symbolic_difference\":{\"assumptions\":[\"表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。\",\"数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":10,\"skipped_probe_reasons\":{\"numeric_probe_timeout\":1,\"original_nonfinite\":9}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.8294573643410853,\"tree_similarity\":0.1705426356589147},\"variable\":{\"f1\":1.0}},\"pair_seed\":520521,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"mom*sqrt((B*cos(theta))**2)\",\"frozen_evaluation_key\":\"f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0024::s521::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))\",\"effective_prediction_b_expression\":\"mom*sqrt((B*cos(theta))**2)\",\"effort\":\"xhigh\",\"evidence_hash\":\"6871505b1694a34a3a8ee55a78abedf709f712a3add77b5d4f0c7aa021385fe9\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0024::s520::clean\",\"prediction_a_plan_evaluation_key\":\"8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616\",\"prediction_a_result_sha256\":\"b6b471128529e7f93ed2980384087755e743169790788191be786e47b3479547\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0024\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0024::s521::clean\",\"prediction_b_plan_evaluation_key\":\"f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2\",\"prediction_b_result_sha256\":\"ee5cbb03ff4247a1c4bb0ad145e7bbaf9976c4d1f2f25a98c0ef7c30e4eecac5\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s521_clean_g0024\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":521,\"simplified_prediction_a_expression\":\"-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))\",\"simplified_prediction_b_expression\":\"mom*sqrt((B*cos(theta))**2)\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+  "request": {
+    "algorithm": "gplearn",
+    "algorithm_slug": "gplearn",
+    "allowed_functions": [
+      "cos",
+      "log",
+      "sin",
+      "sqrt"
+    ],
+    "dataset_id": "feynman_II_15_4",
+    "dataset_index": "g0024",
+    "deterministic_evidence": {
+      "allowed_functions": [
+        "cos",
+        "log",
+        "sin",
+        "sqrt"
+      ],
+      "allowed_variables": [
+        "mom",
+        "B",
+        "theta"
+      ],
+      "evidence_sha256": "6871505b1694a34a3a8ee55a78abedf709f712a3add77b5d4f0c7aa021385fe9",
+      "lhs_binding": {
+        "frozen_effective_expression": "-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))",
+        "frozen_evaluation_key": "8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616",
+        "frozen_logical_id": "pred_simplify::gplearn::g0024::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "c13dc4d2a2576fe81f3ea08b65a7bb837842cfb37955f479bcba655c29935665",
+        "lhs_artifact": {
+          "artifact_sha256": "b9ec8da38f7f51fbd844f85cf231df38c581a64bf41937ef721cd8fbe9788cb1",
+          "canonical_expression": "(-(((0.944814860959031*sqrt((((-theta)*log(mom**2))*cos(theta))/(sqrt((-theta)*sqrt(((theta*log(mom))*sin(sqrt(theta*cos(theta))*cos(theta)))*sin((((0.426916502374879*sqrt(B*mom))*sqrt((theta*sqrt(log(mom)))*cos(theta)))*cos(theta))/log(mom)))))))*((B*(0.452*mom) + 0.491022996469811) - I*pi) + log(mom)) + sin(0.672309452558864*sqrt(B*mom))))*sin(((0.426916502374879*sqrt(B*mom))*cos(theta))/(sqrt(log(mom))))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Float",
+                                    "value": "Float('0.944814860959031', precision=53)"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "NegativeOne",
+                                                        "value": "Integer(-1)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('theta')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('mom')"
+                                                          },
+                                                          {
+                                                            "type": "Integer",
+                                                            "value": "Integer(2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "log"
+                                                  }
+                                                ],
+                                                "type": "mul"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "type": "Symbol",
+                                                    "value": "Symbol('theta')"
+                                                  }
+                                                ],
+                                                "type": "cos"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "NegativeOne",
+                                                            "value": "Integer(-1)"
+                                                          },
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('theta')"
+                                                          }
+                                                        ],
+                                                        "type": "mul"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "type": "Symbol",
+                                                                        "value": "Symbol('theta')"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "type": "Symbol",
+                                                                            "value": "Symbol('mom')"
+                                                                          }
+                                                                        ],
+                                                                        "type": "log"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  },
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Symbol",
+                                                                                    "value": "Symbol('theta')"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "type": "Symbol",
+                                                                                        "value": "Symbol('theta')"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "cos"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "type": "Half",
+                                                                                "value": "Rational(1, 2)"
+                                                                              }
+                                                                            ],
+                                                                            "type": "pow"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      }
+                                                                    ],
+                                                                    "type": "sin"
+                                                                  }
+                                                                ],
+                                                                "type": "mul"
+                                                              },
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Float",
+                                                                                    "value": "Float('0.42691650237487899', precision=53)"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('mom')"
+                                                                                          },
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('B')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "type": "Half",
+                                                                                        "value": "Rational(1, 2)"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "pow"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          },
+                                                                                          {
+                                                                                            "args": [
+                                                                                              {
+                                                                                                "args": [
+                                                                                                  {
+                                                                                                    "type": "Symbol",
+                                                                                                    "value": "Symbol('mom')"
+                                                                                                  }
+                                                                                                ],
+                                                                                                "type": "log"
+                                                                                              },
+                                                                                              {
+                                                                                                "type": "Half",
+                                                                                                "value": "Rational(1, 2)"
+                                                                                              }
+                                                                                            ],
+                                                                                            "type": "pow"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "cos"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "mul"
+                                                                                  },
+                                                                                  {
+                                                                                    "type": "Half",
+                                                                                    "value": "Rational(1, 2)"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "pow"
+                                                                              }
+                                                                            ],
+                                                                            "type": "mul"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('mom')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "log"
+                                                                          },
+                                                                          {
+                                                                            "type": "NegativeOne",
+                                                                            "value": "Integer(-1)"
+                                                                          }
+                                                                        ],
+                                                                        "type": "pow"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  }
+                                                                ],
+                                                                "type": "sin"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Half",
+                                                            "value": "Rational(1, 2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "type": "Half",
+                                                    "value": "Rational(1, 2)"
+                                                  }
+                                                ],
+                                                "type": "pow"
+                                              },
+                                              {
+                                                "type": "NegativeOne",
+                                                "value": "Integer(-1)"
+                                              }
+                                            ],
+                                            "type": "pow"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Half",
+                                        "value": "Rational(1, 2)"
+                                      }
+                                    ],
+                                    "type": "pow"
+                                  }
+                                ],
+                                "type": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "Float",
+                                                "value": "Float('0.45200000000000001', precision=53)"
+                                              },
+                                              {
+                                                "type": "Symbol",
+                                                "value": "Symbol('mom')"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('B')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Float",
+                                        "value": "Float('0.49102299646981101', precision=53)"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "NegativeOne",
+                                        "value": "Integer(-1)"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "ImaginaryUnit",
+                                            "value": "I"
+                                          },
+                                          {
+                                            "type": "pi",
+                                            "value": "pi"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  }
+                                ],
+                                "type": "add"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('mom')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.67230945255886398', precision=53)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Half",
+                                    "value": "Rational(1, 2)"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "sin"
+                      }
+                    ],
+                    "type": "add"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.42691650237487899', precision=53)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Half",
+                                    "value": "Rational(1, 2)"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('mom')"
+                                  }
+                                ],
+                                "type": "log"
+                              },
+                              {
+                                "type": "Half",
+                                "value": "Rational(1, 2)"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "type": "NegativeOne",
+                            "value": "Integer(-1)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "sin"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Constant"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('theta')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('mom')"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "log"
+                                                  }
+                                                ],
+                                                "type": "mul"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "type": "Symbol",
+                                                    "value": "Symbol('theta')"
+                                                  }
+                                                ],
+                                                "type": "cos"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Constant"
+                                                          },
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('theta')"
+                                                          }
+                                                        ],
+                                                        "type": "mul"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "type": "Symbol",
+                                                                        "value": "Symbol('theta')"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "type": "Symbol",
+                                                                            "value": "Symbol('mom')"
+                                                                          }
+                                                                        ],
+                                                                        "type": "log"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  },
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Symbol",
+                                                                                    "value": "Symbol('theta')"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "type": "Symbol",
+                                                                                        "value": "Symbol('theta')"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "cos"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "type": "Constant"
+                                                                              }
+                                                                            ],
+                                                                            "type": "pow"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      }
+                                                                    ],
+                                                                    "type": "sin"
+                                                                  }
+                                                                ],
+                                                                "type": "mul"
+                                                              },
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Constant"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('mom')"
+                                                                                          },
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('B')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "type": "Constant"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "pow"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          },
+                                                                                          {
+                                                                                            "args": [
+                                                                                              {
+                                                                                                "args": [
+                                                                                                  {
+                                                                                                    "type": "Symbol",
+                                                                                                    "value": "Symbol('mom')"
+                                                                                                  }
+                                                                                                ],
+                                                                                                "type": "log"
+                                                                                              },
+                                                                                              {
+                                                                                                "type": "Constant"
+                                                                                              }
+                                                                                            ],
+                                                                                            "type": "pow"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "cos"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "mul"
+                                                                                  },
+                                                                                  {
+                                                                                    "type": "Constant"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "pow"
+                                                                              }
+                                                                            ],
+                                                                            "type": "mul"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('mom')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "log"
+                                                                          },
+                                                                          {
+                                                                            "type": "Constant"
+                                                                          }
+                                                                        ],
+                                                                        "type": "pow"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  }
+                                                                ],
+                                                                "type": "sin"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "type": "Constant"
+                                                  }
+                                                ],
+                                                "type": "pow"
+                                              },
+                                              {
+                                                "type": "Constant"
+                                              }
+                                            ],
+                                            "type": "pow"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Constant"
+                                      }
+                                    ],
+                                    "type": "pow"
+                                  }
+                                ],
+                                "type": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "Constant"
+                                              },
+                                              {
+                                                "type": "Symbol",
+                                                "value": "Symbol('mom')"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('B')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Constant"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Constant"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Constant"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  }
+                                ],
+                                "type": "add"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('mom')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Constant"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "sin"
+                      }
+                    ],
+                    "type": "add"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Constant"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('mom')"
+                                  }
+                                ],
+                                "type": "log"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "sin"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "d30200f4899d20714b497e9a0c663ed9b15fdd1e01ce8a08cf6e60fae75835e9",
+          "construction_mode": "unevaluated_large_ast",
+          "function_set": [
+            "cos",
+            "log",
+            "sin",
+            "sqrt"
+          ],
+          "node_count": 117,
+          "operator_set": [
+            "add",
+            "cos",
+            "log",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))",
+          "variables": [
+            "B",
+            "mom",
+            "theta"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.6666666666666666
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e",
+        "probe_seed": 520521,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "f727fffdd5727345a0d8f30ebbc0e433624972bcd2ba80ba0b4b80c5b8824e2b",
+          "canonical_expression": "mom*sqrt(B**2*cos(theta)**2)",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('mom')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('B')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Half",
+                    "value": "Rational(1, 2)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('mom')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('B')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "b1ea766be380c2ef7a8eaff688263062a4f5b901cf4eb578e0ae8bf4cfdb27cb",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "cos",
+            "sqrt"
+          ],
+          "node_count": 12,
+          "operator_set": [
+            "cos",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "mom*sqrt((B*cos(theta))**2)",
+          "variables": [
+            "B",
+            "mom",
+            "theta"
+          ]
+        },
+        "skipped_probe_count": 10,
+        "skipped_probe_reasons": {
+          "numeric_probe_timeout": 1,
+          "original_nonfinite": 9
+        },
+        "skipped_probes": [
+          {
+            "reason": "original_nonfinite",
+            "row_index": 516,
+            "split": "id_test",
+            "values": {
+              "B": "3.1847385885857684",
+              "mom": "1.3461446023979624",
+              "theta": "4.0535736357884549"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 790,
+            "split": "id_test",
+            "values": {
+              "B": "1.6880876035101182",
+              "mom": "4.6305931055854836",
+              "theta": "3.0122269369469099"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 1017,
+            "split": "id_test",
+            "values": {
+              "B": "2.4018499514338867",
+              "mom": "1.5457273954689117",
+              "theta": "4.2142322338834619"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 1740,
+            "split": "id_test",
+            "values": {
+              "B": "2.3675210410649816",
+              "mom": "1.1906957666585711",
+              "theta": "3.0868072235169053"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 3659,
+            "split": "id_test",
+            "values": {
+              "B": "2.4892822359087816",
+              "mom": "1.9501131819195847",
+              "theta": "1.2392415227590332"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 4409,
+            "split": "id_test",
+            "values": {
+              "B": "4.2105073395871804",
+              "mom": "3.8115641957343342",
+              "theta": "4.3445959059478234"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 4428,
+            "split": "id_test",
+            "values": {
+              "B": "1.260329789716764",
+              "mom": "2.3235911655214587",
+              "theta": "2.4893425701248351"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 5941,
+            "split": "id_test",
+            "values": {
+              "B": "1.3104711409946188",
+              "mom": "1.5039121433827929",
+              "theta": "4.6925573263331151"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 1314,
+            "split": "ood_test",
+            "values": {
+              "B": "5.1607348223839891",
+              "mom": "5.0343223542025148",
+              "theta": "0.86820950840839861"
+            }
+          },
+          {
+            "reason": "numeric_probe_timeout",
+            "row_index": 1364,
+            "split": "ood_test",
+            "values": {
+              "B": "0.8097391092036581",
+              "mom": "5.1900277430413064",
+              "theta": "0.92710679814034902"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。",
+            "数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 10,
+          "skipped_probe_reasons": {
+            "numeric_probe_timeout": 1,
+            "original_nonfinite": 9
+          },
+          "skipped_probes": [
+            {
+              "reason": "original_nonfinite",
+              "row_index": 516,
+              "split": "id_test",
+              "values": {
+                "B": "3.1847385885857684",
+                "mom": "1.3461446023979624",
+                "theta": "4.0535736357884549"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 790,
+              "split": "id_test",
+              "values": {
+                "B": "1.6880876035101182",
+                "mom": "4.6305931055854836",
+                "theta": "3.0122269369469099"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 1017,
+              "split": "id_test",
+              "values": {
+                "B": "2.4018499514338867",
+                "mom": "1.5457273954689117",
+                "theta": "4.2142322338834619"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 1740,
+              "split": "id_test",
+              "values": {
+                "B": "2.3675210410649816",
+                "mom": "1.1906957666585711",
+                "theta": "3.0868072235169053"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 3659,
+              "split": "id_test",
+              "values": {
+                "B": "2.4892822359087816",
+                "mom": "1.9501131819195847",
+                "theta": "1.2392415227590332"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 4409,
+              "split": "id_test",
+              "values": {
+                "B": "4.2105073395871804",
+                "mom": "3.8115641957343342",
+                "theta": "4.3445959059478234"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 4428,
+              "split": "id_test",
+              "values": {
+                "B": "1.260329789716764",
+                "mom": "2.3235911655214587",
+                "theta": "2.4893425701248351"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 5941,
+              "split": "id_test",
+              "values": {
+                "B": "1.3104711409946188",
+                "mom": "1.5039121433827929",
+                "theta": "4.6925573263331151"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 1314,
+              "split": "ood_test",
+              "values": {
+                "B": "5.1607348223839891",
+                "mom": "5.0343223542025148",
+                "theta": "0.86820950840839861"
+              }
+            },
+            {
+              "reason": "numeric_probe_timeout",
+              "row_index": 1364,
+              "split": "ood_test",
+              "values": {
+                "B": "0.8097391092036581",
+                "mom": "5.1900277430413064",
+                "theta": "0.92710679814034902"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.8294573643410853,
+          "tree_similarity": 0.1705426356589147
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520521,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "mom*sqrt((B*cos(theta))**2)",
+        "frozen_evaluation_key": "f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2",
+        "frozen_logical_id": "pred_simplify::gplearn::g0024::s521::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "deterministic_pair_evidence": {
+      "allowed_functions": [
+        "cos",
+        "log",
+        "sin",
+        "sqrt"
+      ],
+      "allowed_variables": [
+        "mom",
+        "B",
+        "theta"
+      ],
+      "evidence_sha256": "6871505b1694a34a3a8ee55a78abedf709f712a3add77b5d4f0c7aa021385fe9",
+      "lhs_binding": {
+        "frozen_effective_expression": "-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))",
+        "frozen_evaluation_key": "8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616",
+        "frozen_logical_id": "pred_simplify::gplearn::g0024::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "c13dc4d2a2576fe81f3ea08b65a7bb837842cfb37955f479bcba655c29935665",
+        "lhs_artifact": {
+          "artifact_sha256": "b9ec8da38f7f51fbd844f85cf231df38c581a64bf41937ef721cd8fbe9788cb1",
+          "canonical_expression": "(-(((0.944814860959031*sqrt((((-theta)*log(mom**2))*cos(theta))/(sqrt((-theta)*sqrt(((theta*log(mom))*sin(sqrt(theta*cos(theta))*cos(theta)))*sin((((0.426916502374879*sqrt(B*mom))*sqrt((theta*sqrt(log(mom)))*cos(theta)))*cos(theta))/log(mom)))))))*((B*(0.452*mom) + 0.491022996469811) - I*pi) + log(mom)) + sin(0.672309452558864*sqrt(B*mom))))*sin(((0.426916502374879*sqrt(B*mom))*cos(theta))/(sqrt(log(mom))))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Float",
+                                    "value": "Float('0.944814860959031', precision=53)"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "NegativeOne",
+                                                        "value": "Integer(-1)"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('theta')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('mom')"
+                                                          },
+                                                          {
+                                                            "type": "Integer",
+                                                            "value": "Integer(2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "log"
+                                                  }
+                                                ],
+                                                "type": "mul"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "type": "Symbol",
+                                                    "value": "Symbol('theta')"
+                                                  }
+                                                ],
+                                                "type": "cos"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "NegativeOne",
+                                                            "value": "Integer(-1)"
+                                                          },
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('theta')"
+                                                          }
+                                                        ],
+                                                        "type": "mul"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "type": "Symbol",
+                                                                        "value": "Symbol('theta')"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "type": "Symbol",
+                                                                            "value": "Symbol('mom')"
+                                                                          }
+                                                                        ],
+                                                                        "type": "log"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  },
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Symbol",
+                                                                                    "value": "Symbol('theta')"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "type": "Symbol",
+                                                                                        "value": "Symbol('theta')"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "cos"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "type": "Half",
+                                                                                "value": "Rational(1, 2)"
+                                                                              }
+                                                                            ],
+                                                                            "type": "pow"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      }
+                                                                    ],
+                                                                    "type": "sin"
+                                                                  }
+                                                                ],
+                                                                "type": "mul"
+                                                              },
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Float",
+                                                                                    "value": "Float('0.42691650237487899', precision=53)"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('mom')"
+                                                                                          },
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('B')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "type": "Half",
+                                                                                        "value": "Rational(1, 2)"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "pow"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          },
+                                                                                          {
+                                                                                            "args": [
+                                                                                              {
+                                                                                                "args": [
+                                                                                                  {
+                                                                                                    "type": "Symbol",
+                                                                                                    "value": "Symbol('mom')"
+                                                                                                  }
+                                                                                                ],
+                                                                                                "type": "log"
+                                                                                              },
+                                                                                              {
+                                                                                                "type": "Half",
+                                                                                                "value": "Rational(1, 2)"
+                                                                                              }
+                                                                                            ],
+                                                                                            "type": "pow"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "cos"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "mul"
+                                                                                  },
+                                                                                  {
+                                                                                    "type": "Half",
+                                                                                    "value": "Rational(1, 2)"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "pow"
+                                                                              }
+                                                                            ],
+                                                                            "type": "mul"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('mom')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "log"
+                                                                          },
+                                                                          {
+                                                                            "type": "NegativeOne",
+                                                                            "value": "Integer(-1)"
+                                                                          }
+                                                                        ],
+                                                                        "type": "pow"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  }
+                                                                ],
+                                                                "type": "sin"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Half",
+                                                            "value": "Rational(1, 2)"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "type": "Half",
+                                                    "value": "Rational(1, 2)"
+                                                  }
+                                                ],
+                                                "type": "pow"
+                                              },
+                                              {
+                                                "type": "NegativeOne",
+                                                "value": "Integer(-1)"
+                                              }
+                                            ],
+                                            "type": "pow"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Half",
+                                        "value": "Rational(1, 2)"
+                                      }
+                                    ],
+                                    "type": "pow"
+                                  }
+                                ],
+                                "type": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "Float",
+                                                "value": "Float('0.45200000000000001', precision=53)"
+                                              },
+                                              {
+                                                "type": "Symbol",
+                                                "value": "Symbol('mom')"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('B')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Float",
+                                        "value": "Float('0.49102299646981101', precision=53)"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "NegativeOne",
+                                        "value": "Integer(-1)"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "ImaginaryUnit",
+                                            "value": "I"
+                                          },
+                                          {
+                                            "type": "pi",
+                                            "value": "pi"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  }
+                                ],
+                                "type": "add"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('mom')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.67230945255886398', precision=53)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Half",
+                                    "value": "Rational(1, 2)"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "sin"
+                      }
+                    ],
+                    "type": "add"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.42691650237487899', precision=53)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Half",
+                                    "value": "Rational(1, 2)"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('mom')"
+                                  }
+                                ],
+                                "type": "log"
+                              },
+                              {
+                                "type": "Half",
+                                "value": "Rational(1, 2)"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "type": "NegativeOne",
+                            "value": "Integer(-1)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "sin"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Constant"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "type": "Constant"
+                                                      },
+                                                      {
+                                                        "type": "Symbol",
+                                                        "value": "Symbol('theta')"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('mom')"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "log"
+                                                  }
+                                                ],
+                                                "type": "mul"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "type": "Symbol",
+                                                    "value": "Symbol('theta')"
+                                                  }
+                                                ],
+                                                "type": "cos"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "type": "Constant"
+                                                          },
+                                                          {
+                                                            "type": "Symbol",
+                                                            "value": "Symbol('theta')"
+                                                          }
+                                                        ],
+                                                        "type": "mul"
+                                                      },
+                                                      {
+                                                        "args": [
+                                                          {
+                                                            "args": [
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "type": "Symbol",
+                                                                        "value": "Symbol('theta')"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "type": "Symbol",
+                                                                            "value": "Symbol('mom')"
+                                                                          }
+                                                                        ],
+                                                                        "type": "log"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  },
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Symbol",
+                                                                                    "value": "Symbol('theta')"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "type": "Symbol",
+                                                                                        "value": "Symbol('theta')"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "cos"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "type": "Constant"
+                                                                              }
+                                                                            ],
+                                                                            "type": "pow"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      }
+                                                                    ],
+                                                                    "type": "sin"
+                                                                  }
+                                                                ],
+                                                                "type": "mul"
+                                                              },
+                                                              {
+                                                                "args": [
+                                                                  {
+                                                                    "args": [
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "type": "Constant"
+                                                                                  },
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('mom')"
+                                                                                          },
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('B')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "type": "Constant"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "pow"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "mul"
+                                                                              },
+                                                                              {
+                                                                                "args": [
+                                                                                  {
+                                                                                    "args": [
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          },
+                                                                                          {
+                                                                                            "args": [
+                                                                                              {
+                                                                                                "args": [
+                                                                                                  {
+                                                                                                    "type": "Symbol",
+                                                                                                    "value": "Symbol('mom')"
+                                                                                                  }
+                                                                                                ],
+                                                                                                "type": "log"
+                                                                                              },
+                                                                                              {
+                                                                                                "type": "Constant"
+                                                                                              }
+                                                                                            ],
+                                                                                            "type": "pow"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "mul"
+                                                                                      },
+                                                                                      {
+                                                                                        "args": [
+                                                                                          {
+                                                                                            "type": "Symbol",
+                                                                                            "value": "Symbol('theta')"
+                                                                                          }
+                                                                                        ],
+                                                                                        "type": "cos"
+                                                                                      }
+                                                                                    ],
+                                                                                    "type": "mul"
+                                                                                  },
+                                                                                  {
+                                                                                    "type": "Constant"
+                                                                                  }
+                                                                                ],
+                                                                                "type": "pow"
+                                                                              }
+                                                                            ],
+                                                                            "type": "mul"
+                                                                          },
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('theta')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "cos"
+                                                                          }
+                                                                        ],
+                                                                        "type": "mul"
+                                                                      },
+                                                                      {
+                                                                        "args": [
+                                                                          {
+                                                                            "args": [
+                                                                              {
+                                                                                "type": "Symbol",
+                                                                                "value": "Symbol('mom')"
+                                                                              }
+                                                                            ],
+                                                                            "type": "log"
+                                                                          },
+                                                                          {
+                                                                            "type": "Constant"
+                                                                          }
+                                                                        ],
+                                                                        "type": "pow"
+                                                                      }
+                                                                    ],
+                                                                    "type": "mul"
+                                                                  }
+                                                                ],
+                                                                "type": "sin"
+                                                              }
+                                                            ],
+                                                            "type": "mul"
+                                                          },
+                                                          {
+                                                            "type": "Constant"
+                                                          }
+                                                        ],
+                                                        "type": "pow"
+                                                      }
+                                                    ],
+                                                    "type": "mul"
+                                                  },
+                                                  {
+                                                    "type": "Constant"
+                                                  }
+                                                ],
+                                                "type": "pow"
+                                              },
+                                              {
+                                                "type": "Constant"
+                                              }
+                                            ],
+                                            "type": "pow"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Constant"
+                                      }
+                                    ],
+                                    "type": "pow"
+                                  }
+                                ],
+                                "type": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "type": "Constant"
+                                              },
+                                              {
+                                                "type": "Symbol",
+                                                "value": "Symbol('mom')"
+                                              }
+                                            ],
+                                            "type": "mul"
+                                          },
+                                          {
+                                            "type": "Symbol",
+                                            "value": "Symbol('B')"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      },
+                                      {
+                                        "type": "Constant"
+                                      }
+                                    ],
+                                    "type": "add"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Constant"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "type": "Constant"
+                                          },
+                                          {
+                                            "type": "Constant"
+                                          }
+                                        ],
+                                        "type": "mul"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  }
+                                ],
+                                "type": "add"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('mom')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Constant"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "sin"
+                      }
+                    ],
+                    "type": "add"
+                  }
+                ],
+                "type": "mul"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('mom')"
+                                      },
+                                      {
+                                        "type": "Symbol",
+                                        "value": "Symbol('B')"
+                                      }
+                                    ],
+                                    "type": "mul"
+                                  },
+                                  {
+                                    "type": "Constant"
+                                  }
+                                ],
+                                "type": "pow"
+                              }
+                            ],
+                            "type": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('mom')"
+                                  }
+                                ],
+                                "type": "log"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  }
+                ],
+                "type": "sin"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "d30200f4899d20714b497e9a0c663ed9b15fdd1e01ce8a08cf6e60fae75835e9",
+          "construction_mode": "unevaluated_large_ast",
+          "function_set": [
+            "cos",
+            "log",
+            "sin",
+            "sqrt"
+          ],
+          "node_count": 117,
+          "operator_set": [
+            "add",
+            "cos",
+            "log",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))",
+          "variables": [
+            "B",
+            "mom",
+            "theta"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.6666666666666666
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e",
+        "probe_seed": 520521,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "f727fffdd5727345a0d8f30ebbc0e433624972bcd2ba80ba0b4b80c5b8824e2b",
+          "canonical_expression": "mom*sqrt(B**2*cos(theta)**2)",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('mom')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('B')"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "type": "Integer",
+                            "value": "Integer(2)"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Half",
+                    "value": "Rational(1, 2)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('mom')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('B')"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('theta')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "type": "Constant"
+                          }
+                        ],
+                        "type": "pow"
+                      }
+                    ],
+                    "type": "mul"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "b1ea766be380c2ef7a8eaff688263062a4f5b901cf4eb578e0ae8bf4cfdb27cb",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "cos",
+            "sqrt"
+          ],
+          "node_count": 12,
+          "operator_set": [
+            "cos",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "mom*sqrt((B*cos(theta))**2)",
+          "variables": [
+            "B",
+            "mom",
+            "theta"
+          ]
+        },
+        "skipped_probe_count": 10,
+        "skipped_probe_reasons": {
+          "numeric_probe_timeout": 1,
+          "original_nonfinite": 9
+        },
+        "skipped_probes": [
+          {
+            "reason": "original_nonfinite",
+            "row_index": 516,
+            "split": "id_test",
+            "values": {
+              "B": "3.1847385885857684",
+              "mom": "1.3461446023979624",
+              "theta": "4.0535736357884549"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 790,
+            "split": "id_test",
+            "values": {
+              "B": "1.6880876035101182",
+              "mom": "4.6305931055854836",
+              "theta": "3.0122269369469099"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 1017,
+            "split": "id_test",
+            "values": {
+              "B": "2.4018499514338867",
+              "mom": "1.5457273954689117",
+              "theta": "4.2142322338834619"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 1740,
+            "split": "id_test",
+            "values": {
+              "B": "2.3675210410649816",
+              "mom": "1.1906957666585711",
+              "theta": "3.0868072235169053"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 3659,
+            "split": "id_test",
+            "values": {
+              "B": "2.4892822359087816",
+              "mom": "1.9501131819195847",
+              "theta": "1.2392415227590332"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 4409,
+            "split": "id_test",
+            "values": {
+              "B": "4.2105073395871804",
+              "mom": "3.8115641957343342",
+              "theta": "4.3445959059478234"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 4428,
+            "split": "id_test",
+            "values": {
+              "B": "1.260329789716764",
+              "mom": "2.3235911655214587",
+              "theta": "2.4893425701248351"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 5941,
+            "split": "id_test",
+            "values": {
+              "B": "1.3104711409946188",
+              "mom": "1.5039121433827929",
+              "theta": "4.6925573263331151"
+            }
+          },
+          {
+            "reason": "original_nonfinite",
+            "row_index": 1314,
+            "split": "ood_test",
+            "values": {
+              "B": "5.1607348223839891",
+              "mom": "5.0343223542025148",
+              "theta": "0.86820950840839861"
+            }
+          },
+          {
+            "reason": "numeric_probe_timeout",
+            "row_index": 1364,
+            "split": "ood_test",
+            "values": {
+              "B": "0.8097391092036581",
+              "mom": "5.1900277430413064",
+              "theta": "0.92710679814034902"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "表达式复杂度超过符号证明阈值 64，跳过高风险 simplify。",
+            "数值探针超时（单表达式上限 0.25 秒、整对上限 0.25 秒），停止当前表达式对的剩余探针并交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "18b3e7b93521d7f77ebc91131e08ece07de793a63a0c03e8cf0a22db88f5943f",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "7d1e65534e298c4f059abcfb9dca51ebf20ab010f8fc3a5a0e2cff83828c9f9e",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 10,
+          "skipped_probe_reasons": {
+            "numeric_probe_timeout": 1,
+            "original_nonfinite": 9
+          },
+          "skipped_probes": [
+            {
+              "reason": "original_nonfinite",
+              "row_index": 516,
+              "split": "id_test",
+              "values": {
+                "B": "3.1847385885857684",
+                "mom": "1.3461446023979624",
+                "theta": "4.0535736357884549"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 790,
+              "split": "id_test",
+              "values": {
+                "B": "1.6880876035101182",
+                "mom": "4.6305931055854836",
+                "theta": "3.0122269369469099"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 1017,
+              "split": "id_test",
+              "values": {
+                "B": "2.4018499514338867",
+                "mom": "1.5457273954689117",
+                "theta": "4.2142322338834619"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 1740,
+              "split": "id_test",
+              "values": {
+                "B": "2.3675210410649816",
+                "mom": "1.1906957666585711",
+                "theta": "3.0868072235169053"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 3659,
+              "split": "id_test",
+              "values": {
+                "B": "2.4892822359087816",
+                "mom": "1.9501131819195847",
+                "theta": "1.2392415227590332"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 4409,
+              "split": "id_test",
+              "values": {
+                "B": "4.2105073395871804",
+                "mom": "3.8115641957343342",
+                "theta": "4.3445959059478234"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 4428,
+              "split": "id_test",
+              "values": {
+                "B": "1.260329789716764",
+                "mom": "2.3235911655214587",
+                "theta": "2.4893425701248351"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 5941,
+              "split": "id_test",
+              "values": {
+                "B": "1.3104711409946188",
+                "mom": "1.5039121433827929",
+                "theta": "4.6925573263331151"
+              }
+            },
+            {
+              "reason": "original_nonfinite",
+              "row_index": 1314,
+              "split": "ood_test",
+              "values": {
+                "B": "5.1607348223839891",
+                "mom": "5.0343223542025148",
+                "theta": "0.86820950840839861"
+              }
+            },
+            {
+              "reason": "numeric_probe_timeout",
+              "row_index": 1364,
+              "split": "ood_test",
+              "values": {
+                "B": "0.8097391092036581",
+                "mom": "5.1900277430413064",
+                "theta": "0.92710679814034902"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.8294573643410853,
+          "tree_similarity": 0.1705426356589147
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520521,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "mom*sqrt((B*cos(theta))**2)",
+        "frozen_evaluation_key": "f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2",
+        "frozen_logical_id": "pred_simplify::gplearn::g0024::s521::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "effective_prediction_a_expression": "-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))",
+    "effective_prediction_b_expression": "mom*sqrt((B*cos(theta))**2)",
+    "effort": "xhigh",
+    "evidence_hash": "6871505b1694a34a3a8ee55a78abedf709f712a3add77b5d4f0c7aa021385fe9",
+    "model": "claude-opus-5",
+    "noise_tag": "clean",
+    "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+    "prediction_a_expression_resolution": "llm_simplified_expression",
+    "prediction_a_frozen_evaluation_key": "8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616",
+    "prediction_a_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_a_logical_id": "pred_simplify::gplearn::g0024::s520::clean",
+    "prediction_a_plan_evaluation_key": "8e435eb38f25dea659f366db6eeecdbb6accee2ddecbb149b5f1b3ca31ede616",
+    "prediction_a_result_sha256": "b6b471128529e7f93ed2980384087755e743169790788191be786e47b3479547",
+    "prediction_a_simplify_status": "simplified",
+    "prediction_a_task_id": "gplearn_s520_clean_g0024",
+    "prediction_a_valid_output": true,
+    "prediction_b_expression_resolution": "llm_simplified_expression",
+    "prediction_b_frozen_evaluation_key": "f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2",
+    "prediction_b_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_b_logical_id": "pred_simplify::gplearn::g0024::s521::clean",
+    "prediction_b_plan_evaluation_key": "f95869174b6a0f9812c6423c03c4d7ded65f558113e006ebab07646c1a0b6cf2",
+    "prediction_b_result_sha256": "ee5cbb03ff4247a1c4bb0ad145e7bbaf9976c4d1f2f25a98c0ef7c30e4eecac5",
+    "prediction_b_simplify_status": "simplified",
+    "prediction_b_task_id": "gplearn_s521_clean_g0024",
+    "prediction_b_valid_output": true,
+    "seed_a": 520,
+    "seed_b": 521,
+    "simplified_prediction_a_expression": "-(0.944814860959031*sqrt(-theta*log(mom**2)*cos(theta)/sqrt(-theta*sqrt(theta*log(mom)*sin(sqrt(theta*cos(theta))*cos(theta))*sin(0.426916502374879*sqrt(mom*B)*sqrt(theta*sqrt(log(mom))*cos(theta))*cos(theta)/log(mom)))))*(0.452*mom*B + 0.491022996469811 - I*pi) + log(mom) + sin(0.672309452558864*sqrt(mom*B)))*sin(0.426916502374879*sqrt(mom*B)*cos(theta)/sqrt(log(mom)))",
+    "simplified_prediction_b_expression": "mom*sqrt((B*cos(theta))**2)",
+    "stream": false
+  },
+  "validation": {
+    "error_class": null,
+    "error_message": null,
+    "ok": true,
+    "structured_output": {
+      "brief_reason": "LHS carries an undeclared symbolic entity (imaginary unit I in the -I*pi term), so it has no valid value in the declared real-valued domain over {mom, B, theta} with {cos, log, sin, sqrt}; canonical structure cannot be legitimately abstracted or compared under the declared number system. Deterministic evidence also yields no usable support: zero successful probes (9 nonfinite, 1 timeout), proof_basis none, symbolic simplify skipped above the complexity threshold, and no counterexample. Structural indicators (117 vs 12 nodes, differing fingerprints, tree similarity 0.17) suggest divergence but rest on an expression that is invalid in the declared domain, so the undetermined rule governs.",
+      "confidence": 0.74,
+      "decision": "undetermined"
+    }
+  }
+}

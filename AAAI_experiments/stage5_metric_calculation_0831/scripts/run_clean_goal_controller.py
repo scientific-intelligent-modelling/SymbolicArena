@@ -92,6 +92,10 @@ STRUCT_RECOVERED_REPORT = REPORTS_DIR / "clean_structure_recovered_attempts.json
 EVIDENCE_JSONL = RESULTS_DIR / "clean_pred_vs_gt_evidence.jsonl"
 EVIDENCE_REPORT = REPORTS_DIR / "clean_pred_vs_gt_evidence_report.json"
 AGGREGATE_REPORT = REPORTS_DIR / "aggregate_clean_metrics.json"
+AUDIT_CORRECTIONS_MANIFEST = (
+    STAGE_ROOT
+    / "audits/formula_quality_1000_0903_v2/corrections_v2/manifest/corrections_manifest.json"
+)
 
 RUN_API_MODULE = "AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_anthropic_api_plan"
 MATERIALIZE_RECOVERED_MODULE = (
@@ -699,6 +703,8 @@ def _aggregate_clean() -> None:
             _rel(STRUCT_INDEX),
             "--evidence-jsonl",
             _rel(EVIDENCE_JSONL),
+            "--audit-corrections-manifest-json",
+            _rel(AUDIT_CORRECTIONS_MANIFEST),
             "--clean-run-csv",
             _rel(RESULTS_DIR / "clean_run_metrics.csv"),
             "--task-stability-csv",
@@ -716,7 +722,14 @@ def main() -> int:
     log("controller_started")
     if AGGREGATE_REPORT.exists():
         report = _read_json(AGGREGATE_REPORT)
-        if report.get("status") == "ok":
+        correction_input = (report.get("inputs") or {}).get("audit_corrections_manifest_json") or {}
+        if (
+            report.get("status") == "ok"
+            and report.get("formal_clean_ready") is True
+            and AUDIT_CORRECTIONS_MANIFEST.is_file()
+            and correction_input.get("path") == str(AUDIT_CORRECTIONS_MANIFEST.resolve())
+            and correction_input.get("sha256") == _sha256_file(AUDIT_CORRECTIONS_MANIFEST)
+        ):
             log("clean_already_completed", report_json=str(AGGREGATE_REPORT))
             return 0
 

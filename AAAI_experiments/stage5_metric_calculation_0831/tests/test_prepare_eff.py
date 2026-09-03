@@ -457,6 +457,7 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
     assert report["summary"]["future_backfill_ignored_points"] == 2
     assert report["summary"]["checkpoint_normalization_points"] == 1
     assert report["summary"]["missing_points_after_repairs"] == 0
+    assert report["summary"]["formal_eff_ready"] is True
 
     by_key = {row["logical_key"]: row for row in rows}
     repaired = by_key["fepysr::Nguyen-12::s520::clean"]
@@ -487,6 +488,28 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
     plain = by_key["dso::plain::s521::clean"]
     assert plain["audited_repair_points"] == 0
     assert all(0.0 <= value <= 1.0 for value in plain["quality_trajectory"])
+
+
+def test_limited_eff_preparation_is_not_formal_ready(tmp_path: Path) -> None:
+    fixture = _build_fixture(tmp_path)
+    rows, report = build_eff_preparation(
+        freeze_binding_report=fixture["binding_report"],
+        repair_manifest=fixture["repair_manifest"],
+        repo_root=tmp_path,
+        expected_hosts=1,
+        expected_tasks=3,
+        expected_points=540,
+        expected_existing_points=525,
+        expected_missing_points=15,
+        expected_audited_repair_points=15,
+        expected_future_backfill_ignored_points=2,
+        expected_checkpoint_normalization_points=1,
+        limit_runs=1,
+    )
+
+    assert len(rows) == 1
+    assert report["summary"]["full_contract_checked"] is False
+    assert report["summary"]["formal_eff_ready"] is False
 
 
 def test_cli_writes_jsonl_csv_and_report(tmp_path: Path) -> None:
@@ -611,3 +634,4 @@ def test_real_repo_cli_full_run(tmp_path: Path) -> None:
     assert payload["summary"]["success_count"] == 2250
     assert payload["summary"]["audited_repair_points"] == 15
     assert payload["summary"]["future_backfill_ignored_points"] == 34
+    assert payload["summary"]["formal_eff_ready"] is True

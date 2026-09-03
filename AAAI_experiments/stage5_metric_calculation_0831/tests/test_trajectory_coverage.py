@@ -182,11 +182,57 @@ def test_real_clean_inventory_summary_matches_expected_counts_and_missing_points
     assert summary["final_result_audit"]["id_nmse_mismatches"] == []
     assert summary["final_result_audit"]["ood_nmse_mismatches"] == []
     assert summary["readiness"]["identity_contract_ok"] is True
+    assert summary["readiness"]["raw_missing_points"] == 15
+    assert summary["readiness"]["repaired_missing_points"] == 0
+    assert summary["readiness"]["unresolved_missing_points"] == 15
+    assert summary["readiness"]["repair_manifest_valid"] is False
     assert summary["readiness"]["formal_eff_ready"] is False
     assert summary["readiness"]["blocking_missing_points"] == 15
     validate_trajectory_coverage_summary(summary)
     with pytest.raises(TrajectoryCoverageContractError, match="future backfill"):
         validate_trajectory_coverage_summary(summary, reject_future_backfill=True)
+
+
+def test_real_clean_inventory_repair_manifest_closes_raw_missing_points() -> None:
+    inventory_dir = STAGE5_ROOT / "source_snapshot/trajectory_inventory"
+    summary = build_trajectory_coverage_summary(
+        source_runs_csv=STAGE5_ROOT / "manifests/source_runs.csv",
+        inventory_paths=inventory_dir.glob("clean_inventory_*.jsonl.gz"),
+        report_paths=inventory_dir.glob("clean_inventory_*.report.json"),
+        noise_tag="clean",
+        horizon=180,
+        repair_manifest_path=STAGE5_ROOT / "manifests/trajectory_repairs.v1.json",
+        repo_root=REPO_ROOT,
+    )
+
+    # raw inventory 保持原始证据；修复仅关闭有效 EFF 门禁，不静默改写来源计数。
+    assert summary["inventory"]["missing_points"] == 15
+    assert summary["readiness"]["raw_missing_points"] == 15
+    assert summary["readiness"]["repaired_missing_points"] == 15
+    assert summary["readiness"]["unresolved_missing_points"] == 0
+    assert summary["readiness"]["repair_manifest_valid"] is True
+    assert summary["readiness"]["formal_eff_ready"] is True
+    validate_trajectory_coverage_summary(summary, require_formal_eff_ready=True)
+
+
+def test_repair_manifest_must_exactly_close_raw_missing_points(tmp_path: Path) -> None:
+    manifest_path = STAGE5_ROOT / "manifests/trajectory_repairs.v1.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["repairs"][0]["missing_minutes"][-1] = 180
+    tampered_path = tmp_path / "trajectory_repairs.v1.json"
+    tampered_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    inventory_dir = STAGE5_ROOT / "source_snapshot/trajectory_inventory"
+    with pytest.raises(TrajectoryCoverageContractError, match="exact closure"):
+        build_trajectory_coverage_summary(
+            source_runs_csv=STAGE5_ROOT / "manifests/source_runs.csv",
+            inventory_paths=inventory_dir.glob("clean_inventory_*.jsonl.gz"),
+            report_paths=inventory_dir.glob("clean_inventory_*.report.json"),
+            noise_tag="clean",
+            horizon=180,
+            repair_manifest_path=tampered_path,
+            repo_root=REPO_ROOT,
+        )
 
 
 def test_cli_writes_summary_and_records_ignored_future_backfill(tmp_path: Path) -> None:
@@ -243,6 +289,10 @@ def test_cli_writes_summary_and_records_ignored_future_backfill(tmp_path: Path) 
     assert payload["inventory"]["available_points"] == 2
     assert len(payload["inventory"]["future_backfill_points"]) == 1
     assert payload["inventory"]["point_classification_counts"]["future_backfill_ignored"] == 1
+    assert payload["readiness"]["raw_missing_points"] == 0
+    assert payload["readiness"]["repaired_missing_points"] == 0
+    assert payload["readiness"]["unresolved_missing_points"] == 0
+    assert payload["readiness"]["repair_manifest_valid"] is True
     assert payload["readiness"]["formal_eff_ready"] is True
 
 

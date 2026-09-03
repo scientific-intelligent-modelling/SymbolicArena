@@ -582,6 +582,121 @@ def _aggregate_kwargs(paths: dict[str, Path], tmp_path: Path) -> dict[str, objec
     }
 
 
+def test_eff_readiness_gate_rejects_unclosed_or_unbound_repairs() -> None:
+    rows = {
+        "AlgoA::demo_ds::s520::clean": {
+            "audited_repair_points": "14",
+            "future_backfill_ignored_points": "2",
+            "checkpoint_normalization_points": "1",
+        }
+    }
+    summary = {
+        "formal_eff_ready": False,
+        "original_missing_points": 15,
+        "missing_points_after_repairs": 1,
+        "audited_repair_points": 14,
+        "future_backfill_ignored_points": 2,
+        "checkpoint_normalization_points": 1,
+    }
+
+    with pytest.raises(AggregateCleanMetricsError, match="formal_eff_ready"):
+        aggregate_module._validate_eff_readiness_summary(summary, eff_rows=rows)
+
+    summary["formal_eff_ready"] = True
+    summary["missing_points_after_repairs"] = 0
+    summary["audited_repair_points"] = 15
+    with pytest.raises(AggregateCleanMetricsError, match="audited_repair_points"):
+        aggregate_module._validate_eff_readiness_summary(summary, eff_rows=rows)
+
+
+def test_eff_readiness_gate_accepts_exact_repair_closure() -> None:
+    rows = {
+        "AlgoA::demo_ds::s520::clean": {
+            "audited_repair_points": "15",
+            "future_backfill_ignored_points": "2",
+            "checkpoint_normalization_points": "1",
+        },
+        "AlgoA::demo_ds::s521::clean": {
+            "audited_repair_points": "0",
+            "future_backfill_ignored_points": "0",
+            "checkpoint_normalization_points": "0",
+        },
+    }
+    summary = {
+        "formal_eff_ready": True,
+        "original_missing_points": 15,
+        "missing_points_after_repairs": 0,
+        "audited_repair_points": 15,
+        "future_backfill_ignored_points": 2,
+        "checkpoint_normalization_points": 1,
+    }
+
+    assert aggregate_module._validate_eff_readiness_summary(summary, eff_rows=rows) == {
+        "formal_eff_ready": True,
+        "raw_missing_points": 15,
+        "repaired_missing_points": 15,
+        "unresolved_missing_points": 0,
+        "future_backfill_ignored_points": 2,
+        "checkpoint_normalization_points": 1,
+    }
+
+
+def test_formal_contract_requires_formula_audit_corrections_manifest() -> None:
+    with pytest.raises(AggregateCleanMetricsError, match="audit corrections manifest"):
+        aggregate_module._validate_audit_corrections_requirement(
+            None,
+            expected_runs=2250,
+            expected_algorithms=15,
+            expected_datasets=50,
+        )
+
+    assert (
+        aggregate_module._validate_audit_corrections_requirement(
+            None,
+            expected_runs=3,
+            expected_algorithms=1,
+            expected_datasets=1,
+        )
+        is None
+    )
+
+
+def test_effective_view_accepts_hash_bound_audit_metadata() -> None:
+    logical_id = "pred_simplify::algoa::g0001::s520::clean"
+    base = {
+        "logical_id": logical_id,
+        "effective_expression": "x0 + 0",
+        "expression_resolution": "llm_simplified_expression",
+    }
+    overlay_revision = _fake_sha("overlay")
+    view = {
+        **base,
+        "effective_expression": "x0",
+        "expression_resolution": "original_identity_fallback_after_audit",
+        "base_file_sha256": _fake_sha("base-file"),
+        "base_row_sha256": _fake_sha(
+            json.dumps(base, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        ),
+        "overlay_action": "replace_expression",
+        "overlay_revision_sha256": overlay_revision,
+        "source_audit_logical_id": "formula_audit::prediction::algoa::g0001::s520::clean",
+        "source_final_record_sha256": _fake_sha("audit-row"),
+        "suggested_simplified_expression": "x0",
+    }
+    view["output_row_sha256"] = _fake_sha(
+        json.dumps(view, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    )
+
+    assert aggregate_module._validate_effective_views(
+        rows=[view],
+        base_rows={logical_id: base},
+        plan_rows={logical_id: {"request": {"original_expression": "x0"}}},
+        base_file_sha256=_fake_sha("base-file"),
+        overlay_revision_sha256=overlay_revision,
+        context="test.pred_effective",
+    ) == {logical_id: "x0"}
+
+
 def test_aggregate_clean_metrics_builds_run_task_and_algorithm_outputs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -678,6 +793,13 @@ def test_aggregate_clean_metrics_builds_run_task_and_algorithm_outputs(
     report_payload = json.loads(report_json.read_text(encoding="utf-8"))
     assert report_payload["summary_sha256"] == payload["summary_sha256"]
     assert report_payload["outputs"]["clean_run_metrics_csv"]["sha256"]
+    for key in (
+        "gt_frozen_index",
+        "pred_frozen_index",
+        "equivalence_frozen_index",
+        "structure_frozen_index",
+    ):
+        assert "plan_requests_by_logical_id" not in report_payload["inputs"][key]
 
 
 def test_aggregate_clean_metrics_accepts_gt_v2_logical_id(
@@ -1006,6 +1128,48 @@ def test_aggregate_clean_metrics_hard_fails_when_valid_run_lacks_deterministic_e
 
     with pytest.raises(AggregateCleanMetricsError, match="evidence_jsonl.*不闭合"):
         aggregate_clean_metrics(**_aggregate_kwargs(paths, tmp_path))
+
+
+def test_aggregate_accepts_recanonicalized_artifact_when_expression_and_metrics_match(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    evidence_rows = [
+        json.loads(line)
+        for line in paths["evidence_jsonl"].read_text(encoding="utf-8").splitlines()
+    ]
+    evidence_rows[0]["prediction"]["artifact_sha256"] = _fake_sha("older-sympy-artifact")
+    _write_jsonl(paths["evidence_jsonl"], evidence_rows)
+    _patch_fixture_contract(monkeypatch, paths, tmp_path)
+
+    report = aggregate_clean_metrics(**_aggregate_kwargs(paths, tmp_path))
+
+    assert report["summary"]["artifact_recanonicalization_count"] == 1
+
+
+def test_aggregate_recomputes_metric_when_bound_artifact_was_recanonicalized(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _build_fixture(tmp_path)
+    evidence_rows = [
+        json.loads(line)
+        for line in paths["evidence_jsonl"].read_text(encoding="utf-8").splitlines()
+    ]
+    evidence_rows[0]["prediction"]["artifact_sha256"] = _fake_sha("older-sympy-artifact")
+    evidence_rows[0]["tree"]["tree_similarity"] = 0.25
+    _write_jsonl(paths["evidence_jsonl"], evidence_rows)
+    _patch_fixture_contract(monkeypatch, paths, tmp_path)
+
+    report = aggregate_clean_metrics(**_aggregate_kwargs(paths, tmp_path))
+
+    assert report["summary"]["artifact_recanonicalization_count"] == 1
+    assert report["summary"]["metric_recanonicalization_count"] == 1
+    assert report["diagnostics"]["symbolic_recanonicalization"]["artifact_bindings"][0][
+        "logical_id"
+    ] == "pred_simplify::algoa::g0001::s520::clean"
+    assert report["diagnostics"]["runtime"]["sympy_version"]
 
 
 def test_cli_writes_atomic_outputs_and_summary(

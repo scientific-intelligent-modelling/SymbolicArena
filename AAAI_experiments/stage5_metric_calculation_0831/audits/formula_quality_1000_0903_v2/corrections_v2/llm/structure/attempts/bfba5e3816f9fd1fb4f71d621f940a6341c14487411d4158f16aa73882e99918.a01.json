@@ -1,0 +1,1787 @@
+{
+  "api_request": {
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "content": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"udsr\",\"algorithm_slug\":\"udsr\",\"allowed_functions\":[],\"dataset_id\":\"feynman_I_27_6\",\"dataset_index\":\"g0026\",\"deterministic_evidence\":{\"allowed_functions\":[],\"allowed_variables\":[\"d1\",\"d2\",\"n\"],\"evidence_sha256\":\"229da799bc3fe8a4c681839f1381945998b197a9b9201bed7f2d1648a7f14491\",\"lhs_binding\":{\"frozen_effective_expression\":\"d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)\",\"frozen_evaluation_key\":\"70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07\",\"frozen_logical_id\":\"pred_simplify::udsr::g0026::s521::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"equivalent\",\"evidence_sha256\":\"62056c627687eddc26672f2341179e666a117d3b1826025594323e3b75dfd607\",\"lhs_artifact\":{\"artifact_sha256\":\"659977966ad79a4472584d2c52a2dcf70e123fb61010ea7ebb3f78d3a3368805\",\"constants_abstracted_tree_fingerprint\":\"623106f5f46ca6b92dadda6cc838e588329be5419e39f320acf5cf1733d9c905\",\"construction_mode\":\"evaluated\",\"function_set\":[],\"node_count\":18,\"operator_set\":[\"add\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"d1\",\"d2\",\"n\"]},\"max_abs_error\":\"1.1102230246251565e-16\",\"max_rel_error\":\"1.5473154523401736e-16\",\"max_tolerance\":\"2.7553222482868587e-09\",\"normalized_probe_points_sha256\":\"9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d\",\"operator\":{\"f1\":1.0},\"probe_count\":16,\"probe_hash\":\"ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681\",\"probe_sample_sha256\":\"405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56\",\"probe_seed\":521522,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"7e07ad542df3b345be6e39a661058b68a8ee87bb10f9f685f993fb3b5578407c\",\"constants_abstracted_tree_fingerprint\":\"5dc8cb0ec64f36ad97644b277c994bddcc063ac66e6b011e98a6588a82de4034\",\"construction_mode\":\"evaluated\",\"function_set\":[],\"node_count\":10,\"operator_set\":[\"add\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"d1\",\"d2\",\"n\"]},\"skipped_probe_count\":0,\"skipped_probe_reasons\":{},\"symbolic_difference\":{\"assumptions\":[],\"counterexample\":null,\"decision\":\"equivalent\",\"max_abs_error\":\"1.1102230246251565e-16\",\"max_rel_error\":\"1.5473154523401736e-16\",\"max_tolerance\":\"2.7553222482868587e-09\",\"normalized_probe_points_sha256\":\"9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d\",\"probe_hash\":\"ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681\",\"probe_sample_sha256\":\"405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"symbolic_difference_zero\",\"skipped_probe_count\":0,\"skipped_probe_reasons\":{}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.35714285714285715,\"tree_similarity\":0.6428571428571428},\"variable\":{\"f1\":1.0}},\"pair_seed\":521522,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"d1*d2/(d1*n + d2)\",\"frozen_evaluation_key\":\"f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2\",\"frozen_logical_id\":\"pred_simplify::udsr::g0026::s522::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)\",\"effective_prediction_b_expression\":\"d1*d2/(d1*n + d2)\",\"effort\":\"xhigh\",\"evidence_hash\":\"229da799bc3fe8a4c681839f1381945998b197a9b9201bed7f2d1648a7f14491\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::udsr::g0026::s521::clean\",\"prediction_a_plan_evaluation_key\":\"70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07\",\"prediction_a_result_sha256\":\"7f88bdefa4b88b0b3d67cc939c243483daeb2038439d30bd41314e9922a87c63\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"udsr_s521_clean_g0026\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::udsr::g0026::s522::clean\",\"prediction_b_plan_evaluation_key\":\"f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2\",\"prediction_b_result_sha256\":\"fabda74af1a8f6dcf93d240a4672c47e2d19ac0f6e9ac04751eda525c3bd1c7e\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"udsr_s522_clean_g0026\",\"prediction_b_valid_output\":true,\"seed_a\":521,\"seed_b\":522,\"simplified_prediction_a_expression\":\"d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)\",\"simplified_prediction_b_expression\":\"d1*d2/(d1*n + d2)\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-5",
+    "output_config": {
+      "effort": "xhigh"
+    },
+    "stream": false,
+    "system": "You are a strict mathematical benchmark evaluator.\nAll domain assumptions, declared variables/functions, instantiated constants, and output-schema rules supplied by the user are hard constraints.\nNever add assumptions from physical interpretation, typical parameter signs, or observed probe ranges.\nJudge preservation in the declared number system, not in a broader complex domain.\nIf an expression has no valid value in the declared real-valued domain, or relies on undeclared symbolic entities, follow the task's unable/undetermined rule rather than treating textual identity as sufficient.\nReturn only the requested JSON object, with no additional properties or prose.",
+    "thinking": {
+      "type": "adaptive"
+    }
+  },
+  "api_response": {
+    "content": [
+      {
+        "block_sha256": "064717ee4cfeda02a0303f50833c92e844a20ac86478a44a686f97a650b61c6f",
+        "original_type": "thinking",
+        "redacted": true,
+        "type": "redacted_thinking"
+      },
+      {
+        "text": "{\"decision\":\"mathematically_equivalent\",\"confidence\":0.95,\"brief_reason\":\"A = d1^2*d2/(d1*(d1*n + d2)) cancels a factor d1 to give exactly B = d1*d2/(d1*n + d2); symbolic difference is zero and all 16 probes match within tolerance (max rel error ~1.5e-16). Only a removable singularity at d1=0 differs, not the function represented.\"}",
+        "type": "text"
+      }
+    ],
+    "id": "msg_vrtx_011Ceg3hXQjvPS7Cch4QYkjv",
+    "model": "claude-opus-5",
+    "role": "assistant",
+    "routify_response": {
+      "ak_quota": {
+        "api_key": "[REDACTED]",
+        "current_rpm": 8,
+        "rpm_limit": 600,
+        "status": "NORMAL"
+      },
+      "is_fall_back_triggered": false,
+      "model_name": "claude-opus-5",
+      "provider_code_md5": "3a33c9",
+      "request_id": "648913a9d0ce4acc8e6c004b2f3972ee",
+      "status": 200,
+      "success": true,
+      "trace_id": "212aa73e17884175593935664e0ce0"
+    },
+    "stop_details": null,
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 3386,
+      "output_tokens": 415,
+      "output_tokens_details": {
+        "thinking_tokens": 266
+      }
+    }
+  },
+  "attempt_id": "bfba5e3816f9fd1fb4f71d621f940a6341c14487411d4158f16aa73882e99918.a01",
+  "evaluation_key": "bfba5e3816f9fd1fb4f71d621f940a6341c14487411d4158f16aa73882e99918",
+  "metadata": {
+    "api_base_url": "https://routify-pub.alibaba-inc.com/protocol/anthropic",
+    "api_channel": "routify",
+    "api_endpoint": "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages",
+    "api_request_sha256": "7aeb19f308fe373c857a1386ffd8c825c67246ac16ebc4af26b205022360e06c",
+    "api_response_sha256": "2cee7fa16b2028334741a7a79b2139703ac41a0d390878945c9663f1b657da5d",
+    "attempt_id": "bfba5e3816f9fd1fb4f71d621f940a6341c14487411d4158f16aa73882e99918.a01",
+    "attempt_number": 1,
+    "error_class": null,
+    "estimated_cost_cny": 0.016383,
+    "evaluation_key": "bfba5e3816f9fd1fb4f71d621f940a6341c14487411d4158f16aa73882e99918",
+    "finished_at": 1788417577.6647892,
+    "http_status": 200,
+    "lease_expires_at": 1788417917.6568608,
+    "logical_id": "stab_structure::udsr::g0026::s521-s522",
+    "persisted_api_response_sha256": "8a568ed7c90459b0c4e176cfbff7900802cc5f75f90a001fe55dddca3a064105",
+    "prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/structure.v1.txt",
+    "prompt_sha256": "64940c7ff791772bef05f5e9641ee8de54ef91b8e203b5860ef07982ec13d8c9",
+    "raw_response_sha256": "8145260b1844f59f135f11a0192a92f1a32ed57f458dc503c9e41f5ccb19aa7b",
+    "rendered_prompt_sha256": "1f84fb9cf27fcb60da39af81bf70881aa210c940562eaa7dc010f94ff8a9b64e",
+    "request_sha256": "2d953afd3dd8a69c2e3df400f85a97183041f695d60933a439c9f50955c3cc0a",
+    "requested_effort": "xhigh",
+    "requested_model": "claude-opus-5",
+    "response_headers": {
+      "request-id": "req_vrtx_011Ceg3hXM2SxojRw1rkdZhp"
+    },
+    "response_metadata": {
+      "content_types": [
+        "thinking",
+        "text"
+      ],
+      "message_id": "msg_vrtx_011Ceg3hXQjvPS7Cch4QYkjv",
+      "model": "claude-opus-5",
+      "stop_reason": "end_turn",
+      "stop_sequence": null
+    },
+    "response_model": "claude-opus-5",
+    "retryable": false,
+    "schema_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/schemas/structure.v1.json",
+    "schema_sha256": "f38e475728bb4be46c61ce1e92c65e8032ef37a337f72ae083ce7f54ba841347",
+    "started_at": 1788417559.2234576,
+    "stream": false,
+    "system_prompt_sha256": "55f871abfb0308c60d2d354e24c209eb44ce9268f0ca6877bce4c55822922aca",
+    "tariff_cny_per_million_tokens": {
+      "cache_read": 0.3,
+      "input": 3.0,
+      "output": 15.0
+    },
+    "task_kind": "structure",
+    "task_type": "stab_structure",
+    "timeout_seconds": 300.0,
+    "transport_version": "anthropic_messages_nonstream_dual_channel.v1",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 3386,
+      "output_tokens": 415,
+      "output_tokens_details": {
+        "thinking_tokens": 266
+      }
+    },
+    "wall_latency_seconds": 18.444174034520984
+  },
+  "output_text": "{\"decision\":\"mathematically_equivalent\",\"confidence\":0.95,\"brief_reason\":\"A = d1^2*d2/(d1*(d1*n + d2)) cancels a factor d1 to give exactly B = d1*d2/(d1*n + d2); symbolic difference is zero and all 16 probes match within tolerance (max rel error ~1.5e-16). Only a removable singularity at d1=0 differs, not the function represented.\"}",
+  "prompt": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"udsr\",\"algorithm_slug\":\"udsr\",\"allowed_functions\":[],\"dataset_id\":\"feynman_I_27_6\",\"dataset_index\":\"g0026\",\"deterministic_evidence\":{\"allowed_functions\":[],\"allowed_variables\":[\"d1\",\"d2\",\"n\"],\"evidence_sha256\":\"229da799bc3fe8a4c681839f1381945998b197a9b9201bed7f2d1648a7f14491\",\"lhs_binding\":{\"frozen_effective_expression\":\"d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)\",\"frozen_evaluation_key\":\"70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07\",\"frozen_logical_id\":\"pred_simplify::udsr::g0026::s521::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"equivalent\",\"evidence_sha256\":\"62056c627687eddc26672f2341179e666a117d3b1826025594323e3b75dfd607\",\"lhs_artifact\":{\"artifact_sha256\":\"659977966ad79a4472584d2c52a2dcf70e123fb61010ea7ebb3f78d3a3368805\",\"constants_abstracted_tree_fingerprint\":\"623106f5f46ca6b92dadda6cc838e588329be5419e39f320acf5cf1733d9c905\",\"construction_mode\":\"evaluated\",\"function_set\":[],\"node_count\":18,\"operator_set\":[\"add\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"d1\",\"d2\",\"n\"]},\"max_abs_error\":\"1.1102230246251565e-16\",\"max_rel_error\":\"1.5473154523401736e-16\",\"max_tolerance\":\"2.7553222482868587e-09\",\"normalized_probe_points_sha256\":\"9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d\",\"operator\":{\"f1\":1.0},\"probe_count\":16,\"probe_hash\":\"ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681\",\"probe_sample_sha256\":\"405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56\",\"probe_seed\":521522,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"7e07ad542df3b345be6e39a661058b68a8ee87bb10f9f685f993fb3b5578407c\",\"constants_abstracted_tree_fingerprint\":\"5dc8cb0ec64f36ad97644b277c994bddcc063ac66e6b011e98a6588a82de4034\",\"construction_mode\":\"evaluated\",\"function_set\":[],\"node_count\":10,\"operator_set\":[\"add\",\"mul\",\"pow\"],\"source_kind\":\"expression\",\"variables\":[\"d1\",\"d2\",\"n\"]},\"skipped_probe_count\":0,\"skipped_probe_reasons\":{},\"symbolic_difference\":{\"assumptions\":[],\"counterexample\":null,\"decision\":\"equivalent\",\"max_abs_error\":\"1.1102230246251565e-16\",\"max_rel_error\":\"1.5473154523401736e-16\",\"max_tolerance\":\"2.7553222482868587e-09\",\"normalized_probe_points_sha256\":\"9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d\",\"probe_hash\":\"ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681\",\"probe_sample_sha256\":\"405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"symbolic_difference_zero\",\"skipped_probe_count\":0,\"skipped_probe_reasons\":{}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.35714285714285715,\"tree_similarity\":0.6428571428571428},\"variable\":{\"f1\":1.0}},\"pair_seed\":521522,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"d1*d2/(d1*n + d2)\",\"frozen_evaluation_key\":\"f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2\",\"frozen_logical_id\":\"pred_simplify::udsr::g0026::s522::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)\",\"effective_prediction_b_expression\":\"d1*d2/(d1*n + d2)\",\"effort\":\"xhigh\",\"evidence_hash\":\"229da799bc3fe8a4c681839f1381945998b197a9b9201bed7f2d1648a7f14491\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::udsr::g0026::s521::clean\",\"prediction_a_plan_evaluation_key\":\"70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07\",\"prediction_a_result_sha256\":\"7f88bdefa4b88b0b3d67cc939c243483daeb2038439d30bd41314e9922a87c63\",\"prediction_a_simplify_status\":\"simplified\",\"prediction_a_task_id\":\"udsr_s521_clean_g0026\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::udsr::g0026::s522::clean\",\"prediction_b_plan_evaluation_key\":\"f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2\",\"prediction_b_result_sha256\":\"fabda74af1a8f6dcf93d240a4672c47e2d19ac0f6e9ac04751eda525c3bd1c7e\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"udsr_s522_clean_g0026\",\"prediction_b_valid_output\":true,\"seed_a\":521,\"seed_b\":522,\"simplified_prediction_a_expression\":\"d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)\",\"simplified_prediction_b_expression\":\"d1*d2/(d1*n + d2)\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+  "request": {
+    "algorithm": "udsr",
+    "algorithm_slug": "udsr",
+    "allowed_functions": [],
+    "dataset_id": "feynman_I_27_6",
+    "dataset_index": "g0026",
+    "deterministic_evidence": {
+      "allowed_functions": [],
+      "allowed_variables": [
+        "d1",
+        "d2",
+        "n"
+      ],
+      "evidence_sha256": "229da799bc3fe8a4c681839f1381945998b197a9b9201bed7f2d1648a7f14491",
+      "lhs_binding": {
+        "frozen_effective_expression": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+        "frozen_evaluation_key": "70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07",
+        "frozen_logical_id": "pred_simplify::udsr::g0026::s521::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "equivalent",
+        "evidence_sha256": "62056c627687eddc26672f2341179e666a117d3b1826025594323e3b75dfd607",
+        "lhs_artifact": {
+          "artifact_sha256": "659977966ad79a4472584d2c52a2dcf70e123fb61010ea7ebb3f78d3a3368805",
+          "canonical_expression": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('d1')"
+                  },
+                  {
+                    "type": "Integer",
+                    "value": "Integer(2)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.0', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d2')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.0', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('d1')"
+                              },
+                              {
+                                "type": "Integer",
+                                "value": "Integer(2)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('d1')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d2')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('d1')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "623106f5f46ca6b92dadda6cc838e588329be5419e39f320acf5cf1733d9c905",
+          "construction_mode": "evaluated",
+          "function_set": [],
+          "node_count": 18,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+          "variables": [
+            "d1",
+            "d2",
+            "n"
+          ]
+        },
+        "max_abs_error": "1.1102230246251565e-16",
+        "max_rel_error": "1.5473154523401736e-16",
+        "max_tolerance": "2.7553222482868587e-09",
+        "normalized_probe_points_sha256": "9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d",
+        "numeric_probes": [
+          {
+            "abs_error": "0",
+            "original": "0.55766065976415624",
+            "rel_error": "0",
+            "row_index": 1317,
+            "simplified": "0.55766065976415624",
+            "split": "id_test",
+            "tolerance": "1.5576606597641564e-09",
+            "values": {
+              "d1": "1.115799644252824",
+              "d2": "3.4013565841999225",
+              "n": "3.050972513068344"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.81764196399617195",
+            "rel_error": "0",
+            "row_index": 1589,
+            "simplified": "0.81764196399617195",
+            "split": "id_test",
+            "tolerance": "1.817641963996172e-09",
+            "values": {
+              "d1": "3.5368232585564985",
+              "d2": "4.5754525778966775",
+              "n": "4.3022504819020124"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "1.0904762858906318",
+            "rel_error": "0",
+            "row_index": 4492,
+            "simplified": "1.0904762858906318",
+            "split": "id_test",
+            "tolerance": "2.0904762858906319e-09",
+            "values": {
+              "d1": "4.485172099356177",
+              "d2": "4.986692350651202",
+              "n": "3.4611315240698843"
+            }
+          },
+          {
+            "abs_error": "1.1102230246251565e-16",
+            "original": "0.71751563195859336",
+            "rel_error": "1.5473154523401736e-16",
+            "row_index": 4973,
+            "simplified": "0.71751563195859347",
+            "split": "id_test",
+            "tolerance": "1.7175156319585936e-09",
+            "values": {
+              "d1": "2.1588580833944859",
+              "d2": "1.268965012866075",
+              "n": "1.1807592727578975"
+            }
+          },
+          {
+            "abs_error": "1.1102230246251565e-16",
+            "original": "0.89672969846875894",
+            "rel_error": "1.2380799102794914e-16",
+            "row_index": 5519,
+            "simplified": "0.89672969846875905",
+            "split": "id_test",
+            "tolerance": "1.8967296984687591e-09",
+            "values": {
+              "d1": "1.2565300000190065",
+              "d2": "4.8483573871506218",
+              "n": "1.5481810000333058"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "1.6368426011996078",
+            "rel_error": "0",
+            "row_index": 8632,
+            "simplified": "1.6368426011996078",
+            "split": "id_test",
+            "tolerance": "2.6368426011996081e-09",
+            "values": {
+              "d1": "3.7448637753481249",
+              "d2": "4.9572427875758702",
+              "n": "1.704795202399719"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "1.7553222482868587",
+            "rel_error": "0",
+            "row_index": 8958,
+            "simplified": "1.7553222482868587",
+            "split": "id_test",
+            "tolerance": "2.7553222482868587e-09",
+            "values": {
+              "d1": "3.4467556077742434",
+              "d2": "4.8178203454015147",
+              "n": "1.34690865854264"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.61815443100867362",
+            "rel_error": "0",
+            "row_index": 9971,
+            "simplified": "0.61815443100867362",
+            "split": "id_test",
+            "tolerance": "1.6181544310086737e-09",
+            "values": {
+              "d1": "1.1787822400518655",
+              "d2": "4.780236470376142",
+              "n": "3.677845207261274"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.74868107079182045",
+            "rel_error": "0",
+            "row_index": 645,
+            "simplified": "0.74868107079182045",
+            "split": "ood_test",
+            "tolerance": "1.7486810707918205e-09",
+            "values": {
+              "d1": "5.0656937022740625",
+              "d2": "0.84982268327649135",
+              "n": "0.96733267760448771"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.8311843638177232",
+            "rel_error": "0",
+            "row_index": 1148,
+            "simplified": "0.8311843638177232",
+            "split": "ood_test",
+            "tolerance": "1.8311843638177233e-09",
+            "values": {
+              "d1": "0.95900086982603816",
+              "d2": "5.0546443182246765",
+              "n": "0.81051522383448449"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.46107712346115581",
+            "rel_error": "0",
+            "row_index": 3910,
+            "simplified": "0.46107712346115581",
+            "split": "ood_test",
+            "tolerance": "1.4610771234611558e-09",
+            "values": {
+              "d1": "0.91629447963176558",
+              "d2": "0.92298139099236809",
+              "n": "0.99449616319252643"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.45675634105119872",
+            "rel_error": "0",
+            "row_index": 4760,
+            "simplified": "0.45675634105119872",
+            "split": "ood_test",
+            "tolerance": "1.4567563410511988e-09",
+            "values": {
+              "d1": "0.85464966755166571",
+              "d2": "0.88305632063717532",
+              "n": "0.90008255668562687"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.72305647754044",
+            "rel_error": "0",
+            "row_index": 5029,
+            "simplified": "0.72305647754044",
+            "split": "ood_test",
+            "tolerance": "1.7230564775404402e-09",
+            "values": {
+              "d1": "5.183574124198187",
+              "d2": "0.81196101983286462",
+              "n": "0.96631541556694822"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.83290490729115974",
+            "rel_error": "0",
+            "row_index": 5050,
+            "simplified": "0.83290490729115974",
+            "split": "ood_test",
+            "tolerance": "1.83290490729116e-09",
+            "values": {
+              "d1": "5.0056603449212771",
+              "d2": "0.95010749944745831",
+              "n": "0.95090882829005119"
+            }
+          },
+          {
+            "abs_error": "1.1102230246251565e-16",
+            "original": "0.78310054954078645",
+            "rel_error": "1.4177272960365001e-16",
+            "row_index": 5446,
+            "simplified": "0.78310054954078634",
+            "split": "ood_test",
+            "tolerance": "1.7831005495407865e-09",
+            "values": {
+              "d1": "5.0730239380654094",
+              "d2": "0.86470469658659022",
+              "n": "0.93375494307806706"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.8314381945060203",
+            "rel_error": "0",
+            "row_index": 7716,
+            "simplified": "0.8314381945060203",
+            "split": "ood_test",
+            "tolerance": "1.8314381945060205e-09",
+            "values": {
+              "d1": "5.0722765637039871",
+              "d2": "0.81942562427676202",
+              "n": "0.82400218775188017"
+            }
+          }
+        ],
+        "operator": {
+          "f1": 1.0
+        },
+        "probe_count": 16,
+        "probe_hash": "ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681",
+        "probe_sample_sha256": "405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56",
+        "probe_seed": 521522,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "7e07ad542df3b345be6e39a661058b68a8ee87bb10f9f685f993fb3b5578407c",
+          "canonical_expression": "d1*d2/(d1*n + d2)",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d1')"
+              },
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('d2')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d1')"
+              },
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('d2')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "5dc8cb0ec64f36ad97644b277c994bddcc063ac66e6b011e98a6588a82de4034",
+          "construction_mode": "evaluated",
+          "function_set": [],
+          "node_count": 10,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "d1*d2/(d1*n + d2)",
+          "variables": [
+            "d1",
+            "d2",
+            "n"
+          ]
+        },
+        "skipped_probe_count": 0,
+        "skipped_probe_reasons": {},
+        "skipped_probes": [],
+        "symbolic_difference": {
+          "assumptions": [],
+          "counterexample": null,
+          "decision": "equivalent",
+          "max_abs_error": "1.1102230246251565e-16",
+          "max_rel_error": "1.5473154523401736e-16",
+          "max_tolerance": "2.7553222482868587e-09",
+          "normalized_probe_points_sha256": "9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d",
+          "numeric_probes": [
+            {
+              "abs_error": "0",
+              "original": "0.55766065976415624",
+              "rel_error": "0",
+              "row_index": 1317,
+              "simplified": "0.55766065976415624",
+              "split": "id_test",
+              "tolerance": "1.5576606597641564e-09",
+              "values": {
+                "d1": "1.115799644252824",
+                "d2": "3.4013565841999225",
+                "n": "3.050972513068344"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.81764196399617195",
+              "rel_error": "0",
+              "row_index": 1589,
+              "simplified": "0.81764196399617195",
+              "split": "id_test",
+              "tolerance": "1.817641963996172e-09",
+              "values": {
+                "d1": "3.5368232585564985",
+                "d2": "4.5754525778966775",
+                "n": "4.3022504819020124"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "1.0904762858906318",
+              "rel_error": "0",
+              "row_index": 4492,
+              "simplified": "1.0904762858906318",
+              "split": "id_test",
+              "tolerance": "2.0904762858906319e-09",
+              "values": {
+                "d1": "4.485172099356177",
+                "d2": "4.986692350651202",
+                "n": "3.4611315240698843"
+              }
+            },
+            {
+              "abs_error": "1.1102230246251565e-16",
+              "original": "0.71751563195859336",
+              "rel_error": "1.5473154523401736e-16",
+              "row_index": 4973,
+              "simplified": "0.71751563195859347",
+              "split": "id_test",
+              "tolerance": "1.7175156319585936e-09",
+              "values": {
+                "d1": "2.1588580833944859",
+                "d2": "1.268965012866075",
+                "n": "1.1807592727578975"
+              }
+            },
+            {
+              "abs_error": "1.1102230246251565e-16",
+              "original": "0.89672969846875894",
+              "rel_error": "1.2380799102794914e-16",
+              "row_index": 5519,
+              "simplified": "0.89672969846875905",
+              "split": "id_test",
+              "tolerance": "1.8967296984687591e-09",
+              "values": {
+                "d1": "1.2565300000190065",
+                "d2": "4.8483573871506218",
+                "n": "1.5481810000333058"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "1.6368426011996078",
+              "rel_error": "0",
+              "row_index": 8632,
+              "simplified": "1.6368426011996078",
+              "split": "id_test",
+              "tolerance": "2.6368426011996081e-09",
+              "values": {
+                "d1": "3.7448637753481249",
+                "d2": "4.9572427875758702",
+                "n": "1.704795202399719"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "1.7553222482868587",
+              "rel_error": "0",
+              "row_index": 8958,
+              "simplified": "1.7553222482868587",
+              "split": "id_test",
+              "tolerance": "2.7553222482868587e-09",
+              "values": {
+                "d1": "3.4467556077742434",
+                "d2": "4.8178203454015147",
+                "n": "1.34690865854264"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.61815443100867362",
+              "rel_error": "0",
+              "row_index": 9971,
+              "simplified": "0.61815443100867362",
+              "split": "id_test",
+              "tolerance": "1.6181544310086737e-09",
+              "values": {
+                "d1": "1.1787822400518655",
+                "d2": "4.780236470376142",
+                "n": "3.677845207261274"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.74868107079182045",
+              "rel_error": "0",
+              "row_index": 645,
+              "simplified": "0.74868107079182045",
+              "split": "ood_test",
+              "tolerance": "1.7486810707918205e-09",
+              "values": {
+                "d1": "5.0656937022740625",
+                "d2": "0.84982268327649135",
+                "n": "0.96733267760448771"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.8311843638177232",
+              "rel_error": "0",
+              "row_index": 1148,
+              "simplified": "0.8311843638177232",
+              "split": "ood_test",
+              "tolerance": "1.8311843638177233e-09",
+              "values": {
+                "d1": "0.95900086982603816",
+                "d2": "5.0546443182246765",
+                "n": "0.81051522383448449"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.46107712346115581",
+              "rel_error": "0",
+              "row_index": 3910,
+              "simplified": "0.46107712346115581",
+              "split": "ood_test",
+              "tolerance": "1.4610771234611558e-09",
+              "values": {
+                "d1": "0.91629447963176558",
+                "d2": "0.92298139099236809",
+                "n": "0.99449616319252643"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.45675634105119872",
+              "rel_error": "0",
+              "row_index": 4760,
+              "simplified": "0.45675634105119872",
+              "split": "ood_test",
+              "tolerance": "1.4567563410511988e-09",
+              "values": {
+                "d1": "0.85464966755166571",
+                "d2": "0.88305632063717532",
+                "n": "0.90008255668562687"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.72305647754044",
+              "rel_error": "0",
+              "row_index": 5029,
+              "simplified": "0.72305647754044",
+              "split": "ood_test",
+              "tolerance": "1.7230564775404402e-09",
+              "values": {
+                "d1": "5.183574124198187",
+                "d2": "0.81196101983286462",
+                "n": "0.96631541556694822"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.83290490729115974",
+              "rel_error": "0",
+              "row_index": 5050,
+              "simplified": "0.83290490729115974",
+              "split": "ood_test",
+              "tolerance": "1.83290490729116e-09",
+              "values": {
+                "d1": "5.0056603449212771",
+                "d2": "0.95010749944745831",
+                "n": "0.95090882829005119"
+              }
+            },
+            {
+              "abs_error": "1.1102230246251565e-16",
+              "original": "0.78310054954078645",
+              "rel_error": "1.4177272960365001e-16",
+              "row_index": 5446,
+              "simplified": "0.78310054954078634",
+              "split": "ood_test",
+              "tolerance": "1.7831005495407865e-09",
+              "values": {
+                "d1": "5.0730239380654094",
+                "d2": "0.86470469658659022",
+                "n": "0.93375494307806706"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.8314381945060203",
+              "rel_error": "0",
+              "row_index": 7716,
+              "simplified": "0.8314381945060203",
+              "split": "ood_test",
+              "tolerance": "1.8314381945060205e-09",
+              "values": {
+                "d1": "5.0722765637039871",
+                "d2": "0.81942562427676202",
+                "n": "0.82400218775188017"
+              }
+            }
+          ],
+          "probe_hash": "ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681",
+          "probe_sample_sha256": "405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "symbolic_difference_zero",
+          "skipped_probe_count": 0,
+          "skipped_probe_reasons": {},
+          "skipped_probes": []
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.35714285714285715,
+          "tree_similarity": 0.6428571428571428
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 521522,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "d1*d2/(d1*n + d2)",
+        "frozen_evaluation_key": "f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2",
+        "frozen_logical_id": "pred_simplify::udsr::g0026::s522::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "deterministic_pair_evidence": {
+      "allowed_functions": [],
+      "allowed_variables": [
+        "d1",
+        "d2",
+        "n"
+      ],
+      "evidence_sha256": "229da799bc3fe8a4c681839f1381945998b197a9b9201bed7f2d1648a7f14491",
+      "lhs_binding": {
+        "frozen_effective_expression": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+        "frozen_evaluation_key": "70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07",
+        "frozen_logical_id": "pred_simplify::udsr::g0026::s521::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "equivalent",
+        "evidence_sha256": "62056c627687eddc26672f2341179e666a117d3b1826025594323e3b75dfd607",
+        "lhs_artifact": {
+          "artifact_sha256": "659977966ad79a4472584d2c52a2dcf70e123fb61010ea7ebb3f78d3a3368805",
+          "canonical_expression": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('d1')"
+                  },
+                  {
+                    "type": "Integer",
+                    "value": "Integer(2)"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.0', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d2')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('1.0', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('d1')"
+                              },
+                              {
+                                "type": "Integer",
+                                "value": "Integer(2)"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "type": "Symbol",
+                    "value": "Symbol('d1')"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d2')"
+                          }
+                        ],
+                        "type": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('d1')"
+                              },
+                              {
+                                "type": "Constant"
+                              }
+                            ],
+                            "type": "pow"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "623106f5f46ca6b92dadda6cc838e588329be5419e39f320acf5cf1733d9c905",
+          "construction_mode": "evaluated",
+          "function_set": [],
+          "node_count": 18,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+          "variables": [
+            "d1",
+            "d2",
+            "n"
+          ]
+        },
+        "max_abs_error": "1.1102230246251565e-16",
+        "max_rel_error": "1.5473154523401736e-16",
+        "max_tolerance": "2.7553222482868587e-09",
+        "normalized_probe_points_sha256": "9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d",
+        "numeric_probes": [
+          {
+            "abs_error": "0",
+            "original": "0.55766065976415624",
+            "rel_error": "0",
+            "row_index": 1317,
+            "simplified": "0.55766065976415624",
+            "split": "id_test",
+            "tolerance": "1.5576606597641564e-09",
+            "values": {
+              "d1": "1.115799644252824",
+              "d2": "3.4013565841999225",
+              "n": "3.050972513068344"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.81764196399617195",
+            "rel_error": "0",
+            "row_index": 1589,
+            "simplified": "0.81764196399617195",
+            "split": "id_test",
+            "tolerance": "1.817641963996172e-09",
+            "values": {
+              "d1": "3.5368232585564985",
+              "d2": "4.5754525778966775",
+              "n": "4.3022504819020124"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "1.0904762858906318",
+            "rel_error": "0",
+            "row_index": 4492,
+            "simplified": "1.0904762858906318",
+            "split": "id_test",
+            "tolerance": "2.0904762858906319e-09",
+            "values": {
+              "d1": "4.485172099356177",
+              "d2": "4.986692350651202",
+              "n": "3.4611315240698843"
+            }
+          },
+          {
+            "abs_error": "1.1102230246251565e-16",
+            "original": "0.71751563195859336",
+            "rel_error": "1.5473154523401736e-16",
+            "row_index": 4973,
+            "simplified": "0.71751563195859347",
+            "split": "id_test",
+            "tolerance": "1.7175156319585936e-09",
+            "values": {
+              "d1": "2.1588580833944859",
+              "d2": "1.268965012866075",
+              "n": "1.1807592727578975"
+            }
+          },
+          {
+            "abs_error": "1.1102230246251565e-16",
+            "original": "0.89672969846875894",
+            "rel_error": "1.2380799102794914e-16",
+            "row_index": 5519,
+            "simplified": "0.89672969846875905",
+            "split": "id_test",
+            "tolerance": "1.8967296984687591e-09",
+            "values": {
+              "d1": "1.2565300000190065",
+              "d2": "4.8483573871506218",
+              "n": "1.5481810000333058"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "1.6368426011996078",
+            "rel_error": "0",
+            "row_index": 8632,
+            "simplified": "1.6368426011996078",
+            "split": "id_test",
+            "tolerance": "2.6368426011996081e-09",
+            "values": {
+              "d1": "3.7448637753481249",
+              "d2": "4.9572427875758702",
+              "n": "1.704795202399719"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "1.7553222482868587",
+            "rel_error": "0",
+            "row_index": 8958,
+            "simplified": "1.7553222482868587",
+            "split": "id_test",
+            "tolerance": "2.7553222482868587e-09",
+            "values": {
+              "d1": "3.4467556077742434",
+              "d2": "4.8178203454015147",
+              "n": "1.34690865854264"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.61815443100867362",
+            "rel_error": "0",
+            "row_index": 9971,
+            "simplified": "0.61815443100867362",
+            "split": "id_test",
+            "tolerance": "1.6181544310086737e-09",
+            "values": {
+              "d1": "1.1787822400518655",
+              "d2": "4.780236470376142",
+              "n": "3.677845207261274"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.74868107079182045",
+            "rel_error": "0",
+            "row_index": 645,
+            "simplified": "0.74868107079182045",
+            "split": "ood_test",
+            "tolerance": "1.7486810707918205e-09",
+            "values": {
+              "d1": "5.0656937022740625",
+              "d2": "0.84982268327649135",
+              "n": "0.96733267760448771"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.8311843638177232",
+            "rel_error": "0",
+            "row_index": 1148,
+            "simplified": "0.8311843638177232",
+            "split": "ood_test",
+            "tolerance": "1.8311843638177233e-09",
+            "values": {
+              "d1": "0.95900086982603816",
+              "d2": "5.0546443182246765",
+              "n": "0.81051522383448449"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.46107712346115581",
+            "rel_error": "0",
+            "row_index": 3910,
+            "simplified": "0.46107712346115581",
+            "split": "ood_test",
+            "tolerance": "1.4610771234611558e-09",
+            "values": {
+              "d1": "0.91629447963176558",
+              "d2": "0.92298139099236809",
+              "n": "0.99449616319252643"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.45675634105119872",
+            "rel_error": "0",
+            "row_index": 4760,
+            "simplified": "0.45675634105119872",
+            "split": "ood_test",
+            "tolerance": "1.4567563410511988e-09",
+            "values": {
+              "d1": "0.85464966755166571",
+              "d2": "0.88305632063717532",
+              "n": "0.90008255668562687"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.72305647754044",
+            "rel_error": "0",
+            "row_index": 5029,
+            "simplified": "0.72305647754044",
+            "split": "ood_test",
+            "tolerance": "1.7230564775404402e-09",
+            "values": {
+              "d1": "5.183574124198187",
+              "d2": "0.81196101983286462",
+              "n": "0.96631541556694822"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.83290490729115974",
+            "rel_error": "0",
+            "row_index": 5050,
+            "simplified": "0.83290490729115974",
+            "split": "ood_test",
+            "tolerance": "1.83290490729116e-09",
+            "values": {
+              "d1": "5.0056603449212771",
+              "d2": "0.95010749944745831",
+              "n": "0.95090882829005119"
+            }
+          },
+          {
+            "abs_error": "1.1102230246251565e-16",
+            "original": "0.78310054954078645",
+            "rel_error": "1.4177272960365001e-16",
+            "row_index": 5446,
+            "simplified": "0.78310054954078634",
+            "split": "ood_test",
+            "tolerance": "1.7831005495407865e-09",
+            "values": {
+              "d1": "5.0730239380654094",
+              "d2": "0.86470469658659022",
+              "n": "0.93375494307806706"
+            }
+          },
+          {
+            "abs_error": "0",
+            "original": "0.8314381945060203",
+            "rel_error": "0",
+            "row_index": 7716,
+            "simplified": "0.8314381945060203",
+            "split": "ood_test",
+            "tolerance": "1.8314381945060205e-09",
+            "values": {
+              "d1": "5.0722765637039871",
+              "d2": "0.81942562427676202",
+              "n": "0.82400218775188017"
+            }
+          }
+        ],
+        "operator": {
+          "f1": 1.0
+        },
+        "probe_count": 16,
+        "probe_hash": "ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681",
+        "probe_sample_sha256": "405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56",
+        "probe_seed": 521522,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "7e07ad542df3b345be6e39a661058b68a8ee87bb10f9f685f993fb3b5578407c",
+          "canonical_expression": "d1*d2/(d1*n + d2)",
+          "canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d1')"
+              },
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('d2')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "NegativeOne",
+                    "value": "Integer(-1)"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "type": "Symbol",
+                "value": "Symbol('d1')"
+              },
+              {
+                "type": "Symbol",
+                "value": "Symbol('d2')"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('d2')"
+                      },
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('d1')"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('n')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "add"
+                  },
+                  {
+                    "type": "Constant"
+                  }
+                ],
+                "type": "pow"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "5dc8cb0ec64f36ad97644b277c994bddcc063ac66e6b011e98a6588a82de4034",
+          "construction_mode": "evaluated",
+          "function_set": [],
+          "node_count": 10,
+          "operator_set": [
+            "add",
+            "mul",
+            "pow"
+          ],
+          "source_kind": "expression",
+          "source_text": "d1*d2/(d1*n + d2)",
+          "variables": [
+            "d1",
+            "d2",
+            "n"
+          ]
+        },
+        "skipped_probe_count": 0,
+        "skipped_probe_reasons": {},
+        "skipped_probes": [],
+        "symbolic_difference": {
+          "assumptions": [],
+          "counterexample": null,
+          "decision": "equivalent",
+          "max_abs_error": "1.1102230246251565e-16",
+          "max_rel_error": "1.5473154523401736e-16",
+          "max_tolerance": "2.7553222482868587e-09",
+          "normalized_probe_points_sha256": "9b06cd641ca491d100b8a58836b0737625b2adbf68157a7321603be259b49b9d",
+          "numeric_probes": [
+            {
+              "abs_error": "0",
+              "original": "0.55766065976415624",
+              "rel_error": "0",
+              "row_index": 1317,
+              "simplified": "0.55766065976415624",
+              "split": "id_test",
+              "tolerance": "1.5576606597641564e-09",
+              "values": {
+                "d1": "1.115799644252824",
+                "d2": "3.4013565841999225",
+                "n": "3.050972513068344"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.81764196399617195",
+              "rel_error": "0",
+              "row_index": 1589,
+              "simplified": "0.81764196399617195",
+              "split": "id_test",
+              "tolerance": "1.817641963996172e-09",
+              "values": {
+                "d1": "3.5368232585564985",
+                "d2": "4.5754525778966775",
+                "n": "4.3022504819020124"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "1.0904762858906318",
+              "rel_error": "0",
+              "row_index": 4492,
+              "simplified": "1.0904762858906318",
+              "split": "id_test",
+              "tolerance": "2.0904762858906319e-09",
+              "values": {
+                "d1": "4.485172099356177",
+                "d2": "4.986692350651202",
+                "n": "3.4611315240698843"
+              }
+            },
+            {
+              "abs_error": "1.1102230246251565e-16",
+              "original": "0.71751563195859336",
+              "rel_error": "1.5473154523401736e-16",
+              "row_index": 4973,
+              "simplified": "0.71751563195859347",
+              "split": "id_test",
+              "tolerance": "1.7175156319585936e-09",
+              "values": {
+                "d1": "2.1588580833944859",
+                "d2": "1.268965012866075",
+                "n": "1.1807592727578975"
+              }
+            },
+            {
+              "abs_error": "1.1102230246251565e-16",
+              "original": "0.89672969846875894",
+              "rel_error": "1.2380799102794914e-16",
+              "row_index": 5519,
+              "simplified": "0.89672969846875905",
+              "split": "id_test",
+              "tolerance": "1.8967296984687591e-09",
+              "values": {
+                "d1": "1.2565300000190065",
+                "d2": "4.8483573871506218",
+                "n": "1.5481810000333058"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "1.6368426011996078",
+              "rel_error": "0",
+              "row_index": 8632,
+              "simplified": "1.6368426011996078",
+              "split": "id_test",
+              "tolerance": "2.6368426011996081e-09",
+              "values": {
+                "d1": "3.7448637753481249",
+                "d2": "4.9572427875758702",
+                "n": "1.704795202399719"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "1.7553222482868587",
+              "rel_error": "0",
+              "row_index": 8958,
+              "simplified": "1.7553222482868587",
+              "split": "id_test",
+              "tolerance": "2.7553222482868587e-09",
+              "values": {
+                "d1": "3.4467556077742434",
+                "d2": "4.8178203454015147",
+                "n": "1.34690865854264"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.61815443100867362",
+              "rel_error": "0",
+              "row_index": 9971,
+              "simplified": "0.61815443100867362",
+              "split": "id_test",
+              "tolerance": "1.6181544310086737e-09",
+              "values": {
+                "d1": "1.1787822400518655",
+                "d2": "4.780236470376142",
+                "n": "3.677845207261274"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.74868107079182045",
+              "rel_error": "0",
+              "row_index": 645,
+              "simplified": "0.74868107079182045",
+              "split": "ood_test",
+              "tolerance": "1.7486810707918205e-09",
+              "values": {
+                "d1": "5.0656937022740625",
+                "d2": "0.84982268327649135",
+                "n": "0.96733267760448771"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.8311843638177232",
+              "rel_error": "0",
+              "row_index": 1148,
+              "simplified": "0.8311843638177232",
+              "split": "ood_test",
+              "tolerance": "1.8311843638177233e-09",
+              "values": {
+                "d1": "0.95900086982603816",
+                "d2": "5.0546443182246765",
+                "n": "0.81051522383448449"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.46107712346115581",
+              "rel_error": "0",
+              "row_index": 3910,
+              "simplified": "0.46107712346115581",
+              "split": "ood_test",
+              "tolerance": "1.4610771234611558e-09",
+              "values": {
+                "d1": "0.91629447963176558",
+                "d2": "0.92298139099236809",
+                "n": "0.99449616319252643"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.45675634105119872",
+              "rel_error": "0",
+              "row_index": 4760,
+              "simplified": "0.45675634105119872",
+              "split": "ood_test",
+              "tolerance": "1.4567563410511988e-09",
+              "values": {
+                "d1": "0.85464966755166571",
+                "d2": "0.88305632063717532",
+                "n": "0.90008255668562687"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.72305647754044",
+              "rel_error": "0",
+              "row_index": 5029,
+              "simplified": "0.72305647754044",
+              "split": "ood_test",
+              "tolerance": "1.7230564775404402e-09",
+              "values": {
+                "d1": "5.183574124198187",
+                "d2": "0.81196101983286462",
+                "n": "0.96631541556694822"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.83290490729115974",
+              "rel_error": "0",
+              "row_index": 5050,
+              "simplified": "0.83290490729115974",
+              "split": "ood_test",
+              "tolerance": "1.83290490729116e-09",
+              "values": {
+                "d1": "5.0056603449212771",
+                "d2": "0.95010749944745831",
+                "n": "0.95090882829005119"
+              }
+            },
+            {
+              "abs_error": "1.1102230246251565e-16",
+              "original": "0.78310054954078645",
+              "rel_error": "1.4177272960365001e-16",
+              "row_index": 5446,
+              "simplified": "0.78310054954078634",
+              "split": "ood_test",
+              "tolerance": "1.7831005495407865e-09",
+              "values": {
+                "d1": "5.0730239380654094",
+                "d2": "0.86470469658659022",
+                "n": "0.93375494307806706"
+              }
+            },
+            {
+              "abs_error": "0",
+              "original": "0.8314381945060203",
+              "rel_error": "0",
+              "row_index": 7716,
+              "simplified": "0.8314381945060203",
+              "split": "ood_test",
+              "tolerance": "1.8314381945060205e-09",
+              "values": {
+                "d1": "5.0722765637039871",
+                "d2": "0.81942562427676202",
+                "n": "0.82400218775188017"
+              }
+            }
+          ],
+          "probe_hash": "ee79189baea95819a667ace64c7c8265ec2c8b37d256f9c2b36496f95da35681",
+          "probe_sample_sha256": "405e05fc52da57852bced95ad7ce0a937fd001ddaa3a0d4fcb29944720e20d56",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "symbolic_difference_zero",
+          "skipped_probe_count": 0,
+          "skipped_probe_reasons": {},
+          "skipped_probes": []
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.35714285714285715,
+          "tree_similarity": 0.6428571428571428
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 521522,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "d1*d2/(d1*n + d2)",
+        "frozen_evaluation_key": "f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2",
+        "frozen_logical_id": "pred_simplify::udsr::g0026::s522::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "effective_prediction_a_expression": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+    "effective_prediction_b_expression": "d1*d2/(d1*n + d2)",
+    "effort": "xhigh",
+    "evidence_hash": "229da799bc3fe8a4c681839f1381945998b197a9b9201bed7f2d1648a7f14491",
+    "model": "claude-opus-5",
+    "noise_tag": "clean",
+    "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+    "prediction_a_expression_resolution": "llm_simplified_expression",
+    "prediction_a_frozen_evaluation_key": "70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07",
+    "prediction_a_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_a_logical_id": "pred_simplify::udsr::g0026::s521::clean",
+    "prediction_a_plan_evaluation_key": "70e4fb986356c423531195c44c0f2da2f552762a13ed6d401cac9b9dff636c07",
+    "prediction_a_result_sha256": "7f88bdefa4b88b0b3d67cc939c243483daeb2038439d30bd41314e9922a87c63",
+    "prediction_a_simplify_status": "simplified",
+    "prediction_a_task_id": "udsr_s521_clean_g0026",
+    "prediction_a_valid_output": true,
+    "prediction_b_expression_resolution": "llm_simplified_expression",
+    "prediction_b_frozen_evaluation_key": "f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2",
+    "prediction_b_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_b_logical_id": "pred_simplify::udsr::g0026::s522::clean",
+    "prediction_b_plan_evaluation_key": "f78cfdb8e8ad10c83561aaf44a81f4536024f34fc1c5b93355a5cd9a34b9caa2",
+    "prediction_b_result_sha256": "fabda74af1a8f6dcf93d240a4672c47e2d19ac0f6e9ac04751eda525c3bd1c7e",
+    "prediction_b_simplify_status": "simplified",
+    "prediction_b_task_id": "udsr_s522_clean_g0026",
+    "prediction_b_valid_output": true,
+    "seed_a": 521,
+    "seed_b": 522,
+    "simplified_prediction_a_expression": "d1**2*d2/(1.0*d1**2*n + 1.0*d1*d2)",
+    "simplified_prediction_b_expression": "d1*d2/(d1*n + d2)",
+    "stream": false
+  },
+  "validation": {
+    "error_class": null,
+    "error_message": null,
+    "ok": true,
+    "structured_output": {
+      "brief_reason": "A = d1^2*d2/(d1*(d1*n + d2)) cancels a factor d1 to give exactly B = d1*d2/(d1*n + d2); symbolic difference is zero and all 16 probes match within tolerance (max rel error ~1.5e-16). Only a removable singularity at d1=0 differs, not the function represented.",
+      "confidence": 0.95,
+      "decision": "mathematically_equivalent"
+    }
+  }
+}

@@ -1,0 +1,1581 @@
+{
+  "api_request": {
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "content": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"dataset_id\":\"strogatz_barmag2\",\"dataset_index\":\"g0029\",\"deterministic_evidence\":{\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"allowed_variables\":[\"x\",\"y\"],\"evidence_sha256\":\"9658fbe3352b90c87168eb94ca27054233e66f763cf399d07631d976f9d99314\",\"lhs_binding\":{\"frozen_effective_expression\":\"(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))\",\"frozen_evaluation_key\":\"7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0029::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"3696296e6edb2ad74c8ceb5fb2d60bd701d2beb78f6f32dcbc5df704e404380b\",\"lhs_artifact\":{\"artifact_sha256\":\"68571b305311f5cee176de87ab001a90ab36100174d66cb32a8828efb6ed3e4a\",\"constants_abstracted_tree_fingerprint\":\"55cfe84beb422e12407e7fd881846983256caecb751f4d793e4e203cdd987995\",\"construction_mode\":\"evaluated\",\"function_set\":[\"cos\",\"log\",\"sin\"],\"node_count\":20,\"operator_set\":[\"add\",\"cos\",\"log\",\"mul\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"y\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a\",\"operator\":{\"f1\":0.8},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33\",\"probe_seed\":520521,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"73a5a0f46d1dadf97091df8538350db18e6b8f66f8016efac0ed2885fc54024a\",\"canonical_expression\":\"log(1.15732915595393*sqrt(0.746596950315688*sin(y) - 1))\",\"constants_abstracted_tree_fingerprint\":\"a1f63fd9bc5a40435da63ce54ef3e1ccafc1902426f5d99bed9e82a9853c0514\",\"construction_mode\":\"evaluated\",\"function_set\":[\"log\",\"sin\",\"sqrt\"],\"node_count\":11,\"operator_set\":[\"add\",\"log\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"y\"]},\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"both_nonfinite\":12,\"simplified_nonfinite\":4},\"symbolic_difference\":{\"assumptions\":[\"符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"both_nonfinite\":12,\"simplified_nonfinite\":4}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.6129032258064516,\"tree_similarity\":0.3870967741935484},\"variable\":{\"f1\":1.0}},\"pair_seed\":520521,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"log(sqrt(sin(y) - 1.33941077522104))\",\"frozen_evaluation_key\":\"dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0029::s521::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))\",\"effective_prediction_b_expression\":\"log(sqrt(sin(y) - 1.33941077522104))\",\"effort\":\"xhigh\",\"evidence_hash\":\"9658fbe3352b90c87168eb94ca27054233e66f763cf399d07631d976f9d99314\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0029::s520::clean\",\"prediction_a_plan_evaluation_key\":\"7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61\",\"prediction_a_result_sha256\":\"726ab98a4a863e445989ce8a097a4116aa7fc3502236c34766e2630bacd926e8\",\"prediction_a_simplify_status\":\"unchanged\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0029\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0029::s521::clean\",\"prediction_b_plan_evaluation_key\":\"dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f\",\"prediction_b_result_sha256\":\"8ba600317219105ec0986f5ea962eb928ec9544f6d167ee0a603ecb13569052c\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s521_clean_g0029\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":521,\"simplified_prediction_a_expression\":\"(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))\",\"simplified_prediction_b_expression\":\"log(sqrt(sin(y) - 1.33941077522104))\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-5",
+    "output_config": {
+      "effort": "xhigh"
+    },
+    "stream": false,
+    "system": "You are a strict mathematical benchmark evaluator.\nAll domain assumptions, declared variables/functions, instantiated constants, and output-schema rules supplied by the user are hard constraints.\nNever add assumptions from physical interpretation, typical parameter signs, or observed probe ranges.\nJudge preservation in the declared number system, not in a broader complex domain.\nIf an expression has no valid value in the declared real-valued domain, or relies on undeclared symbolic entities, follow the task's unable/undetermined rule rather than treating textual identity as sufficient.\nReturn only the requested JSON object, with no additional properties or prose.",
+    "thinking": {
+      "type": "adaptive"
+    }
+  },
+  "api_response": {
+    "content": [
+      {
+        "block_sha256": "b2f96181ad343ac4e12fcf863bdc7790b2e2a46a4a17c5ede50213acf655cd92",
+        "original_type": "thinking",
+        "redacted": true,
+        "type": "redacted_thinking"
+      },
+      {
+        "text": "{\"decision\":\"undetermined\",\"confidence\":0.62,\"brief_reason\":\"RHS log(sqrt(sin(y) - 1.3394)) has a strictly negative radicand for all real y (sin(y) ≤ 1), so it takes no valid value in the declared real domain; all 16 probes were skipped as non-finite and the symbolic check timed out with no proof basis. Equivalence therefore cannot be assessed, and no reliable canonical-structure comparison can be grounded on a nowhere-defined real expression (fingerprints and trees also differ: 20 vs 11 nodes, similarity 0.39). Per the undetermined rule, no structural verdict is issued.\",\"brief_reason_note\":null}",
+        "type": "text"
+      }
+    ],
+    "id": "msg_bdrk_vx24kcpm3jmhke2sbrjobqv6634vru2k3lrogf3gsxlrhtzvibhq",
+    "model": "claude-opus-5",
+    "role": "assistant",
+    "routify_response": {
+      "ak_quota": {
+        "api_key": "[REDACTED]",
+        "current_rpm": 9,
+        "rpm_limit": 600,
+        "status": "NORMAL"
+      },
+      "is_fall_back_triggered": false,
+      "model_name": "claude-opus-5",
+      "provider_code_md5": "e4c373",
+      "request_id": "aaae0ef181d94ab79a1f238a9332814b",
+      "status": 200,
+      "success": true,
+      "trace_id": "214178b117884175594256986e0c57"
+    },
+    "stop_details": null,
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 3567,
+      "output_tokens": 1791,
+      "output_tokens_details": {
+        "thinking_tokens": 1553
+      },
+      "service_tier": "standard"
+    }
+  },
+  "attempt_id": "9d8c5e120f278d04dd5e7549254a23a3e6dd5542747a95689542dc3367c72e00.a01",
+  "evaluation_key": "9d8c5e120f278d04dd5e7549254a23a3e6dd5542747a95689542dc3367c72e00",
+  "metadata": {
+    "api_base_url": "https://routify-pub.alibaba-inc.com/protocol/anthropic",
+    "api_channel": "routify",
+    "api_endpoint": "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages",
+    "api_request_sha256": "ad87648ca420750dcbbef19a1f9091cebab90ce862b9d7239f01b711303d8377",
+    "api_response_sha256": "776ed7780d23d6a16c0dbbdd1e134fdfad48608054730b6652bdd3db185b7607",
+    "attempt_id": "9d8c5e120f278d04dd5e7549254a23a3e6dd5542747a95689542dc3367c72e00.a01",
+    "attempt_number": 1,
+    "error_class": "structured_output_invalid",
+    "estimated_cost_cny": 0.037566,
+    "evaluation_key": "9d8c5e120f278d04dd5e7549254a23a3e6dd5542747a95689542dc3367c72e00",
+    "finished_at": 1788417598.6230102,
+    "http_status": 200,
+    "lease_expires_at": 1788417917.8352025,
+    "logical_id": "stab_structure::gplearn::g0029::s520-s521",
+    "persisted_api_response_sha256": "bf33c390981a9ec8665aca52ca577a756e3fc5b02bedc5d0742c643d816ff445",
+    "prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/structure.v1.txt",
+    "prompt_sha256": "64940c7ff791772bef05f5e9641ee8de54ef91b8e203b5860ef07982ec13d8c9",
+    "raw_response_sha256": "5f8897d3857c5361b7c6036a0cd7e12b144446060b4e229a0e381e0cabd8f9cc",
+    "rendered_prompt_sha256": "c22a2d261f36d4f842d7ec3ca3c06762d7816daa5090964df25a555591d34a71",
+    "request_sha256": "fa9bb4f4c78afb2910b563933498050c133350bd5f6aa22439b80ed1d358040d",
+    "requested_effort": "xhigh",
+    "requested_model": "claude-opus-5",
+    "response_headers": {},
+    "response_metadata": {},
+    "response_model": "claude-opus-5",
+    "retryable": true,
+    "schema_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/schemas/structure.v1.json",
+    "schema_sha256": "f38e475728bb4be46c61ce1e92c65e8032ef37a337f72ae083ce7f54ba841347",
+    "started_at": 1788417559.3399014,
+    "stream": false,
+    "system_prompt_sha256": "55f871abfb0308c60d2d354e24c209eb44ce9268f0ca6877bce4c55822922aca",
+    "tariff_cny_per_million_tokens": {
+      "cache_read": 0.3,
+      "input": 3.0,
+      "output": 15.0
+    },
+    "task_kind": "structure",
+    "task_type": "stab_structure",
+    "timeout_seconds": 300.0,
+    "transport_version": "anthropic_messages_nonstream_dual_channel.v1",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 3567,
+      "output_tokens": 1791,
+      "output_tokens_details": {
+        "thinking_tokens": 1553
+      },
+      "service_tier": "standard"
+    },
+    "wall_latency_seconds": 39.29370593931526
+  },
+  "output_text": "",
+  "prompt": "You are the mandatory single-turn structural consistency judge for SymbolicArena STAB.\n\nCompare exactly one pair of frozen, simplified clean-run expressions.\n\nDecision meanings:\n- mathematically_equivalent: the two expressions represent the same mathematical function.\n- same_canonical_structure: not established as equivalent, but they share the same canonical symbolic structure after constants are abstracted consistently.\n- different_structure: neither condition holds.\n- undetermined: the available evidence is insufficient.\n\nRules:\n1. Variable identities are fixed.\n2. Respect supplied domain and protected-operator assumptions.\n3. Use deterministic equivalence and canonical-tree evidence, but make the required judgment yourself.\n4. Return only the JSON object required by the supplied schema.\n5. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"algorithm\":\"gplearn\",\"algorithm_slug\":\"gplearn\",\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"dataset_id\":\"strogatz_barmag2\",\"dataset_index\":\"g0029\",\"deterministic_evidence\":{\"allowed_functions\":[\"cos\",\"log\",\"sin\",\"sqrt\"],\"allowed_variables\":[\"x\",\"y\"],\"evidence_sha256\":\"9658fbe3352b90c87168eb94ca27054233e66f763cf399d07631d976f9d99314\",\"lhs_binding\":{\"frozen_effective_expression\":\"(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))\",\"frozen_evaluation_key\":\"7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0029::s520::clean\",\"role\":\"lhs\"},\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"pair_evidence\":{\"decision\":\"undetermined\",\"evidence_sha256\":\"3696296e6edb2ad74c8ceb5fb2d60bd701d2beb78f6f32dcbc5df704e404380b\",\"lhs_artifact\":{\"artifact_sha256\":\"68571b305311f5cee176de87ab001a90ab36100174d66cb32a8828efb6ed3e4a\",\"constants_abstracted_tree_fingerprint\":\"55cfe84beb422e12407e7fd881846983256caecb751f4d793e4e203cdd987995\",\"construction_mode\":\"evaluated\",\"function_set\":[\"cos\",\"log\",\"sin\"],\"node_count\":20,\"operator_set\":[\"add\",\"cos\",\"log\",\"mul\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"y\"]},\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a\",\"operator\":{\"f1\":0.8},\"probe_count\":0,\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33\",\"probe_seed\":520521,\"probe_source\":\"dataset_probes_v1\",\"rhs_artifact\":{\"artifact_sha256\":\"73a5a0f46d1dadf97091df8538350db18e6b8f66f8016efac0ed2885fc54024a\",\"canonical_expression\":\"log(1.15732915595393*sqrt(0.746596950315688*sin(y) - 1))\",\"constants_abstracted_tree_fingerprint\":\"a1f63fd9bc5a40435da63ce54ef3e1ccafc1902426f5d99bed9e82a9853c0514\",\"construction_mode\":\"evaluated\",\"function_set\":[\"log\",\"sin\",\"sqrt\"],\"node_count\":11,\"operator_set\":[\"add\",\"log\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"y\"]},\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"both_nonfinite\":12,\"simplified_nonfinite\":4},\"symbolic_difference\":{\"assumptions\":[\"符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。\"],\"counterexample\":null,\"decision\":\"undetermined\",\"max_abs_error\":\"0\",\"max_rel_error\":\"0\",\"max_tolerance\":\"0\",\"normalized_probe_points_sha256\":\"c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a\",\"probe_hash\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"probe_sample_sha256\":\"5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33\",\"probe_source\":\"dataset_probes_v1\",\"proof_basis\":\"none\",\"skipped_probe_count\":16,\"skipped_probe_reasons\":{\"both_nonfinite\":12,\"simplified_nonfinite\":4}},\"tree\":{\"computed\":true,\"normalized_edit_distance\":0.6129032258064516,\"tree_similarity\":0.3870967741935484},\"variable\":{\"f1\":1.0}},\"pair_seed\":520521,\"phase\":\"structure\",\"rhs_binding\":{\"frozen_effective_expression\":\"log(sqrt(sin(y) - 1.33941077522104))\",\"frozen_evaluation_key\":\"dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f\",\"frozen_logical_id\":\"pred_simplify::gplearn::g0029::s521::clean\",\"role\":\"rhs\"},\"schema_version\":\"symbolic_pair_evidence.v2\"},\"deterministic_pair_evidence_alias\":\"deterministic_evidence\",\"effective_prediction_a_expression\":\"(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))\",\"effective_prediction_b_expression\":\"log(sqrt(sin(y) - 1.33941077522104))\",\"effort\":\"xhigh\",\"evidence_hash\":\"9658fbe3352b90c87168eb94ca27054233e66f763cf399d07631d976f9d99314\",\"model\":\"claude-opus-5\",\"noise_tag\":\"clean\",\"overlay_revision_sha256\":\"397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3\",\"prediction_a_expression_resolution\":\"llm_simplified_expression\",\"prediction_a_frozen_evaluation_key\":\"7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61\",\"prediction_a_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_a_logical_id\":\"pred_simplify::gplearn::g0029::s520::clean\",\"prediction_a_plan_evaluation_key\":\"7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61\",\"prediction_a_result_sha256\":\"726ab98a4a863e445989ce8a097a4116aa7fc3502236c34766e2630bacd926e8\",\"prediction_a_simplify_status\":\"unchanged\",\"prediction_a_task_id\":\"gplearn_s520_clean_g0029\",\"prediction_a_valid_output\":true,\"prediction_b_expression_resolution\":\"llm_simplified_expression\",\"prediction_b_frozen_evaluation_key\":\"dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f\",\"prediction_b_frozen_plan_sha256\":\"d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f\",\"prediction_b_logical_id\":\"pred_simplify::gplearn::g0029::s521::clean\",\"prediction_b_plan_evaluation_key\":\"dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f\",\"prediction_b_result_sha256\":\"8ba600317219105ec0986f5ea962eb928ec9544f6d167ee0a603ecb13569052c\",\"prediction_b_simplify_status\":\"simplified\",\"prediction_b_task_id\":\"gplearn_s521_clean_g0029\",\"prediction_b_valid_output\":true,\"seed_a\":520,\"seed_b\":521,\"simplified_prediction_a_expression\":\"(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))\",\"simplified_prediction_b_expression\":\"log(sqrt(sin(y) - 1.33941077522104))\",\"stream\":false}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.structure.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"decision\":{\"enum\":[\"mathematically_equivalent\",\"same_canonical_structure\",\"different_structure\",\"undetermined\"],\"type\":\"string\"}},\"required\":[\"decision\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+  "request": {
+    "algorithm": "gplearn",
+    "algorithm_slug": "gplearn",
+    "allowed_functions": [
+      "cos",
+      "log",
+      "sin",
+      "sqrt"
+    ],
+    "dataset_id": "strogatz_barmag2",
+    "dataset_index": "g0029",
+    "deterministic_evidence": {
+      "allowed_functions": [
+        "cos",
+        "log",
+        "sin",
+        "sqrt"
+      ],
+      "allowed_variables": [
+        "x",
+        "y"
+      ],
+      "evidence_sha256": "9658fbe3352b90c87168eb94ca27054233e66f763cf399d07631d976f9d99314",
+      "lhs_binding": {
+        "frozen_effective_expression": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+        "frozen_evaluation_key": "7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61",
+        "frozen_logical_id": "pred_simplify::gplearn::g0029::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "3696296e6edb2ad74c8ceb5fb2d60bd701d2beb78f6f32dcbc5df704e404380b",
+        "lhs_artifact": {
+          "artifact_sha256": "68571b305311f5cee176de87ab001a90ab36100174d66cb32a8828efb6ed3e4a",
+          "canonical_expression": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "cos"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "sin"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "sin"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.41999999999999998', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "cos"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "cos"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "sin"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "sin"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "cos"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "55cfe84beb422e12407e7fd881846983256caecb751f4d793e4e203cdd987995",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "cos",
+            "log",
+            "sin"
+          ],
+          "node_count": 20,
+          "operator_set": [
+            "add",
+            "cos",
+            "log",
+            "mul",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+          "variables": [
+            "y"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.8
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33",
+        "probe_seed": 520521,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "73a5a0f46d1dadf97091df8538350db18e6b8f66f8016efac0ed2885fc54024a",
+          "canonical_expression": "log(1.15732915595393*sqrt(0.746596950315688*sin(y) - 1))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Float",
+                    "value": "Float('1.1573291559539318', precision=53)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "NegativeOne",
+                            "value": "Integer(-1)"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.74659695031568807', precision=53)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "type": "Half",
+                        "value": "Rational(1, 2)"
+                      }
+                    ],
+                    "type": "pow"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "log"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "type": "Constant"
+                      }
+                    ],
+                    "type": "pow"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "log"
+          },
+          "constants_abstracted_tree_fingerprint": "a1f63fd9bc5a40435da63ce54ef3e1ccafc1902426f5d99bed9e82a9853c0514",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "log",
+            "sin",
+            "sqrt"
+          ],
+          "node_count": 11,
+          "operator_set": [
+            "add",
+            "log",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "log(sqrt(sin(y) - 1.33941077522104))",
+          "variables": [
+            "y"
+          ]
+        },
+        "skipped_probe_count": 16,
+        "skipped_probe_reasons": {
+          "both_nonfinite": 12,
+          "simplified_nonfinite": 4
+        },
+        "skipped_probes": [
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 0,
+            "split": "id_test",
+            "values": {
+              "x": "5.4158088337299093",
+              "y": "0.47019684437462211"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 9,
+            "split": "id_test",
+            "values": {
+              "x": "5.4527038027919099",
+              "y": "6.4526281905042504"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 19,
+            "split": "id_test",
+            "values": {
+              "x": "5.0011086642281199",
+              "y": "0.39093945646747708"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 20,
+            "split": "id_test",
+            "values": {
+              "x": "5.6469828476529909",
+              "y": "0.47872348639400802"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 22,
+            "split": "id_test",
+            "values": {
+              "x": "4.4879915030195194",
+              "y": "0.22372116529754099"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 29,
+            "split": "id_test",
+            "values": {
+              "x": "5.344913662098401",
+              "y": "6.3636545485426401"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 30,
+            "split": "id_test",
+            "values": {
+              "x": "5.8727357707057308",
+              "y": "6.6482908246785"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 31,
+            "split": "id_test",
+            "values": {
+              "x": "5.2173010241435405",
+              "y": "6.2424344396684806"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 108,
+            "split": "ood_test",
+            "values": {
+              "x": "6.0285302450073459",
+              "y": "-0.093794958764546063"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 149,
+            "split": "ood_test",
+            "values": {
+              "x": "4.1177299106347141",
+              "y": "-0.11126137777873681"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 230,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0295905411086412",
+              "y": "6.6934305559654828"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 260,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0512597899144041",
+              "y": "6.6608323273170145"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 291,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0876970949049056",
+              "y": "6.902753068346196"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 542,
+            "split": "ood_test",
+            "values": {
+              "x": "6.0478597958460947",
+              "y": "6.7939197720931794"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 879,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0890477681381805",
+              "y": "-0.048127816908877727"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 974,
+            "split": "ood_test",
+            "values": {
+              "x": "4.1107102137040608",
+              "y": "6.9122547279986248"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 16,
+          "skipped_probe_reasons": {
+            "both_nonfinite": 12,
+            "simplified_nonfinite": 4
+          },
+          "skipped_probes": [
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 0,
+              "split": "id_test",
+              "values": {
+                "x": "5.4158088337299093",
+                "y": "0.47019684437462211"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 9,
+              "split": "id_test",
+              "values": {
+                "x": "5.4527038027919099",
+                "y": "6.4526281905042504"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 19,
+              "split": "id_test",
+              "values": {
+                "x": "5.0011086642281199",
+                "y": "0.39093945646747708"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 20,
+              "split": "id_test",
+              "values": {
+                "x": "5.6469828476529909",
+                "y": "0.47872348639400802"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 22,
+              "split": "id_test",
+              "values": {
+                "x": "4.4879915030195194",
+                "y": "0.22372116529754099"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 29,
+              "split": "id_test",
+              "values": {
+                "x": "5.344913662098401",
+                "y": "6.3636545485426401"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 30,
+              "split": "id_test",
+              "values": {
+                "x": "5.8727357707057308",
+                "y": "6.6482908246785"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 31,
+              "split": "id_test",
+              "values": {
+                "x": "5.2173010241435405",
+                "y": "6.2424344396684806"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 108,
+              "split": "ood_test",
+              "values": {
+                "x": "6.0285302450073459",
+                "y": "-0.093794958764546063"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 149,
+              "split": "ood_test",
+              "values": {
+                "x": "4.1177299106347141",
+                "y": "-0.11126137777873681"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 230,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0295905411086412",
+                "y": "6.6934305559654828"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 260,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0512597899144041",
+                "y": "6.6608323273170145"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 291,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0876970949049056",
+                "y": "6.902753068346196"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 542,
+              "split": "ood_test",
+              "values": {
+                "x": "6.0478597958460947",
+                "y": "6.7939197720931794"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 879,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0890477681381805",
+                "y": "-0.048127816908877727"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 974,
+              "split": "ood_test",
+              "values": {
+                "x": "4.1107102137040608",
+                "y": "6.9122547279986248"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.6129032258064516,
+          "tree_similarity": 0.3870967741935484
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520521,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "log(sqrt(sin(y) - 1.33941077522104))",
+        "frozen_evaluation_key": "dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f",
+        "frozen_logical_id": "pred_simplify::gplearn::g0029::s521::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "deterministic_pair_evidence": {
+      "allowed_functions": [
+        "cos",
+        "log",
+        "sin",
+        "sqrt"
+      ],
+      "allowed_variables": [
+        "x",
+        "y"
+      ],
+      "evidence_sha256": "9658fbe3352b90c87168eb94ca27054233e66f763cf399d07631d976f9d99314",
+      "lhs_binding": {
+        "frozen_effective_expression": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+        "frozen_evaluation_key": "7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61",
+        "frozen_logical_id": "pred_simplify::gplearn::g0029::s520::clean",
+        "role": "lhs"
+      },
+      "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+      "pair_evidence": {
+        "decision": "undetermined",
+        "evidence_sha256": "3696296e6edb2ad74c8ceb5fb2d60bd701d2beb78f6f32dcbc5df704e404380b",
+        "lhs_artifact": {
+          "artifact_sha256": "68571b305311f5cee176de87ab001a90ab36100174d66cb32a8828efb6ed3e4a",
+          "canonical_expression": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "cos"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "sin"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "sin"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Float",
+                            "value": "Float('0.41999999999999998', precision=53)"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "cos"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "cos"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "log"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "cos"
+                  },
+                  {
+                    "args": [
+                      {
+                        "type": "Symbol",
+                        "value": "Symbol('y')"
+                      }
+                    ],
+                    "type": "sin"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Symbol",
+                                "value": "Symbol('y')"
+                              }
+                            ],
+                            "type": "sin"
+                          }
+                        ],
+                        "type": "add"
+                      }
+                    ],
+                    "type": "sin"
+                  }
+                ],
+                "type": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "type": "Symbol",
+                            "value": "Symbol('y')"
+                          }
+                        ],
+                        "type": "mul"
+                      }
+                    ],
+                    "type": "cos"
+                  }
+                ],
+                "type": "log"
+              }
+            ],
+            "type": "mul"
+          },
+          "constants_abstracted_tree_fingerprint": "55cfe84beb422e12407e7fd881846983256caecb751f4d793e4e203cdd987995",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "cos",
+            "log",
+            "sin"
+          ],
+          "node_count": 20,
+          "operator_set": [
+            "add",
+            "cos",
+            "log",
+            "mul",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+          "variables": [
+            "y"
+          ]
+        },
+        "max_abs_error": "0",
+        "max_rel_error": "0",
+        "max_tolerance": "0",
+        "normalized_probe_points_sha256": "c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a",
+        "numeric_probes": [],
+        "operator": {
+          "f1": 0.8
+        },
+        "probe_count": 0,
+        "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "probe_sample_sha256": "5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33",
+        "probe_seed": 520521,
+        "probe_source": "dataset_probes_v1",
+        "rhs_artifact": {
+          "artifact_sha256": "73a5a0f46d1dadf97091df8538350db18e6b8f66f8016efac0ed2885fc54024a",
+          "canonical_expression": "log(1.15732915595393*sqrt(0.746596950315688*sin(y) - 1))",
+          "canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Float",
+                    "value": "Float('1.1573291559539318', precision=53)"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "NegativeOne",
+                            "value": "Integer(-1)"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Float",
+                                "value": "Float('0.74659695031568807', precision=53)"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "type": "Half",
+                        "value": "Rational(1, 2)"
+                      }
+                    ],
+                    "type": "pow"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "log"
+          },
+          "constants_abstracted_canonical_tree": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "type": "Constant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "type": "Constant"
+                          },
+                          {
+                            "args": [
+                              {
+                                "type": "Constant"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "type": "Symbol",
+                                    "value": "Symbol('y')"
+                                  }
+                                ],
+                                "type": "sin"
+                              }
+                            ],
+                            "type": "mul"
+                          }
+                        ],
+                        "type": "add"
+                      },
+                      {
+                        "type": "Constant"
+                      }
+                    ],
+                    "type": "pow"
+                  }
+                ],
+                "type": "mul"
+              }
+            ],
+            "type": "log"
+          },
+          "constants_abstracted_tree_fingerprint": "a1f63fd9bc5a40435da63ce54ef3e1ccafc1902426f5d99bed9e82a9853c0514",
+          "construction_mode": "evaluated",
+          "function_set": [
+            "log",
+            "sin",
+            "sqrt"
+          ],
+          "node_count": 11,
+          "operator_set": [
+            "add",
+            "log",
+            "mul",
+            "pow",
+            "sin"
+          ],
+          "source_kind": "expression",
+          "source_text": "log(sqrt(sin(y) - 1.33941077522104))",
+          "variables": [
+            "y"
+          ]
+        },
+        "skipped_probe_count": 16,
+        "skipped_probe_reasons": {
+          "both_nonfinite": 12,
+          "simplified_nonfinite": 4
+        },
+        "skipped_probes": [
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 0,
+            "split": "id_test",
+            "values": {
+              "x": "5.4158088337299093",
+              "y": "0.47019684437462211"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 9,
+            "split": "id_test",
+            "values": {
+              "x": "5.4527038027919099",
+              "y": "6.4526281905042504"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 19,
+            "split": "id_test",
+            "values": {
+              "x": "5.0011086642281199",
+              "y": "0.39093945646747708"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 20,
+            "split": "id_test",
+            "values": {
+              "x": "5.6469828476529909",
+              "y": "0.47872348639400802"
+            }
+          },
+          {
+            "reason": "simplified_nonfinite",
+            "row_index": 22,
+            "split": "id_test",
+            "values": {
+              "x": "4.4879915030195194",
+              "y": "0.22372116529754099"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 29,
+            "split": "id_test",
+            "values": {
+              "x": "5.344913662098401",
+              "y": "6.3636545485426401"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 30,
+            "split": "id_test",
+            "values": {
+              "x": "5.8727357707057308",
+              "y": "6.6482908246785"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 31,
+            "split": "id_test",
+            "values": {
+              "x": "5.2173010241435405",
+              "y": "6.2424344396684806"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 108,
+            "split": "ood_test",
+            "values": {
+              "x": "6.0285302450073459",
+              "y": "-0.093794958764546063"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 149,
+            "split": "ood_test",
+            "values": {
+              "x": "4.1177299106347141",
+              "y": "-0.11126137777873681"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 230,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0295905411086412",
+              "y": "6.6934305559654828"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 260,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0512597899144041",
+              "y": "6.6608323273170145"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 291,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0876970949049056",
+              "y": "6.902753068346196"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 542,
+            "split": "ood_test",
+            "values": {
+              "x": "6.0478597958460947",
+              "y": "6.7939197720931794"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 879,
+            "split": "ood_test",
+            "values": {
+              "x": "4.0890477681381805",
+              "y": "-0.048127816908877727"
+            }
+          },
+          {
+            "reason": "both_nonfinite",
+            "row_index": 974,
+            "split": "ood_test",
+            "values": {
+              "x": "4.1107102137040608",
+              "y": "6.9122547279986248"
+            }
+          }
+        ],
+        "symbolic_difference": {
+          "assumptions": [
+            "符号证明超时或当前执行线程无法安全设置超时（上限 0.25 秒），保留数值探针交由后续裁决。"
+          ],
+          "counterexample": null,
+          "decision": "undetermined",
+          "max_abs_error": "0",
+          "max_rel_error": "0",
+          "max_tolerance": "0",
+          "normalized_probe_points_sha256": "c37a7908f91fba306c26f247ea53aaa154a54551e11e603de3739a53e7407a1a",
+          "numeric_probes": [],
+          "probe_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "probe_sample_sha256": "5173197292a2f2fe99412532f6c4bd72e134471e20121756c41db5871f96dc33",
+          "probe_source": "dataset_probes_v1",
+          "proof_basis": "none",
+          "skipped_probe_count": 16,
+          "skipped_probe_reasons": {
+            "both_nonfinite": 12,
+            "simplified_nonfinite": 4
+          },
+          "skipped_probes": [
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 0,
+              "split": "id_test",
+              "values": {
+                "x": "5.4158088337299093",
+                "y": "0.47019684437462211"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 9,
+              "split": "id_test",
+              "values": {
+                "x": "5.4527038027919099",
+                "y": "6.4526281905042504"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 19,
+              "split": "id_test",
+              "values": {
+                "x": "5.0011086642281199",
+                "y": "0.39093945646747708"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 20,
+              "split": "id_test",
+              "values": {
+                "x": "5.6469828476529909",
+                "y": "0.47872348639400802"
+              }
+            },
+            {
+              "reason": "simplified_nonfinite",
+              "row_index": 22,
+              "split": "id_test",
+              "values": {
+                "x": "4.4879915030195194",
+                "y": "0.22372116529754099"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 29,
+              "split": "id_test",
+              "values": {
+                "x": "5.344913662098401",
+                "y": "6.3636545485426401"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 30,
+              "split": "id_test",
+              "values": {
+                "x": "5.8727357707057308",
+                "y": "6.6482908246785"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 31,
+              "split": "id_test",
+              "values": {
+                "x": "5.2173010241435405",
+                "y": "6.2424344396684806"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 108,
+              "split": "ood_test",
+              "values": {
+                "x": "6.0285302450073459",
+                "y": "-0.093794958764546063"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 149,
+              "split": "ood_test",
+              "values": {
+                "x": "4.1177299106347141",
+                "y": "-0.11126137777873681"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 230,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0295905411086412",
+                "y": "6.6934305559654828"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 260,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0512597899144041",
+                "y": "6.6608323273170145"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 291,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0876970949049056",
+                "y": "6.902753068346196"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 542,
+              "split": "ood_test",
+              "values": {
+                "x": "6.0478597958460947",
+                "y": "6.7939197720931794"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 879,
+              "split": "ood_test",
+              "values": {
+                "x": "4.0890477681381805",
+                "y": "-0.048127816908877727"
+              }
+            },
+            {
+              "reason": "both_nonfinite",
+              "row_index": 974,
+              "split": "ood_test",
+              "values": {
+                "x": "4.1107102137040608",
+                "y": "6.9122547279986248"
+              }
+            }
+          ]
+        },
+        "tree": {
+          "computed": true,
+          "normalized_edit_distance": 0.6129032258064516,
+          "tree_similarity": 0.3870967741935484
+        },
+        "variable": {
+          "f1": 1.0
+        }
+      },
+      "pair_seed": 520521,
+      "phase": "structure",
+      "rhs_binding": {
+        "frozen_effective_expression": "log(sqrt(sin(y) - 1.33941077522104))",
+        "frozen_evaluation_key": "dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f",
+        "frozen_logical_id": "pred_simplify::gplearn::g0029::s521::clean",
+        "role": "rhs"
+      },
+      "schema_version": "symbolic_pair_evidence.v2"
+    },
+    "effective_prediction_a_expression": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+    "effective_prediction_b_expression": "log(sqrt(sin(y) - 1.33941077522104))",
+    "effort": "xhigh",
+    "evidence_hash": "9658fbe3352b90c87168eb94ca27054233e66f763cf399d07631d976f9d99314",
+    "model": "claude-opus-5",
+    "noise_tag": "clean",
+    "overlay_revision_sha256": "397c45a0a1f37642518d32693c99efd27b8046a8c0ef1456d62ade6d891229d3",
+    "prediction_a_expression_resolution": "llm_simplified_expression",
+    "prediction_a_frozen_evaluation_key": "7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61",
+    "prediction_a_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_a_logical_id": "pred_simplify::gplearn::g0029::s520::clean",
+    "prediction_a_plan_evaluation_key": "7fa0142922c209fffa53dcb370d6f5d947abca2686b4a56c455e6cd7c3cf1b61",
+    "prediction_a_result_sha256": "726ab98a4a863e445989ce8a097a4116aa7fc3502236c34766e2630bacd926e8",
+    "prediction_a_simplify_status": "unchanged",
+    "prediction_a_task_id": "gplearn_s520_clean_g0029",
+    "prediction_a_valid_output": true,
+    "prediction_b_expression_resolution": "llm_simplified_expression",
+    "prediction_b_frozen_evaluation_key": "dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f",
+    "prediction_b_frozen_plan_sha256": "d6187baa60ad34f088e18aa045eae5b406fb253a4ff486ff20c55a178003f72f",
+    "prediction_b_logical_id": "pred_simplify::gplearn::g0029::s521::clean",
+    "prediction_b_plan_evaluation_key": "dfb8b442ac29563ece4f5ce42a66a221d79278b7201e537b6b0961bfaff0e24f",
+    "prediction_b_result_sha256": "8ba600317219105ec0986f5ea962eb928ec9544f6d167ee0a603ecb13569052c",
+    "prediction_b_simplify_status": "simplified",
+    "prediction_b_task_id": "gplearn_s521_clean_g0029",
+    "prediction_b_valid_output": true,
+    "seed_a": 520,
+    "seed_b": 521,
+    "simplified_prediction_a_expression": "(sin(y) + sin(y + sin(y)) + cos(log(y) + cos(y)))*log(cos(0.42*y))",
+    "simplified_prediction_b_expression": "log(sqrt(sin(y) - 1.33941077522104))",
+    "stream": false
+  },
+  "validation": {
+    "error_class": "structured_output_invalid",
+    "error_message": "API result 未通过 Draft-07 schema: Additional properties are not allowed ('brief_reason_note' was unexpected)",
+    "ok": false,
+    "structured_output": null
+  }
+}

@@ -9,6 +9,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 
+from .trajectory_repairs import TrajectoryRepairContractError, load_repair_manifest
+
 
 class TrajectoryCoverageContractError(ValueError):
     """轨迹覆盖率输入不满足 Stage5 契约。"""
@@ -240,6 +242,8 @@ def build_trajectory_coverage_summary(
     report_paths: Iterable[Path],
     noise_tag: str = "clean",
     horizon: int = 180,
+    repair_manifest_path: Path | None = None,
+    repo_root: Path | None = None,
 ) -> dict[str, Any]:
     if horizon <= 0:
         raise TrajectoryCoverageContractError("horizon 必须为正整数")
@@ -531,10 +535,75 @@ def build_trajectory_coverage_summary(
         summary["report_mismatches"],
     )
     identity_contract_ok = not any(identity_issues)
+    raw_missing_points = sorted(
+        (
+            str(point["logical_key"]),
+            str(point["host"]),
+            str(point["task_id"]),
+            int(point["minute"]),
+        )
+        for point in missing_points
+    )
+    repaired_missing_points = 0
+    unresolved_missing_points = len(raw_missing_points)
+    repair_manifest_valid = not raw_missing_points
+    if repair_manifest_path is not None:
+        repair_root = repo_root.resolve() if repo_root is not None else _repo_root()
+        resolved_manifest_path = Path(repair_manifest_path)
+        if not resolved_manifest_path.is_absolute():
+            resolved_manifest_path = repair_root / resolved_manifest_path
+        resolved_manifest_path = resolved_manifest_path.resolve()
+        try:
+            repair_manifest = load_repair_manifest(
+                resolved_manifest_path,
+                repo_root=repair_root,
+            )
+        except (OSError, TrajectoryRepairContractError) as exc:
+            raise TrajectoryCoverageContractError(
+                f"repair manifest 无法加载或未通过 schema/evidence 校验: {resolved_manifest_path}: {exc}"
+            ) from exc
+        manifest_horizon = repair_manifest.get("horizon")
+        if manifest_horizon != horizon:
+            raise TrajectoryCoverageContractError(
+                f"repair manifest horizon={manifest_horizon!r} 与请求 horizon={horizon} 不一致"
+            )
+        manifest_points: list[tuple[str, str, str, int]] = []
+        for repair in repair_manifest.get("repairs", []):
+            if not isinstance(repair, Mapping):
+                raise TrajectoryCoverageContractError("repair manifest repairs 条目必须是 object")
+            logical_key = str(repair.get("logical_key") or "")
+            host = str(repair.get("host") or "")
+            task_id = str(repair.get("task_id") or "")
+            minutes = repair.get("missing_minutes")
+            if not isinstance(minutes, list):
+                raise TrajectoryCoverageContractError(
+                    f"{logical_key or '<unknown>'} repair missing_minutes 不是数组"
+                )
+            manifest_points.extend(
+                (logical_key, host, task_id, int(minute))
+                for minute in minutes
+            )
+        if Counter(raw_missing_points) != Counter(manifest_points):
+            raw_only = sorted(Counter(raw_missing_points) - Counter(manifest_points))
+            manifest_only = sorted(Counter(manifest_points) - Counter(raw_missing_points))
+            raise TrajectoryCoverageContractError(
+                "repair manifest 与 raw missing points 不构成 exact closure; "
+                f"raw_only={raw_only[:3]} manifest_only={manifest_only[:3]}"
+            )
+        repaired_missing_points = len(raw_missing_points)
+        unresolved_missing_points = 0
+        repair_manifest_valid = True
+
     summary["readiness"] = {
         "identity_contract_ok": identity_contract_ok,
-        "formal_eff_ready": identity_contract_ok and counts["missing_file"] == 0,
-        "blocking_missing_points": counts["missing_file"],
+        "raw_missing_points": len(raw_missing_points),
+        "repaired_missing_points": repaired_missing_points,
+        "unresolved_missing_points": unresolved_missing_points,
+        "repair_manifest_valid": repair_manifest_valid,
+        "formal_eff_ready": identity_contract_ok
+        and repair_manifest_valid
+        and unresolved_missing_points == 0,
+        "blocking_missing_points": unresolved_missing_points,
         "future_backfill_ignored_points": counts["future_backfill_ignored"],
     }
     summary["contract_ok"] = identity_contract_ok
@@ -545,6 +614,7 @@ def validate_trajectory_coverage_summary(
     summary: Mapping[str, Any],
     *,
     reject_future_backfill: bool = False,
+    require_formal_eff_ready: bool = False,
 ) -> None:
     inventory = summary.get("inventory")
     final_audit = summary.get("final_result_audit")
@@ -571,6 +641,10 @@ def validate_trajectory_coverage_summary(
     report_mismatches = summary.get("report_mismatches")
     if isinstance(report_mismatches, list) and report_mismatches:
         issues.append(f"report_mismatches={len(report_mismatches)}")
+    if require_formal_eff_ready:
+        readiness = summary.get("readiness")
+        if not isinstance(readiness, Mapping) or readiness.get("formal_eff_ready") is not True:
+            issues.append("readiness.formal_eff_ready!=true")
     if issues:
         raise TrajectoryCoverageContractError("；".join(issues))
 
@@ -592,6 +666,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--noise-tag", choices=("clean", "noise001", "noise005"), default="clean")
     parser.add_argument("--horizon", type=int, default=180)
     parser.add_argument(
+        "--repair-manifest",
+        type=Path,
+        default=None,
+        help="可选的 audited trajectory repair manifest；提供后必须与 raw missing points 精确闭合",
+    )
+    parser.add_argument(
         "--output-json",
         type=Path,
         default=stage5_root / "reports/trajectory_coverage.json",
@@ -611,6 +691,8 @@ def main(argv: list[str] | None = None) -> int:
         report_paths=report_paths,
         noise_tag=args.noise_tag,
         horizon=args.horizon,
+        repair_manifest_path=args.repair_manifest,
+        repo_root=_repo_root(),
     )
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     rendered = json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True)
