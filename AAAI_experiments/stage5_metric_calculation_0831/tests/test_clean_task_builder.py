@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import sys
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
@@ -50,6 +51,75 @@ def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
             handle.write("\n")
+
+
+def test_planned_task_json_record_handles_deep_request_without_mutation() -> None:
+    canonical_tree: dict[str, object] = {"leaf": "x0"}
+    for _ in range(1100):
+        canonical_tree = {"child": canonical_tree}
+    previous_limit = sys.getrecursionlimit()
+    try:
+        sys.setrecursionlimit(5000)
+        json.dumps(canonical_tree)
+    finally:
+        sys.setrecursionlimit(previous_limit)
+
+    request: dict[str, object] = {
+        "expression": "x0",
+        "ast_source_evidence": {
+            "canonical_artifact": {"canonical_tree": canonical_tree},
+        },
+    }
+    task = PlannedTask(
+        evaluation_key="a" * 64,
+        logical_id="pred_simplify::demo::g0001::s520::clean",
+        task_type="pred_simplify",
+        condition="clean",
+        priority=20,
+        input_hash="b" * 64,
+        prompt_version="simplify.v1",
+        prompt_sha256="c" * 64,
+        schema_version="simplify.v1",
+        schema_sha256="d" * 64,
+        dependencies=(),
+        prompt_path="prompt.txt",
+        schema_path="schema.json",
+        prompt_template="REQUEST:\n{{REQUEST_JSON}}",
+        schema_content={"type": "object"},
+        normalized_input={"request": "demo"},
+        request=request,
+    )
+
+    record = task.to_json_record()
+
+    assert set(record) == {
+        "evaluation_key",
+        "logical_id",
+        "task_type",
+        "condition",
+        "priority",
+        "input_hash",
+        "prompt_version",
+        "prompt_sha256",
+        "schema_version",
+        "schema_sha256",
+        "dependencies",
+        "prompt_path",
+        "schema_path",
+        "prompt_template",
+        "schema_content",
+        "normalized_input",
+        "request",
+        "task_spec",
+        "rendered_prompt",
+    }
+    assert record["request"] is request
+    assert task.request is request
+    with pytest.raises(FrozenInstanceError):
+        task.request = {}  # type: ignore[misc]
+    assert record["dependencies"] == []
+    assert "canonical_tree" not in record["rendered_prompt"]
+    assert canonical_tree == request["ast_source_evidence"]["canonical_artifact"]["canonical_tree"]  # type: ignore[index]
 
 
 def test_noise_cli_defaults_defer_condition_specific_inputs() -> None:

@@ -13,7 +13,7 @@ import json
 import keyword
 import math
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -137,7 +137,9 @@ class PlannedTask:
         )
 
     def to_json_record(self) -> dict[str, Any]:
-        payload = asdict(self)
+        # 只展开 dataclass 外壳。asdict() 会递归 deepcopy 任意 request 树，
+        # 深层 canonical_tree 即使可序列化，也可能先在这里触发 RecursionError。
+        payload = {field.name: getattr(self, field.name) for field in fields(self)}
         payload["dependencies"] = list(self.dependencies)
         payload["task_spec"] = json.loads(self.to_task_spec().canonical_json())
         payload["rendered_prompt"] = render_prompt(
