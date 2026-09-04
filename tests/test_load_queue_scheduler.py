@@ -162,7 +162,7 @@ def test_preflight_local_files_include_runtime_semantics_dependencies(tmp_path):
         "scientific_intelligent_modelling/benchmarks/normalizers.py"
     )
     assert local_files["subprocess_runner"] == (
-        "scientific_intelligent_modelling/benchmarks/subprocess_runner.py"
+        "scientific_intelligent_modelling/srkit/subprocess_runner.py"
     )
     assert local_files["imcts_native_regressor"] == (
         "scientific_intelligent_modelling/algorithms/"

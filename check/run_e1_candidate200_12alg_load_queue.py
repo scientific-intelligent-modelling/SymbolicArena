@@ -2750,7 +2750,7 @@ def _preflight_local_files(
         "scheduler": "check/run_e1_candidate200_12alg_load_queue.py",
         "launcher": "check/launch_e1_benchmark.py",
         "runner": "scientific_intelligent_modelling/benchmarks/runner.py",
-        "subprocess_runner": "scientific_intelligent_modelling/benchmarks/subprocess_runner.py",
+        "subprocess_runner": "scientific_intelligent_modelling/srkit/subprocess_runner.py",
         "artifact_schema": "scientific_intelligent_modelling/benchmarks/artifact_schema.py",
         "normalizers": "scientific_intelligent_modelling/benchmarks/normalizers.py",
         "imcts_native_regressor": (
