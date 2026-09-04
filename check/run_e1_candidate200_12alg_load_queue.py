@@ -2155,21 +2155,33 @@ def _write_summary(state: dict[str, Any], host_states: list[dict[str, Any]] | No
     path.write_text(json.dumps(_summarize_state(state, host_states), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _pending_task_ids(state: dict[str, Any], dispatch_seed: int | None = None) -> list[str]:
+def _pending_task_ids(
+    state: dict[str, Any],
+    dispatch_seed: int | None = None,
+    dispatch_noise_tag: str | None = None,
+) -> list[str]:
     return [
         task_id
         for task_id, task in state["tasks"].items()
-        if task.get("state") == "pending" and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
+        if task.get("state") == "pending"
+        and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
+        and (dispatch_noise_tag is None or task.get("noise_tag") == dispatch_noise_tag)
     ]
 
 
-def _pending_task_ids_by_tool(state: dict[str, Any], tool: str, dispatch_seed: int | None = None) -> list[str]:
+def _pending_task_ids_by_tool(
+    state: dict[str, Any],
+    tool: str,
+    dispatch_seed: int | None = None,
+    dispatch_noise_tag: str | None = None,
+) -> list[str]:
     return [
         task_id
         for task_id, task in state["tasks"].items()
         if task.get("state") == "pending"
         and task.get("tool") == tool
         and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
+        and (dispatch_noise_tag is None or task.get("noise_tag") == dispatch_noise_tag)
     ]
 
 
@@ -2226,21 +2238,56 @@ def _ordered_pending_ids_for_tools(
     tools: list[str],
     start: int = 0,
     dispatch_seed: int | None = None,
+    dispatch_noise_tag: str | None = None,
 ) -> list[str]:
     ordered: list[str] = []
     if not tools:
         return ordered
     for offset in range(len(tools)):
         tool = tools[(start + offset) % len(tools)]
-        ordered.extend(_pending_task_ids_by_tool(state, tool, dispatch_seed))
+        ordered.extend(
+            _pending_task_ids_by_tool(
+                state,
+                tool,
+                dispatch_seed,
+                dispatch_noise_tag,
+            )
+        )
     return ordered
 
 
-def _active_dispatch_seed(state: dict[str, Any], args: argparse.Namespace) -> int | None:
+def _active_dispatch_noise_tag(
+    state: dict[str, Any], args: argparse.Namespace
+) -> str | None:
+    if getattr(args, "condition_dispatch_mode", "mixed") != "sequential":
+        return None
+    configured_sigmas = getattr(args, "noise_sigmas", None)
+    if configured_sigmas is None:
+        configured_sigmas = [0.0]
+    seen: set[str] = set()
+    for sigma in configured_sigmas:
+        noise_tag = _noise_tag_for_sigma(float(sigma))
+        if noise_tag in seen:
+            continue
+        seen.add(noise_tag)
+        if _pending_task_ids(state, dispatch_noise_tag=noise_tag):
+            return noise_tag
+    return None
+
+
+def _active_dispatch_seed(
+    state: dict[str, Any],
+    args: argparse.Namespace,
+    dispatch_noise_tag: str | None = None,
+) -> int | None:
     if args.seed_dispatch_mode != "sequential":
         return None
     for seed in args.seeds:
-        if _pending_task_ids(state, int(seed)):
+        if _pending_task_ids(
+            state,
+            int(seed),
+            dispatch_noise_tag,
+        ):
             return int(seed)
     return None
 
@@ -2251,12 +2298,19 @@ def _next_pending_task_id(
     *,
     max_cpu_weight: int | None = None,
 ) -> str | None:
-    dispatch_seed = _active_dispatch_seed(state, args)
+    dispatch_noise_tag = _active_dispatch_noise_tag(state, args)
+    dispatch_seed = _active_dispatch_seed(state, args, dispatch_noise_tag)
     if args.prioritize_llm:
         llm_tools = [tool for tool in args.tools if tool in LLM_TOOLS]
         if args.round_robin_tools:
             llm_start = int(state.get("llm_round_robin_cursor") or 0)
-            llm_pending = _ordered_pending_ids_for_tools(state, llm_tools, start=llm_start, dispatch_seed=dispatch_seed)
+            llm_pending = _ordered_pending_ids_for_tools(
+                state,
+                llm_tools,
+                start=llm_start,
+                dispatch_seed=dispatch_seed,
+                dispatch_noise_tag=dispatch_noise_tag,
+            )
         else:
             llm_pending = [
                 task_id
@@ -2264,6 +2318,10 @@ def _next_pending_task_id(
                 if task.get("state") == "pending"
                 and task.get("tool") in LLM_TOOLS
                 and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
+                and (
+                    dispatch_noise_tag is None
+                    or task.get("noise_tag") == dispatch_noise_tag
+                )
             ]
         picked = _first_eligible_pending(llm_pending, state, args, max_cpu_weight=max_cpu_weight)
         if picked is not None:
@@ -2281,6 +2339,10 @@ def _next_pending_task_id(
             if task.get("state") == "pending"
             and (not args.prioritize_llm or task.get("tool") not in LLM_TOOLS)
             and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
+            and (
+                dispatch_noise_tag is None
+                or task.get("noise_tag") == dispatch_noise_tag
+            )
         ]
         picked = _first_eligible_pending(pending, state, args, max_cpu_weight=max_cpu_weight)
         if picked is not None:
@@ -2288,7 +2350,7 @@ def _next_pending_task_id(
         if args.prioritize_llm:
             return None
         return _first_eligible_pending(
-            _pending_task_ids(state, dispatch_seed),
+            _pending_task_ids(state, dispatch_seed, dispatch_noise_tag),
             state,
             args,
             max_cpu_weight=max_cpu_weight,
@@ -2301,7 +2363,12 @@ def _next_pending_task_id(
     for offset in range(len(tools)):
         idx = (start + offset) % len(tools)
         tool = tools[idx]
-        pending = _pending_task_ids_by_tool(state, tool, dispatch_seed)
+        pending = _pending_task_ids_by_tool(
+            state,
+            tool,
+            dispatch_seed,
+            dispatch_noise_tag,
+        )
         picked = _first_eligible_pending(pending, state, args, max_cpu_weight=max_cpu_weight)
         if picked:
             state["round_robin_cursor"] = (idx + 1) % len(tools)
@@ -2978,6 +3045,15 @@ def _parse_args() -> argparse.Namespace:
         help="任务派发 seed 策略。mixed 保持原有混合派发；sequential 会先派完较早 seed 的 pending 任务，再派下一个 seed。",
     )
     parser.add_argument(
+        "--condition-dispatch-mode",
+        choices=["mixed", "sequential"],
+        default="mixed",
+        help=(
+            "任务派发 condition 策略。mixed 保持原有混合派发；sequential 按 "
+            "--noise-sigmas 顺序派完当前 condition 的 pending 后再进入下一 condition。"
+        ),
+    )
+    parser.add_argument(
         "--prioritize-llm",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -3090,6 +3166,7 @@ def main() -> None:
                 "tools": args.tools,
                 "seeds": args.seeds,
                 "noise_sigmas": args.noise_sigmas or [0.0],
+                "condition_dispatch_mode": args.condition_dispatch_mode,
                 "tasks": len(tasks),
                 "tool_config": {tool: TOOL_CONFIG[tool] for tool in args.tools},
                 "load_tier_new_jobs": args.load_tier_new_jobs,

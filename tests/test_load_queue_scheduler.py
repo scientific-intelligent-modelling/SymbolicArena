@@ -184,6 +184,9 @@ def _scheduler_args(**overrides):
         "default_max_running_per_tool": 0,
         "llm_model_bucket_limits_parsed": {"base": 1, "turbo": 1},
         "seed_dispatch_mode": "mixed",
+        "condition_dispatch_mode": "mixed",
+        "noise_sigmas": [0.0, 0.01, 0.05],
+        "seeds": [520, 521, 522],
     }
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -480,6 +483,193 @@ def test_next_pending_uses_available_llm_bucket_before_non_llm():
     picked = scheduler._next_pending_task_id(state, _scheduler_args())
 
     assert picked == "pending_turbo"
+
+
+def test_condition_dispatch_mixed_preserves_existing_pending_order():
+    state = {
+        "tasks": {
+            "noise005_first": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "noise005",
+            },
+            "clean_second": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "clean",
+            },
+        }
+    }
+
+    picked = scheduler._next_pending_task_id(
+        state,
+        _scheduler_args(
+            tools=["gplearn"],
+            prioritize_llm=False,
+            round_robin_tools=False,
+            condition_dispatch_mode="mixed",
+        ),
+    )
+
+    assert picked == "noise005_first"
+
+
+def test_condition_dispatch_sequential_locks_configured_noise_order():
+    state = {
+        "tasks": {
+            "noise005_llm": {
+                "state": "pending",
+                "tool": "llmsr",
+                "seed": 520,
+                "noise_tag": "noise005",
+                "llm_model_bucket": "turbo",
+            },
+            "noise001_non_llm": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "noise001",
+            },
+            "clean_non_llm": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "clean",
+            },
+        },
+        "round_robin_cursor": 0,
+        "llm_round_robin_cursor": 0,
+    }
+
+    picked = scheduler._next_pending_task_id(
+        state,
+        _scheduler_args(condition_dispatch_mode="sequential"),
+    )
+
+    assert picked == "clean_non_llm"
+
+
+def test_condition_dispatch_sequential_does_not_cross_condition_when_llm_limited():
+    state = {
+        "tasks": {
+            "running_clean_turbo": {
+                "state": "running",
+                "tool": "drsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_clean_turbo": {
+                "state": "pending",
+                "tool": "llmsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_noise001_non_llm": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "noise001",
+            },
+        },
+        "round_robin_cursor": 0,
+        "llm_round_robin_cursor": 0,
+    }
+
+    picked = scheduler._next_pending_task_id(
+        state,
+        _scheduler_args(
+            condition_dispatch_mode="sequential",
+            llm_model_bucket_limits_parsed={"turbo": 1},
+        ),
+    )
+
+    assert picked is None
+
+
+def test_condition_and_seed_sequential_compose_with_condition_precedence():
+    state = {
+        "tasks": {
+            "noise001_seed520": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "noise001",
+            },
+            "clean_seed521": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 521,
+                "noise_tag": "clean",
+            },
+            "clean_seed520": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "clean",
+            },
+        }
+    }
+    args = _scheduler_args(
+        tools=["gplearn"],
+        prioritize_llm=False,
+        round_robin_tools=False,
+        condition_dispatch_mode="sequential",
+        seed_dispatch_mode="sequential",
+        seeds=[520, 521],
+    )
+
+    first = scheduler._next_pending_task_id(state, args)
+    state["tasks"]["clean_seed520"]["state"] = "done"
+    second = scheduler._next_pending_task_id(state, args)
+
+    assert first == "clean_seed520"
+    assert second == "clean_seed521"
+
+
+def test_queue_start_records_condition_dispatch_mode(tmp_path: Path):
+    source = tmp_path / "source.csv"
+    source.write_text(
+        "global_index,dataset_dir,dataset_name\n"
+        "1,sim-datasets-data/demo/dataset,dataset\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            "python",
+            str(Path(scheduler.__file__)),
+            "--source-csv",
+            str(source),
+            "--expected-rows",
+            "1",
+            "--queue-root",
+            str(tmp_path / "queue"),
+            "--params-root",
+            str(tmp_path / "params"),
+            "--tools",
+            "gplearn",
+            "--seeds",
+            "520",
+            "--noise-sigmas",
+            "0",
+            "0.01",
+            "--condition-dispatch-mode",
+            "sequential",
+            "--dry-run",
+            "--once",
+        ],
+        text=True,
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    queue_start = json.loads(result.stdout.splitlines()[0])
+    assert queue_start["condition_dispatch_mode"] == "sequential"
 
 
 def test_list_queue_sessions_does_not_mask_tmux_ls_timeout(monkeypatch):
