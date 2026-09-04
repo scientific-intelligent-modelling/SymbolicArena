@@ -189,6 +189,9 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
             "host": "host1",
             "result_sha256": _fake_sha("numeric-520"),
             "valid_output": "true",
+            "evaluation_status": "valid",
+            "invalid_reason": "",
+            "replay_error": "",
             "formula_source": "canonical_artifact",
             "id_nmse": "1e-06",
             "ood_nmse": "1e-04",
@@ -205,6 +208,9 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
             "host": "host1",
             "result_sha256": _fake_sha("numeric-521"),
             "valid_output": "true",
+            "evaluation_status": "valid",
+            "invalid_reason": "",
+            "replay_error": "",
             "formula_source": "canonical_artifact",
             "id_nmse": "1e-05",
             "ood_nmse": "1e-02",
@@ -221,6 +227,9 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
             "host": "host1",
             "result_sha256": _fake_sha("numeric-522"),
             "valid_output": "false",
+            "evaluation_status": "invalid_output",
+            "invalid_reason": "canonical prediction 含 NaN/Inf",
+            "replay_error": "",
             "formula_source": "canonical_artifact",
             "id_nmse": "1",
             "ood_nmse": "1",
@@ -639,6 +648,142 @@ def test_eff_readiness_gate_accepts_exact_repair_closure() -> None:
         "future_backfill_ignored_points": 2,
         "checkpoint_normalization_points": 1,
     }
+
+
+def test_canonical_replay_gate_accepts_closed_report_and_rows() -> None:
+    rows = {
+        "AlgoA::demo_ds::s520::clean": {
+            "evaluation_path": "canonical_replay.v1",
+            "canonical_replay_attempted_points": "180",
+            "canonical_replay_succeeded_points": "180",
+            "canonical_replay_failed_points": "0",
+            "canonical_replay_invalid_output_points": "2",
+        }
+    }
+    summary = {
+        "evaluation_path": "canonical_replay.v1",
+        "canonical_replay_attempted_points": 180,
+        "canonical_replay_succeeded_points": 180,
+        "canonical_replay_failed_points": 0,
+        "canonical_replay_invalid_output_points": 2,
+    }
+
+    assert aggregate_module._validate_canonical_replay_contract(
+        summary,
+        rows=rows,
+        report_context="eff_preparation_report.summary",
+        row_point_fields=True,
+    ) == {
+        "evaluation_path": "canonical_replay.v1",
+        "attempted_points": 180,
+        "succeeded_points": 180,
+        "failed_points": 0,
+        "invalid_output_points": 2,
+    }
+
+
+@pytest.mark.parametrize(
+    ("summary_update", "row_update", "message"),
+    [
+        ({"evaluation_path": "frozen_metrics.v1"}, {}, "evaluation_path"),
+        ({"canonical_replay_failed_points": 1}, {}, "failed_points"),
+        ({"canonical_replay_succeeded_points": 179}, {}, "attempted_points"),
+        ({}, {"evaluation_path": "frozen_metrics.v1"}, "CSV.*evaluation_path"),
+        (
+            {},
+            {"canonical_replay_succeeded_points": "179"},
+            "CSV.*canonical_replay_succeeded_points",
+        ),
+    ],
+)
+def test_canonical_replay_gate_rejects_open_or_mixed_contract(
+    summary_update: dict[str, object],
+    row_update: dict[str, object],
+    message: str,
+) -> None:
+    row = {
+        "evaluation_path": "canonical_replay.v1",
+        "canonical_replay_attempted_points": "180",
+        "canonical_replay_succeeded_points": "180",
+        "canonical_replay_failed_points": "0",
+        "canonical_replay_invalid_output_points": "2",
+    }
+    row.update(row_update)
+    summary = {
+        "evaluation_path": "canonical_replay.v1",
+        "canonical_replay_attempted_points": 180,
+        "canonical_replay_succeeded_points": 180,
+        "canonical_replay_failed_points": 0,
+        "canonical_replay_invalid_output_points": 2,
+    }
+    summary.update(summary_update)
+
+    with pytest.raises(AggregateCleanMetricsError, match=message):
+        aggregate_module._validate_canonical_replay_contract(
+            summary,
+            rows={"AlgoA::demo_ds::s520::clean": row},
+            report_context="eff_preparation_report.summary",
+            row_point_fields=True,
+        )
+
+
+def test_clean_numeric_replay_gate_rejects_report_or_row_errors() -> None:
+    payload = {
+        "evaluation_path": "canonical_replay.v1",
+        "counts": {
+            "valid_outputs": 1,
+            "canonical_invalid_outputs": 0,
+            "replay_unavailable": 0,
+            "replay_errors": 0,
+        },
+    }
+    rows = {
+        "AlgoA::demo_ds::s520::clean": {
+            "evaluation_path": "canonical_replay.v1",
+            "evaluation_status": "valid",
+            "valid_output": "true",
+            "invalid_reason": "",
+            "id_quality": "0.8",
+            "ood_quality": "0.7",
+            "replay_error": "",
+        }
+    }
+    assert aggregate_module._validate_clean_numeric_replay_contract(payload, rows=rows) == {
+        "evaluation_path": "canonical_replay.v1",
+        "valid_outputs": 1,
+        "replay_errors": 0,
+        "invalid_outputs": 0,
+        "replay_unavailable": 0,
+    }
+
+    broken_payload = json.loads(json.dumps(payload))
+    broken_payload["counts"]["replay_errors"] = 1
+    with pytest.raises(AggregateCleanMetricsError, match="replay_errors"):
+        aggregate_module._validate_clean_numeric_replay_contract(broken_payload, rows=rows)
+
+    broken_rows = json.loads(json.dumps(rows))
+    broken_rows["AlgoA::demo_ds::s520::clean"]["replay_error"] = "cannot parse"
+    with pytest.raises(AggregateCleanMetricsError, match="CSV replay_error"):
+        aggregate_module._validate_clean_numeric_replay_contract(payload, rows=broken_rows)
+
+    unavailable_rows = json.loads(json.dumps(rows))
+    unavailable_rows["AlgoA::demo_ds::s520::clean"].update(
+        {
+            "evaluation_status": "replay_unavailable",
+            "valid_output": "",
+            "id_quality": "",
+            "ood_quality": "",
+            "replay_error": "missing evidence",
+        }
+    )
+    unavailable_payload = json.loads(json.dumps(payload))
+    unavailable_payload["counts"].update(
+        {"valid_outputs": 0, "replay_unavailable": 1, "replay_errors": 1}
+    )
+    with pytest.raises(AggregateCleanMetricsError, match="replay_unavailable"):
+        aggregate_module._validate_clean_numeric_replay_contract(
+            unavailable_payload, rows=unavailable_rows
+        )
 
 
 def test_formal_contract_requires_formula_audit_corrections_manifest() -> None:

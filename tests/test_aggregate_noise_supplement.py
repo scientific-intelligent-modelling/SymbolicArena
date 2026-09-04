@@ -98,7 +98,10 @@ def _numeric_row(
         "task_id": f"{algorithm.lower()}_s{seed}_{condition}_{dataset}",
         "host": "host2",
         "result_sha256": "a" * 64,
+        "evaluation_status": "valid",
         "valid_output": "true",
+        "invalid_reason": "",
+        "replay_error": "",
         "formula_source": "canonical_artifact",
         "id_nmse": 0.1,
         "ood_nmse": 0.2,
@@ -300,6 +303,39 @@ def test_aggregate_noise_supplement_rejects_duplicate_numeric_key(tmp_path: Path
     _write_csv(noise_path, rows)
 
     with pytest.raises(AggregateNoiseSupplementError, match="重复"):
+        aggregate_noise_supplement(**arguments)
+
+
+def test_aggregate_noise_supplement_rejects_replay_unavailable_instead_of_scoring_zero(
+    tmp_path: Path,
+) -> None:
+    arguments = _fixture(tmp_path)
+    noise_path = Path(arguments["noise001_numeric_csv"])
+    rows = list(csv.DictReader(noise_path.open()))
+    rows[0].update(
+        {
+            "evaluation_status": "replay_unavailable",
+            "valid_output": "",
+            "id_quality": "",
+            "ood_quality": "",
+        }
+    )
+    _write_csv(noise_path, rows)
+
+    with pytest.raises(AggregateNoiseSupplementError, match="replay_unavailable"):
+        aggregate_noise_supplement(**arguments)
+
+
+def test_aggregate_noise_supplement_rejects_legacy_blank_status(
+    tmp_path: Path,
+) -> None:
+    arguments = _fixture(tmp_path)
+    noise_path = Path(arguments["noise001_numeric_csv"])
+    rows = list(csv.DictReader(noise_path.open()))
+    rows[0]["evaluation_status"] = ""
+    _write_csv(noise_path, rows)
+
+    with pytest.raises(AggregateNoiseSupplementError, match="evaluation_status"):
         aggregate_noise_supplement(**arguments)
 
 

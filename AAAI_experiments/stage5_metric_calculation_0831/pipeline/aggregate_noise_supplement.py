@@ -333,9 +333,12 @@ def _load_numeric_rows(
         "noise_tag",
         "task_id",
         "host",
+        "evaluation_status",
         "valid_output",
+        "invalid_reason",
         "id_quality",
         "ood_quality",
+        "replay_error",
     }
     rows, _ = _read_csv(path, label=f"{condition}_numeric_run_metrics.csv", required_fields=required)
     numeric: dict[tuple[str, str, int], dict[str, Any]] = {}
@@ -344,11 +347,25 @@ def _load_numeric_rows(
         key = _validate_logical_key(row, condition=condition, context=context)
         if key in numeric:
             _raise(f"{condition}_numeric_run_metrics.csv 出现重复键: {key}")
+        evaluation_status = _nonempty_string(
+            row["evaluation_status"], context=f"{context}.evaluation_status"
+        )
+        if evaluation_status == "replay_unavailable":
+            _raise(f"{context}.evaluation_status=replay_unavailable，禁止按 0 分聚合")
+        if evaluation_status not in {"valid", "invalid_output"}:
+            _raise(f"{context}.evaluation_status 枚举非法: {evaluation_status!r}")
         valid = _parse_bool(row["valid_output"], context=f"{context}.valid_output")
         id_quality = _unit_float(row["id_quality"], context=f"{context}.id_quality")
         ood_quality = _unit_float(row["ood_quality"], context=f"{context}.ood_quality")
-        if not valid and (id_quality != 0.0 or ood_quality != 0.0):
-            _raise(f"{context} valid_output=false 时质量必须为 0")
+        invalid_reason = str(row.get("invalid_reason") or "").strip()
+        replay_error = str(row.get("replay_error") or "").strip()
+        if replay_error:
+            _raise(f"{context}.replay_error 必须为空")
+        if evaluation_status == "valid":
+            if not valid or invalid_reason:
+                _raise(f"{context} valid 状态字段不一致")
+        elif valid or not invalid_reason or id_quality != 0.0 or ood_quality != 0.0:
+            _raise(f"{context} invalid_output 状态字段或质量不一致")
         numeric[key] = {
             "row": row,
             "valid": valid,

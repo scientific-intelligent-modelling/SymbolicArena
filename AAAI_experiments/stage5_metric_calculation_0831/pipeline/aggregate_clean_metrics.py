@@ -41,6 +41,7 @@ DEFAULT_EXPECTED_DATASETS = 50
 AUDIT_CORRECTIONS_SCHEMA_VERSION = "audit_corrections.v1"
 AUDIT_FALLBACK_RESOLUTION = "original_identity_fallback_after_audit"
 MINIMUM_FORMAL_AUDIT_ROWS = 1000
+CANONICAL_REPLAY_EVALUATION_PATH = "canonical_replay.v1"
 SIMPLIFY_OUTCOMES = {"simplified", "unchanged", "unable"}
 SIMPLIFY_EQUIVALENCE_ASSESSMENTS = {"preserved", "not_preserved", "undetermined"}
 GT_NO_CALL_REASONS = {"missing_ground_truth_expression"}
@@ -1344,6 +1345,117 @@ def _validate_path_sha_rowcount_triplet(
     return {"path": str(resolved_path), "sha256": sha256, "row_count": row_count}
 
 
+def _validate_clean_numeric_replay_contract(
+    payload: Mapping[str, Any],
+    *,
+    rows: Mapping[str, Mapping[str, str]],
+) -> dict[str, Any]:
+    """验证最终数值指标全部来自同一 canonical replay 路径。"""
+    if payload.get("evaluation_path") != CANONICAL_REPLAY_EVALUATION_PATH:
+        _raise(
+            "clean_numeric_preparation_report.evaluation_path 必须为 "
+            f"{CANONICAL_REPLAY_EVALUATION_PATH}"
+        )
+    counts = payload.get("counts")
+    if not isinstance(counts, Mapping):
+        _raise("clean_numeric_preparation_report.counts 缺失")
+    valid_outputs = _parse_int(
+        counts.get("valid_outputs"),
+        context="clean_numeric_preparation_report.counts.valid_outputs",
+    )
+    invalid_outputs = _parse_int(
+        counts.get("canonical_invalid_outputs"),
+        context="clean_numeric_preparation_report.counts.canonical_invalid_outputs",
+    )
+    replay_unavailable = _parse_int(
+        counts.get("replay_unavailable"),
+        context="clean_numeric_preparation_report.counts.replay_unavailable",
+    )
+    replay_errors = _parse_int(
+        counts.get("replay_errors"),
+        context="clean_numeric_preparation_report.counts.replay_errors",
+    )
+    if min(valid_outputs, invalid_outputs, replay_unavailable, replay_errors) < 0:
+        _raise("clean_numeric_preparation_report replay 状态计数不得为负数")
+    if valid_outputs + invalid_outputs + replay_unavailable != len(rows):
+        _raise(
+            "clean_numeric_preparation_report replay 状态计数未与 CSV 行数闭合"
+        )
+    if replay_unavailable != 0:
+        _raise(
+            "clean_numeric_preparation_report.counts.replay_unavailable 必须为 0，"
+            f"实际为 {replay_unavailable}"
+        )
+    if replay_errors != 0:
+        _raise(
+            "clean_numeric_preparation_report.counts.replay_errors 必须为 0，"
+            f"实际为 {replay_errors}"
+        )
+    row_valid_outputs = 0
+    row_invalid_outputs = 0
+    row_replay_unavailable = 0
+    row_replay_errors = 0
+    for logical_key, row in rows.items():
+        if row.get("evaluation_path") != CANONICAL_REPLAY_EVALUATION_PATH:
+            _raise(
+                f"{logical_key} clean numeric CSV evaluation_path 必须为 "
+                f"{CANONICAL_REPLAY_EVALUATION_PATH}"
+            )
+        evaluation_status = str(row.get("evaluation_status") or "").strip()
+        if evaluation_status not in {"valid", "invalid_output", "replay_unavailable"}:
+            _raise(f"{logical_key}.evaluation_status 枚举非法或缺失")
+        replay_error = str(row.get("replay_error") or "").strip()
+        invalid_reason = str(row.get("invalid_reason") or "").strip()
+        valid_output_text = str(row.get("valid_output") or "").strip().lower()
+        id_quality_text = str(row.get("id_quality") or "").strip()
+        ood_quality_text = str(row.get("ood_quality") or "").strip()
+        if replay_error:
+            row_replay_errors += 1
+            if evaluation_status != "replay_unavailable":
+                _raise(f"{logical_key} clean numeric CSV replay_error 必须为空")
+        if evaluation_status == "valid":
+            row_valid_outputs += 1
+            if valid_output_text != "true" or invalid_reason or replay_error:
+                _raise(f"{logical_key} valid 状态字段不一致")
+            _finite_unit_float(id_quality_text, context=f"{logical_key}.id_quality")
+            _finite_unit_float(ood_quality_text, context=f"{logical_key}.ood_quality")
+        elif evaluation_status == "invalid_output":
+            row_invalid_outputs += 1
+            if valid_output_text != "false" or not invalid_reason or replay_error:
+                _raise(f"{logical_key} invalid_output 状态字段不一致")
+            if (
+                _finite_unit_float(id_quality_text, context=f"{logical_key}.id_quality") != 0.0
+                or _finite_unit_float(ood_quality_text, context=f"{logical_key}.ood_quality")
+                != 0.0
+            ):
+                _raise(f"{logical_key} invalid_output 的 ID/OOD 质量必须为 0")
+        else:
+            row_replay_unavailable += 1
+            if valid_output_text or invalid_reason or not replay_error:
+                _raise(f"{logical_key} replay_unavailable 状态字段不一致")
+            if id_quality_text or ood_quality_text:
+                _raise(f"{logical_key} replay_unavailable 不得携带 ID/OOD 质量")
+    if row_valid_outputs != valid_outputs:
+        _raise(
+            "clean_numeric_preparation_report.counts.valid_outputs 与 CSV 不一致: "
+            f"{valid_outputs} != {row_valid_outputs}"
+        )
+    if row_invalid_outputs != invalid_outputs:
+        _raise(
+            "clean_numeric_preparation_report.counts.canonical_invalid_outputs "
+            f"与 CSV 不一致: {invalid_outputs} != {row_invalid_outputs}"
+        )
+    if row_replay_unavailable != replay_unavailable or row_replay_errors != replay_errors:
+        _raise("clean numeric replay unavailable/error 计数与 CSV 不一致")
+    return {
+        "evaluation_path": CANONICAL_REPLAY_EVALUATION_PATH,
+        "valid_outputs": valid_outputs,
+        "replay_errors": replay_errors,
+        "invalid_outputs": invalid_outputs,
+        "replay_unavailable": replay_unavailable,
+    }
+
+
 def _validate_clean_numeric_preparation_report(
     report_path: Path,
     *,
@@ -1418,10 +1530,12 @@ def _validate_clean_numeric_preparation_report(
         expected_sha256=_sha256_file(numeric_csv),
         expected_row_count=len(numeric_rows),
     )
+    replay_contract = _validate_clean_numeric_replay_contract(payload, rows=numeric_rows)
     return {
         **wrapped["info"],
         "status": "ok",
         "contract_ok": True,
+        "canonical_replay": replay_contract,
         "outputs": {"run_csv": output_info},
         "inputs": {
             "freeze_binding_json": str(freeze_binding_path),
@@ -1562,12 +1676,19 @@ def _validate_eff_preparation_report(
             _raise(f"{logical_key} bundle_sha256 未绑定到 eff_preparation_report.inputs.freeze_records")
         if row.get("bundle_report_sha256") not in allowed_report_shas:
             _raise(f"{logical_key} bundle_report_sha256 未绑定到 eff_preparation_report.inputs.freeze_reports")
+    replay_contract = _validate_canonical_replay_contract(
+        summary,
+        rows=eff_rows,
+        report_context="eff_preparation_report.summary",
+        row_point_fields=True,
+    )
     readiness = _validate_eff_readiness_summary(summary, eff_rows=eff_rows)
     return {
         **wrapped["info"],
         "status": "ok",
         "contract_ok": True,
         "summary": dict(summary),
+        "canonical_replay": replay_contract,
         "readiness": readiness,
         "outputs": {"eff_csv": output_info},
         "inputs": {
@@ -1582,6 +1703,101 @@ def _validate_eff_preparation_report(
             "freeze_record_count": len(freeze_records),
             "freeze_report_count": len(freeze_reports),
         },
+    }
+
+
+def _validate_canonical_replay_contract(
+    summary: Mapping[str, Any],
+    *,
+    rows: Mapping[str, Mapping[str, str]],
+    report_context: str,
+    row_point_fields: bool,
+) -> dict[str, Any]:
+    """阻止旧评估路径或未闭合 replay 结果进入正式聚合。"""
+    evaluation_path = summary.get("evaluation_path")
+    if evaluation_path != CANONICAL_REPLAY_EVALUATION_PATH:
+        _raise(
+            f"{report_context}.evaluation_path 必须为 "
+            f"{CANONICAL_REPLAY_EVALUATION_PATH}"
+        )
+
+    attempted = _parse_int(
+        summary.get("canonical_replay_attempted_points"),
+        context=f"{report_context}.canonical_replay_attempted_points",
+    )
+    succeeded = _parse_int(
+        summary.get("canonical_replay_succeeded_points"),
+        context=f"{report_context}.canonical_replay_succeeded_points",
+    )
+    failed = _parse_int(
+        summary.get("canonical_replay_failed_points"),
+        context=f"{report_context}.canonical_replay_failed_points",
+    )
+    invalid_output = _parse_int(
+        summary.get("canonical_replay_invalid_output_points"),
+        context=f"{report_context}.canonical_replay_invalid_output_points",
+    )
+    if min(attempted, succeeded, failed, invalid_output) < 0:
+        _raise(f"{report_context} canonical replay 计数不得为负数")
+    if failed != 0:
+        _raise(f"{report_context}.canonical_replay_failed_points 必须为 0，实际为 {failed}")
+    if attempted != succeeded + failed:
+        _raise(
+            f"{report_context}.canonical_replay_attempted_points 未与 succeeded+failed 闭合: "
+            f"{attempted} != {succeeded}+{failed}"
+        )
+    if invalid_output > succeeded:
+        _raise(
+            f"{report_context}.canonical_replay_invalid_output_points 不得超过 succeeded: "
+            f"{invalid_output} > {succeeded}"
+        )
+
+    row_totals = {"attempted": 0, "succeeded": 0, "failed": 0, "invalid_output": 0}
+    for logical_key, row in rows.items():
+        if row.get("evaluation_path") != CANONICAL_REPLAY_EVALUATION_PATH:
+            _raise(
+                f"{logical_key} CSV evaluation_path 必须为 "
+                f"{CANONICAL_REPLAY_EVALUATION_PATH}"
+            )
+        if not row_point_fields:
+            continue
+        row_counts = {
+            name: _parse_int(
+                row.get(f"canonical_replay_{name}_points"),
+                context=f"{logical_key}.canonical_replay_{name}_points",
+            )
+            for name in ("attempted", "succeeded", "failed", "invalid_output")
+        }
+        if row_counts["failed"] != 0:
+            _raise(f"{logical_key} CSV canonical_replay_failed_points 必须为 0")
+        if row_counts["attempted"] != row_counts["succeeded"]:
+            _raise(
+                f"{logical_key} CSV canonical_replay_succeeded_points 未与 "
+                "canonical_replay_attempted_points 闭合"
+            )
+        for name, value in row_counts.items():
+            row_totals[name] += value
+
+    if row_point_fields:
+        expected = {
+            "attempted": attempted,
+            "succeeded": succeeded,
+            "failed": failed,
+            "invalid_output": invalid_output,
+        }
+        for name, value in row_totals.items():
+            if value != expected[name]:
+                _raise(
+                    f"{report_context}.canonical_replay_{name}_points 与 CSV 逐行合计不一致: "
+                    f"{expected[name]} != {value}"
+                )
+
+    return {
+        "evaluation_path": CANONICAL_REPLAY_EVALUATION_PATH,
+        "attempted_points": attempted,
+        "succeeded_points": succeeded,
+        "failed_points": failed,
+        "invalid_output_points": invalid_output,
     }
 
 
@@ -2380,6 +2596,7 @@ def aggregate_clean_metrics(
             "noise_tag",
             "task_id",
             "host",
+            "evaluation_status",
             "valid_output",
             "id_quality",
             "ood_quality",

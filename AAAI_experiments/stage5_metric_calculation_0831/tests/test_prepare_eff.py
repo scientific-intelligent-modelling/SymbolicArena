@@ -38,6 +38,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.metrics import (
     phi_nmse,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.prepare_eff import (
+    EffPreparationContractError,
     build_eff_preparation,
 )
 
@@ -282,6 +283,7 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 id_nmse=1.0,
                 ood_nmse=1.0,
             )
+            payload["source_score"] = 1.0
             plain_record["snapshots"].append(
                 _frozen_snapshot_from_payload(minute, payload, outer_path=outer_path)
             )
@@ -336,6 +338,17 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
     }
     repair_manifest_path.write_text(
         json.dumps(repair_manifest_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    formula_recovery_path = manifests_dir / "formula_recovery.v1.json"
+    formula_recovery_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "formula_recovery.v1",
+                "condition": "clean",
+                "entries": [],
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -429,7 +442,124 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
         "stage5_root": stage5_root,
         "binding_report": binding_report_path,
         "repair_manifest": repair_manifest_path,
+        "formula_recovery_manifest": formula_recovery_path,
     }
+
+
+def _write_rerun_overlay(
+    fixture: dict[str, Path],
+    *,
+    damage: str | None = None,
+) -> Path:
+    overlay_dir = fixture["stage5_root"] / "work/clean_rerun_overlay_v1"
+    bundle_path = overlay_dir / "clean_eff_overlay.jsonl.gz"
+    logical_key = "tpsr::CRK11::s520::clean"
+    snapshots = []
+    for minute in range(1, 181):
+        payload = _snapshot_payload(
+            minute,
+            record_type=(
+                "budget_end_internal_best" if minute == 180 else "periodic_best"
+            ),
+            expression="overlay_eq",
+            id_nmse=1.0e-6,
+            ood_nmse=2.0e-6,
+        )
+        payload.update(tool="tpsr", dataset="CRK11", seed=520)
+        snapshots.append(
+            _frozen_snapshot_from_payload(
+                minute,
+                payload,
+                outer_path=f"/rerun/tpsr/progress/minute_{minute:04d}.json",
+            )
+        )
+    if damage == "missing_minute":
+        snapshots.pop(17)
+    elif damage == "bad_endpoint":
+        endpoint_payload = json.loads(snapshots[-1]["raw_text"])
+        endpoint_payload["record_type"] = "periodic_best"
+        snapshots[-1] = _frozen_snapshot_from_payload(
+            180,
+            endpoint_payload,
+            outer_path="/rerun/tpsr/progress/minute_0180.json",
+        )
+    result_payload = {
+        "tool": "tpsr",
+        "dataset": "CRK11",
+        "seed": 520,
+        "status": "ok",
+        "equation": "overlay_eq",
+    }
+    result_raw = json.dumps(result_payload, ensure_ascii=False, sort_keys=True)
+    record = {
+        "source": {
+            "algorithm": "tpsr",
+            "dataset_id": "CRK11",
+            "seed": 520,
+            "noise_tag": "clean",
+            "task_id": "tpsr_s520_clean_g0001",
+            "host": "rerun-host",
+            "batch": "rerun",
+            "path": "/rerun/tpsr/result.json",
+        },
+        "result": {
+            "status": "ok",
+            "sha256": hashlib.sha256(result_raw.encode()).hexdigest(),
+            "raw_text": result_raw,
+        },
+        "snapshots": snapshots,
+        "overlay": {
+            "schema_version": "clean_rerun_eff_overlay_v1",
+            "scope": "mixed_clean_rerun_overlay",
+            "replacement_scope": "final_and_eff",
+            "logical_key": logical_key,
+            "origin": "test_rerun",
+        },
+    }
+    records = [record, record] if damage == "duplicate" else [record]
+    _write_bundle(bundle_path, records)
+    bundle_sha = _sha256_file(bundle_path)
+    if damage == "bad_bundle_sha":
+        bundle_sha = "0" * 64
+    manifest_path = overlay_dir / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "clean_rerun_eff_overlay_v1",
+                "status": "passed",
+                "scope": "mixed_clean_rerun_overlay",
+                "horizon_minutes": 180,
+                "overlay_unique_keys": 1,
+                "replacement_count": 1,
+                "eff_replacement_count": 1,
+                "eff_replacement_keys": [
+                    "tpsr::wrong::s520::clean"
+                    if damage == "wrong_key"
+                    else logical_key
+                ],
+                "algorithm_counts": {"tpsr": 1},
+                "checkpoint_identity": {
+                    "expected_per_run": 180,
+                    "verified_runs": 1,
+                    "verified_points": 180,
+                    "all_verified": True,
+                },
+                "outputs": {
+                    "overlay_bundle": {
+                        "path": str(bundle_path.resolve()),
+                        "sha256": bundle_sha,
+                        "size_bytes": bundle_path.stat().st_size,
+                        "rows": 1,
+                    }
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return manifest_path
 
 
 def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_counts(
@@ -439,6 +569,7 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
     rows, report = build_eff_preparation(
         freeze_binding_report=fixture["binding_report"],
         repair_manifest=fixture["repair_manifest"],
+        formula_recovery_manifest=fixture["formula_recovery_manifest"],
         repo_root=tmp_path,
         expected_hosts=1,
         expected_tasks=3,
@@ -448,6 +579,7 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
         expected_audited_repair_points=15,
         expected_future_backfill_ignored_points=2,
         expected_checkpoint_normalization_points=1,
+        replay_performance=False,
     )
 
     assert len(rows) == 3
@@ -458,6 +590,12 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
     assert report["summary"]["checkpoint_normalization_points"] == 1
     assert report["summary"]["missing_points_after_repairs"] == 0
     assert report["summary"]["formal_eff_ready"] is True
+    assert report["inputs"]["formula_recovery_manifest"] == {
+        "path": str(fixture["formula_recovery_manifest"].resolve()),
+        "sha256": _sha256_file(fixture["formula_recovery_manifest"]),
+        "condition": "clean",
+        "entry_count": 0,
+    }
 
     by_key = {row["logical_key"]: row for row in rows}
     repaired = by_key["fepysr::Nguyen-12::s520::clean"]
@@ -490,11 +628,80 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
     assert all(0.0 <= value <= 1.0 for value in plain["quality_trajectory"])
 
 
+def test_eff_preparation_replaces_exact_overlay_trajectory(tmp_path: Path) -> None:
+    fixture = _build_fixture(tmp_path)
+    overlay_manifest = _write_rerun_overlay(fixture)
+    rows, report = build_eff_preparation(
+        freeze_binding_report=fixture["binding_report"],
+        repair_manifest=fixture["repair_manifest"],
+        formula_recovery_manifest=fixture["formula_recovery_manifest"],
+        rerun_overlay_manifest=overlay_manifest,
+        repo_root=tmp_path,
+        expected_hosts=1,
+        expected_tasks=3,
+        expected_points=540,
+        expected_existing_points=525,
+        expected_missing_points=15,
+        expected_audited_repair_points=15,
+        expected_future_backfill_ignored_points=None,
+        expected_checkpoint_normalization_points=None,
+        expected_overlay_replacements=1,
+        replay_performance=False,
+    )
+
+    by_key = {row["logical_key"]: row for row in rows}
+    replaced = by_key["tpsr::CRK11::s520::clean"]
+    assert replaced["host"] == "rerun-host"
+    assert replaced["bundle_path"].endswith("clean_eff_overlay.jsonl.gz")
+    assert replaced["bundle_report_path"] == str(overlay_manifest.resolve())
+    assert replaced["repair_applied"] is False
+    assert len(replaced["quality_trajectory"]) == 180
+    assert replaced["trajectory_sources"][-1] == "budget_end_internal_best:180"
+    assert report["summary"]["overlay_replacement_count"] == 1
+    assert report["summary"]["formal_eff_ready"] is True
+    assert report["inputs"]["rerun_overlay_manifest"]["sha256"] == _sha256_file(
+        overlay_manifest
+    )
+
+
+@pytest.mark.parametrize(
+    ("damage", "message"),
+    [
+        ("bad_bundle_sha", "overlay bundle SHA"),
+        ("duplicate", "overlay logical_key 重复"),
+        ("wrong_key", "eff_replacement_keys"),
+        ("missing_minute", "恰有 180"),
+        ("bad_endpoint", "minute_0180"),
+    ],
+)
+def test_eff_preparation_rejects_invalid_overlay(
+    tmp_path: Path, damage: str, message: str
+) -> None:
+    fixture = _build_fixture(tmp_path)
+    overlay_manifest = _write_rerun_overlay(fixture, damage=damage)
+    with pytest.raises(EffPreparationContractError, match=message):
+        build_eff_preparation(
+            freeze_binding_report=fixture["binding_report"],
+            repair_manifest=fixture["repair_manifest"],
+            formula_recovery_manifest=fixture["formula_recovery_manifest"],
+            rerun_overlay_manifest=overlay_manifest,
+            repo_root=tmp_path,
+            expected_hosts=1,
+            expected_tasks=3,
+            expected_points=540,
+            expected_existing_points=525,
+            expected_missing_points=15,
+            expected_overlay_replacements=1,
+            replay_performance=False,
+        )
+
+
 def test_limited_eff_preparation_is_not_formal_ready(tmp_path: Path) -> None:
     fixture = _build_fixture(tmp_path)
     rows, report = build_eff_preparation(
         freeze_binding_report=fixture["binding_report"],
         repair_manifest=fixture["repair_manifest"],
+        formula_recovery_manifest=fixture["formula_recovery_manifest"],
         repo_root=tmp_path,
         expected_hosts=1,
         expected_tasks=3,
@@ -505,11 +712,134 @@ def test_limited_eff_preparation_is_not_formal_ready(tmp_path: Path) -> None:
         expected_future_backfill_ignored_points=2,
         expected_checkpoint_normalization_points=1,
         limit_runs=1,
+        replay_performance=False,
     )
 
     assert len(rows) == 1
     assert report["summary"]["full_contract_checked"] is False
     assert report["summary"]["formal_eff_ready"] is False
+
+
+def test_replay_invalid_candidate_succeeds_with_zero_quality(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline import prepare_eff as module
+
+    snapshots = {
+        1: {
+            "record_type": "periodic_best",
+            "checkpoint_index": 1,
+            "status": "ok",
+            "equation": "1 / (x0 - x0)",
+            "canonical_artifact": {"instantiated_expression": "1 / (x0 - x0)"},
+        }
+    }
+
+    def fake_replay(payload, *, algorithm, repo_root, cache, **kwargs):
+        return {
+            "evaluation_path": "canonical_replay.v1",
+            "canonical_artifact": payload["canonical_artifact"],
+            "canonical_artifact_sha256": "b" * 64,
+            "artifact_rebuilt": False,
+            "id_test": None,
+            "ood_test": None,
+            "id_quality": 0.0,
+            "ood_quality": 0.0,
+            "valid_output": False,
+            "invalid_reason": "canonical prediction 含 NaN/Inf",
+            "error": None,
+        }
+
+    monkeypatch.setattr(module, "replay_payload_performance", fake_replay)
+    replayed, counts = module._replay_trajectory_payloads(
+        snapshots,
+        algorithm="demo",
+        repo_root=tmp_path,
+        cache=module.PerformanceReplayCache(),
+    )
+
+    assert counts == {
+        "attempted": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "invalid_output": 1,
+        "artifact_rebuilt": 0,
+    }
+    assert replayed[1]["status"] == "invalid"
+    assert replayed[1]["canonical_replay_invalid_reason"]
+    assert "canonical_replay_error" not in replayed[1]
+
+
+def test_eff_final_without_artifact_uses_logical_task_recovery_params(
+    tmp_path: Path,
+) -> None:
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline import prepare_eff as module
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.performance_replay import (
+        load_formula_recovery_manifest,
+    )
+
+    dataset_dir = tmp_path / "sim-datasets-data/ssr50/datasets/demo/case"
+    dataset_dir.mkdir(parents=True)
+    (dataset_dir / "metadata.yaml").write_text(
+        "dataset:\n  name: case\n  target:\n    name: y\n  features:\n    - name: a\n    - name: b\n",
+        encoding="utf-8",
+    )
+    for split in ("train", "valid", "id_test", "ood_test"):
+        (dataset_dir / f"{split}.csv").write_text(
+            "a,b,y\n10,1,2\n20,2,4\n30,3,6\n", encoding="utf-8"
+        )
+    equation = "def equation(a, b, params):\n    return params[0] * b\n"
+    result_sha = "a" * 64
+    recovery_path = tmp_path / "formula_recovery.v1.json"
+    recovery_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "formula_recovery.v1",
+                "condition": "clean",
+                "entries": [
+                    {
+                        "task_id": "drsr_s520_clean_g0001",
+                        "resolution": "recovered_params",
+                        "frozen_result_sha256": result_sha,
+                        "equation_sha256": hashlib.sha256(equation.encode()).hexdigest(),
+                        "params": [2.0],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    snapshots = {
+        180: {
+            "record_type": "recovered_final",
+            "checkpoint_index": "final",
+            "status": "ok",
+            "equation": equation,
+            "dataset_dir": str(dataset_dir),
+        }
+    }
+    replayed, counts = module._replay_trajectory_payloads(
+        snapshots,
+        algorithm="drsr",
+        repo_root=tmp_path,
+        cache=module.PerformanceReplayCache(),
+        recovery_manifest=load_formula_recovery_manifest(
+            recovery_path, expected_condition="clean"
+        ),
+        task_id="drsr_s520_clean_g0001",
+        condition="clean",
+        result_sha256=result_sha,
+    )
+
+    assert counts == {
+        "attempted": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "invalid_output": 0,
+        "artifact_rebuilt": 1,
+    }
+    assert replayed[180]["canonical_artifact"]["parameter_values"] == [2.0]
+    assert replayed[180]["id_test"]["nmse"] == pytest.approx(0.0)
 
 
 def test_cli_writes_jsonl_csv_and_report(tmp_path: Path) -> None:
@@ -526,6 +856,8 @@ def test_cli_writes_jsonl_csv_and_report(tmp_path: Path) -> None:
         str(fixture["binding_report"]),
         "--repair-manifest",
         str(fixture["repair_manifest"]),
+        "--formula-recovery-manifest",
+        str(fixture["formula_recovery_manifest"]),
         "--repo-root",
         str(tmp_path),
         "--expected-hosts",
@@ -550,6 +882,7 @@ def test_cli_writes_jsonl_csv_and_report(tmp_path: Path) -> None:
         str(output_csv),
         "--output-report",
         str(output_report),
+        "--skip-canonical-replay",
     ]
     completed = subprocess.run(
         cmd,
