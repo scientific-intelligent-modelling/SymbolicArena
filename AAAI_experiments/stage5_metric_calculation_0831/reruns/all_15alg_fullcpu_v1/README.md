@@ -19,6 +19,8 @@
 
 资源保护：load 与内存使用率上限均为 0.90，每机至少保留 32 GB 可用内存，轮询间隔 30 秒。LLMSR 与 DRSR 共用 turbo 全局并发上限 30。
 
+条件调度严格采用 `clean -> noise001 -> noise005`。只有当前 condition 不再有 pending，才允许新增下一 condition；LLM 桶限流不会导致越级。首次启动在加入该保护前已经产生的 noise001 任务继续保留，避免浪费已投入的计算，但后续新增任务会先补完全部 clean。
+
 新旧 controller 的 `--session-prefix` 与 `--host-session-count-prefix` 都精确使用 `all_conditions_cpu_v2_`。因此新 controller 会把旧 143 个会话计入资源占用；同时 143 个 task_id 已从新 allowlist 排除，不会产生同名 session 冲突。
 
 ## 冻结输入

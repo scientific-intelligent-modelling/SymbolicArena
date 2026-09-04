@@ -416,6 +416,7 @@ def _command(root: Path, mode: str) -> str:
         "  --tools " + " ".join(TOOLS) + " \\",
         "  --seeds " + " ".join(str(seed) for seed in SEEDS) + " \\",
         "  --noise-sigmas 0 0.01 0.05 \\",
+        "  --condition-dispatch-mode sequential \\",
         "  --controller-host iaaccn22 \\",
         "  --use-internal-ips \\",
         "  --remote-root /home/zhangziwen/workplace/scientific-intelligent-modelling \\",
@@ -613,6 +614,8 @@ def _scheduler_args(root: Path) -> list[str]:
         "0",
         "0.01",
         "0.05",
+        "--condition-dispatch-mode",
+        "sequential",
         "--controller-host",
         "iaaccn22",
         "--use-internal-ips",
@@ -739,6 +742,8 @@ def _readme(report: Mapping[str, Any]) -> str:
 这里的“打满”是按 `0.50:64,0.70:32,0.85:8,0.90:2` 分段滚动补位，使真实 load 逼近但不超过 0.90；每机最多 230 个任务。LLM 等等待型任务不会再因保守 weight 估算提前卡住整机。重启控制器会复用同一 state 和会话前缀，只补充空余配额，不停止或重复已启动任务。
 
 资源保护：load 与内存使用率上限均为 0.90，每机至少保留 32 GB 可用内存，轮询间隔 30 秒。LLMSR 与 DRSR 共用 turbo 全局并发上限 30。
+
+条件调度严格采用 `clean -> noise001 -> noise005`。只有当前 condition 不再有 pending，才允许新增下一 condition；LLM 桶限流不会导致越级。首次启动在加入该保护前已经产生的 noise001 任务继续保留，避免浪费已投入的计算，但后续新增任务会先补完全部 clean。
 
 新旧 controller 的 `--session-prefix` 与 `--host-session-count-prefix` 都精确使用 `all_conditions_cpu_v2_`。因此新 controller 会把旧 143 个会话计入资源占用；同时 143 个 task_id 已从新 allowlist 排除，不会产生同名 session 冲突。
 
