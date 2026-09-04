@@ -795,6 +795,126 @@ class TaskStateStore:
         *,
         now: float | None = None,
     ) -> None:
+        self._register_supersession_batch(
+            supersessions,
+            now=now,
+            allow_proven_dependency_rebinding=False,
+        )
+
+    def register_dependency_rebinding_supersession(
+        self,
+        predecessor_evaluation_key: str,
+        successor: TaskSpec,
+        *,
+        identity: str,
+        reason: str,
+        predecessor_plan_sha256: str,
+        successor_plan_sha256: str,
+        now: float | None = None,
+    ) -> None:
+        """仅允许把依赖按既有 supersession 证明逐位置重绑定。"""
+
+        self.register_dependency_rebinding_supersession_batch(
+            (
+                TaskSupersession(
+                    predecessor_evaluation_key=predecessor_evaluation_key,
+                    successor=successor,
+                    identity=identity,
+                    reason=reason,
+                    predecessor_plan_sha256=predecessor_plan_sha256,
+                    successor_plan_sha256=successor_plan_sha256,
+                ),
+            ),
+            now=now,
+        )
+
+    def register_dependency_rebinding_supersession_batch(
+        self,
+        supersessions: Sequence[TaskSupersession],
+        *,
+        now: float | None = None,
+    ) -> None:
+        self._register_supersession_batch(
+            supersessions,
+            now=now,
+            allow_proven_dependency_rebinding=True,
+        )
+
+    @staticmethod
+    def _validate_proven_dependency_rebinding(
+        connection: sqlite3.Connection,
+        *,
+        predecessor_key: str,
+        predecessor_dependencies_json: str,
+        successor_dependencies: Sequence[str],
+    ) -> None:
+        predecessor_dependencies = tuple(json.loads(predecessor_dependencies_json))
+        successor_dependencies = tuple(str(item) for item in successor_dependencies)
+        if len(predecessor_dependencies) != len(successor_dependencies):
+            raise StateContractError(
+                f"任务 {predecessor_key!r} 的 dependency rebinding 长度发生变化"
+            )
+        for old_dependency, new_dependency in zip(
+            predecessor_dependencies, successor_dependencies, strict=True
+        ):
+            if (
+                old_dependency != new_dependency
+                and new_dependency in predecessor_dependencies
+            ):
+                raise StateContractError(
+                    f"任务 {predecessor_key!r} 的 dependency rebinding 顺序发生变化"
+                )
+        valid_superseded = TaskStateStore._valid_superseded_predecessors(connection)
+        for index, (old_dependency, new_dependency) in enumerate(
+            zip(predecessor_dependencies, successor_dependencies, strict=True)
+        ):
+            if old_dependency == new_dependency:
+                continue
+            mapping = connection.execute(
+                """SELECT successor_evaluation_key
+                   FROM task_supersessions
+                   WHERE predecessor_evaluation_key=?""",
+                (old_dependency,),
+            ).fetchone()
+            if (
+                mapping is None
+                or str(mapping["successor_evaluation_key"]) != new_dependency
+                or old_dependency not in valid_superseded
+            ):
+                raise StateContractError(
+                    f"任务 {predecessor_key!r} 的 dependency[{index}] "
+                    f"{old_dependency!r}->{new_dependency!r} 未证明"
+                )
+            replacement = connection.execute(
+                "SELECT state FROM tasks WHERE evaluation_key=?",
+                (new_dependency,),
+            ).fetchone()
+            replacement_state = None if replacement is None else str(replacement["state"])
+            if replacement_state not in {"frozen", "non_applicable"}:
+                raise StateContractError(
+                    f"dependency replacement {new_dependency!r} 未达到 frozen/non_applicable 终态"
+                )
+            binding_table = (
+                "frozen_results"
+                if replacement_state == "frozen"
+                else "non_applicable_results"
+            )
+            binding = connection.execute(
+                f"SELECT 1 FROM {binding_table} WHERE evaluation_key=?",
+                (new_dependency,),
+            ).fetchone()
+            if binding is None:
+                raise StateContractError(
+                    f"dependency replacement {new_dependency!r} 终态缺少审计绑定"
+                )
+
+    def _register_supersession_batch(
+        self,
+        supersessions: Sequence[TaskSupersession],
+        *,
+        now: float | None,
+        allow_proven_dependency_rebinding: bool,
+    ) -> None:
         if not supersessions:
             return
         timestamp = time.time() if now is None else float(now)
@@ -887,7 +1007,18 @@ class TaskStateStore:
                     priority=successor.priority,
                     dependencies_json=successor_dependencies_json,
                 )
-                if predecessor_identity != successor_identity:
+                if predecessor_identity[:3] != successor_identity[:3]:
+                    raise StateContractError(
+                        f"supersession identity 不一致: {predecessor_key!r} -> {successor.evaluation_key!r}"
+                    )
+                if allow_proven_dependency_rebinding:
+                    self._validate_proven_dependency_rebinding(
+                        connection,
+                        predecessor_key=predecessor_key,
+                        predecessor_dependencies_json=str(predecessor["dependencies_json"]),
+                        successor_dependencies=successor.dependencies,
+                    )
+                elif predecessor_identity != successor_identity:
                     raise StateContractError(
                         f"supersession identity 不一致: {predecessor_key!r} -> {successor.evaluation_key!r}"
                     )

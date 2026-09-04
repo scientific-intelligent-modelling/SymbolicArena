@@ -73,6 +73,281 @@ def _table_count(path: Path, table: str) -> int:
     return int(row[0])
 
 
+def _freeze_task(store: TaskStateStore, key: str, *, now: float) -> None:
+    lease = store.reserve_attempt(key, now=now, lease_seconds=10)
+    store.freeze_result(
+        lease.attempt_id,
+        result_path=f"llm/frozen/{key}.json",
+        result_sha256=f"sha-{key}",
+        now=now + 0.1,
+    )
+
+
+def _dependency_rebinding_fixture(
+    tmp_path: Path,
+    *,
+    replacement_terminal: str,
+) -> tuple[TaskStateStore, Path, TaskSpec]:
+    state_db = tmp_path / "dependency_rebinding.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=20, logical_task_cap=10)
+    old_dependency = task("dep_v1")
+    stable_dependency = task("stable")
+    predecessor = task(
+        "consumer_v1",
+        dependencies=("dep_v1", "stable"),
+        prompt_version="equivalence.v1",
+        schema_version="equivalence.v1",
+    )
+    store.register_tasks((old_dependency, stable_dependency), now=1.0)
+    _freeze_task(store, "dep_v1", now=2.0)
+    _freeze_task(store, "stable", now=3.0)
+    store.register_task(predecessor, now=4.0)
+    _freeze_task(store, "consumer_v1", now=5.0)
+
+    new_dependency = task(
+        "dep_v2",
+        prompt_version="simplify.v2",
+        schema_version="simplify.v2",
+    )
+    store.register_supersession(
+        "dep_v1",
+        new_dependency,
+        identity="dataset::dep",
+        reason="replacement final changed",
+        predecessor_plan_sha256="plan::dep-v1",
+        successor_plan_sha256="plan::dep-v2",
+        now=6.0,
+    )
+    if replacement_terminal == "frozen":
+        _freeze_task(store, "dep_v2", now=7.0)
+    elif replacement_terminal == "non_applicable":
+        store.mark_non_applicable(
+            "dep_v2",
+            reason="replacement has no valid expression",
+            evidence_path="audit/dep_v2.json",
+            evidence_sha256="sha-dep-v2-evidence",
+            now=7.0,
+        )
+    elif replacement_terminal != "pending":
+        raise AssertionError(replacement_terminal)
+    return store, state_db, predecessor
+
+
+@pytest.mark.parametrize("replacement_terminal", ["frozen", "non_applicable"])
+def test_dependency_rebinding_supersession_accepts_only_proven_terminal_mapping(
+    tmp_path: Path,
+    replacement_terminal: str,
+) -> None:
+    store, state_db, predecessor = _dependency_rebinding_fixture(
+        tmp_path,
+        replacement_terminal=replacement_terminal,
+    )
+    successor = TaskSpec(
+        evaluation_key="consumer_v2",
+        logical_id="logical::consumer_v2",
+        task_type=predecessor.task_type,
+        condition=predecessor.condition,
+        priority=predecessor.priority,
+        input_hash="input::consumer-v2",
+        prompt_version="equivalence.v2",
+        schema_version="equivalence.v2",
+        dependencies=("dep_v2", "stable"),
+    )
+
+    store.register_dependency_rebinding_supersession(
+        "consumer_v1",
+        successor,
+        identity="dataset::consumer",
+        reason="upstream dependency was superseded",
+        predecessor_plan_sha256="plan::consumer-v1",
+        successor_plan_sha256="plan::consumer-v2",
+        now=8.0,
+    )
+
+    assert store.task_state("consumer_v1") == "superseded"
+    assert store.task_state("consumer_v2") == "pending"
+    with sqlite3.connect(state_db) as connection:
+        row = connection.execute(
+            "SELECT dependencies_json, state FROM tasks WHERE evaluation_key='consumer_v2'"
+        ).fetchone()
+        mapping = connection.execute(
+            "SELECT predecessor_evaluation_key, successor_evaluation_key "
+            "FROM task_supersessions WHERE predecessor_evaluation_key='consumer_v1'"
+        ).fetchone()
+    assert row == ('["dep_v2", "stable"]', "pending")
+    assert mapping == ("consumer_v1", "consumer_v2")
+
+
+@pytest.mark.parametrize(
+    ("replacement_terminal", "dependencies", "error"),
+    [
+        ("frozen", ("unknown", "stable"), "未证明"),
+        ("pending", ("dep_v2", "stable"), "终态"),
+        ("frozen", ("dep_v2",), "长度"),
+        ("frozen", ("stable", "dep_v2"), "顺序"),
+        ("frozen", ("dep_v2", "unknown"), "未证明"),
+    ],
+)
+def test_dependency_rebinding_supersession_rejects_drift_atomically(
+    tmp_path: Path,
+    replacement_terminal: str,
+    dependencies: tuple[str, ...],
+    error: str,
+) -> None:
+    store, state_db, predecessor = _dependency_rebinding_fixture(
+        tmp_path,
+        replacement_terminal=replacement_terminal,
+    )
+    successor = TaskSpec(
+        evaluation_key="consumer_v2",
+        logical_id="logical::consumer_v2",
+        task_type=predecessor.task_type,
+        condition=predecessor.condition,
+        priority=predecessor.priority,
+        input_hash="input::consumer-v2",
+        prompt_version="equivalence.v2",
+        schema_version="equivalence.v2",
+        dependencies=dependencies,
+    )
+    before_tasks = _table_count(state_db, "tasks")
+    before_supersessions = _table_count(state_db, "task_supersessions")
+    before_events = _table_count(state_db, "events")
+
+    with pytest.raises(StateContractError, match=error):
+        store.register_dependency_rebinding_supersession(
+            "consumer_v1",
+            successor,
+            identity="dataset::consumer",
+            reason="upstream dependency was superseded",
+            predecessor_plan_sha256="plan::consumer-v1",
+            successor_plan_sha256="plan::consumer-v2",
+            now=8.0,
+        )
+
+    assert store.task_state("consumer_v1") == "frozen"
+    with sqlite3.connect(state_db) as connection:
+        assert connection.execute(
+            "SELECT 1 FROM tasks WHERE evaluation_key='consumer_v2'"
+        ).fetchone() is None
+    assert _table_count(state_db, "tasks") == before_tasks
+    assert _table_count(state_db, "task_supersessions") == before_supersessions
+    assert _table_count(state_db, "events") == before_events
+
+
+def test_dependency_rebinding_supersession_rejects_identity_drift_atomically(
+    tmp_path: Path,
+) -> None:
+    store, state_db, predecessor = _dependency_rebinding_fixture(
+        tmp_path,
+        replacement_terminal="frozen",
+    )
+    before = (
+        _table_count(state_db, "tasks"),
+        _table_count(state_db, "task_supersessions"),
+        _table_count(state_db, "events"),
+    )
+    drifts = (
+        {"task_type": "equivalence"},
+        {"condition": "noise001"},
+        {"priority": predecessor.priority + 1},
+    )
+    for drift in drifts:
+        values = {
+            "task_type": predecessor.task_type,
+            "condition": predecessor.condition,
+            "priority": predecessor.priority,
+            **drift,
+        }
+        successor = TaskSpec(
+            evaluation_key="consumer_v2",
+            logical_id="logical::consumer_v2",
+            task_type=str(values["task_type"]),
+            condition=str(values["condition"]),
+            priority=int(values["priority"]),
+            input_hash="input::consumer-v2",
+            prompt_version="equivalence.v2",
+            schema_version="equivalence.v2",
+            dependencies=("dep_v2", "stable"),
+        )
+        with pytest.raises(StateContractError, match="identity 不一致"):
+            store.register_dependency_rebinding_supersession(
+                "consumer_v1",
+                successor,
+                identity="dataset::consumer",
+                reason="upstream dependency was superseded",
+                predecessor_plan_sha256="plan::consumer-v1",
+                successor_plan_sha256="plan::consumer-v2",
+                now=8.0,
+            )
+        assert (
+            _table_count(state_db, "tasks"),
+            _table_count(state_db, "task_supersessions"),
+            _table_count(state_db, "events"),
+        ) == before
+        assert store.task_state("consumer_v1") == "frozen"
+
+
+def test_dependency_rebinding_batch_rolls_back_valid_item_when_later_item_fails(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "dependency_rebinding_batch.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=30, logical_task_cap=10)
+    store.register_tasks((task("dep_v1"), task("stable")), now=1.0)
+    _freeze_task(store, "dep_v1", now=2.0)
+    _freeze_task(store, "stable", now=3.0)
+    consumers = (
+        task("consumer_a_v1", dependencies=("dep_v1", "stable")),
+        task("consumer_b_v1", dependencies=("dep_v1", "stable")),
+    )
+    store.register_tasks(consumers, now=4.0)
+    _freeze_task(store, "consumer_a_v1", now=5.0)
+    _freeze_task(store, "consumer_b_v1", now=6.0)
+    store.register_supersession(
+        "dep_v1",
+        task("dep_v2", prompt_version="simplify.v2", schema_version="simplify.v2"),
+        identity="dataset::dep",
+        reason="replacement final changed",
+        predecessor_plan_sha256="plan::dep-v1",
+        successor_plan_sha256="plan::dep-v2",
+        now=7.0,
+    )
+    _freeze_task(store, "dep_v2", now=8.0)
+    valid_successor = task(
+        "consumer_a_v2",
+        dependencies=("dep_v2", "stable"),
+        prompt_version="equivalence.v2",
+        schema_version="equivalence.v2",
+    )
+    invalid_successor = task(
+        "consumer_b_v2",
+        dependencies=("unknown", "stable"),
+        prompt_version="equivalence.v2",
+        schema_version="equivalence.v2",
+    )
+    before = (
+        _table_count(state_db, "tasks"),
+        _table_count(state_db, "task_supersessions"),
+        _table_count(state_db, "events"),
+    )
+
+    with pytest.raises(StateContractError, match="未证明"):
+        store.register_dependency_rebinding_supersession_batch(
+            (
+                supersession("consumer_a_v1", valid_successor),
+                supersession("consumer_b_v1", invalid_successor),
+            ),
+            now=9.0,
+        )
+
+    assert store.task_state("consumer_a_v1") == "frozen"
+    assert store.task_state("consumer_b_v1") == "frozen"
+    assert (
+        _table_count(state_db, "tasks"),
+        _table_count(state_db, "task_supersessions"),
+        _table_count(state_db, "events"),
+    ) == before
+
+
 def test_write_transactions_are_serialized_within_one_store(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
