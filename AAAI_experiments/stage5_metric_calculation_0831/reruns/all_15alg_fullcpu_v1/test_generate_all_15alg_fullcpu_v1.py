@@ -122,11 +122,11 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
         assert f"--tools {expected_tools}" in text
         assert "--noise-sigmas 0 0.01 0.05" in text
         assert "--condition-dispatch-mode sequential" in text
-        assert "--max-jobs-per-host 230" in text
+        assert "--max-jobs-per-host 256" in text
         assert "--max-cpu-used-ratio" not in text
-        assert "--max-new-jobs-per-host-per-poll 64" in text
-        assert '"0.50:64,0.70:32,0.85:8,0.90:2"' in text
-        assert "--max-load-ratio 0.90" in text
+        assert "--max-new-jobs-per-host-per-poll 128" in text
+        assert '"0.50:128,0.75:64,0.90:32,0.98:8,1.00:2"' in text
+        assert "--max-load-ratio 1.00" in text
         assert "--max-memory-used-ratio 0.90" in text
         assert "--min-free-mem-gb 32" in text
         assert "--poll-seconds 30" in text
@@ -146,7 +146,7 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
 
     readme = (root / "README.md").read_text(encoding="utf-8")
     assert "取消固定 CPU weight 硬封顶" in readme
-    assert "真实 load 逼近但不超过 0.90" in readme
+    assert "真实 load 同时逼近 1.00" in readme
     assert "clean -> noise001 -> noise005" in readme
     assert "143 + 6607 = 6750" in readme
 

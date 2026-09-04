@@ -88,10 +88,10 @@ LOGICAL_CPUS_PER_HOST = 256
 PHYSICAL_CPUS_PER_HOST = 128
 CPU_WEIGHT_BUDGET_PER_HOST = None
 MAX_CPU_USED_RATIO = None
-MAX_JOBS_PER_HOST = 230
-MAX_NEW_JOBS_PER_HOST_PER_POLL = 64
-LOAD_TIERS = "0.50:64,0.70:32,0.85:8,0.90:2"
-MAX_LOAD_RATIO = 0.90
+MAX_JOBS_PER_HOST = 256
+MAX_NEW_JOBS_PER_HOST_PER_POLL = 128
+LOAD_TIERS = "0.50:128,0.75:64,0.90:32,0.98:8,1.00:2"
+MAX_LOAD_RATIO = 1.00
 MAX_MEMORY_USED_RATIO = 0.90
 MIN_FREE_MEM_GB = 32
 POLL_SECONDS = 30
@@ -739,9 +739,9 @@ def _readme(report: Mapping[str, Any]) -> str:
 
 机器固定为 `iaaccn22~29`，每机实测 `256` 个逻辑 CPU、`128` 个物理核。首轮 115 weight 时实测仍有 64%~78% CPU idle，提高到 230 weight 后真实 load 仍只有 0.52~0.64，因此本版取消固定 CPU weight 硬封顶，改为由真实 load、内存与会话数共同控制。
 
-这里的“打满”是按 `0.50:64,0.70:32,0.85:8,0.90:2` 分段滚动补位，使真实 load 逼近但不超过 0.90；每机最多 230 个任务。LLM 等等待型任务不会再因保守 weight 估算提前卡住整机。重启控制器会复用同一 state 和会话前缀，只补充空余配额，不停止或重复已启动任务。
+这里的“打满”是按 `0.50:128,0.75:64,0.90:32,0.98:8,1.00:2` 分段滚动补位，使八台机器的真实 load 同时逼近 1.00；每机最多 256 个任务。LLM 等等待型任务不会再因保守 weight 估算提前卡住整机。重启控制器会复用同一 state 和会话前缀，只补充空余配额，不停止或重复已启动任务。
 
-资源保护：load 与内存使用率上限均为 0.90，每机至少保留 32 GB 可用内存，轮询间隔 30 秒。LLMSR 与 DRSR 共用 turbo 全局并发上限 30。
+资源保护：load 上限为 1.00，内存使用率上限仍为 0.90，每机至少保留 32 GB 可用内存，轮询间隔 30 秒。LLMSR 与 DRSR 共用 turbo 全局并发上限 30。
 
 条件调度严格采用 `clean -> noise001 -> noise005`。只有当前 condition 不再有 pending，才允许新增下一 condition；LLM 桶限流不会导致越级。首次启动在加入该保护前已经产生的 noise001 任务继续保留，避免浪费已投入的计算，但后续新增任务会先补完全部 clean。
 

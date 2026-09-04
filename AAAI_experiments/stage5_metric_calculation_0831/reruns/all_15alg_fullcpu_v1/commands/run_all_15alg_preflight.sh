@@ -24,10 +24,10 @@ python "$REPO_ROOT/check/run_e1_candidate200_12alg_load_queue.py" \
   --use-internal-ips \
   --remote-root /home/zhangziwen/workplace/scientific-intelligent-modelling \
   --remote-data-root /home/zhangziwen/sim-datasets-data \
-  --max-jobs-per-host 230 \
-  --max-new-jobs-per-host-per-poll 64 \
-  --load-tier-new-jobs "0.50:64,0.70:32,0.85:8,0.90:2" \
-  --max-load-ratio 0.90 \
+  --max-jobs-per-host 256 \
+  --max-new-jobs-per-host-per-poll 128 \
+  --load-tier-new-jobs "0.50:128,0.75:64,0.90:32,0.98:8,1.00:2" \
+  --max-load-ratio 1.00 \
   --max-memory-used-ratio 0.90 \
   --min-free-mem-gb 32 \
   --session-prefix all_conditions_cpu_v2_ \

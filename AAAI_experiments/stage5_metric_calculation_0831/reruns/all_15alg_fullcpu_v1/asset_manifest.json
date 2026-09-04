@@ -1,8 +1,8 @@
 {
   "files": {
     "README.md": {
-      "bytes": 3339,
-      "sha256": "c03d1959f793b1043727f8c44eedd5deabb46e7e994c81857a927cbb8e708654"
+      "bytes": 3371,
+      "sha256": "1de72293ad20dc0513cdb7469160ca33146d4f566ad484e0f27c561006898d80"
     },
     "commands/deploy_via_iaaccn22.sh": {
       "bytes": 2593,
@@ -13,16 +13,16 @@
       "sha256": "c96938a595778f02836c24a9ccbcbc3051bd3d5757b8c3036927c1b037c63016"
     },
     "commands/run_all_15alg_dry_run.sh": {
-      "bytes": 1784,
-      "sha256": "4bc825c6917fe831835c72c99f64b616917e5e5480257e3ffbc8bcaea038e1a3"
+      "bytes": 1794,
+      "sha256": "f8947e5c108933968ad0faac9e6948d6ffa95418fbc864cfec72621347069c8d"
     },
     "commands/run_all_15alg_formal.sh": {
-      "bytes": 1917,
-      "sha256": "06a9f814fa08e006fe4af6ec2d840d81014d25babd1549aac3e5da846eab109d"
+      "bytes": 1927,
+      "sha256": "0274cfd485514413308d170070cccff62c9c1f5f7eca2c880086770d3e1f678d"
     },
     "commands/run_all_15alg_preflight.sh": {
-      "bytes": 1855,
-      "sha256": "bee539436a75babc3bf3c5bfc371d432548ccae850fdb8c980e9f15ac1e49810"
+      "bytes": 1865,
+      "sha256": "c5b3ae1db81db2b2b0d13e5b08592a0f64e40bcbb7780824e6759259d0eb2315"
     },
     "frozen_inputs/all_conditions_cpu_v2_excluded_143.csv": {
       "bytes": 44288,
@@ -41,8 +41,8 @@
       "sha256": "fcfee57dd69ae30176094672231da0d90867577deb4d5842929c6beff207e3c7"
     },
     "generate_all_15alg_fullcpu_v1.py": {
-      "bytes": 36902,
-      "sha256": "ff98324b988b1078e9fe0b17a222e2c7928f0dd996fa926d4e9a5c98916f0fa9"
+      "bytes": 36944,
+      "sha256": "320c8e4bc9e0ce413ebcff423f80ba6a73c46a1970c50cd1e85fe84441bc64b1"
     },
     "logs/.gitkeep": {
       "bytes": 0,
@@ -253,12 +253,12 @@
       "sha256": "6c80a1e4f596512967a726ecaa549cf9418032b99091ca0ee12c9a9e3e732753"
     },
     "reports/dry_run_validation.json": {
-      "bytes": 7874,
-      "sha256": "ecfcaccaa300325ef02ec30af79234594ad991c28743812d1a203637fe4e2e9c"
+      "bytes": 7893,
+      "sha256": "afd718a437d5e35e0e0ef6ac510fa1f18ff005d20e9d45e197d1846afacf0214"
     },
     "test_generate_all_15alg_fullcpu_v1.py": {
-      "bytes": 9185,
-      "sha256": "5e4d9ab3c0b58942e4b4b5739db8e54b00e9de5500ed43368b3c0ac29fd03b47"
+      "bytes": 9189,
+      "sha256": "f85870144ff18eece77b8b6fea2a5a1f5aa3e4b8c4f850563082c3df87786e27"
     }
   },
   "metadata": {
@@ -420,13 +420,13 @@
         "iaaccn22",
         "--use-internal-ips",
         "--max-jobs-per-host",
-        "230",
+        "256",
         "--max-new-jobs-per-host-per-poll",
-        "64",
+        "128",
         "--load-tier-new-jobs",
-        "0.50:64,0.70:32,0.85:8,0.90:2",
+        "0.50:128,0.75:64,0.90:32,0.98:8,1.00:2",
         "--max-load-ratio",
-        "0.9",
+        "1.0",
         "--max-memory-used-ratio",
         "0.9",
         "--min-free-mem-gb",
@@ -486,7 +486,7 @@
           "base",
           "turbo"
         ],
-        "load_tier_new_jobs": "0.50:64,0.70:32,0.85:8,0.90:2",
+        "load_tier_new_jobs": "0.50:128,0.75:64,0.90:32,0.98:8,1.00:2",
         "max_cpu_used_ratio": null,
         "noise_sigmas": [
           0.0,
@@ -507,7 +507,7 @@
         "skip_support_sync": false,
         "source_csv": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/frozen_inputs/sources/formal3h_13alg_ssr50_source.csv",
         "tasks": 6607,
-        "time": "2026-09-05T05:24:48",
+        "time": "2026-09-05T06:21:44",
         "tool_config": {
           "drsr": {
             "cpu_weight": 1,
@@ -1229,13 +1229,13 @@
       "cpu_weight_budget_per_host": null,
       "llm_turbo_global_limit": 30,
       "load_driven_dispatch": true,
-      "load_tiers": "0.50:64,0.70:32,0.85:8,0.90:2",
+      "load_tiers": "0.50:128,0.75:64,0.90:32,0.98:8,1.00:2",
       "logical_cpus_per_host": 256,
       "max_cpu_used_ratio": null,
-      "max_jobs_per_host": 230,
-      "max_load_ratio": 0.9,
+      "max_jobs_per_host": 256,
+      "max_load_ratio": 1.0,
       "max_memory_used_ratio": 0.9,
-      "max_new_jobs_per_host_per_poll": 64,
+      "max_new_jobs_per_host_per_poll": 128,
       "min_free_mem_gb": 32,
       "physical_core_reserve_fraction": null,
       "physical_cpus_per_host": 128,
