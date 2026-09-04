@@ -1,0 +1,354 @@
+{
+  "algorithm_counts": {
+    "drsr": 1,
+    "imcts": 79,
+    "jaxsr": 63
+  },
+  "command": [
+    "python",
+    "/home/family/workplace/scientific-intelligent-modelling/check/run_e1_candidate200_12alg_load_queue.py",
+    "--batch-name",
+    "all_conditions_cpu_v2_noise_formal_dry_run_validation",
+    "--source-csv",
+    "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/ssr50_source.csv",
+    "--expected-rows",
+    "50",
+    "--queue-root",
+    "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/queues/dry_run_validation",
+    "--params-root",
+    "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params",
+    "--task-id-allowlist-csv",
+    "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/manifests/all_conditions_noise_task_allowlist.csv",
+    "--hosts",
+    "iaaccn22",
+    "iaaccn23",
+    "iaaccn24",
+    "iaaccn25",
+    "iaaccn26",
+    "iaaccn27",
+    "iaaccn28",
+    "iaaccn29",
+    "--tools",
+    "jaxsr",
+    "imcts",
+    "drsr",
+    "--seeds",
+    "520",
+    "521",
+    "522",
+    "--noise-sigmas",
+    "0.01",
+    "0.05",
+    "--controller-host",
+    "iaaccn22",
+    "--use-internal-ips",
+    "--max-jobs-per-host",
+    "18",
+    "--max-new-jobs-per-host-per-poll",
+    "18",
+    "--load-tier-new-jobs",
+    "0.50:18,0.70:18,0.85:18,0.95:18",
+    "--max-load-ratio",
+    "0.95",
+    "--max-memory-used-ratio",
+    "0.95",
+    "--session-prefix",
+    "all_conditions_cpu_v2_",
+    "--host-session-count-prefix",
+    "all_conditions_cpu_v2_",
+    "--poll-seconds",
+    "60",
+    "--retry-limit",
+    "1",
+    "--llm-model-assignment",
+    "from-params",
+    "--llm-default-bucket",
+    "turbo",
+    "--llm-model-bucket-limits",
+    "base:0,turbo:1",
+    "--max-cpu-used-ratio",
+    "0.95",
+    "--dry-run",
+    "--once"
+  ],
+  "condition_counts": {
+    "noise001": 79,
+    "noise005": 64
+  },
+  "expected": {
+    "algorithm_counts": {
+      "drsr": 1,
+      "imcts": 79,
+      "jaxsr": 63
+    },
+    "allowlists": {
+      "algorithm_counts": {
+        "drsr": 1,
+        "imcts": 79,
+        "jaxsr": 63
+      },
+      "condition_counts": {
+        "noise001": 79,
+        "noise005": 64
+      },
+      "deduplicated_count": 143,
+      "merged_count": 143,
+      "source_allowlists": [
+        {
+          "algorithm": "jaxsr",
+          "condition": "noise001",
+          "expected_rows": 35,
+          "read_rows": 35,
+          "source": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/native_fidelity_v1/manifests/jaxsr_noise001_task_allowlist.csv",
+          "source_sha256": "745d2e1d4c10eca7082c59eb6d60dfff24b43267324453a63547431cd905de69"
+        },
+        {
+          "algorithm": "jaxsr",
+          "condition": "noise005",
+          "expected_rows": 28,
+          "read_rows": 28,
+          "source": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/native_fidelity_v1/manifests/jaxsr_noise005_task_allowlist.csv",
+          "source_sha256": "538065c643ae5c3d48a412b69067cf30da22ef5ddcb26e4728b1e45652fd9778"
+        },
+        {
+          "algorithm": "imcts",
+          "condition": "noise001",
+          "expected_rows": 44,
+          "read_rows": 44,
+          "source": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/native_fidelity_v1/manifests/imcts_noise001_task_allowlist.csv",
+          "source_sha256": "2597bdb080d65a1f2f62e1ff7c3178ce485cf016aea9844914fe922ab3ac21d2"
+        },
+        {
+          "algorithm": "imcts",
+          "condition": "noise005",
+          "expected_rows": 35,
+          "read_rows": 35,
+          "source": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/native_fidelity_v1/manifests/imcts_noise005_task_allowlist.csv",
+          "source_sha256": "36e781ce63ff7bdd83c784675b1ff3d4e863a2d4e4953118dbf0ee7753f30f33"
+        },
+        {
+          "algorithm": "drsr",
+          "condition": "noise005",
+          "expected_rows": 1,
+          "read_rows": 1,
+          "source": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/native_fidelity_v1/manifests/drsr_noise005_task_allowlist.csv",
+          "source_sha256": "80a875b955d2a60e8dcacc3790779ed854329ef8a596911fb8bb2032deb6b60e"
+        }
+      ],
+      "task_ids_unique": true
+    },
+    "asset_root": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2",
+    "commands": [
+      "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/commands/run_all_conditions_preflight.sh",
+      "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/commands/run_all_conditions_dry_run.sh",
+      "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/commands/run_all_conditions_formal.sh"
+    ],
+    "condition_counts": {
+      "noise001": 79,
+      "noise005": 64
+    },
+    "dry_run": null,
+    "first_round_capacity": 144,
+    "first_round_tasks_fit": true,
+    "frozen_files": {
+      "allowlists": [
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/native_fidelity_v1_allowlists/jaxsr_noise001_task_allowlist.csv",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/native_fidelity_v1_allowlists/jaxsr_noise005_task_allowlist.csv",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/native_fidelity_v1_allowlists/imcts_noise001_task_allowlist.csv",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/native_fidelity_v1_allowlists/imcts_noise005_task_allowlist.csv",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/native_fidelity_v1_allowlists/drsr_noise005_task_allowlist.csv"
+      ],
+      "params": [
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params/jaxsr__noise001.json",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params/jaxsr__noise005.json",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params/imcts__noise001.json",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params/imcts__noise005.json",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params/drsr__noise005.json",
+        "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params/drsr.json"
+      ],
+      "source_csv": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/ssr50_source.csv"
+    },
+    "hosts": [
+      "iaaccn22",
+      "iaaccn23",
+      "iaaccn24",
+      "iaaccn25",
+      "iaaccn26",
+      "iaaccn27",
+      "iaaccn28",
+      "iaaccn29"
+    ],
+    "max_cpu_used_ratio": 0.95,
+    "max_jobs_per_host": 18,
+    "max_load_ratio": 0.95,
+    "max_memory_used_ratio": 0.95,
+    "max_new_jobs_per_host_per_poll": 18,
+    "noise_sigmas": [
+      0.01,
+      0.05
+    ],
+    "old_noise_trajectory_policy": {
+      "action": "recycle_for_postprocessing",
+      "full_rerun_required": false,
+      "old_noise_trajectories": 4500
+    },
+    "params": {
+      "drsr.json": {
+        "progress_snapshot_interval_seconds": 60,
+        "sha256": "1b40f4f453c260f97f68d1b82bdc2fb50470d2d56210cb6e83d1fcf86d0252e0",
+        "source": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/drsr3h/drsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260618-162355/params/drsr.json",
+        "timeout_in_seconds": 10800,
+        "train_label_noise_sigma": 0.0
+      },
+      "drsr__noise005.json": {
+        "progress_snapshot_interval_seconds": 60,
+        "sha256": "7434f0fa7dafdcea4d95bde4d321db2fc9183f6f6893b926e3ae9e808f0e66fa",
+        "source": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/drsr3h/drsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260618-162355/params/drsr__noise005.json",
+        "timeout_in_seconds": 10800,
+        "train_label_noise_sigma": 0.05
+      },
+      "imcts__noise001.json": {
+        "progress_snapshot_interval_seconds": 60,
+        "sha256": "2d9c397e3d7fec412261f8e939d475a7a0551519a9926f9a4494607bce878a2d",
+        "source": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658/params/imcts__noise001.json",
+        "timeout_in_seconds": 10800,
+        "train_label_noise_sigma": 0.01
+      },
+      "imcts__noise005.json": {
+        "progress_snapshot_interval_seconds": 60,
+        "sha256": "c05143ea3cc1c309af842af6319fe879e7edf442c04164d4a0f4c01caaf42768",
+        "source": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658/params/imcts__noise005.json",
+        "timeout_in_seconds": 10800,
+        "train_label_noise_sigma": 0.05
+      },
+      "jaxsr__noise001.json": {
+        "progress_snapshot_interval_seconds": 60,
+        "sha256": "f033c157b31ea7092465b506fb03b92d329cb808e900b87639ff39bbd5b66fce",
+        "source": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658/params/jaxsr__noise001.json",
+        "timeout_in_seconds": 10800,
+        "train_label_noise_sigma": 0.01
+      },
+      "jaxsr__noise005.json": {
+        "progress_snapshot_interval_seconds": 60,
+        "sha256": "81d098ae5f61c32afa15a10c8eba2816d112ff4c50ecfdb827750182f56fca05",
+        "source": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658/params/jaxsr__noise005.json",
+        "timeout_in_seconds": 10800,
+        "train_label_noise_sigma": 0.05
+      }
+    },
+    "physical_core_fill_note": "143 single-worker tasks do not physically fill 2048 CPU cores; first-round fill means concurrent submission.",
+    "progress_snapshot_interval_seconds": 60,
+    "seeds": [
+      520,
+      521,
+      522
+    ],
+    "source": {
+      "drsr_source_sha256": "fcfee57dd69ae30176094672231da0d90867577deb4d5842929c6beff207e3c7",
+      "fields": [
+        "global_index",
+        "dataset_id",
+        "dataset_name",
+        "dataset_dir",
+        "dataset_rel"
+      ],
+      "path": "/home/family/workplace/scientific-intelligent-modelling/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658/queues/ssr50_source.csv",
+      "rows": 50,
+      "sha256": "fcfee57dd69ae30176094672231da0d90867577deb4d5842929c6beff207e3c7"
+    },
+    "status": "ok",
+    "task_count": 143,
+    "task_ids_unique": true,
+    "timeout_in_seconds": 10800,
+    "tools": [
+      "jaxsr",
+      "imcts",
+      "drsr"
+    ]
+  },
+  "future_flag_excluded": null,
+  "queue_start": {
+    "batch_name": "all_conditions_cpu_v2_noise_formal_dry_run_validation",
+    "dry_run": true,
+    "event": "queue_start",
+    "host_remote_data_root_overrides": {},
+    "host_remote_root_overrides": {},
+    "hosts": [
+      "iaaccn22",
+      "iaaccn23",
+      "iaaccn24",
+      "iaaccn25",
+      "iaaccn26",
+      "iaaccn27",
+      "iaaccn28",
+      "iaaccn29"
+    ],
+    "llm_model_assignment": "from-params",
+    "llm_model_bucket_limits": {
+      "base": 0,
+      "turbo": 1
+    },
+    "llm_model_buckets": [
+      "base",
+      "turbo"
+    ],
+    "load_tier_new_jobs": "0.50:18,0.70:18,0.85:18,0.95:18",
+    "max_cpu_used_ratio": 0.95,
+    "noise_sigmas": [
+      0.01,
+      0.05
+    ],
+    "params_root": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/params",
+    "preflight_only": false,
+    "prioritize_llm": true,
+    "queue_root": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/queues/dry_run_validation",
+    "remote_data_root": "/home/zhangziwen/sim-datasets-data",
+    "remote_root": "/home/zhangziwen/workplace/scientific-intelligent-modelling",
+    "seeds": [
+      520,
+      521,
+      522
+    ],
+    "skip_support_sync": false,
+    "source_csv": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/frozen_inputs/ssr50_source.csv",
+    "tasks": 143,
+    "time": "2026-09-05T03:11:50",
+    "tool_config": {
+      "drsr": {
+        "cpu_weight": 1,
+        "env": "sim_llm",
+        "llm": true,
+        "params": "drsr",
+        "task_size": 1,
+        "tool_arg": "drsr",
+        "workers": 1
+      },
+      "imcts": {
+        "cpu_weight": 1,
+        "env": "sim_iMCTS",
+        "params": "imcts",
+        "task_size": 1,
+        "tool_arg": "iMCTS",
+        "workers": 1
+      },
+      "jaxsr": {
+        "cpu_weight": 1,
+        "env": "sim_jaxsr",
+        "params": "jaxsr",
+        "task_size": 1,
+        "tool_arg": "jaxsr",
+        "workers": 1
+      }
+    },
+    "tools": [
+      "jaxsr",
+      "imcts",
+      "drsr"
+    ]
+  },
+  "state_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_conditions_cpu_v2/queues/dry_run_validation/state/all_conditions_cpu_v2_noise_formal_dry_run_validation.state.json",
+  "status": "ok",
+  "task_count": 143,
+  "task_ids_unique": true,
+  "validation_mode": "local_scheduler_dry_run"
+}
