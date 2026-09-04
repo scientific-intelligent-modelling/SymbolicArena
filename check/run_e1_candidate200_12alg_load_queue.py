@@ -53,21 +53,21 @@ LLM_TOOLS = {"llmsr", "drsr"}
 
 
 TOOL_CONFIG: dict[str, dict[str, Any]] = {
-    "gplearn": {"tool_arg": "gplearn", "params": "gplearn", "env": "sim_base", "workers": 1, "task_size": 1},
-    "llmsr": {"tool_arg": "llmsr", "params": "llmsr", "env": "sim_llm", "workers": 1, "task_size": 1, "llm": True},
-    "pyoperon": {"tool_arg": "pyoperon", "params": "pyoperon", "env": "sim_base", "workers": 1, "task_size": 1},
-    "drsr": {"tool_arg": "drsr", "params": "drsr", "env": "sim_llm", "workers": 1, "task_size": 1, "llm": True},
-    "pysr": {"tool_arg": "pysr", "params": "pysr", "env": "sim_base", "workers": 1, "task_size": 1},
-    "dso": {"tool_arg": "dso", "params": "dso", "env": "sim_dso", "workers": 1, "task_size": 1},
-    "tpsr": {"tool_arg": "tpsr", "params": "tpsr", "env": "sim_tpsr", "workers": 1, "task_size": 1},
-    "e2esr": {"tool_arg": "e2esr", "params": "e2esr", "env": "sim_e2esr", "workers": 1, "task_size": 1},
-    "fepysr": {"tool_arg": "fepysr", "params": "fepysr", "env": "sim_fepysr", "workers": 1, "task_size": 1},
-    "jaxsr": {"tool_arg": "jaxsr", "params": "jaxsr", "env": "sim_jaxsr", "workers": 1, "task_size": 1},
-    "qlattice": {"tool_arg": "QLattice", "params": "qlattice", "env": "sim_qLattice", "workers": 1, "task_size": 1},
-    "imcts": {"tool_arg": "iMCTS", "params": "imcts", "env": "sim_iMCTS", "workers": 1, "task_size": 1},
-    "udsr": {"tool_arg": "udsr", "params": "udsr", "env": "sim_dso", "workers": 1, "task_size": 1},
-    "ragsr": {"tool_arg": "ragsr", "params": "ragsr", "env": "sim_ragsr", "workers": 1, "task_size": 1},
-    "symbolfit": {"tool_arg": "symbolfit", "params": "symbolfit", "env": "sim_symbolfit", "workers": 1, "task_size": 1},
+    "gplearn": {"tool_arg": "gplearn", "params": "gplearn", "env": "sim_base", "workers": 1, "task_size": 1, "cpu_weight": 1},
+    "llmsr": {"tool_arg": "llmsr", "params": "llmsr", "env": "sim_llm", "workers": 1, "task_size": 1, "cpu_weight": 1, "llm": True},
+    "pyoperon": {"tool_arg": "pyoperon", "params": "pyoperon", "env": "sim_base", "workers": 1, "task_size": 1, "cpu_weight": 4},
+    "drsr": {"tool_arg": "drsr", "params": "drsr", "env": "sim_llm", "workers": 1, "task_size": 1, "cpu_weight": 1, "llm": True},
+    "pysr": {"tool_arg": "pysr", "params": "pysr", "env": "sim_base", "workers": 1, "task_size": 1, "cpu_weight": 4},
+    "dso": {"tool_arg": "dso", "params": "dso", "env": "sim_dso", "workers": 1, "task_size": 1, "cpu_weight": 4},
+    "tpsr": {"tool_arg": "tpsr", "params": "tpsr", "env": "sim_tpsr", "workers": 1, "task_size": 1, "cpu_weight": 4},
+    "e2esr": {"tool_arg": "e2esr", "params": "e2esr", "env": "sim_e2esr", "workers": 1, "task_size": 1, "cpu_weight": 1},
+    "fepysr": {"tool_arg": "fepysr", "params": "fepysr", "env": "sim_fepysr", "workers": 1, "task_size": 1, "cpu_weight": 4},
+    "jaxsr": {"tool_arg": "jaxsr", "params": "jaxsr", "env": "sim_jaxsr", "workers": 1, "task_size": 1, "cpu_weight": 1},
+    "qlattice": {"tool_arg": "QLattice", "params": "qlattice", "env": "sim_qLattice", "workers": 1, "task_size": 1, "cpu_weight": 4},
+    "imcts": {"tool_arg": "iMCTS", "params": "imcts", "env": "sim_iMCTS", "workers": 1, "task_size": 1, "cpu_weight": 1},
+    "udsr": {"tool_arg": "udsr", "params": "udsr", "env": "sim_dso", "workers": 1, "task_size": 1, "cpu_weight": 1},
+    "ragsr": {"tool_arg": "ragsr", "params": "ragsr", "env": "sim_ragsr", "workers": 1, "task_size": 1, "cpu_weight": 4},
+    "symbolfit": {"tool_arg": "symbolfit", "params": "symbolfit", "env": "sim_symbolfit", "workers": 1, "task_size": 1, "cpu_weight": 1},
 }
 
 DEFAULT_TOOLS = tuple(TOOL_CONFIG)
@@ -106,6 +106,29 @@ class QueueTask:
     @property
     def expected(self) -> int:
         return len(self.rows)
+
+
+def _tool_cpu_weight(tool: str) -> int:
+    """返回调度用 CPU 权重；未知工具按一个 CPU 保守处理。"""
+    config = TOOL_CONFIG.get(str(tool).strip().lower())
+    if not config:
+        return 1
+    try:
+        return max(1, int(config.get("cpu_weight", 1)))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _task_cpu_weight(task: dict[str, Any] | QueueTask) -> int:
+    if isinstance(task, QueueTask):
+        return _tool_cpu_weight(task.tool)
+    try:
+        value = task.get("cpu_weight")
+        if value is not None:
+            return max(1, int(value))
+    except (AttributeError, TypeError, ValueError):
+        pass
+    return _tool_cpu_weight(str(task.get("tool") or ""))
 
 
 def _now() -> str:
@@ -639,6 +662,14 @@ export NUMBA_NUM_THREADS=1
 export NUMBA_THREADING_LAYER=workqueue
 export TF_NUM_INTRAOP_THREADS=1
 export TF_NUM_INTEROP_THREADS=1
+export JAX_NUM_THREADS=1
+export XLA_FLAGS="${{XLA_FLAGS:-}} --xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1"
+export JULIA_NUM_THREADS=1
+export JULIA_MAX_NUM_THREADS=1
+export JULIA_NUM_GC_THREADS=1
+export PYTHON_JULIACALL_THREADS=1
+export PYTHON_JULIACALL_PROCS=1
+export PYSR_PROCS=1
 export SIM_QUEUE_TASK_ID="$TASK_ID"
 export SIM_QUEUE_SESSION="$SESSION_NAME"
 
@@ -717,6 +748,7 @@ def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
         "batch_name": batch_name,
         "created_at": _now(),
         "updated_at": _now(),
+        "host_resources": {},
         "tasks": {
             task.task_id: {
                 "task_id": task.task_id,
@@ -727,6 +759,7 @@ def _initial_state(batch_name: str, tasks: list[QueueTask]) -> dict[str, Any]:
                 "task_index": task.task_index,
                 "expected": task.expected,
                 "params_name": task.params_name,
+                "cpu_weight": _task_cpu_weight(task),
                 "llm_model_bucket": task.llm_model_bucket,
                 "state": "pending",
                 "attempts": 0,
@@ -759,6 +792,7 @@ def _load_or_init_state(batch_name: str, tasks: list[QueueTask], queue_root: Pat
             # 旧 state 可能没有这些字段；补齐即可。若已有但不一致，拒绝混跑。
             for key, expected_value in {
                 "params_name": expected.params_name,
+                "cpu_weight": _task_cpu_weight(expected),
                 "llm_model_bucket": expected.llm_model_bucket,
                 "noise_tag": expected.noise_tag,
                 "noise_sigma": expected.noise_sigma,
@@ -766,11 +800,24 @@ def _load_or_init_state(batch_name: str, tasks: list[QueueTask], queue_root: Pat
                 current = task_state.get(key)
                 if current in (None, ""):
                     task_state[key] = expected_value
+                elif key == "cpu_weight":
+                    try:
+                        if int(current) != int(expected_value):
+                            raise SystemExit(
+                                f"已有 state 与当前任务 CPU 权重不一致，避免混跑: {path}; "
+                                f"task={task_id}, field={key}, state={current!r}, expected={expected_value!r}"
+                            )
+                    except (TypeError, ValueError) as exc:
+                        raise SystemExit(
+                            f"已有 state 的 CPU 权重非法，避免混跑: {path}; "
+                            f"task={task_id}, field={key}, state={current!r}"
+                        ) from exc
                 elif current != expected_value:
                     raise SystemExit(
                         f"已有 state 与当前任务参数不一致，避免混跑: {path}; "
                         f"task={task_id}, field={key}, state={current!r}, expected={expected_value!r}"
                     )
+        state.setdefault("host_resources", {})
         return state
     state = _initial_state(batch_name, tasks)
     _save_state(state, queue_root)
@@ -896,11 +943,14 @@ def _sync_support_to_host(
     local_launcher = REPO_ROOT / "check/launch_e1_benchmark.py"
     local_slices = queue_root / "slices"
     remote_slices = remote_root / local_slices.relative_to(REPO_ROOT)
+    remote_queue_root = remote_root / queue_root.resolve().relative_to(REPO_ROOT.resolve())
     local_params = _selected_params(tasks, params_root)
 
     _remote_mkdir(host, remote_support.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     _remote_mkdir(host, remote_launcher.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
     _remote_mkdir(host, remote_slices.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
+    # 启动日志必须落在仓库内的持久目录，避免远端重启后丢失 /tmp 日志。
+    _remote_mkdir(host, remote_queue_root / "logs", controller_host=controller_host, use_internal_ips=use_internal_ips)
     for local_param in local_params:
         remote_path = remote_root / local_param.relative_to(REPO_ROOT)
         _remote_mkdir(host, remote_path.parent, controller_host=controller_host, use_internal_ips=use_internal_ips)
@@ -1009,6 +1059,11 @@ def _probe_host(
     session_prefix: str,
     host_session_count_prefix: str | None = None,
 ) -> dict[str, Any]:
+    session_weights = {
+        tool: _tool_cpu_weight(tool)
+        for tool in TOOL_CONFIG
+    }
+    unknown_session_weight = max(session_weights.values(), default=1)
     script = rf"""
 import json
 import os
@@ -1036,14 +1091,39 @@ def mem_info():
             "mem_used_ratio": None,
         }}
 
-def session_count(pattern):
-    proc = subprocess.run(["bash", "-lc", "timeout 30 tmux ls 2>/dev/null || true"], text=True, capture_output=True, timeout=35)
-    return sum(1 for line in proc.stdout.splitlines() if pattern in line)
+def active_sessions(pattern):
+    proc = subprocess.run(
+        ["bash", "-lc", "timeout 30 tmux ls 2>/dev/null || true"],
+        text=True,
+        capture_output=True,
+        timeout=35,
+    )
+    weights = {json.dumps(session_weights, ensure_ascii=False)}
+    unknown_weight = int({unknown_session_weight})
+    records = []
+    for line in proc.stdout.splitlines():
+        if ":" not in line:
+            continue
+        session = line.split(":", 1)[0].strip()
+        if not session.startswith(pattern):
+            continue
+        task_id = session[len(pattern):].strip() or None
+        tool = task_id.split("_", 1)[0].lower() if task_id else None
+        known = tool in weights
+        records.append({{
+            "session": session,
+            "task_id": task_id,
+            "tool": tool if known else None,
+            "cpu_weight": int(weights.get(tool, unknown_weight)),
+            "cpu_weight_known": bool(known),
+        }})
+    return records
 
 load1, load5, load15 = os.getloadavg()
 cpu_count = os.cpu_count() or 1
 memory = mem_info()
 prefix = {(host_session_count_prefix or session_prefix)!r}
+active = active_sessions(prefix)
 print(json.dumps({{
     "load1": load1,
     "load5": load5,
@@ -1051,7 +1131,9 @@ print(json.dumps({{
     "cpu_count": cpu_count,
     "load_ratio": load1 / cpu_count,
     **memory,
-    "queue_sessions": session_count(prefix),
+    "active_sessions": active,
+    "queue_sessions": len(active),
+    "active_cpu_weight": sum(int(item["cpu_weight"]) for item in active),
 }}))
 """
     result = _ssh(host, f"python - <<'PY'\n{script}\nPY", controller_host=controller_host, use_internal_ips=use_internal_ips, timeout=60)
@@ -1064,19 +1146,121 @@ print(json.dumps({{
     return {"host": host, "ok": True, **payload}
 
 
+def _host_active_cpu_weight(host_state: dict[str, Any]) -> int:
+    """读取 host probe 的 active weight，兼容旧 probe 输出。"""
+    if "active_cpu_weight" in host_state:
+        try:
+            return max(0, int(host_state["active_cpu_weight"]))
+        except (TypeError, ValueError):
+            pass
+    active_sessions = host_state.get("active_sessions")
+    if isinstance(active_sessions, list):
+        total = 0
+        for session in active_sessions:
+            if not isinstance(session, dict):
+                total += 1
+                continue
+            try:
+                total += max(1, int(session.get("cpu_weight")))
+            except (TypeError, ValueError):
+                total += _tool_cpu_weight(str(session.get("tool") or ""))
+        return total
+    try:
+        queue_sessions = max(0, int(host_state.get("queue_sessions") or 0))
+    except (TypeError, ValueError):
+        queue_sessions = 0
+    # 旧 probe 只有 session 数；按已知最大权重保守估算，避免新预算模式低估占用。
+    max_known_weight = max((_tool_cpu_weight(tool) for tool in TOOL_CONFIG), default=1)
+    return queue_sessions * max_known_weight
+
+
+def _host_cpu_budget(host_state: dict[str, Any], args: argparse.Namespace) -> int | None:
+    """按 host 实际 cpu_count 计算本轮可用 CPU 权重预算。"""
+    ratio = getattr(args, "max_cpu_used_ratio", None)
+    if ratio is None:
+        return None
+    try:
+        cpu_count = int(host_state.get("cpu_count") or 0)
+        ratio = float(ratio)
+    except (TypeError, ValueError):
+        # 新预算模式下无法确认机器容量时宁可不接新任务，避免绕过 CPU 限制。
+        return 0
+    if cpu_count <= 0 or ratio <= 0:
+        return 0
+    return max(1, int(cpu_count * ratio))
+
+
+def _state_cpu_weight(state: dict[str, Any], statuses: set[str]) -> int:
+    return sum(
+        _task_cpu_weight(task)
+        for task in state.get("tasks", {}).values()
+        if str(task.get("state")) in statuses
+    )
+
+
+def _annotate_host_cpu_state(
+    host_state: dict[str, Any],
+    state: dict[str, Any],
+    args: argparse.Namespace,
+) -> None:
+    """把本轮 host 的 CPU 预算、活动权重和 pending 权重写入可持久化快照。"""
+    budget = _host_cpu_budget(host_state, args)
+    active = _host_active_cpu_weight(host_state)
+    host_state["cpu_budget"] = budget
+    host_state["max_cpu_used_ratio"] = getattr(args, "max_cpu_used_ratio", None)
+    host_state["active_cpu_weight"] = active
+    host_state["pending_cpu_weight"] = _state_cpu_weight(state, {"pending"})
+    host_state["available_cpu_weight"] = None if budget is None else max(0, budget - active)
+    host_state.setdefault("dispatch_cpu_weight", 0)
+    host_state.setdefault("active_cpu_weight_after_dispatch", active)
+
+
+def _host_resource_snapshot(host_state: dict[str, Any]) -> dict[str, Any]:
+    """提取可写入 state 的 host 资源快照，保留 probe/派发前后的权重信息。"""
+    keys = (
+        "host",
+        "ok",
+        "error",
+        "cpu_count",
+        "cpu_budget",
+        "max_cpu_used_ratio",
+        "load_ratio",
+        "queue_sessions",
+        "active_sessions",
+        "active_cpu_weight",
+        "dispatch_cpu_weight",
+        "active_cpu_weight_after_dispatch",
+        "pending_cpu_weight",
+        "available_cpu_weight",
+        "available_slots",
+        "dispatched",
+        "dispatch_limit_reason",
+        "dispatch_skip_reason",
+    )
+    return {key: host_state[key] for key in keys if key in host_state}
+
+
 def _host_can_accept(host_state: dict[str, Any], args: argparse.Namespace) -> tuple[bool, str]:
     if not host_state.get("ok"):
         return False, str(host_state.get("error") or "host probe failed")
-    if int(host_state.get("queue_sessions") or 0) >= args.max_jobs_per_host:
+    if int(host_state.get("queue_sessions") or 0) >= getattr(args, "max_jobs_per_host", 100):
         return False, "queue session 已达上限"
-    if float(host_state.get("load_ratio") or 99.0) >= args.max_load_ratio:
-        return False, f"load_ratio>={args.max_load_ratio}"
+    max_load_ratio = float(getattr(args, "max_load_ratio", 0.80))
+    if float(host_state.get("load_ratio") or 99.0) >= max_load_ratio:
+        return False, f"load_ratio>={max_load_ratio}"
+    cpu_budget = _host_cpu_budget(host_state, args)
+    if cpu_budget is not None:
+        active_cpu_weight = _host_active_cpu_weight(host_state)
+        if active_cpu_weight >= cpu_budget:
+            return False, f"active_cpu_weight>={cpu_budget}"
     mem_used = host_state.get("mem_used_ratio")
-    if mem_used is not None and float(mem_used) >= args.max_memory_used_ratio:
-        return False, f"mem_used_ratio>={args.max_memory_used_ratio}"
+    max_memory_used_ratio = float(getattr(args, "max_memory_used_ratio", 0.80))
+    if mem_used is not None and float(mem_used) >= max_memory_used_ratio:
+        return False, f"mem_used_ratio>={max_memory_used_ratio}"
     mem_available = host_state.get("mem_available_gb")
-    if args.min_free_mem_gb > 0 and mem_available is not None and float(mem_available) < args.min_free_mem_gb:
-        return False, f"mem_available_gb<{args.min_free_mem_gb}"
+    min_free_mem_gb = float(getattr(args, "min_free_mem_gb", 0.0))
+    if min_free_mem_gb > 0 and mem_available is not None and float(mem_available) < min_free_mem_gb:
+        return False, f"mem_available_gb<{min_free_mem_gb}"
     return True, "ok"
 
 
@@ -1104,16 +1288,27 @@ def _parse_load_tiers(raw: str) -> list[tuple[float, int]]:
 
 def _max_new_jobs_for_host(host_state: dict[str, Any], args: argparse.Namespace) -> tuple[int, str]:
     active_sessions = int(host_state.get("queue_sessions") or 0)
-    hard_slots = max(0, args.max_jobs_per_host - active_sessions)
+    hard_slots = max(0, getattr(args, "max_jobs_per_host", 100) - active_sessions)
     if hard_slots <= 0:
         return 0, "no_hard_slot"
     load_ratio = float(host_state.get("load_ratio") or 99.0)
-    for threshold, jobs in args.load_tier_new_jobs_parsed:
+    load_tiers = getattr(args, "load_tier_new_jobs_parsed", [])
+    for threshold, jobs in load_tiers:
         if load_ratio < threshold:
-            return min(jobs, hard_slots), f"load<{threshold:g}:jobs={jobs}"
-    if args.load_tier_new_jobs_parsed:
+            available = min(jobs, hard_slots)
+            budget = _host_cpu_budget(host_state, args)
+            if budget is not None:
+                available = min(available, max(0, budget - _host_active_cpu_weight(host_state)))
+                return available, f"load<{threshold:g}:jobs={jobs};cpu_budget={budget}"
+            return available, f"load<{threshold:g}:jobs={jobs}"
+    if load_tiers:
         return 0, "load_not_in_tiers"
-    return min(args.max_new_jobs_per_host_per_poll, hard_slots), "fixed_max_new_jobs"
+    available = min(getattr(args, "max_new_jobs_per_host_per_poll", 2), hard_slots)
+    budget = _host_cpu_budget(host_state, args)
+    if budget is not None:
+        available = min(available, max(0, budget - _host_active_cpu_weight(host_state)))
+        return available, f"fixed_max_new_jobs;cpu_budget={budget}"
+    return available, "fixed_max_new_jobs"
 
 
 def _read_task_statuses_bulk(
@@ -1280,10 +1475,12 @@ def _list_queue_sessions(host: str, *, controller_host: str, use_internal_ips: b
 def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], args: argparse.Namespace) -> tuple[str, str]:
     config = TOOL_CONFIG[task.tool]
     session = f"{args.session_prefix}{task.task_id}"
-    start_log = Path("/tmp") / f"{session}.start.log"
-    submit_log = Path("/tmp") / f"{session}.submit.log"
     remote_root = _remote_root_for_host(host, args)
     remote_data_root = _remote_data_root_for_host(host, args)
+    queue_rel = args.queue_root_path.resolve().relative_to(REPO_ROOT.resolve())
+    remote_log_root = remote_root / queue_rel / "logs"
+    start_log = remote_log_root / f"{session}.start.log"
+    submit_log = remote_log_root / f"{session}.submit.log"
     support_rel = _remote_support_script_path(args.queue_root_path).relative_to(REPO_ROOT)
     support_remote = remote_root / support_rel
     slice_rel = _sync_task_slice(task)
@@ -1312,6 +1509,7 @@ def _task_submit_line(task: QueueTask, host: str, state_task: dict[str, Any], ar
     command = (
         # tmux 启动在个别机器上可能很慢；这里让 SSH 只提交后台启动命令，
         # 避免单台慢机器阻塞整轮 dispatch。
+        f"mkdir -p {shlex.quote(str(remote_log_root))} && "
         f"nohup bash -lc {shlex.quote(tmux_command)} "
         f"</dev/null >{shlex.quote(str(submit_log))} 2>&1 &"
     )
@@ -1333,6 +1531,7 @@ def _start_task_on_host(task: QueueTask, host: str, state_task: dict[str, Any], 
             "ended_at": None,
             "error": None,
             "batch_name": args.batch_name,
+            "cpu_weight": _task_cpu_weight(task),
             "params_name": task.params_name,
             "llm_model_bucket": task.llm_model_bucket,
             "noise_tag": task.noise_tag,
@@ -1381,6 +1580,7 @@ def _start_tasks_on_host(
                 "ended_at": None,
                 "error": None,
                 "batch_name": args.batch_name,
+                "cpu_weight": _task_cpu_weight(task),
                 "params_name": task.params_name,
                 "llm_model_bucket": task.llm_model_bucket,
                 "noise_tag": task.noise_tag,
@@ -1394,6 +1594,7 @@ def _start_tasks_on_host(
                 "host": host,
                 "tool": task.tool,
                 "seed": task.seed,
+                "cpu_weight": _task_cpu_weight(task),
                 "noise_tag": task.noise_tag,
                 "noise_sigma": task.noise_sigma,
                 "params_name": task.params_name,
@@ -1921,10 +2122,12 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
 
 def _summarize_state(state: dict[str, Any], host_states: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     counts = Counter(task["state"] for task in state["tasks"].values())
+    cpu_weights = Counter()
     by_tool_state: dict[str, Counter[str]] = {}
     by_noise_state: dict[str, Counter[str]] = {}
     by_llm_bucket_state: dict[str, Counter[str]] = {}
     for task in state["tasks"].values():
+        cpu_weights[str(task["state"])] += _task_cpu_weight(task)
         tool = str(task["tool"])
         by_tool_state.setdefault(tool, Counter())[str(task["state"])] += 1
         noise_tag = str(task.get("noise_tag") or "clean")
@@ -1941,6 +2144,7 @@ def _summarize_state(state: dict[str, Any], host_states: list[dict[str, Any]] | 
         "by_llm_model_bucket": {
             bucket: dict(sorted(counter.items())) for bucket, counter in sorted(by_llm_bucket_state.items())
         },
+        "cpu_weights": dict(sorted(cpu_weights.items())),
         "hosts": host_states or [],
     }
 
@@ -2001,8 +2205,16 @@ def _task_within_global_limits(state: dict[str, Any], task_id: str, args: argpar
     return True, "ok"
 
 
-def _first_eligible_pending(pending: list[str], state: dict[str, Any], args: argparse.Namespace) -> str | None:
+def _first_eligible_pending(
+    pending: list[str],
+    state: dict[str, Any],
+    args: argparse.Namespace,
+    *,
+    max_cpu_weight: int | None = None,
+) -> str | None:
     for task_id in pending:
+        if max_cpu_weight is not None and _task_cpu_weight(state["tasks"][task_id]) > max_cpu_weight:
+            continue
         ok, _ = _task_within_global_limits(state, task_id, args)
         if ok:
             return task_id
@@ -2033,7 +2245,12 @@ def _active_dispatch_seed(state: dict[str, Any], args: argparse.Namespace) -> in
     return None
 
 
-def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> str | None:
+def _next_pending_task_id(
+    state: dict[str, Any],
+    args: argparse.Namespace,
+    *,
+    max_cpu_weight: int | None = None,
+) -> str | None:
     dispatch_seed = _active_dispatch_seed(state, args)
     if args.prioritize_llm:
         llm_tools = [tool for tool in args.tools if tool in LLM_TOOLS]
@@ -2048,7 +2265,7 @@ def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> st
                 and task.get("tool") in LLM_TOOLS
                 and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
             ]
-        picked = _first_eligible_pending(llm_pending, state, args)
+        picked = _first_eligible_pending(llm_pending, state, args, max_cpu_weight=max_cpu_weight)
         if picked is not None:
             if args.round_robin_tools and llm_tools:
                 picked_tool = str(state["tasks"][picked]["tool"])
@@ -2065,12 +2282,17 @@ def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> st
             and (not args.prioritize_llm or task.get("tool") not in LLM_TOOLS)
             and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
         ]
-        picked = _first_eligible_pending(pending, state, args)
+        picked = _first_eligible_pending(pending, state, args, max_cpu_weight=max_cpu_weight)
         if picked is not None:
             return picked
         if args.prioritize_llm:
             return None
-        return _first_eligible_pending(_pending_task_ids(state, dispatch_seed), state, args)
+        return _first_eligible_pending(
+            _pending_task_ids(state, dispatch_seed),
+            state,
+            args,
+            max_cpu_weight=max_cpu_weight,
+        )
 
     tools = list(args.tools)
     if args.prioritize_llm:
@@ -2080,7 +2302,7 @@ def _next_pending_task_id(state: dict[str, Any], args: argparse.Namespace) -> st
         idx = (start + offset) % len(tools)
         tool = tools[idx]
         pending = _pending_task_ids_by_tool(state, tool, dispatch_seed)
-        picked = _first_eligible_pending(pending, state, args)
+        picked = _first_eligible_pending(pending, state, args, max_cpu_weight=max_cpu_weight)
         if picked:
             state["round_robin_cursor"] = (idx + 1) % len(tools)
             return picked
@@ -2136,6 +2358,8 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
             )
             for host in ready_hosts
         ]
+        for host_state in host_states:
+            _annotate_host_cpu_state(host_state, state, args)
         _append_event(
             args.batch_name,
             {
@@ -2156,14 +2380,30 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
             host_state["dispatch_limit_reason"] = dispatch_limit_reason
             host_state["available_slots"] = available_slots
             selected_items: list[tuple[str, QueueTask, dict[str, Any]]] = []
+            active_cpu_weight = _host_active_cpu_weight(host_state)
+            cpu_budget = _host_cpu_budget(host_state, args)
+            selected_cpu_weight = 0
             for _ in range(available_slots):
-                task_id = _next_pending_task_id(state, args)
+                remaining_cpu_weight = (
+                    None
+                    if cpu_budget is None
+                    else max(0, cpu_budget - active_cpu_weight - selected_cpu_weight)
+                )
+                task_id = _next_pending_task_id(state, args, max_cpu_weight=remaining_cpu_weight)
                 if task_id is None:
                     break
                 task = task_map[task_id]
                 state_task = state["tasks"][task_id]
                 state_task["state"] = "dispatching"
                 selected_items.append((task_id, task, state_task))
+                selected_cpu_weight += _task_cpu_weight(task)
+            host_state["dispatch_cpu_weight"] = selected_cpu_weight
+            host_state["active_cpu_weight_after_dispatch"] = active_cpu_weight + selected_cpu_weight
+            host_state["available_cpu_weight"] = (
+                None
+                if cpu_budget is None
+                else max(0, cpu_budget - active_cpu_weight - selected_cpu_weight)
+            )
             host_dispatched = 0
             if selected_items:
                 try:
@@ -2177,6 +2417,11 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                             "host": host,
                             "task_ids": [task_id for task_id, _, _ in selected_items],
                             "count": len(selected_items),
+                            "cpu_budget": cpu_budget,
+                            "active_cpu_weight": active_cpu_weight,
+                            "dispatch_cpu_weight": selected_cpu_weight,
+                            "active_cpu_weight_after_dispatch": active_cpu_weight + selected_cpu_weight,
+                            "pending_cpu_weight": _state_cpu_weight(state, {"pending"}),
                         },
                         args.queue_root_path,
                     )
@@ -2198,6 +2443,10 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                                 "last_dispatch_error": repr(exc),
                             }
                         )
+                    host_state["active_cpu_weight_after_dispatch"] = active_cpu_weight
+                    host_state["available_cpu_weight"] = (
+                        None if cpu_budget is None else max(0, cpu_budget - active_cpu_weight)
+                    )
                     _append_event(
                         args.batch_name,
                         {
@@ -2205,13 +2454,22 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
                             "host": host,
                             "task_ids": [task_id for task_id, _, _ in selected_items],
                             "count": len(selected_items),
+                            "cpu_budget": cpu_budget,
+                            "active_cpu_weight": active_cpu_weight,
+                            "dispatch_cpu_weight": selected_cpu_weight,
+                            "pending_cpu_weight": _state_cpu_weight(state, {"pending"}),
                             "error": repr(exc),
                         },
                         args.queue_root_path,
                     )
                     # 启动失败不立即丢弃任务，下轮继续尝试。
             host_state["dispatched"] = host_dispatched
+            host_state["pending_cpu_weight"] = _state_cpu_weight(state, {"pending"})
 
+        state["host_resources"] = {
+            str(host_state["host"]): _host_resource_snapshot(host_state)
+            for host_state in host_states
+        }
         _save_state(state, args.queue_root_path)
         _write_summary(state, host_states)
         summary = _summarize_state(state, host_states)
@@ -2678,6 +2936,14 @@ def _parse_args() -> argparse.Namespace:
         help="host 持续不可达且任务已超过 timeout+该宽限后，将任务重置为 pending 以便在其它机器重跑；0 表示禁用。",
     )
     parser.add_argument("--max-jobs-per-host", type=int, default=100)
+    parser.add_argument(
+        "--max-cpu-used-ratio",
+        type=float,
+        default=None,
+        help=(
+            "按每台机器实际 cpu_count 计算任务 CPU 权重预算；未传时保持旧的 session/load 调度行为。"
+        ),
+    )
     parser.add_argument("--default-max-running-per-tool", type=int, default=0, help="0 表示不限制单工具全局 running 数")
     parser.add_argument("--max-new-jobs-per-host-per-poll", type=int, default=2)
     parser.add_argument(
@@ -2752,6 +3018,8 @@ def _parse_args() -> argparse.Namespace:
         item.strip().lower() for item in str(args.llm_model_buckets).split(",") if item.strip()
     ]
     args.llm_model_bucket_limits_parsed = _parse_named_ints(args.llm_model_bucket_limits)
+    if args.max_cpu_used_ratio is not None and not 0 < args.max_cpu_used_ratio <= 1:
+        raise SystemExit("--max-cpu-used-ratio 必须在 (0, 1] 内")
     args.remote_root_path = Path(args.remote_root).expanduser()
     args.remote_data_root_path = Path(args.remote_data_root).expanduser()
     args.host_remote_root_overrides_parsed = _parse_host_path_overrides(args.host_remote_root_overrides)
@@ -2818,6 +3086,7 @@ def main() -> None:
                 "tasks": len(tasks),
                 "tool_config": {tool: TOOL_CONFIG[tool] for tool in args.tools},
                 "load_tier_new_jobs": args.load_tier_new_jobs,
+                "max_cpu_used_ratio": args.max_cpu_used_ratio,
                 "prioritize_llm": args.prioritize_llm,
                 "llm_model_assignment": args.llm_model_assignment,
                 "llm_model_buckets": args.llm_model_buckets_parsed,
