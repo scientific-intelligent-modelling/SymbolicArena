@@ -121,10 +121,10 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
         assert f"--hosts {expected_hosts}" in text
         assert f"--tools {expected_tools}" in text
         assert "--noise-sigmas 0 0.01 0.05" in text
-        assert "--max-jobs-per-host 115" in text
-        assert "--max-cpu-used-ratio 0.44921875" in text
-        assert "--max-new-jobs-per-host-per-poll 115" in text
-        assert '"0.50:115,0.70:115,0.85:115,0.90:115"' in text
+        assert "--max-jobs-per-host 230" in text
+        assert "--max-cpu-used-ratio 0.8984375" in text
+        assert "--max-new-jobs-per-host-per-poll 230" in text
+        assert '"0.50:230,0.70:230,0.85:230,0.90:230"' in text
         assert "--max-load-ratio 0.90" in text
         assert "--max-memory-used-ratio 0.90" in text
         assert "--min-free-mem-gb 32" in text
@@ -134,13 +134,13 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
         assert "--llm-model-bucket-limits base:0,turbo:30" in text
     formal = (root / "commands/run_all_15alg_formal.sh").read_text(encoding="utf-8")
     assert "--force-rerun-existing" in formal
-    assert report["resources"]["cpu_weight_budget_per_host"] == 115
+    assert report["resources"]["cpu_weight_budget_per_host"] == 230
     assert report["resources"]["logical_cpus_per_host"] == 256
     assert report["resources"]["physical_cpus_per_host"] == 128
 
     readme = (root / "README.md").read_text(encoding="utf-8")
-    assert "约 `115` 个物理核等价" in readme
-    assert "不是占满 `256` 个逻辑线程" in readme
+    assert "`230/256`" in readme
+    assert "真实 load 达到 0.90" in readme
     assert "143 + 6607 = 6750" in readme
 
     environment = dict(os.environ)
