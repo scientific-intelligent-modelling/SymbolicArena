@@ -24,9 +24,8 @@ python "$REPO_ROOT/check/run_e1_candidate200_12alg_load_queue.py" \
   --remote-root /home/zhangziwen/workplace/scientific-intelligent-modelling \
   --remote-data-root /home/zhangziwen/sim-datasets-data \
   --max-jobs-per-host 230 \
-  --max-cpu-used-ratio 0.8984375 \
-  --max-new-jobs-per-host-per-poll 230 \
-  --load-tier-new-jobs "0.50:230,0.70:230,0.85:230,0.90:230" \
+  --max-new-jobs-per-host-per-poll 64 \
+  --load-tier-new-jobs "0.50:64,0.70:32,0.85:8,0.90:2" \
   --max-load-ratio 0.90 \
   --max-memory-used-ratio 0.90 \
   --min-free-mem-gb 32 \

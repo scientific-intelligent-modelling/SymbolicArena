@@ -122,9 +122,9 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
         assert f"--tools {expected_tools}" in text
         assert "--noise-sigmas 0 0.01 0.05" in text
         assert "--max-jobs-per-host 230" in text
-        assert "--max-cpu-used-ratio 0.8984375" in text
-        assert "--max-new-jobs-per-host-per-poll 230" in text
-        assert '"0.50:230,0.70:230,0.85:230,0.90:230"' in text
+        assert "--max-cpu-used-ratio" not in text
+        assert "--max-new-jobs-per-host-per-poll 64" in text
+        assert '"0.50:64,0.70:32,0.85:8,0.90:2"' in text
         assert "--max-load-ratio 0.90" in text
         assert "--max-memory-used-ratio 0.90" in text
         assert "--min-free-mem-gb 32" in text
@@ -137,13 +137,15 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
     assert "SIM_RESUME_EXISTING_QUEUE" in formal
     assert "RESUME_ARGS+=(--skip-support-sync)" in formal
     assert '"${RESUME_ARGS[@]}"' in formal
-    assert report["resources"]["cpu_weight_budget_per_host"] == 230
+    assert report["resources"]["cpu_weight_budget_per_host"] is None
+    assert report["resources"]["max_cpu_used_ratio"] is None
+    assert report["resources"]["load_driven_dispatch"] is True
     assert report["resources"]["logical_cpus_per_host"] == 256
     assert report["resources"]["physical_cpus_per_host"] == 128
 
     readme = (root / "README.md").read_text(encoding="utf-8")
-    assert "`230/256`" in readme
-    assert "真实 load 达到 0.90" in readme
+    assert "取消固定 CPU weight 硬封顶" in readme
+    assert "真实 load 逼近但不超过 0.90" in readme
     assert "143 + 6607 = 6750" in readme
 
     environment = dict(os.environ)

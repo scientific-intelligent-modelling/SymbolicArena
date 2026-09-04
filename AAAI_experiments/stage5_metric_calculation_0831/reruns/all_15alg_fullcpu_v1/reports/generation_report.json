@@ -156,12 +156,10 @@
       "--use-internal-ips",
       "--max-jobs-per-host",
       "230",
-      "--max-cpu-used-ratio",
-      "0.8984375",
       "--max-new-jobs-per-host-per-poll",
-      "230",
+      "64",
       "--load-tier-new-jobs",
-      "0.50:230,0.70:230,0.85:230,0.90:230",
+      "0.50:64,0.70:32,0.85:8,0.90:2",
       "--max-load-ratio",
       "0.9",
       "--max-memory-used-ratio",
@@ -222,8 +220,8 @@
         "base",
         "turbo"
       ],
-      "load_tier_new_jobs": "0.50:230,0.70:230,0.85:230,0.90:230",
-      "max_cpu_used_ratio": 0.8984375,
+      "load_tier_new_jobs": "0.50:64,0.70:32,0.85:8,0.90:2",
+      "max_cpu_used_ratio": null,
       "noise_sigmas": [
         0.0,
         0.01,
@@ -243,7 +241,7 @@
       "skip_support_sync": false,
       "source_csv": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/frozen_inputs/sources/formal3h_13alg_ssr50_source.csv",
       "tasks": 6607,
-      "time": "2026-09-05T04:28:50",
+      "time": "2026-09-05T04:49:44",
       "tool_config": {
         "drsr": {
           "cpu_weight": 1,
@@ -414,7 +412,7 @@
     "generation_report_excluded_to_avoid_hash_cycle": true,
     "path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/asset_manifest.json",
     "self_hash_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/asset_manifest.sha256",
-    "sha256": "7aef54d87bfa57f3ab232e8cb07202daeef9da81b8698f0f8f29cb74942fc0af"
+    "sha256": "541be7bfeeef019394e17e3e5d0d3d63f2e0d442460a45b95543c2cebc2e94e8"
   },
   "parameter_validation": {
     "all_valid": true,
@@ -968,17 +966,18 @@
     }
   },
   "resources": {
-    "cpu_weight_budget_per_host": 230,
+    "cpu_weight_budget_per_host": null,
     "llm_turbo_global_limit": 30,
-    "load_tiers": "0.50:230,0.70:230,0.85:230,0.90:230",
+    "load_driven_dispatch": true,
+    "load_tiers": "0.50:64,0.70:32,0.85:8,0.90:2",
     "logical_cpus_per_host": 256,
-    "max_cpu_used_ratio": 0.8984375,
+    "max_cpu_used_ratio": null,
     "max_jobs_per_host": 230,
     "max_load_ratio": 0.9,
     "max_memory_used_ratio": 0.9,
-    "max_new_jobs_per_host_per_poll": 230,
+    "max_new_jobs_per_host_per_poll": 64,
     "min_free_mem_gb": 32,
-    "physical_core_reserve_fraction": 0.1,
+    "physical_core_reserve_fraction": null,
     "physical_cpus_per_host": 128,
     "poll_seconds": 30
   },

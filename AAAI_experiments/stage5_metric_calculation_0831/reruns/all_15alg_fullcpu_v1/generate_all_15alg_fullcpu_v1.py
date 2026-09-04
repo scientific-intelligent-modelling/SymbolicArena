@@ -86,11 +86,11 @@ TIMEOUT_SECONDS = 10800
 SNAPSHOT_SECONDS = 60
 LOGICAL_CPUS_PER_HOST = 256
 PHYSICAL_CPUS_PER_HOST = 128
-CPU_WEIGHT_BUDGET_PER_HOST = 230
-MAX_CPU_USED_RATIO = CPU_WEIGHT_BUDGET_PER_HOST / LOGICAL_CPUS_PER_HOST
+CPU_WEIGHT_BUDGET_PER_HOST = None
+MAX_CPU_USED_RATIO = None
 MAX_JOBS_PER_HOST = 230
-MAX_NEW_JOBS_PER_HOST_PER_POLL = 230
-LOAD_TIERS = "0.50:230,0.70:230,0.85:230,0.90:230"
+MAX_NEW_JOBS_PER_HOST_PER_POLL = 64
+LOAD_TIERS = "0.50:64,0.70:32,0.85:8,0.90:2"
 MAX_LOAD_RATIO = 0.90
 MAX_MEMORY_USED_RATIO = 0.90
 MIN_FREE_MEM_GB = 32
@@ -421,7 +421,6 @@ def _command(root: Path, mode: str) -> str:
         "  --remote-root /home/zhangziwen/workplace/scientific-intelligent-modelling \\",
         "  --remote-data-root /home/zhangziwen/sim-datasets-data \\",
         f"  --max-jobs-per-host {MAX_JOBS_PER_HOST} \\",
-        f"  --max-cpu-used-ratio {MAX_CPU_USED_RATIO:.17g} \\",
         f"  --max-new-jobs-per-host-per-poll {MAX_NEW_JOBS_PER_HOST_PER_POLL} \\",
         f'  --load-tier-new-jobs "{LOAD_TIERS}" \\',
         f"  --max-load-ratio {MAX_LOAD_RATIO:.2f} \\",
@@ -619,8 +618,6 @@ def _scheduler_args(root: Path) -> list[str]:
         "--use-internal-ips",
         "--max-jobs-per-host",
         str(MAX_JOBS_PER_HOST),
-        "--max-cpu-used-ratio",
-        f"{MAX_CPU_USED_RATIO:.17g}",
         "--max-new-jobs-per-host-per-poll",
         str(MAX_NEW_JOBS_PER_HOST_PER_POLL),
         "--load-tier-new-jobs",
@@ -737,9 +734,9 @@ def _readme(report: Mapping[str, Any]) -> str:
 
 ## CPU 饱和口径
 
-机器固定为 `iaaccn22~29`，每机实测 `256` 个逻辑 CPU、`128` 个物理核。首轮按 115 weight 派发后实测仍有 64%~78% CPU idle，因此每机 CPU weight 上限提高到 `230/256`，即 `{MAX_CPU_USED_RATIO:.17g}` 的逻辑 CPU 调度预算。
+机器固定为 `iaaccn22~29`，每机实测 `256` 个逻辑 CPU、`128` 个物理核。首轮 115 weight 时实测仍有 64%~78% CPU idle，提高到 230 weight 后真实 load 仍只有 0.52~0.64，因此本版取消固定 CPU weight 硬封顶，改为由真实 load、内存与会话数共同控制。
 
-这里的“打满”是允许调度器一次补位到 230 CPU weight；并不强行把每个算法假定成持续满核，因为 LLM 等任务存在等待阶段。控制器仍会在真实 load 达到 0.90、内存达到保护线或 weight 用尽时停止追加。重启控制器会复用同一 state 和会话前缀，只补充空余配额，不停止或重复已启动任务。
+这里的“打满”是按 `0.50:64,0.70:32,0.85:8,0.90:2` 分段滚动补位，使真实 load 逼近但不超过 0.90；每机最多 230 个任务。LLM 等等待型任务不会再因保守 weight 估算提前卡住整机。重启控制器会复用同一 state 和会话前缀，只补充空余配额，不停止或重复已启动任务。
 
 资源保护：load 与内存使用率上限均为 0.90，每机至少保留 32 GB 可用内存，轮询间隔 30 秒。LLMSR 与 DRSR 共用 turbo 全局并发上限 30。
 
@@ -834,8 +831,9 @@ def generate_assets(
             "logical_cpus_per_host": LOGICAL_CPUS_PER_HOST,
             "physical_cpus_per_host": PHYSICAL_CPUS_PER_HOST,
             "cpu_weight_budget_per_host": CPU_WEIGHT_BUDGET_PER_HOST,
-            "physical_core_reserve_fraction": 0.10,
+            "physical_core_reserve_fraction": None,
             "max_cpu_used_ratio": MAX_CPU_USED_RATIO,
+            "load_driven_dispatch": True,
             "max_jobs_per_host": MAX_JOBS_PER_HOST,
             "max_new_jobs_per_host_per_poll": MAX_NEW_JOBS_PER_HOST_PER_POLL,
             "load_tiers": LOAD_TIERS,
