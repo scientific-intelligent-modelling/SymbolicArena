@@ -30,11 +30,12 @@ import socket
 import subprocess
 import time
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterable, Iterator
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +51,7 @@ DEFAULT_HOSTS = ("iaaccn23", "iaaccn24", "iaaccn25", "iaaccn26", "iaaccn27", "ia
 DEFAULT_SEEDS = (1314,)
 DONE_STATUSES = {"ok", "timed_out", "no_valid_output"}
 LLM_TOOLS = {"llmsr", "drsr"}
+MAX_READONLY_HOST_WORKERS = 8
 
 
 TOOL_CONFIG: dict[str, dict[str, Any]] = {
@@ -221,6 +223,34 @@ def _run_bytes(cmd: list[str], *, input_bytes: bytes, timeout: int = 60) -> subp
         if "timeout" not in stderr.lower():
             stderr = (stderr + "\ntimeout").strip()
         return subprocess.CompletedProcess(cmd, 124, _safe_text(exc.stdout), stderr)
+
+
+def _parallel_host_reads(
+    hosts: Iterable[str],
+    reader: Callable[[str], Any],
+    *,
+    on_error: Callable[[str, Exception], Any],
+) -> dict[str, Any]:
+    """并行执行跨 host 只读操作，并按首次出现的 host 顺序返回。"""
+
+    ordered_hosts = list(dict.fromkeys(str(host) for host in hosts))
+    if not ordered_hosts:
+        return {}
+    completed: dict[str, Any] = {}
+    with ThreadPoolExecutor(
+        max_workers=min(MAX_READONLY_HOST_WORKERS, len(ordered_hosts)),
+        thread_name_prefix="host-read",
+    ) as executor:
+        future_to_host = {
+            executor.submit(reader, host): host for host in ordered_hosts
+        }
+        for future in as_completed(future_to_host):
+            host = future_to_host[future]
+            try:
+                completed[host] = future.result()
+            except Exception as exc:
+                completed[host] = on_error(host, exc)
+    return {host: completed[host] for host in ordered_hosts}
 
 
 def _host_number(host: str) -> str | None:
@@ -1881,18 +1911,20 @@ def _reap_remote_task_processes_for_state(
 def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> None:
     _normalize_pending_task_state(state)
     running_items = [(task_id, task) for task_id, task in state["tasks"].items() if task.get("state") == "running"]
-    sessions_by_host: dict[str, set[str] | None] = {}
-    for _, task in running_items:
-        host = str(task["assigned_host"])
-        if host not in sessions_by_host:
-            sessions_by_host[host] = _list_queue_sessions(
-                host,
-                controller_host=args.controller_host,
-                use_internal_ips=args.use_internal_ips,
-                session_prefix=args.session_prefix,
-            )
+    running_hosts = list(
+        dict.fromkeys(str(task["assigned_host"]) for _, task in running_items)
+    )
+    sessions_by_host: dict[str, set[str] | None] = _parallel_host_reads(
+        running_hosts,
+        lambda host: _list_queue_sessions(
+            host,
+            controller_host=args.controller_host,
+            use_internal_ips=args.use_internal_ips,
+            session_prefix=args.session_prefix,
+        ),
+        on_error=lambda _host, _exc: None,
+    )
 
-    precise_sessions_by_host: dict[str, set[str] | None] = {}
     omitted_sessions_by_host: dict[str, set[str]] = defaultdict(set)
     for _, task in running_items:
         host = str(task["assigned_host"])
@@ -1900,13 +1932,16 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
         session = str(task["session"])
         if host_sessions is not None and session not in host_sessions:
             omitted_sessions_by_host[host].add(session)
-    for host, sessions in omitted_sessions_by_host.items():
-        precise_sessions_by_host[host] = _sessions_running_bulk(
+    precise_sessions_by_host = _parallel_host_reads(
+        omitted_sessions_by_host,
+        lambda host: _sessions_running_bulk(
             host,
-            sessions,
+            omitted_sessions_by_host[host],
             controller_host=args.controller_host,
             use_internal_ips=args.use_internal_ips,
-        )
+        ),
+        on_error=lambda _host, _exc: None,
+    )
 
     finished_items: list[tuple[str, dict[str, Any]]] = []
     unverified_hosts_reported: set[str] = set()
@@ -1994,15 +2029,31 @@ def _update_running_tasks(state: dict[str, Any], args: argparse.Namespace) -> No
     for item in finished_items:
         finished_by_host[str(item[1]["assigned_host"])].append(item)
 
-    statuses: dict[str, dict[str, Any]] = {}
-    for host, items in finished_by_host.items():
-        host_statuses = _read_task_statuses_bulk(
+    def status_error(host: str, exc: Exception) -> dict[str, dict[str, Any]]:
+        return {
+            task_id: {
+                "read_error": f"bulk status read raised for {host}: {exc!r}",
+                "seen": 0,
+                "done": 0,
+                "errors": 0,
+                "counts": {},
+            }
+            for task_id, _ in finished_by_host[host]
+        }
+
+    statuses_by_host = _parallel_host_reads(
+        finished_by_host,
+        lambda host: _read_task_statuses_bulk(
             host,
-            [task for _, task in items],
+            [task for _, task in finished_by_host[host]],
             remote_root=_remote_root_for_host(host, args),
             controller_host=args.controller_host,
             use_internal_ips=args.use_internal_ips,
-        )
+        ),
+        on_error=status_error,
+    )
+    statuses: dict[str, dict[str, Any]] = {}
+    for host_statuses in statuses_by_host.values():
         statuses.update(host_statuses)
 
     done_reap_results: dict[str, bool] = {}
@@ -2415,16 +2466,22 @@ def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
 
     while True:
         _update_running_tasks(state, args)
-        host_states = [
-            _probe_host(
+        host_states_by_host = _parallel_host_reads(
+            ready_hosts,
+            lambda host: _probe_host(
                 host,
                 controller_host=args.controller_host,
                 use_internal_ips=args.use_internal_ips,
                 session_prefix=args.session_prefix,
                 host_session_count_prefix=args.host_session_count_prefix,
-            )
-            for host in ready_hosts
-        ]
+            ),
+            on_error=lambda host, exc: {
+                "host": host,
+                "ok": False,
+                "error": f"host probe raised: {exc!r}",
+            },
+        )
+        host_states = list(host_states_by_host.values())
         for host_state in host_states:
             _annotate_host_cpu_state(host_state, state, args)
         _append_event(

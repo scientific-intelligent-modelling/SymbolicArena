@@ -1,11 +1,45 @@
 from pathlib import Path
 import json
 import subprocess
+import threading
+import time
 from types import SimpleNamespace
 
 import pytest
 
 from check import run_e1_candidate200_12alg_load_queue as scheduler
+
+
+def test_parallel_host_reads_caps_workers_preserves_order_and_isolates_failure():
+    hosts = [f"iaaccn{number}" for number in range(22, 34)]
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+
+    def reader(host):
+        nonlocal active, max_active
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+        try:
+            time.sleep(0.01)
+            if host == "iaaccn27":
+                raise RuntimeError("probe failed")
+            return f"value:{host}"
+        finally:
+            with lock:
+                active -= 1
+
+    results = scheduler._parallel_host_reads(
+        hosts,
+        reader,
+        on_error=lambda host, exc: f"error:{host}:{exc}",
+    )
+
+    assert list(results) == hosts
+    assert results["iaaccn22"] == "value:iaaccn22"
+    assert results["iaaccn27"] == "error:iaaccn27:probe failed"
+    assert 1 < max_active <= 8
 
 
 def test_controller_lock_rejects_second_scheduler_for_same_batch(tmp_path: Path) -> None:
@@ -740,6 +774,222 @@ def test_sessions_running_bulk_checks_all_sessions_in_one_ssh(monkeypatch):
     assert calls[0][0] == "iaaccn25"
     assert "formal24h_full_gplearn_s520_clean_g0004" in calls[0][1]
     assert "formal24h_full_gplearn_s520_clean_g0005" in calls[0][1]
+
+
+def test_update_running_read_phases_are_parallel_with_strict_barriers(
+    tmp_path, monkeypatch
+):
+    hosts = ["iaaccn25", "iaaccn26"]
+    task_ids = [f"gplearn_s520_clean_g{index:04d}" for index in (4, 5)]
+    state = {
+        "tasks": {
+            task_id: {
+                "task_id": task_id,
+                "tool": "gplearn",
+                "state": "running",
+                "assigned_host": host,
+                "session": f"formal24h_full_{task_id}",
+                "expected": 1,
+            }
+            for host, task_id in zip(hosts, task_ids, strict=True)
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+    barriers = {
+        name: threading.Barrier(2, timeout=2)
+        for name in ("list", "precise", "status")
+    }
+    finished = {name: set() for name in barriers}
+    lock = threading.Lock()
+    main_thread = threading.current_thread()
+    event_threads = []
+
+    def run_phase(name, host):
+        preceding = {"list": None, "precise": "list", "status": "precise"}[name]
+        if preceding is not None:
+            with lock:
+                assert finished[preceding] == set(hosts)
+        barriers[name].wait()
+        if host == hosts[0]:
+            time.sleep(0.02)
+        with lock:
+            finished[name].add(host)
+
+    def list_sessions(host, **_kwargs):
+        run_phase("list", host)
+        return set()
+
+    def precise_sessions(host, _sessions, **_kwargs):
+        run_phase("precise", host)
+        return set()
+
+    def read_statuses(host, tasks, **_kwargs):
+        run_phase("status", host)
+        return {
+            task["task_id"]: {
+                "read_error": None,
+                "seen": 1,
+                "done": 1,
+                "errors": 0,
+                "counts": {"ok": 1},
+            }
+            for task in tasks
+        }
+
+    monkeypatch.setattr(scheduler, "_list_queue_sessions", list_sessions)
+    monkeypatch.setattr(scheduler, "_sessions_running_bulk", precise_sessions)
+    monkeypatch.setattr(scheduler, "_read_task_statuses_bulk", read_statuses)
+    monkeypatch.setattr(scheduler, "_reap_remote_task_processes", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        scheduler,
+        "_append_event",
+        lambda *_args, **_kwargs: event_threads.append(threading.current_thread()),
+    )
+
+    scheduler._update_running_tasks(state, args)
+
+    assert finished == {name: set(hosts) for name in barriers}
+    assert [task["state"] for task in state["tasks"].values()] == ["done", "done"]
+    assert event_threads and set(event_threads) == {main_thread}
+
+
+@pytest.mark.parametrize("failing_phase", ["list", "precise", "status"])
+def test_update_running_host_read_exception_keeps_failed_host_only(
+    tmp_path, monkeypatch, failing_phase
+):
+    hosts = ["iaaccn25", "iaaccn26"]
+    task_ids = [f"gplearn_s520_clean_g{index:04d}" for index in (4, 5)]
+    state = {
+        "tasks": {
+            task_id: {
+                "task_id": task_id,
+                "tool": "gplearn",
+                "state": "running",
+                "assigned_host": host,
+                "session": f"formal24h_full_{task_id}",
+                "expected": 1,
+            }
+            for host, task_id in zip(hosts, task_ids, strict=True)
+        }
+    }
+    args = SimpleNamespace(
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="formal24h_full_",
+        batch_name="formal24h",
+        queue_root_path=tmp_path / "queue",
+        retry_limit=3,
+        remote_root_path=tmp_path / "remote",
+        host_remote_root_overrides_parsed={},
+    )
+
+    def maybe_fail(phase, host):
+        if phase == failing_phase and host == hosts[0]:
+            raise RuntimeError(f"{phase} failed")
+
+    def list_sessions(host, **_kwargs):
+        maybe_fail("list", host)
+        return set()
+
+    def precise_sessions(host, _sessions, **_kwargs):
+        maybe_fail("precise", host)
+        return set()
+
+    def read_statuses(host, tasks, **_kwargs):
+        maybe_fail("status", host)
+        return {
+            task["task_id"]: {
+                "read_error": None,
+                "seen": 1,
+                "done": 1,
+                "errors": 0,
+                "counts": {"ok": 1},
+            }
+            for task in tasks
+        }
+
+    monkeypatch.setattr(scheduler, "_list_queue_sessions", list_sessions)
+    monkeypatch.setattr(scheduler, "_sessions_running_bulk", precise_sessions)
+    monkeypatch.setattr(scheduler, "_read_task_statuses_bulk", read_statuses)
+    monkeypatch.setattr(scheduler, "_reap_remote_task_processes", lambda *_args, **_kwargs: True)
+
+    scheduler._update_running_tasks(state, args)
+
+    assert state["tasks"][task_ids[0]]["state"] == "running"
+    assert state["tasks"][task_ids[1]]["state"] == "done"
+    if failing_phase == "status":
+        assert "status failed" in state["tasks"][task_ids[0]]["last_status_read_error"]
+
+
+def test_scheduler_probes_ready_hosts_in_parallel_and_keeps_ready_order(
+    tmp_path, monkeypatch, capsys
+):
+    hosts = ["iaaccn25", "iaaccn26", "iaaccn27"]
+    barrier = threading.Barrier(len(hosts), timeout=2)
+    probe_finish_order = []
+    events = []
+
+    def probe(host, **_kwargs):
+        barrier.wait()
+        time.sleep({"iaaccn25": 0.03, "iaaccn26": 0.02, "iaaccn27": 0.01}[host])
+        if host == "iaaccn26":
+            raise RuntimeError("host read failed")
+        probe_finish_order.append(host)
+        return {"host": host, "ok": False, "error": "test-only"}
+
+    args = SimpleNamespace(
+        dry_run=False,
+        skip_support_sync=True,
+        hosts=hosts,
+        batch_name="parallel-probe",
+        queue_root_path=tmp_path / "queue",
+        controller_host="iaaccn22",
+        use_internal_ips=True,
+        session_prefix="parallel_",
+        host_session_count_prefix="parallel_",
+        max_cpu_used_ratio=None,
+        max_jobs_per_host=1,
+        max_load_ratio=0.9,
+        max_memory_used_ratio=0.9,
+        min_free_mem_gb=0,
+        once=True,
+    )
+    monkeypatch.setattr(
+        scheduler,
+        "_load_or_init_state",
+        lambda *_args, **_kwargs: {
+            "batch_name": "parallel-probe",
+            "tasks": {},
+            "round_robin_cursor": 0,
+        },
+    )
+    monkeypatch.setattr(scheduler, "_update_running_tasks", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(scheduler, "_probe_host", probe)
+    monkeypatch.setattr(
+        scheduler,
+        "_append_event",
+        lambda _batch, event, _root: events.append(event),
+    )
+    monkeypatch.setattr(scheduler, "_save_state", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(scheduler, "_write_summary", lambda *_args, **_kwargs: None)
+
+    scheduler._run_scheduler([], args)
+
+    host_probe = next(event for event in events if event["event"] == "host_probe")
+    assert [item["host"] for item in host_probe["hosts"]] == hosts
+    assert host_probe["hosts"][1]["ok"] is False
+    assert "host read failed" in host_probe["hosts"][1]["error"]
+    assert probe_finish_order == ["iaaccn27", "iaaccn25"]
+    capsys.readouterr()
 
 
 def test_update_running_tasks_keeps_running_when_tmux_ls_unavailable(tmp_path, monkeypatch):
