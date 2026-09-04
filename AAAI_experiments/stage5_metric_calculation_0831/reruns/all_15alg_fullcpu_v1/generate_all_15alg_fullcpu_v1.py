@@ -436,12 +436,22 @@ def _command(root: Path, mode: str) -> str:
         "  --llm-default-bucket turbo \\",
         "  --llm-model-bucket-limits base:0,turbo:30",
     ]
+    if mode == "formal":
+        python_index = lines.index(
+            'python "$REPO_ROOT/check/run_e1_candidate200_12alg_load_queue.py" \\'
+        )
+        lines[python_index:python_index] = [
+            "RESUME_ARGS=()",
+            'if [[ "${SIM_RESUME_EXISTING_QUEUE:-0}" == "1" ]]; then',
+            "  RESUME_ARGS+=(--skip-support-sync)",
+            "fi",
+        ]
     if mode == "preflight":
         lines[-1] += ' \\\n  --preflight-only \\\n  --preflight-report "$ASSET_ROOT/reports/preflight_report.json"'
     elif mode == "dry_run":
         lines[-1] += " \\\n  --dry-run \\\n  --once"
     else:
-        lines[-1] += " \\\n  --force-rerun-existing"
+        lines[-1] += ' \\\n  "${RESUME_ARGS[@]}" \\\n  --force-rerun-existing'
     return "\n".join(lines) + "\n"
 
 

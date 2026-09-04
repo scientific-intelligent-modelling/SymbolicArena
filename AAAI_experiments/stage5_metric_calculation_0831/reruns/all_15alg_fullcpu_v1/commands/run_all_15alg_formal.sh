@@ -8,6 +8,10 @@ exec > >(tee -a "$ASSET_ROOT/logs/controller_formal.log") 2>&1
 cd "$REPO_ROOT"
 export PYTHONPATH=.
 export SIM_QUEUE_CONTROLLER_IS_LOCAL=1
+RESUME_ARGS=()
+if [[ "${SIM_RESUME_EXISTING_QUEUE:-0}" == "1" ]]; then
+  RESUME_ARGS+=(--skip-support-sync)
+fi
 python "$REPO_ROOT/check/run_e1_candidate200_12alg_load_queue.py" \
   --batch-name all_15alg_fullcpu_v1_formal \
   --source-csv "$ASSET_ROOT/frozen_inputs/sources/formal3h_13alg_ssr50_source.csv" \
@@ -38,4 +42,5 @@ python "$REPO_ROOT/check/run_e1_candidate200_12alg_load_queue.py" \
   --llm-model-assignment from-params \
   --llm-default-bucket turbo \
   --llm-model-bucket-limits base:0,turbo:30 \
+  "${RESUME_ARGS[@]}" \
   --force-rerun-existing

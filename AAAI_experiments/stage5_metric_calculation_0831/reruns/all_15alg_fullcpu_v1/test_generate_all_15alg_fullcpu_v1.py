@@ -134,6 +134,9 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
         assert "--llm-model-bucket-limits base:0,turbo:30" in text
     formal = (root / "commands/run_all_15alg_formal.sh").read_text(encoding="utf-8")
     assert "--force-rerun-existing" in formal
+    assert "SIM_RESUME_EXISTING_QUEUE" in formal
+    assert "RESUME_ARGS+=(--skip-support-sync)" in formal
+    assert '"${RESUME_ARGS[@]}"' in formal
     assert report["resources"]["cpu_weight_budget_per_host"] == 230
     assert report["resources"]["logical_cpus_per_host"] == 256
     assert report["resources"]["physical_cpus_per_host"] == 128
