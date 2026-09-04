@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+REPO_ROOT="${SIM_REPO_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../../../.." && pwd)}"
 REMOTE_ROOT=/home/zhangziwen/workplace/scientific-intelligent-modelling
 FILES=(
   'check/run_e1_candidate200_12alg_load_queue.py'
@@ -28,6 +28,15 @@ FILES=(
   'scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py'
 )
 cd "$REPO_ROOT"
+if [[ "${1:-}" == "--verify-local-only" ]]; then
+  test -d "AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1"
+  for file in "${FILES[@]}"; do
+    test -f "$file"
+  done
+  printf 'local_deployment_inputs_ok repo_root=%s files=%s
+' "$REPO_ROOT" "${#FILES[@]}"
+  exit 0
+fi
 timeout 600 rsync -a --relative "${FILES[@]}" "iaaccn22:$REMOTE_ROOT/"
-timeout 600 rsync -a --delete "AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/" "iaaccn22:$REMOTE_ROOT/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/"
+timeout 600 rsync -a "AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/" "iaaccn22:$REMOTE_ROOT/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/"
 timeout 900 ssh -o BatchMode=yes -o ConnectTimeout=10 iaaccn22 "/bin/bash '$REMOTE_ROOT/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/commands/fanout_from_iaaccn22.sh'"

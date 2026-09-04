@@ -159,7 +159,7 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
 
 
 def test_runtime_fingerprints_deployment_and_manifest(generated) -> None:
-    _, root, report = generated
+    module, root, report = generated
     fingerprint_path = root / "manifests/runtime_code_fingerprints.json"
     fingerprints = json.loads(fingerprint_path.read_text(encoding="utf-8"))
     assert fingerprints["file_count"] == 23
@@ -173,6 +173,13 @@ def test_runtime_fingerprints_deployment_and_manifest(generated) -> None:
 
     deploy = (root / "commands/deploy_via_iaaccn22.sh").read_text(encoding="utf-8")
     fanout = (root / "commands/fanout_from_iaaccn22.sh").read_text(encoding="utf-8")
+    inferred_repo_root = (
+        module.DEFAULT_ASSET_ROOT / "commands" / "../../../../.."
+    ).resolve()
+    assert inferred_repo_root == module.REPO_ROOT.resolve()
+    assert '/../../../../.." && pwd)' in deploy
+    assert "--delete" not in deploy
+    assert "--delete" not in fanout
     assert "iaaccn22:$REMOTE_ROOT/" in deploy
     assert "fanout_from_iaaccn22.sh" in deploy
     for number in range(23, 30):
@@ -180,6 +187,21 @@ def test_runtime_fingerprints_deployment_and_manifest(generated) -> None:
     assert "llm_config" not in deploy.lower()
     assert report["deployment"]["executed"] is False
     assert report["deployment"]["copies_llm_config_or_secrets"] is False
+
+    environment = dict(os.environ)
+    environment["SIM_REPO_ROOT"] = str(module.REPO_ROOT)
+    local_verify = subprocess.run(
+        ["bash", str(root / "commands/deploy_via_iaaccn22.sh"), "--verify-local-only"],
+        cwd=module.REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    assert local_verify.returncode == 0, local_verify.stderr
+    assert "local_deployment_inputs_ok" in local_verify.stdout
+    assert "files=23" in local_verify.stdout
 
     manifest_path = root / "asset_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

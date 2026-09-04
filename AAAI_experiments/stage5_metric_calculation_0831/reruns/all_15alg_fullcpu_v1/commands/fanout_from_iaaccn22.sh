@@ -31,6 +31,6 @@ cd "$REMOTE_ROOT" || exit 2
 failed=0
 for ip in "${IPS[@]}"; do
   timeout 600 rsync -a --relative "${FILES[@]}" "$ip:$REMOTE_ROOT/" || { echo "FANOUT_CODE_FAIL $ip"; failed=1; }
-  timeout 600 rsync -a --delete "AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/" "$ip:$REMOTE_ROOT/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/" || { echo "FANOUT_ASSET_FAIL $ip"; failed=1; }
+  timeout 600 rsync -a "AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/" "$ip:$REMOTE_ROOT/AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/" || { echo "FANOUT_ASSET_FAIL $ip"; failed=1; }
 done
 exit "$failed"
