@@ -1785,6 +1785,56 @@ class TaskStateStore:
                 },
             )
 
+    def increase_max_attempts_per_task(
+        self,
+        new_limit: int,
+        *,
+        audit_reason: str,
+        now: float | None = None,
+    ) -> bool:
+        """只允许在既有全局物理预算内审计化上调单任务重试上限。"""
+
+        if isinstance(new_limit, bool) or not isinstance(new_limit, int):
+            raise StateContractError("单任务尝试上限必须是正整数")
+        if new_limit <= 0:
+            raise StateContractError("单任务尝试上限必须是正整数")
+        if new_limit > self.attempt_cap:
+            raise StateContractError("单任务尝试上限不得超过全局物理尝试上限")
+        if not audit_reason:
+            raise StateContractError("上调单任务尝试上限必须包含审计原因")
+        timestamp = time.time() if now is None else float(now)
+        with self._write_transaction() as connection:
+            row = connection.execute(
+                "SELECT value FROM meta WHERE key='max_attempts_per_task'"
+            ).fetchone()
+            if row is None:
+                raise StateContractError("状态库缺少 max_attempts_per_task 元数据")
+            current = int(row["value"])
+            if current != self.max_attempts_per_task:
+                raise StateContractError(
+                    "状态库 max_attempts_per_task 与当前实例不一致"
+                )
+            if new_limit < current:
+                raise StateContractError("禁止下调已冻结的单任务尝试上限")
+            if new_limit == current:
+                return False
+            connection.execute(
+                "UPDATE meta SET value=? WHERE key='max_attempts_per_task'",
+                (str(new_limit),),
+            )
+            self._event(
+                connection,
+                event_type="attempt_limit_increased",
+                event_at=timestamp,
+                details={
+                    "old_limit": current,
+                    "new_limit": new_limit,
+                    "audit_reason": audit_reason,
+                },
+            )
+        self.max_attempts_per_task = new_limit
+        return True
+
     def reopen_exhausted_failed_attempt(
         self,
         attempt_id: str,

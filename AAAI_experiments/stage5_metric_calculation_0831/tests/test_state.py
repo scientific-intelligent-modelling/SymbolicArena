@@ -1145,6 +1145,71 @@ def test_reopen_exhausted_failed_attempt_rejects_wrong_class_or_spent_budget(
         )
 
 
+def test_increase_max_attempts_per_task_is_audited_and_enables_retry(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10, max_attempts_per_task=1)
+    store.register_task(task("a"))
+    lease = store.reserve_attempt("a", now=1.0, lease_seconds=10)
+    store.finish_failure(
+        lease.attempt_id,
+        error_class="api_http_transient",
+        retryable=True,
+        now=2.0,
+    )
+    assert store.task_state("a") == "exhausted"
+
+    assert store.increase_max_attempts_per_task(
+        2,
+        audit_reason="渠道瞬时失败未产生有效模型输出",
+        now=3.0,
+    ) is True
+    assert store.increase_max_attempts_per_task(
+        2,
+        audit_reason="幂等复核",
+        now=4.0,
+    ) is False
+    store.reopen_exhausted_failed_attempt(
+        lease.attempt_id,
+        allowed_error_classes=("api_http_transient",),
+        reclassified_error_class="api_http_transient",
+        audit_reason="在全局物理预算内重试",
+        now=5.0,
+    )
+    retry = store.reserve_attempt("a", now=6.0, lease_seconds=10)
+    assert retry.attempt_number == 2
+
+    with sqlite3.connect(state_db) as connection:
+        meta = dict(connection.execute("SELECT key, value FROM meta").fetchall())
+        events = connection.execute(
+            "SELECT details_json FROM events WHERE event_type='attempt_limit_increased'"
+        ).fetchall()
+    assert meta["max_attempts_per_task"] == "2"
+    assert len(events) == 1
+    assert json.loads(events[0][0]) == {
+        "audit_reason": "渠道瞬时失败未产生有效模型输出",
+        "new_limit": 2,
+        "old_limit": 1,
+    }
+    TaskStateStore(state_db, attempt_cap=10, max_attempts_per_task=2)
+    with pytest.raises(StateContractError, match="参数漂移"):
+        TaskStateStore(state_db, attempt_cap=10, max_attempts_per_task=1)
+
+
+@pytest.mark.parametrize("new_limit", [0, -1, 11])
+def test_increase_max_attempts_per_task_rejects_invalid_limit(
+    tmp_path: Path,
+    new_limit: int,
+) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=10)
+    with pytest.raises(StateContractError):
+        store.increase_max_attempts_per_task(
+            new_limit,
+            audit_reason="test",
+        )
+
+
 def test_supersession_batch_is_atomic_idempotent_and_tracks_summary(tmp_path: Path) -> None:
     state_db = tmp_path / "state.sqlite3"
     store = TaskStateStore(state_db, attempt_cap=10, logical_task_cap=2)
