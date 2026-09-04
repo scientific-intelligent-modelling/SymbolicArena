@@ -553,7 +553,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         report_json=args.report_json.resolve(),
     )
     print(json.dumps(report["counts"], ensure_ascii=False, sort_keys=True))
-    return 0
+    return 0 if report.get("contract_ok") is True else 2
 
 
 if __name__ == "__main__":

@@ -305,3 +305,15 @@ def test_prepare_clean_numeric_keeps_replay_unavailable_out_of_scores(
     assert report["counts"]["replay_errors"] == 1
     assert report["outputs"]["algorithm_csv_row_count"] == 0
     assert list(csv.DictReader(algorithm_csv.open(encoding="utf-8", newline=""))) == []
+
+
+def test_clean_numeric_cli_returns_nonzero_when_contract_is_not_ready(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        module,
+        "prepare_clean_numeric",
+        lambda **_kwargs: {"counts": {"replay_unavailable": 1}, "contract_ok": False},
+    )
+
+    assert module.main([]) == 2

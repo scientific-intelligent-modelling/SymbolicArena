@@ -334,6 +334,7 @@ def _load_numeric_rows(
         "task_id",
         "host",
         "evaluation_status",
+        "evaluation_path",
         "valid_output",
         "invalid_reason",
         "id_quality",
@@ -350,6 +351,14 @@ def _load_numeric_rows(
         evaluation_status = _nonempty_string(
             row["evaluation_status"], context=f"{context}.evaluation_status"
         )
+        evaluation_path = _nonempty_string(
+            row["evaluation_path"], context=f"{context}.evaluation_path"
+        )
+        if evaluation_path != "canonical_replay.v1":
+            _raise(
+                f"{context}.evaluation_path 必须为 canonical_replay.v1，"
+                f"实际为 {evaluation_path!r}"
+            )
         if evaluation_status == "replay_unavailable":
             _raise(f"{context}.evaluation_status=replay_unavailable，禁止按 0 分聚合")
         if evaluation_status not in {"valid", "invalid_output"}:

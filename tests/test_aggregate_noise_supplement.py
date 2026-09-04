@@ -103,6 +103,7 @@ def _numeric_row(
         "invalid_reason": "",
         "replay_error": "",
         "formula_source": "canonical_artifact",
+        "evaluation_path": "canonical_replay.v1",
         "id_nmse": 0.1,
         "ood_nmse": 0.2,
         "id_quality": quality,
@@ -336,6 +337,19 @@ def test_aggregate_noise_supplement_rejects_legacy_blank_status(
     _write_csv(noise_path, rows)
 
     with pytest.raises(AggregateNoiseSupplementError, match="evaluation_status"):
+        aggregate_noise_supplement(**arguments)
+
+
+def test_aggregate_noise_supplement_rejects_noncanonical_evaluation_path(
+    tmp_path: Path,
+) -> None:
+    arguments = _fixture(tmp_path)
+    noise_path = Path(arguments["noise001_numeric_csv"])
+    rows = list(csv.DictReader(noise_path.open()))
+    rows[0]["evaluation_path"] = "frozen_metrics.v1"
+    _write_csv(noise_path, rows)
+
+    with pytest.raises(AggregateNoiseSupplementError, match="evaluation_path"):
         aggregate_noise_supplement(**arguments)
 
 
