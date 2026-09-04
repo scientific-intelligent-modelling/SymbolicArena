@@ -143,6 +143,33 @@ def test_preflight_local_files_include_all_algorithm_wrappers(tmp_path):
         assert local_files[label] == rel_path
 
 
+def test_preflight_local_files_include_runtime_semantics_dependencies(tmp_path):
+    source_csv = (
+        scheduler.REPO_ROOT
+        / "benchmark-runs"
+        / "compliance"
+        / "latest"
+        / "queues"
+        / "smoke_2datasets_source.csv"
+    )
+
+    local_files = scheduler._preflight_local_files(source_csv)
+
+    assert local_files["artifact_schema"] == (
+        "scientific_intelligent_modelling/benchmarks/artifact_schema.py"
+    )
+    assert local_files["normalizers"] == (
+        "scientific_intelligent_modelling/benchmarks/normalizers.py"
+    )
+    assert local_files["subprocess_runner"] == (
+        "scientific_intelligent_modelling/benchmarks/subprocess_runner.py"
+    )
+    assert local_files["imcts_native_regressor"] == (
+        "scientific_intelligent_modelling/algorithms/"
+        "iMCTS_wrapper/MCTS-4-SR/iMCTS/regressor.py"
+    )
+
+
 def _write_params(root: Path, *names: str) -> None:
     root.mkdir(parents=True, exist_ok=True)
     for name in names:

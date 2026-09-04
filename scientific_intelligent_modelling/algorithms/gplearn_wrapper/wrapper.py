@@ -99,6 +99,10 @@ class GPLearnRegressor(BaseWrapper):
         self.params = self._validate_and_normalize_params(kwargs)
         self.model = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+        # gplearn 的 warm_start 会把新一代的局部 best 写进同一个 model；保存
+        # 在线快照时必须单调保留内部 loss 最低的历史候选。
+        self._progress_best_loss = None
+        self._progress_best_payload = None
 
     @classmethod
     def _validate_and_normalize_params(cls, raw_params: Dict[str, Any]) -> Dict[str, Any]:
@@ -336,13 +340,38 @@ class GPLearnRegressor(BaseWrapper):
             if not run_details or not run_details.get("generation"):
                 return
             last_idx = len(run_details["generation"]) - 1
+            losses = run_details.get("best_fitness") or []
+            lengths = run_details.get("best_length") or []
+            if last_idx >= len(losses) or last_idx >= len(lengths):
+                return
+            try:
+                loss = float(losses[last_idx])
+            except (TypeError, ValueError, OverflowError):
+                loss = None
+            if loss is not None and not np.isfinite(loss):
+                loss = None
+
+            # gplearn 的 ``best_fitness`` 是当前 generation 的内部 loss，
+            # 不是跨 generation 的累计 best；新一代变差时不能覆盖旧快照。
+            if self._progress_best_payload is not None:
+                if loss is None:
+                    return
+                if self._progress_best_loss is not None and loss >= self._progress_best_loss:
+                    return
+
+            try:
+                complexity = int(lengths[last_idx])
+            except (TypeError, ValueError, OverflowError):
+                complexity = None
             payload = {
                 "equation": str(self.model),
-                "loss": float(run_details["best_fitness"][last_idx]),
-                "complexity": int(run_details["best_length"][last_idx]),
+                "loss": loss,
+                "complexity": complexity,
                 "generation": int(run_details["generation"][last_idx]) + 1,
                 "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             }
+            self._progress_best_loss = loss
+            self._progress_best_payload = payload
             os.makedirs(os.path.dirname(self._progress_state_path), exist_ok=True)
             with open(self._progress_state_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2)

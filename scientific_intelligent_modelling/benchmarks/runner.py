@@ -12,7 +12,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,8 @@ from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor
 
 _HIDDEN_PARAM_KEYS = {"api_key", "apikey", "token", "password", "secret"}
 _PROGRESS_DIRNAME = "progress"
+_SYMBOLFIT_SEARCH_BEST_FILENAME = ".symbolfit_search_best.json"
+_SYMBOLFIT_SEARCH_HISTORY_FILENAME = ".symbolfit_pysr_candidates.jsonl"
 _SNAPSHOT_CAPABLE_TOOLS = {
     "llmsr",
     "drsr",
@@ -447,6 +449,8 @@ def _sympy_locals() -> dict[str, Any]:
         "Abs": sp.Abs,
         "Max": sp.Max,
         "Min": sp.Min,
+        "maximum": sp.Max,
+        "minimum": sp.Min,
         "sqrt": sp.sqrt,
         "log": sp.log,
         "exp": sp.exp,
@@ -456,12 +460,174 @@ def _sympy_locals() -> dict[str, Any]:
         "asin": sp.asin,
         "acos": sp.acos,
         "atan": sp.atan,
+        "cbrt": sp.Function("cbrt"),
         "square": lambda x: x**2,
         "cube": lambda x: x**3,
     }
     for i in range(256):
         locals_map[f"x{i}"] = sp.Symbol(f"x{i}")
     return locals_map
+
+
+_EXECUTABLE_NUMPY_CALLS = {
+    "np.abs",
+    "np.arccos",
+    "np.arcsin",
+    "np.arctan",
+    "np.cbrt",
+    "np.clip",
+    "np.cos",
+    "np.exp",
+    "np.gradient",
+    "np.log",
+    "np.log1p",
+    "np.linalg.norm",
+    "np.maximum",
+    "np.mean",
+    "np.minimum",
+    "np.power",
+    "np.sin",
+    "np.sinh",
+    "np.sqrt",
+    "np.square",
+    "np.tan",
+    "np.tanh",
+    "np.where",
+}
+_EXECUTABLE_BARE_CALLS = {
+    "abs",
+    "arccos",
+    "arcsin",
+    "arctan",
+    "cbrt",
+    "clip",
+    "cos",
+    "exp",
+    "gradient",
+    "log",
+    "log1p",
+    "maximum",
+    "mean",
+    "minimum",
+    "power",
+    "sin",
+    "sinh",
+    "sqrt",
+    "square",
+    "tan",
+    "tanh",
+    "where",
+}
+
+
+def _attribute_path(node: ast.AST) -> str | None:
+    parts: list[str] = []
+    current = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
+        return None
+    parts.append(current.id)
+    return ".".join(reversed(parts))
+
+
+def _validate_executable_expression(tree: ast.AST) -> None:
+    """只允许 NumPy 数值表达式 AST，拒绝任意 Python 执行能力。"""
+    allowed_nodes = (
+        ast.Expression,
+        ast.Constant,
+        ast.Name,
+        ast.Load,
+        ast.Attribute,
+        ast.Subscript,
+        ast.Call,
+        ast.keyword,
+        ast.BinOp,
+        ast.UnaryOp,
+        ast.BoolOp,
+        ast.Compare,
+        ast.IfExp,
+        ast.Add,
+        ast.Sub,
+        ast.Mult,
+        ast.Div,
+        ast.Pow,
+        ast.Mod,
+        ast.BitAnd,
+        ast.BitOr,
+        ast.USub,
+        ast.UAdd,
+        ast.And,
+        ast.Or,
+        ast.Eq,
+        ast.NotEq,
+        ast.Lt,
+        ast.LtE,
+        ast.Gt,
+        ast.GtE,
+        ast.Is,
+        ast.IsNot,
+    )
+    for node in ast.walk(tree):
+        if not isinstance(node, allowed_nodes):
+            raise ValueError(f"executable_expression 含不允许的 AST 节点: {node.__class__.__name__}")
+        if isinstance(node, ast.Name):
+            if node.id in {"np", "pi", "abs", *_EXECUTABLE_BARE_CALLS}:
+                continue
+            if re.fullmatch(r"x\d+", node.id):
+                continue
+            raise ValueError(f"executable_expression 含非标准名称: {node.id}")
+        if isinstance(node, ast.Attribute):
+            path = _attribute_path(node)
+            if path not in _EXECUTABLE_NUMPY_CALLS and path not in {"np.pi", "np.linalg"}:
+                raise ValueError(f"executable_expression 含不允许的属性: {path}")
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                if node.func.id not in _EXECUTABLE_BARE_CALLS:
+                    raise ValueError(f"executable_expression 含不允许的函数: {node.func.id}")
+            elif isinstance(node.func, ast.Attribute):
+                if _attribute_path(node.func) not in _EXECUTABLE_NUMPY_CALLS:
+                    raise ValueError("executable_expression 含不允许的 NumPy 函数")
+            else:
+                raise ValueError("executable_expression 函数调用形态不受支持")
+        if isinstance(node, ast.Subscript):
+            if not isinstance(node.value, ast.Name) or not re.fullmatch(r"x\d+", node.value.id):
+                raise ValueError("executable_expression 只允许对特征向量做常量下标访问")
+            index = node.slice
+            if isinstance(index, ast.Constant) and isinstance(index.value, int):
+                continue
+            if (
+                isinstance(index, ast.UnaryOp)
+                and isinstance(index.op, (ast.USub, ast.UAdd))
+                and isinstance(index.operand, ast.Constant)
+                and isinstance(index.operand.value, int)
+            ):
+                continue
+            raise ValueError("executable_expression 特征下标必须是整数常量")
+
+
+def _predict_executable_expression(expression: str, X: np.ndarray) -> np.ndarray:
+    """按冻结 Python AST 的原始结合顺序执行 DRSR/LLMSR 公式。"""
+    X_arr = np.asarray(X, dtype=float)
+    if X_arr.ndim != 2:
+        raise ValueError("executable_expression 预测要求二维输入")
+    tree = ast.parse(expression, mode="eval")
+    _validate_executable_expression(tree)
+    context: dict[str, Any] = {"np": np, "pi": np.pi, "abs": np.abs}
+    for name in _EXECUTABLE_BARE_CALLS:
+        if hasattr(np, name):
+            context[name] = getattr(np, name)
+    for idx in range(X_arr.shape[1]):
+        context[f"x{idx}"] = X_arr[:, idx]
+    with np.errstate(all="ignore"):
+        value = eval(compile(tree, "<canonical-executable-expression>", "eval"), {"__builtins__": {}}, context)
+    pred = np.asarray(value, dtype=float)
+    if pred.ndim == 0:
+        pred = np.full(X_arr.shape[0], float(pred), dtype=float)
+    else:
+        pred = np.broadcast_to(pred, (X_arr.shape[0],)).astype(float)
+    return pred.reshape(-1)
 
 
 _GPLEARN_TOKEN_RE = re.compile(
@@ -619,6 +785,10 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
 
     这里只服务 runner 的中间最优快照，不依赖具体算法 wrapper 或子进程环境。
     """
+    executable_expression = artifact.get("executable_expression")
+    if isinstance(executable_expression, str) and executable_expression.strip():
+        return _predict_executable_expression(executable_expression, X)
+
     if str(artifact.get("tool_name") or "").strip().lower() == "gplearn":
         raw_equation = artifact.get("raw_equation")
         if isinstance(raw_equation, str) and raw_equation.strip():
@@ -700,6 +870,7 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
                 "Min": _broadcast_minimum,
                 "amax": _broadcast_maximum,
                 "amin": _broadcast_minimum,
+                "cbrt": np.cbrt,
             },
             "numpy",
         ],
@@ -710,7 +881,7 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
         scalar_fn = sp.lambdify(
             free_symbols,
             expr,
-            modules=[{"Max": max, "Min": min, "Abs": abs}, "math"],
+            modules=[{"Max": max, "Min": min, "Abs": abs, "cbrt": np.cbrt}, "math"],
         )
         values = []
         for row in X_arr:
@@ -861,9 +1032,8 @@ def _with_drsr_candidate_params(
     return candidate
 
 
-def _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths: list[Path]) -> dict[str, Any] | None:
-    best_loss = None
-    best_item = None
+def _read_pysr_hall_of_fame_candidates(candidate_paths: list[Path]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
     for path in candidate_paths:
         if not path.is_file():
             continue
@@ -871,25 +1041,52 @@ def _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths: list[Path])
             df = pd.read_csv(path)
         except Exception:
             continue
-        if df.empty or "Equation" not in df.columns or "Loss" not in df.columns:
+        if df.empty:
+            continue
+        equation_column = next(
+            (name for name in ("Equation", "PySR equation", "equation") if name in df.columns),
+            None,
+        )
+        loss_column = next(
+            (name for name in ("Loss", "PySR loss", "loss") if name in df.columns),
+            None,
+        )
+        if equation_column is None or loss_column is None:
             continue
         for _, row in df.iterrows():
-            equation = row.get("Equation")
-            loss = row.get("Loss")
+            equation = row.get(equation_column)
             if not isinstance(equation, str) or not equation.strip():
                 continue
             try:
-                loss_val = float(loss)
-            except Exception:
+                loss = float(row.get(loss_column))
+            except (TypeError, ValueError, OverflowError):
                 continue
-            if best_loss is None or loss_val < best_loss:
-                best_loss = loss_val
-                best_item = {
-                    "equation": equation,
-                    "loss": loss_val,
-                    "complexity": row.get("Complexity"),
-                    }
-    return best_item
+            if not math.isfinite(loss):
+                continue
+            complexity = row.get("Complexity")
+            try:
+                complexity = int(complexity)
+            except (TypeError, ValueError, OverflowError):
+                complexity = None
+            candidates.append(
+                {
+                    "equation": equation.strip(),
+                    "scaled_equation": equation.strip(),
+                    "loss": loss,
+                    "internal_loss": loss,
+                    "complexity": complexity,
+                    "source_path": str(path),
+                    "source": "symbolfit_active_pysr_hall_of_fame",
+                }
+            )
+    return candidates
+
+
+def _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths: list[Path]) -> dict[str, Any] | None:
+    candidates = _read_pysr_hall_of_fame_candidates(candidate_paths)
+    if not candidates:
+        return None
+    return min(candidates, key=lambda item: item["internal_loss"])
 
 
 def _extract_pysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
@@ -1002,6 +1199,34 @@ def _extract_imcts_periodic_candidate(experiment_dir: str | Path) -> dict[str, A
     return item
 
 
+def _imcts_candidate_evidence(candidate: Mapping[str, Any] | None) -> dict[str, Any]:
+    """归一化 iMCTS 原生 reward 候选的发现与排名证据。"""
+
+    if not isinstance(candidate, Mapping):
+        return {}
+    aliases = {
+        "source_score": ("source_score", "score"),
+        "source_evaluations": ("source_evaluations", "evaluations"),
+        "candidate_first_discovered_minute": (
+            "candidate_first_discovered_minute",
+            "first_discovered_minute",
+        ),
+        "candidate_first_discovered_elapsed_seconds": (
+            "candidate_first_discovered_elapsed_seconds",
+            "first_discovered_elapsed_seconds",
+        ),
+        "candidate_source": ("candidate_source", "source"),
+    }
+    evidence: dict[str, Any] = {}
+    for target, sources in aliases.items():
+        for source in sources:
+            value = candidate.get(source)
+            if value is not None:
+                evidence[target] = value
+                break
+    return evidence
+
+
 def _extract_tpsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
     path = Path(experiment_dir) / ".tpsr_current_best.json"
     item = _read_json_file(path)
@@ -1030,9 +1255,33 @@ def _extract_jaxsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, A
     if not item:
         return None
     equation = item.get("equation")
+    if isinstance(equation, str) and equation.strip():
+        return item
+    fidelity = item.get("fidelity")
+    # JAXSR 明确记录了导出失败/校验中时，这是一个真实的当前 best 状态，
+    # 不能降级成 heartbeat，否则轨迹会错误 carry-forward 旧公式。
+    if isinstance(fidelity, dict) and fidelity:
+        return item
+    return None
+
+
+def _jaxsr_candidate_fidelity(
+    tool_name: str,
+    candidate: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    if str(tool_name).strip().lower() != "jaxsr":
+        return None, None
+    fidelity = candidate.get("fidelity")
+    if not isinstance(fidelity, dict) or not fidelity:
+        return None, None
+    status = str(fidelity.get("status") or "invalid").strip().lower()
+    equation = candidate.get("equation")
+    if status != "verified":
+        reason = fidelity.get("reason") or "native best 没有可验证的忠实表达式"
+        return fidelity, f"JAXSR export fidelity {status}: {reason}"
     if not isinstance(equation, str) or not equation.strip():
-        return None
-    return item
+        return fidelity, "JAXSR export fidelity invalid: verified 状态缺少 equation"
+    return fidelity, None
 
 
 def _extract_ragsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
@@ -1057,42 +1306,315 @@ def _extract_fepysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, 
     return item
 
 
-def _extract_symbolfit_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
+def _symbolfit_coordinate_transform(active: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(active, dict):
+        return None
+    nested = active.get("coordinate_transform")
+    transform = dict(nested) if isinstance(nested, dict) else {}
+    for key in (
+        "input_rescale",
+        "x_min",
+        "x_max",
+        "x_range",
+        "y_scale",
+        "y_unscale_factor",
+        "scale_y_by",
+        "equation_space",
+    ):
+        if key in active and key not in transform:
+            transform[key] = active[key]
+    if not transform:
+        return None
+    return transform
+
+
+def _unscale_symbolfit_equation(
+    equation: str,
+    coordinate_transform: dict[str, Any] | None,
+) -> str:
+    """将 SymbolFit active PySR 的缩放空间公式还原到原始 X/y 坐标。"""
+    if not isinstance(equation, str) or not equation.strip() or not coordinate_transform:
+        return str(equation or "").strip()
+    transform = coordinate_transform
+    equation_space = str(transform.get("equation_space") or "")
+    if equation_space.startswith("original_input") and not transform.get("input_rescale"):
+        return equation.strip()
+    try:
+        input_rescale = bool(transform.get("input_rescale", False))
+        y_unscale_factor = transform.get("y_unscale_factor")
+        if y_unscale_factor is None:
+            y_scale = float(transform.get("y_scale", 1.0))
+            y_unscale_factor = 1.0 / y_scale if y_scale else 1.0
+        y_unscale_factor = float(y_unscale_factor)
+        if not math.isfinite(y_unscale_factor) or y_unscale_factor == 0.0:
+            y_unscale_factor = 1.0
+
+        text = re.sub(r"\bX(\d+)\b", lambda match: f"x{match.group(1)}", equation.strip())
+        expr = sp.sympify(text, locals=_sympy_locals())
+        if input_rescale:
+            x_min = transform.get("x_min")
+            x_range = transform.get("x_range")
+            x_max = transform.get("x_max")
+            if x_range is None and isinstance(x_min, list) and isinstance(x_max, list):
+                x_range = [float(high) - float(low) for low, high in zip(x_min, x_max)]
+            if not isinstance(x_min, list) or not isinstance(x_range, list):
+                return equation.strip()
+            substitutions: dict[Any, Any] = {}
+            for index, (raw_min, raw_range) in enumerate(zip(x_min, x_range)):
+                try:
+                    minimum = float(raw_min)
+                    width = float(raw_range)
+                except (TypeError, ValueError, OverflowError):
+                    return equation.strip()
+                if not math.isfinite(minimum) or not math.isfinite(width):
+                    return equation.strip()
+                symbol = sp.Symbol(f"x{index}")
+                if abs(width) <= 1.0e-15:
+                    # 上游对常量特征的缩放本身会产生零除；在原始数据坐标
+                    # 中将该缩放变量固定为 0，避免回放时凭空引入 x 依赖。
+                    substitutions[symbol] = sp.Float(0.0)
+                else:
+                    substitutions[symbol] = (symbol - sp.Float(minimum)) / sp.Float(width)
+            if substitutions:
+                expr = expr.xreplace(substitutions)
+        if abs(y_unscale_factor - 1.0) > 1.0e-15:
+            expr = sp.Float(y_unscale_factor) * expr
+        return str(expr)
+    except Exception:
+        return equation.strip()
+
+
+def _read_symbolfit_search_history(path: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        return []
+    candidates: list[dict[str, Any]] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return candidates
+    for line in lines:
+        try:
+            item = json.loads(line)
+        except Exception:
+            continue
+        if not isinstance(item, dict):
+            continue
+        equation = item.get("scaled_equation") or item.get("equation")
+        if not isinstance(equation, str) or not equation.strip():
+            continue
+        try:
+            loss = float(item.get("internal_loss", item.get("loss")))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if not math.isfinite(loss):
+            continue
+        item = dict(item)
+        item["scaled_equation"] = equation.strip()
+        item["internal_loss"] = loss
+        item["loss"] = loss
+        candidates.append(item)
+    return candidates
+
+
+def _append_symbolfit_search_history(path: Path, candidate: dict[str, Any]) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(candidate, ensure_ascii=False, sort_keys=True) + "\n")
+    except Exception:
+        return
+
+
+def _merge_symbolfit_search_candidate(
+    history: list[dict[str, Any]],
+    candidate: dict[str, Any],
+    *,
+    snapshot_minute: int | None,
+    snapshot_elapsed_seconds: float | None,
+    attempt: Any,
+    coordinate_transform: dict[str, Any] | None,
+) -> dict[str, Any]:
+    scaled_equation = str(candidate.get("scaled_equation") or candidate.get("equation") or "").strip()
+    key = str(candidate.get("candidate_key") or hashlib.sha256(scaled_equation.encode("utf-8")).hexdigest())
+    try:
+        loss = float(candidate.get("internal_loss", candidate.get("loss")))
+    except (TypeError, ValueError, OverflowError):
+        loss = math.inf
+    existing = next((item for item in history if str(item.get("candidate_key")) == key), None)
+    if existing is None:
+        merged = dict(candidate)
+        merged["candidate_key"] = key
+        merged["scaled_equation"] = scaled_equation
+        merged["internal_loss"] = loss
+        merged["loss"] = loss
+        merged["attempt"] = attempt
+        merged["first_discovered_attempt"] = attempt
+        merged["first_discovered_minute"] = snapshot_minute
+        merged["first_discovered_elapsed_seconds"] = snapshot_elapsed_seconds
+        if coordinate_transform:
+            merged["coordinate_transform"] = coordinate_transform
+        history.append(merged)
+        return merged
+
+    if loss < float(existing.get("internal_loss", math.inf)):
+        existing["internal_loss"] = loss
+        existing["loss"] = loss
+    if coordinate_transform and not existing.get("coordinate_transform"):
+        existing["coordinate_transform"] = coordinate_transform
+    return existing
+
+
+def _extract_symbolfit_periodic_candidate(
+    experiment_dir: str | Path,
+    *,
+    snapshot_minute: int | None = None,
+    snapshot_elapsed_seconds: float | None = None,
+) -> dict[str, Any] | None:
     base_dir = Path(experiment_dir)
-    path = base_dir / ".symbolfit_current_best.json"
-    item = _read_json_file(path)
-    if item:
-        equation = item.get("equation")
-        if isinstance(equation, str) and equation.strip():
-            return item
-
     active = _read_json_file(base_dir / ".symbolfit_active_run.json")
-    if not active:
-        return None
-    work_dir = active.get("work_dir")
-    if not isinstance(work_dir, str) or not work_dir.strip():
-        return None
-    work_path = Path(work_dir)
-    if not work_path.is_dir():
-        return None
-    candidate_paths = sorted(
-        [
-            *work_path.glob("outputs_tmp/*/hall_of_fame.csv"),
-            *work_path.glob("outputs_tmp/*/hall_of_fame.csv.bak"),
-        ],
-        key=lambda item_path: item_path.stat().st_mtime if item_path.exists() else 0,
-        reverse=True,
-    )
-    candidate = _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths)
-    if candidate is None:
-        return None
-    candidate["tool"] = "symbolfit"
-    candidate["source"] = "symbolfit_active_pysr_hall_of_fame"
-    candidate["attempt"] = active.get("attempt")
-    return candidate
+    coordinate_transform = _symbolfit_coordinate_transform(active)
+    try:
+        attempt = int(active.get("attempt")) if isinstance(active, dict) else None
+    except (TypeError, ValueError):
+        attempt = None
+
+    history_path = base_dir / _SYMBOLFIT_SEARCH_HISTORY_FILENAME
+    history = _read_symbolfit_search_history(history_path)
+    if snapshot_elapsed_seconds is not None:
+        try:
+            observed_elapsed_seconds = max(0.0, float(snapshot_elapsed_seconds))
+        except (TypeError, ValueError, OverflowError):
+            observed_elapsed_seconds = None
+    else:
+        observed_elapsed_seconds = None
+    observed_minute = snapshot_minute
+    if observed_elapsed_seconds is not None and math.isfinite(observed_elapsed_seconds):
+        observed_minute = max(1, int(math.ceil(observed_elapsed_seconds / 60.0)))
+    active_candidates: list[dict[str, Any]] = []
+    if isinstance(active, dict):
+        work_dir = active.get("work_dir")
+        if isinstance(work_dir, str) and work_dir.strip():
+            work_path = Path(work_dir)
+            if work_path.is_dir():
+                candidate_paths = sorted(
+                    [
+                        *work_path.glob("outputs_tmp/*/hall_of_fame.csv"),
+                        *work_path.glob("outputs_tmp/*/hall_of_fame.csv.bak"),
+                    ],
+                    key=lambda item_path: item_path.stat().st_mtime if item_path.exists() else 0,
+                    reverse=True,
+                )
+                active_candidates = _read_pysr_hall_of_fame_candidates(candidate_paths)
+
+    observed_history_rows: list[dict[str, Any]] = []
+    for candidate in active_candidates:
+        merged = _merge_symbolfit_search_candidate(
+            history,
+            candidate,
+            snapshot_minute=observed_minute,
+            snapshot_elapsed_seconds=observed_elapsed_seconds,
+            attempt=attempt,
+            coordinate_transform=coordinate_transform,
+        )
+        # 返回历史项保留还原后的表达式，同时留下 scaled_equation 便于追溯和重放。
+        merged["equation"] = _unscale_symbolfit_equation(
+            str(merged.get("scaled_equation") or ""),
+            merged.get("coordinate_transform"),
+        )
+        merged["tool"] = "symbolfit"
+        merged["source"] = "symbolfit_active_pysr_hall_of_fame"
+
+        candidate_copy = dict(candidate)
+        candidate_copy["attempt"] = attempt
+        candidate_copy["first_discovered_attempt"] = merged.get(
+            "first_discovered_attempt"
+        )
+        candidate_copy["first_discovered_minute"] = merged.get(
+            "first_discovered_minute"
+        )
+        candidate_copy["first_discovered_elapsed_seconds"] = merged.get(
+            "first_discovered_elapsed_seconds"
+        )
+        candidate_copy["coordinate_transform"] = coordinate_transform
+        candidate_copy["candidate_key"] = merged.get("candidate_key")
+        observed_history_rows.append(candidate_copy)
+
+    if active_candidates:
+        # 持久化本次观察到的候选；重复行无害，读取时会保留最早发现信息。
+        for candidate_copy in observed_history_rows:
+            _append_symbolfit_search_history(history_path, candidate_copy)
+
+    # wrapper 在 attempt 结束后写入该 sidecar；它仍是 PySR 内部目标，
+    # 因而优先级高于基于 refit RMSE 的 current-best 文件。
+    search_best = _read_json_file(base_dir / _SYMBOLFIT_SEARCH_BEST_FILENAME)
+    if isinstance(search_best, dict):
+        search_best = dict(search_best)
+        search_best["equation"] = _unscale_symbolfit_equation(
+            str(search_best.get("scaled_equation") or search_best.get("equation") or ""),
+            search_best.get("coordinate_transform") or coordinate_transform,
+        )
+        try:
+            search_best["internal_loss"] = float(
+                search_best.get("internal_loss", search_best.get("loss"))
+            )
+            search_best["loss"] = search_best["internal_loss"]
+        except (TypeError, ValueError, OverflowError):
+            search_best = None
+        if search_best is not None:
+            history.append(search_best)
+
+    # wrapper 侧遥测以缩放坐标保存 PySR 表达式（scaled_equation），并在旁边
+    # 保存仿射映射。选全局搜索最优前先物化原始坐标表达式，避免 canonical
+    # replay 把缩放公式直接用于原始 X。
+    for item in history:
+        scaled_equation = item.get("scaled_equation") or item.get("equation")
+        if not isinstance(scaled_equation, str) or not scaled_equation.strip():
+            continue
+        item["scaled_equation"] = scaled_equation.strip()
+        item["equation"] = _unscale_symbolfit_equation(
+            item["scaled_equation"],
+            item.get("coordinate_transform") or coordinate_transform,
+        )
+
+    valid_history = [
+        item
+        for item in history
+        if isinstance(item.get("equation"), str)
+        and item.get("equation", "").strip()
+        and isinstance(item.get("internal_loss"), (int, float))
+        and math.isfinite(float(item["internal_loss"]))
+        and (
+            snapshot_minute is None
+            or not isinstance(item.get("first_discovered_minute"), (int, float))
+            or int(item["first_discovered_minute"]) <= snapshot_minute
+        )
+    ]
+    if valid_history:
+        best = min(valid_history, key=lambda item: float(item["internal_loss"]))
+        result = dict(best)
+        result["tool"] = "symbolfit"
+        result["source"] = result.get("source") or "symbolfit_pysr_search_history"
+        result["loss"] = float(result["internal_loss"])
+        return result
+
+    # 兼容旧 run：仅写出 refit 候选、没有 PySR 活跃遥测时回退到该文件。
+    current = _read_json_file(base_dir / ".symbolfit_current_best.json")
+    if current:
+        equation = current.get("equation")
+        if isinstance(equation, str) and equation.strip():
+            current = dict(current)
+            current["source"] = "symbolfit_refit_current_best"
+            return current
+    return None
 
 
-def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> dict[str, Any] | None:
+def _extract_periodic_candidate(
+    tool_name: str,
+    experiment_dir: str | Path,
+    *,
+    snapshot_minute: int | None = None,
+    snapshot_elapsed_seconds: float | None = None,
+) -> dict[str, Any] | None:
     tool = str(tool_name).strip().lower()
     if tool == "llmsr":
         return _extract_llmsr_periodic_candidate(experiment_dir)
@@ -1123,7 +1645,11 @@ def _extract_periodic_candidate(tool_name: str, experiment_dir: str | Path) -> d
     if tool == "fepysr":
         return _extract_fepysr_periodic_candidate(experiment_dir)
     if tool == "symbolfit":
-        return _extract_symbolfit_periodic_candidate(experiment_dir)
+        return _extract_symbolfit_periodic_candidate(
+            experiment_dir,
+            snapshot_minute=snapshot_minute,
+            snapshot_elapsed_seconds=snapshot_elapsed_seconds,
+        )
     return None
 
 
@@ -1258,7 +1784,13 @@ def _build_periodic_snapshot_payload(
     experiment_dir: str | Path,
     checkpoint_index: int,
 ) -> dict[str, Any] | None:
-    candidate = _extract_periodic_candidate(tool_name, experiment_dir)
+    snapshot_elapsed_seconds = max(0.0, time.time() - started_at)
+    candidate = _extract_periodic_candidate(
+        tool_name,
+        experiment_dir,
+        snapshot_minute=checkpoint_index,
+        snapshot_elapsed_seconds=snapshot_elapsed_seconds,
+    )
     if not candidate:
         payload = build_result_payload(
             tool_name=tool_name,
@@ -1285,13 +1817,24 @@ def _build_periodic_snapshot_payload(
         payload["candidate_available"] = False
         return payload
 
-    parameter_values = _candidate_parameter_values(candidate)
-    canonical_artifact, canonical_artifact_error = safe_build_canonical_artifact(
-        tool_name=tool_name,
-        equation=candidate.get("function") if "function" in candidate else candidate.get("equation"),
-        expected_n_features=len(dataset.feature_names),
-        parameter_values=parameter_values,
+    candidate_fidelity, fidelity_export_error = _jaxsr_candidate_fidelity(
+        tool_name,
+        candidate,
     )
+    raw_equation = candidate.get("function") if "function" in candidate else candidate.get("equation")
+    if fidelity_export_error is not None:
+        canonical_artifact = None
+        canonical_artifact_error = fidelity_export_error
+    else:
+        parameter_values = _candidate_parameter_values(candidate)
+        canonical_artifact, canonical_artifact_error = safe_build_canonical_artifact(
+            tool_name=tool_name,
+            equation=raw_equation,
+            expected_n_features=len(dataset.feature_names),
+            parameter_values=parameter_values,
+        )
+        if canonical_artifact is not None and candidate_fidelity is not None:
+            canonical_artifact["fidelity_check"] = dict(candidate_fidelity)
 
     train_metrics = None
     valid_metrics = None
@@ -1321,7 +1864,7 @@ def _build_periodic_snapshot_payload(
         started_at=started_at,
         status="ok" if error is None else "error",
         error=error,
-        equation=str(candidate.get("function") or candidate.get("equation") or ""),
+        equation=str(raw_equation).strip() if raw_equation is not None else None,
         equation_count=1,
         canonical_artifact=canonical_artifact,
         canonical_artifact_error=canonical_artifact_error,
@@ -1339,7 +1882,20 @@ def _build_periodic_snapshot_payload(
     payload["source_sample_order"] = candidate.get("sample_order")
     payload["source_score"] = candidate.get("score")
     payload["source_loss"] = candidate.get("loss")
+    payload["source_internal_loss"] = candidate.get("internal_loss")
+    payload["source_evaluations"] = candidate.get("evaluations")
     payload["source_complexity"] = candidate.get("complexity")
+    payload["candidate_attempt"] = candidate.get("attempt")
+    payload["candidate_first_discovered_attempt"] = candidate.get("first_discovered_attempt")
+    payload["candidate_first_discovered_minute"] = candidate.get("first_discovered_minute")
+    payload["candidate_first_discovered_elapsed_seconds"] = candidate.get(
+        "first_discovered_elapsed_seconds"
+    )
+    payload["candidate_coordinate_transform"] = candidate.get("coordinate_transform")
+    payload["candidate_source"] = candidate.get("source")
+    payload["candidate_available"] = True
+    if candidate_fidelity is not None:
+        payload["candidate_fidelity"] = dict(candidate_fidelity)
     return payload
 
 
@@ -1365,6 +1921,13 @@ def _recover_timeout_payload_from_candidate(
             experiment_dir=experiment_dir,
         )
 
+    candidate_fidelity, fidelity_export_error = _jaxsr_candidate_fidelity(
+        tool_name,
+        candidate,
+    )
+    if fidelity_export_error is not None:
+        return None
+
     raw_equation = candidate.get("function") if "function" in candidate else candidate.get("equation")
     equation = str(raw_equation or "").strip()
     if not equation:
@@ -1381,6 +1944,8 @@ def _recover_timeout_payload_from_candidate(
         expected_n_features=len(dataset.feature_names),
         parameter_values=parameter_values,
     )
+    if canonical_artifact is not None and candidate_fidelity is not None:
+        canonical_artifact["fidelity_check"] = dict(candidate_fidelity)
 
     train_metrics = None
     valid_metrics = None
@@ -1409,7 +1974,7 @@ def _recover_timeout_payload_from_candidate(
         if snapshot_payload is not None:
             return snapshot_payload
 
-    return {
+    recovered = {
         "equation": equation,
         "equation_count": 1,
         "canonical_artifact": canonical_artifact,
@@ -1419,6 +1984,9 @@ def _recover_timeout_payload_from_candidate(
         "id_metrics": id_metrics,
         "ood_metrics": ood_metrics,
     }
+    if str(tool_name).strip().lower() in {"imcts", "imcts_wrapper"}:
+        recovered.update(_imcts_candidate_evidence(candidate))
+    return recovered
 
 
 def _recover_timeout_payload_from_progress_snapshots(
@@ -1459,7 +2027,7 @@ def _recover_timeout_payload_from_progress_snapshots(
                 train_metrics = _evaluate_prediction(dataset.train, train_pred)
             except Exception:
                 train_metrics = None
-        return {
+        recovered = {
             "equation": equation,
             "equation_count": item.get("equation_count") or 1,
             "canonical_artifact": artifact,
@@ -1469,6 +2037,9 @@ def _recover_timeout_payload_from_progress_snapshots(
             "id_metrics": id_metrics,
             "ood_metrics": ood_metrics,
         }
+        if expected_tool in {"imcts", "imcts_wrapper"}:
+            recovered.update(_imcts_candidate_evidence(item))
+        return recovered
     return None
 
 
@@ -1543,6 +2114,11 @@ def _write_final_progress_payload_if_requested(
     progress_snapshot_interval_seconds: int | None,
     output_dir: Path,
     experiment_dir: str | Path | None,
+    tool_name: str | None = None,
+    dataset: LoadedDataset | None = None,
+    params: dict[str, Any] | None = None,
+    seed: int | None = None,
+    started_at: float | None = None,
 ) -> None:
     if not progress_snapshot_interval_seconds:
         return
@@ -1554,19 +2130,49 @@ def _write_final_progress_payload_if_requested(
     if not isinstance(result.get("canonical_artifact"), dict):
         return
 
-    payload = dict(result)
-    payload["record_type"] = "final_best"
-    payload["checkpoint_index"] = "final"
-    try:
-        elapsed_seconds = float(result.get("seconds") or 0.0)
-    except Exception:
-        elapsed_seconds = 0.0
-    payload["elapsed_seconds"] = round(elapsed_seconds, 3)
-    payload["elapsed_minutes"] = max(0, int(round(elapsed_seconds / 60.0)))
     snapshot_minute_index = _progress_budget_minute_index(
         result,
         interval_seconds=progress_snapshot_interval_seconds,
     )
+    payload = None
+    normalized_tool = str(tool_name or result.get("tool") or "").strip()
+    if (
+        normalized_tool
+        and dataset is not None
+        and params is not None
+        and seed is not None
+        and started_at is not None
+        and experiment_dir is not None
+        and _is_snapshot_capable_tool(normalized_tool)
+    ):
+        try:
+            payload = _build_periodic_snapshot_payload(
+                tool_name=normalized_tool,
+                dataset=dataset,
+                params=params,
+                seed=seed,
+                started_at=started_at,
+                experiment_dir=experiment_dir,
+                checkpoint_index=snapshot_minute_index,
+            )
+        except Exception:
+            payload = None
+        if payload is not None:
+            payload["record_type"] = "budget_end_internal_best"
+            payload["checkpoint_index"] = int(snapshot_minute_index)
+            if normalized_tool.lower() in {"imcts", "imcts_wrapper"}:
+                result.update(_imcts_candidate_evidence(payload))
+
+    if payload is None:
+        payload = dict(result)
+        payload["record_type"] = "final_best"
+        payload["checkpoint_index"] = "final"
+        try:
+            elapsed_seconds = float(result.get("seconds") or 0.0)
+        except Exception:
+            elapsed_seconds = 0.0
+        payload["elapsed_seconds"] = round(elapsed_seconds, 3)
+        payload["elapsed_minutes"] = max(0, int(round(elapsed_seconds / 60.0)))
     _write_progress_payload(
         payload,
         primary_dir=output_dir / _PROGRESS_DIRNAME,
@@ -1840,6 +2446,7 @@ def run_benchmark_task(
     raw_execution_error = None
     recovered_from_error = False
     no_valid_output_reason = None
+    internal_candidate_evidence: dict[str, Any] = {}
 
     reg = SymbolicRegressor(
         tool_name,
@@ -1902,6 +2509,8 @@ def run_benchmark_task(
             experiment_dir=experiment_dir,
         )
         if recovered_payload is not None:
+            if str(tool_name).strip().lower() in {"imcts", "imcts_wrapper"}:
+                internal_candidate_evidence = _imcts_candidate_evidence(recovered_payload)
             equation = recovered_payload["equation"]
             equation_count = recovered_payload["equation_count"]
             canonical_artifact = recovered_payload["canonical_artifact"]
@@ -1941,6 +2550,8 @@ def run_benchmark_task(
                 experiment_dir=experiment_dir,
             )
         if recovered_payload is not None:
+            if str(tool_name).strip().lower() in {"imcts", "imcts_wrapper"}:
+                internal_candidate_evidence = _imcts_candidate_evidence(recovered_payload)
             equation = recovered_payload["equation"]
             equation_count = recovered_payload["equation_count"]
             canonical_artifact = recovered_payload["canonical_artifact"]
@@ -2004,6 +2615,12 @@ def run_benchmark_task(
     result["recovered_from_error"] = recovered_from_error
     result["no_valid_output_reason"] = no_valid_output_reason
     result["train_label_noise"] = train_label_noise
+    if str(tool_name).strip().lower() in {"imcts", "imcts_wrapper"}:
+        if not internal_candidate_evidence and experiment_dir:
+            internal_candidate_evidence = _imcts_candidate_evidence(
+                _extract_imcts_periodic_candidate(experiment_dir)
+            )
+        result.update(internal_candidate_evidence)
     if budget_exhausted:
         result["termination_reason"] = timeout_type
     elif recovered_from_error:
@@ -2018,6 +2635,11 @@ def run_benchmark_task(
         progress_snapshot_interval_seconds=progress_snapshot_interval_seconds,
         output_dir=output_dir,
         experiment_dir=experiment_dir,
+        tool_name=tool_name,
+        dataset=dataset,
+        params=params,
+        seed=seed,
+        started_at=started_at,
     )
 
     result_path = output_dir / "result.json"

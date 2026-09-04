@@ -1,6 +1,10 @@
+import json
 import sys
+import tempfile
 import types
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from scientific_intelligent_modelling.benchmarks.normalizers import (
     normalize_drsr_artifact,
@@ -54,6 +58,18 @@ class SymbolicNormalizersTest(unittest.TestCase):
         self.assertEqual(artifact["normalized_expression"], "x0 + 2*x1")
         self.assertTrue(artifact["sympy_parse_ok"])
 
+    def test_normalize_qlattice_keeps_zero_based_output_when_x0_is_absent(self):
+        """QLattice 的 x1 是原生第二列，不能因 x0 缺失而平移。"""
+        artifact = normalize_qlattice_artifact("x1", expected_n_features=2)
+        self.assertEqual(artifact["normalized_expression"], "x1")
+        self.assertEqual(artifact["variables"], ["x1"])
+        self.assertIn("return x1", artifact["python_function_source"])
+
+    def test_normalize_qlattice_keeps_explicit_zero_based_output(self):
+        artifact = normalize_qlattice_artifact("x0 + 2*x1", expected_n_features=2)
+        self.assertEqual(artifact["normalized_expression"], "x0 + 2*x1")
+        self.assertEqual(artifact["variables"], ["x0", "x1"])
+
     def test_normalize_gplearn_artifact(self):
         artifact = normalize_gplearn_artifact("add(X0, mul(X1, X1))")
         self.assertEqual(artifact["tool_name"], "gplearn")
@@ -86,6 +102,18 @@ class SymbolicNormalizersTest(unittest.TestCase):
         self.assertEqual(artifact["normalized_expression"], "log(x0 + 1) + log(x0**2 + 1)")
         self.assertTrue(artifact["sympy_parse_ok"])
         self.assertTrue(artifact["artifact_valid"])
+
+    def test_normalize_imcts_keeps_zero_based_x_without_x0(self):
+        artifact = normalize_imcts_artifact("x2 / x3", expected_n_features=4)
+        self.assertEqual(artifact["normalized_expression"], "x2/x3")
+        self.assertEqual(artifact["variables"], ["x2", "x3"])
+
+    def test_normalize_imcts_rejects_force_expanded_log_without_vector_source(self):
+        with self.assertRaisesRegex(ValueError, "expand_log"):
+            normalize_imcts_artifact(
+                "exp(x3/(x3 + 1))*exp(-2*log(x0)/(x3 + 1))",
+                expected_n_features=4,
+            )
 
     def test_normalize_e2esr_artifact(self):
         artifact = normalize_e2esr_artifact("x_0 + x_1**2")
@@ -123,6 +151,55 @@ class SymbolicNormalizersTest(unittest.TestCase):
         self.assertEqual(artifact["parameter_symbols"], ["c0", "c1", "c2"])
         self.assertTrue(artifact["sympy_parse_ok"])
 
+    def test_normalize_llmsr_maps_signature_order_without_heuristic_shift(self):
+        raw = (
+            "def equation(alpha, beta, params):\n"
+            "    return alpha + 2 * beta\n"
+        )
+        artifact = normalize_llmsr_artifact(raw, expected_n_features=2)
+        self.assertEqual(artifact["normalized_expression"], "x0 + 2*x1")
+        self.assertEqual(artifact["variables"], ["x0", "x1"])
+
+        zero_based = normalize_llmsr_artifact(
+            "def equation(x0, x1, params):\n    return x1\n",
+            expected_n_features=2,
+        )
+        self.assertEqual(zero_based["normalized_expression"], "x1")
+
+    def test_normalize_llmsr_resolves_negative_parameter_index(self):
+        raw = "def equation(x0, params):\n    return params[-2] * x0 + params[-1]\n"
+        artifact = normalize_llmsr_artifact(
+            raw,
+            parameter_values=[1.5, -2.0, 3.0],
+            expected_n_features=1,
+        )
+        self.assertEqual(artifact["normalized_expression"], "c1*x0 + c2")
+        self.assertEqual(artifact["executable_expression"], "(-2.0) * x0 + 3.0")
+
+    def test_normalize_llmsr_rejects_out_of_range_negative_parameter_index(self):
+        raw = "def equation(x0, params):\n    return params[-4] * x0\n"
+        with self.assertRaisesRegex(ValueError, "参数下标越界"):
+            normalize_llmsr_artifact(
+                raw,
+                parameter_values=[1.0, 2.0, 3.0],
+                expected_n_features=1,
+            )
+
+    def test_normalize_llmsr_keeps_executable_when_display_sympy_cannot_parse(self):
+        raw = (
+            "def equation(x0, x1, params):\n"
+            "    return params[0] * x0 / np.linalg.norm(x1)\n"
+        )
+        artifact = normalize_llmsr_artifact(
+            raw,
+            parameter_values=[2.0],
+            expected_n_features=2,
+        )
+        self.assertFalse(artifact["sympy_parse_ok"])
+        self.assertEqual(artifact["variables"], ["x0", "x1"])
+        self.assertEqual(artifact["executable_expression"], "2.0 * x0 / np.linalg.norm(x1)")
+        self.assertTrue(artifact["artifact_valid"])
+
     def test_infer_llmsr_n_features_from_signature(self):
         raw = (
             "def equation(x0, x1, params):\n"
@@ -140,6 +217,23 @@ class SymbolicNormalizersTest(unittest.TestCase):
         self.assertEqual(artifact["normalized_expression"], "c0 + c1*x0 + c2*x1")
         self.assertEqual(artifact["instantiated_expression"], "1.0 + 2.0*x0 + 3.0*x1")
         self.assertTrue(artifact["sympy_parse_ok"])
+
+    def test_normalize_drsr_maps_numpy_minmax_to_sympy_elementwise_ops(self):
+        raw = (
+            "def equation(col0, col1, col2, params):\n"
+            "    return params[0] * np.maximum(col0, 1e-6) "
+            "+ params[1] * np.minimum(col1, col2)\n"
+        )
+        artifact = normalize_drsr_artifact(
+            raw,
+            parameter_values=[2.0, 3.0],
+            expected_n_features=3,
+        )
+        self.assertTrue(artifact["sympy_parse_ok"])
+        self.assertIn("Max(1.0e-6, x0)", artifact["normalized_expression"])
+        self.assertIn("Min(x1, x2)", artifact["normalized_expression"])
+        self.assertIn("max", artifact["operator_set"])
+        self.assertIn("min", artifact["operator_set"])
 
     def test_normalize_drsr_legacy_xyv_artifact(self):
         raw = (
@@ -230,6 +324,94 @@ class SymbolicNormalizersTest(unittest.TestCase):
         artifact = model.export_canonical_symbolic_program()
         self.assertEqual(artifact["normalized_expression"], "log(x0 + 1) + log(x0**2 + 1)")
         self.assertTrue(artifact["artifact_valid"])
+
+    def test_wrapper_export_imcts_prefers_native_vector_expression(self):
+        model = iMCTSRegressor()
+        model._best_expr_simplified = "exp(x3/(x3 + 1))*exp(-2*log(x0)/(x3 + 1))"
+        model._best_expr_vector = "np.exp(x[3] / (x[3] + 1) - 2 * np.log(x[0]) / (x[3] + 1))"
+        model._n_features = 4
+
+        self.assertEqual(model.get_optimal_equation(), model._best_expr_vector)
+        artifact = model.export_canonical_symbolic_program()
+
+        self.assertEqual(artifact["raw_equation"], model._best_expr_vector)
+        self.assertIn("x3", artifact["normalized_expression"])
+        self.assertIn("x0", artifact["normalized_expression"])
+        self.assertTrue(artifact["artifact_valid"])
+
+    def test_imcts_unranked_final_state_does_not_erase_internal_reward(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model = iMCTSRegressor(exp_path=tmp, exp_name="imcts_state")
+            model._fit_started_at = 100.0
+            with patch(
+                "scientific_intelligent_modelling.algorithms.iMCTS_wrapper.wrapper.time.time",
+                return_value=110.0,
+            ):
+                model._write_progress_state(
+                    equation="np.exp(x[0])",
+                    score=0.9,
+                    evaluations=42,
+                )
+            model._write_progress_state(
+                equation="np.exp(x[1])",
+                score=None,
+                evaluations=84,
+            )
+
+            payload = json.loads(
+                (Path(tmp) / "imcts_state" / ".imcts_current_best.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(payload["equation"], "np.exp(x[0])")
+            self.assertEqual(payload["score"], 0.9)
+            self.assertEqual(payload["evaluations"], 42)
+            self.assertEqual(payload["first_discovered_minute"], 1)
+            self.assertEqual(payload["first_discovered_elapsed_seconds"], 10.0)
+
+    def test_imcts_progress_state_preserves_first_discovery_until_new_best(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model = iMCTSRegressor(exp_path=tmp, exp_name="imcts_discovery")
+            model._fit_started_at = 100.0
+            state_path = Path(tmp) / "imcts_discovery" / ".imcts_current_best.json"
+
+            with patch(
+                "scientific_intelligent_modelling.algorithms.iMCTS_wrapper.wrapper.time.time",
+                side_effect=[110.0, 170.0, 230.0],
+            ):
+                model._write_progress_state(
+                    equation="np.exp(x[0])", score=0.5, evaluations=10
+                )
+                first = json.loads(state_path.read_text(encoding="utf-8"))
+                model._write_progress_state(
+                    equation="np.exp(x[0])", score=0.5, evaluations=20
+                )
+                carried = json.loads(state_path.read_text(encoding="utf-8"))
+                model._write_progress_state(
+                    equation="np.exp(x[1])", score=0.8, evaluations=30
+                )
+                improved = json.loads(state_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(first["first_discovered_minute"], 1)
+            self.assertEqual(carried["first_discovered_minute"], 1)
+            self.assertEqual(carried["evaluations"], 10)
+            self.assertEqual(improved["first_discovered_minute"], 3)
+            self.assertEqual(improved["first_discovered_elapsed_seconds"], 130.0)
+            self.assertEqual(improved["score"], 0.8)
+
+    def test_imcts_unranked_candidate_cannot_create_internal_best_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model = iMCTSRegressor(exp_path=tmp, exp_name="imcts_unranked")
+
+            model._write_progress_state(
+                equation="np.exp(x[0])",
+                score=None,
+                evaluations=42,
+            )
+
+            self.assertFalse(
+                (Path(tmp) / "imcts_unranked" / ".imcts_current_best.json").exists()
+            )
 
     def test_wrapper_export_e2esr(self):
         model = E2ESRRegressor.__new__(E2ESRRegressor)

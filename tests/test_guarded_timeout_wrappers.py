@@ -1,4 +1,5 @@
 import builtins
+import json
 import sys
 import types
 
@@ -285,6 +286,38 @@ def test_qlattice_standardizes_large_target_and_restores_predictions(monkeypatch
     np.testing.assert_allclose(reg.predict(np.asarray([[0.0], [1.0]])), expected)
 
 
+def test_qlattice_export_preserves_native_zero_based_feature_semantics(monkeypatch) -> None:
+    """导出的 canonical artifact 应与 QLattice 原生 x1 预测使用同一列。"""
+    from scientific_intelligent_modelling.benchmarks.runner import _predict_from_canonical_artifact
+
+    class FakeModel:
+        bic = 0.0
+
+        def sympify(self, signif=4):
+            return "x1"
+
+        def predict(self, data):
+            return np.asarray(data["x1"], dtype=float)
+
+    class FakeQLattice:
+        def auto_run(self, **kwargs):
+            return [FakeModel()]
+
+    monkeypatch.setitem(sys.modules, "feyn", types.SimpleNamespace(QLattice=FakeQLattice))
+
+    X = np.asarray([[10.0, 1.0], [20.0, 2.0], [30.0, 3.0]])
+    reg = QLatticeRegressor(n_epochs=1, target_standardize=False)
+    reg.fit(X, X[:, 1])
+
+    artifact = reg.export_canonical_symbolic_program()
+    native_prediction = reg.predict(X)
+    canonical_prediction = _predict_from_canonical_artifact(artifact, X)
+
+    assert artifact["normalized_expression"] == "x1"
+    np.testing.assert_allclose(native_prediction, X[:, 1])
+    np.testing.assert_allclose(canonical_prediction, native_prediction)
+
+
 def test_qlattice_empty_search_falls_back_to_mean_constant(monkeypatch, tmp_path) -> None:
     class FakeQLattice:
         def auto_run(self, **kwargs):
@@ -391,6 +424,69 @@ def test_symbolfit_current_best_snapshot_supports_timeout_recovery(monkeypatch, 
     assert recovered["equation"] == "X0"
 
 
+def test_symbolfit_active_snapshot_records_coordinate_transform(monkeypatch, tmp_path) -> None:
+    """active run 元数据应让 runner 能还原 PySR 的缩放坐标。"""
+    class FakePySRRegressor:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class FakeTable:
+        def __len__(self):
+            return 1
+
+        def iterrows(self):
+            yield 0, {
+                "RMSE": 1.0,
+                "R2": 0.0,
+                "PySR loss": 0.25,
+                "PySR equation": "X0",
+                "Parameterized equation, unscaled": "X0",
+                "Parameterized equation": "X0",
+            }
+
+    class FakeSymbolFit:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.func_candidates = FakeTable()
+
+        def fit(self):
+            return None
+
+    symbolfit_pkg = types.ModuleType("symbolfit")
+    symbolfit_submodule = types.ModuleType("symbolfit.symbolfit")
+    symbolfit_submodule.SymbolFit = FakeSymbolFit
+    monkeypatch.setitem(sys.modules, "pysr", types.SimpleNamespace(PySRRegressor=FakePySRRegressor))
+    monkeypatch.setitem(sys.modules, "symbolfit", symbolfit_pkg)
+    monkeypatch.setitem(sys.modules, "symbolfit.symbolfit", symbolfit_submodule)
+
+    reg = SymbolFitRegressor(
+        exp_path=str(tmp_path),
+        exp_name="coordinate_metadata",
+        n_features=1,
+        timeout_in_seconds=10,
+        input_rescale=True,
+        scale_y_by="mean",
+    )
+    reg.fit(np.asarray([[10.0], [20.0], [30.0]]), np.asarray([10.0, 20.0, 30.0]))
+
+    active = json.loads(
+        (tmp_path / "coordinate_metadata" / ".symbolfit_active_run.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert active["input_rescale"] is True
+    assert active["x_min"] == [10.0]
+    assert active["x_max"] == [30.0]
+    assert active["y_scale"] == 0.05
+    search_best = json.loads(
+        (tmp_path / "coordinate_metadata" / ".symbolfit_search_best.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert search_best["internal_loss"] == 0.25
+    assert search_best["scaled_equation"] == "X0"
+
+
 def test_symbolfit_writes_active_pysr_work_dir_for_progress_snapshots(monkeypatch, tmp_path) -> None:
     observed_work_dirs = []
 
@@ -433,6 +529,31 @@ def test_symbolfit_writes_active_pysr_work_dir_for_progress_snapshots(monkeypatc
     assert "symbolfit_work" in active
     assert observed_work_dirs
     assert exp_dir / "symbolfit_work" in observed_work_dirs[0].parents
+
+
+def test_symbolfit_postfit_history_uses_ceil_minute_and_exact_elapsed(
+    monkeypatch, tmp_path
+) -> None:
+    class FakeTable:
+        def iterrows(self):
+            yield 0, {"PySR equation": "X0", "PySR loss": 0.25, "Complexity": 1}
+
+    model = types.SimpleNamespace(func_candidates=FakeTable())
+    reg = SymbolFitRegressor(
+        exp_path=str(tmp_path),
+        exp_name="strict_discovery_time",
+        timeout_in_seconds=10800,
+    )
+    reg._fit_started_at = 100.0
+    reg._coordinate_transform = {"input_rescale": False, "y_scale": 1.0}
+    monkeypatch.setattr(symbolfit_module.time, "monotonic", lambda: 10900.25)
+
+    reg._record_internal_candidates(model, attempt=1, attempt_started_at=100.0)
+
+    history_path = tmp_path / "strict_discovery_time" / ".symbolfit_pysr_candidates.jsonl"
+    row = json.loads(history_path.read_text(encoding="utf-8").splitlines()[0])
+    assert row["first_discovered_minute"] == 181
+    assert row["first_discovered_elapsed_seconds"] == 10800.25
 
 
 def test_symbolfit_short_budget_uses_external_deadline_with_guarded_inner_runs(monkeypatch) -> None:

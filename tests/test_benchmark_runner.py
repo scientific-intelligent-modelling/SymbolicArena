@@ -121,6 +121,123 @@ class BenchmarkRunnerTest(unittest.TestCase):
         pred = runner._predict_from_canonical_artifact(artifact, np.asarray([[2.0, 3.0], [1.0, 4.0]]))
         np.testing.assert_allclose(pred, np.asarray([17.0, 17.0]))
 
+    def test_predict_from_canonical_artifact_uses_real_numpy_cbrt(self):
+        artifact = {
+            "tool_name": "drsr",
+            "instantiated_expression": "cbrt(x0)",
+        }
+        pred = runner._predict_from_canonical_artifact(
+            artifact,
+            np.asarray([[-8.0], [-1.0], [8.0]]),
+        )
+        np.testing.assert_allclose(pred, np.asarray([-2.0, -1.0, 2.0]))
+
+    def test_predict_from_canonical_artifact_prefers_executable_python_tree(self):
+        raw = (
+            "def equation(x0, params):\n"
+            "    return params[0] + params[1] / "
+            "(1 + np.exp(-(x0 - params[2]) / params[3]))\n"
+        )
+        from scientific_intelligent_modelling.benchmarks.normalizers import normalize_llmsr_artifact
+
+        params = [-6.0755525116527105, 0.6781758534940286, 0.5430817954654256, 0.0002585712221404973]
+        artifact = normalize_llmsr_artifact(
+            raw,
+            parameter_values=params,
+            expected_n_features=1,
+        )
+        X = np.asarray([[-10.0], [0.0], [10.0]])
+
+        with np.errstate(all="ignore"):
+            expected = params[0] + params[1] / (
+                1 + np.exp(-(X[:, 0] - params[2]) / params[3])
+            )
+        pred = runner._predict_from_canonical_artifact(artifact, X)
+
+        self.assertTrue(np.all(np.isfinite(pred)))
+        np.testing.assert_allclose(pred, expected)
+
+    def test_predict_from_executable_expression_preserves_negative_power_base(self):
+        artifact = {
+            "tool_name": "llmsr",
+            "executable_expression": "(-2.0) ** 2 + x0",
+            "instantiated_expression": "-2.0**2 + x0",
+        }
+        pred = runner._predict_from_canonical_artifact(artifact, np.asarray([[1.0], [2.0]]))
+        np.testing.assert_allclose(pred, np.asarray([5.0, 6.0]))
+
+    def test_predict_from_executable_expression_rejects_python_capabilities(self):
+        artifact = {
+            "tool_name": "llmsr",
+            "executable_expression": "__import__('os').system('true')",
+        }
+        with self.assertRaisesRegex(ValueError, "不允许|非标准"):
+            runner._predict_from_canonical_artifact(artifact, np.asarray([[1.0]]))
+
+    def test_predict_from_executable_expression_allows_constant_feature_subscript(self):
+        artifact = {
+            "tool_name": "llmsr",
+            "executable_expression": "x0 + x1[0]",
+        }
+        pred = runner._predict_from_canonical_artifact(
+            artifact,
+            np.asarray([[1.0, 10.0], [2.0, 20.0]]),
+        )
+        np.testing.assert_allclose(pred, np.asarray([11.0, 12.0]))
+
+    def test_predict_from_executable_expression_allows_numpy_gradient(self):
+        artifact = {
+            "tool_name": "llmsr",
+            "executable_expression": "2.0 * x0 + np.gradient(x1)",
+        }
+        X = np.asarray(
+            [
+                [1.0, 1.0],
+                [2.0, 4.0],
+                [3.0, 9.0],
+                [4.0, 16.0],
+            ]
+        )
+
+        pred = runner._predict_from_canonical_artifact(artifact, X)
+
+        expected = 2.0 * X[:, 0] + np.gradient(X[:, 1])
+        np.testing.assert_allclose(pred, expected)
+
+    def test_drsr_numpy_maximum_replay_is_elementwise(self):
+        from scientific_intelligent_modelling.benchmarks.normalizers import normalize_drsr_artifact
+
+        raw = (
+            "def equation(col0, col1, col2, params):\n"
+            "    return params[0] + params[1] * col0 / "
+            "(col1 * np.maximum(col2, 1e-6)) + params[2] * col1 * np.exp(params[3] * col2)\n"
+        )
+        params = [-8.351879365020947e-05, 1.9999565766692573, 7.676934321751336, -8.465500121281929]
+        artifact = normalize_drsr_artifact(raw, parameter_values=params, expected_n_features=3)
+        X = np.asarray([[2.0, 4.0, -1.0], [2.0, 4.0, 2.0]])
+        expected = (
+            params[0]
+            + params[1] * X[:, 0] / (X[:, 1] * np.maximum(X[:, 2], 1e-6))
+            + params[2] * X[:, 1] * np.exp(params[3] * X[:, 2])
+        )
+        pred = runner._predict_from_canonical_artifact(artifact, X)
+        np.testing.assert_allclose(pred, expected)
+
+    def test_drsr_boolean_indicator_replay_casts_to_zero_one(self):
+        from scientific_intelligent_modelling.benchmarks.normalizers import normalize_drsr_artifact
+
+        raw = (
+            "def equation(col0, col1, params):\n"
+            "    return params[0] + params[7] * (col1 >= 1e-6)\n"
+        )
+        params = [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5]
+        artifact = normalize_drsr_artifact(raw, parameter_values=params, expected_n_features=2)
+        X = np.asarray([[0.0, -1.0], [0.0, 1e-6], [0.0, 2.0]])
+        pred = runner._predict_from_canonical_artifact(artifact, X)
+        np.testing.assert_allclose(pred, np.asarray([0.25, -0.25, -0.25]))
+        self.assertFalse(artifact["sympy_parse_ok"])
+        self.assertTrue(any("sympy_display_parse_failed" in note for note in artifact["normalization_notes"]))
+
     def test_predict_from_gplearn_artifact_uses_protected_semantics(self):
         artifact = {
             "tool_name": "gplearn",

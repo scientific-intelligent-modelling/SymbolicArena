@@ -90,6 +90,10 @@ def instantiate_expression(
         if idx >= len(parameter_values):
             break
         value = repr(float(parameter_values[idx]))
+        # 负常数必须作为一个原子代入；否则 `c0**2` 会被改写成
+        # `-2.0**2`，Python/SymPy 语义从正四变成负四。
+        if value.startswith("-"):
+            value = f"({value})"
         out = re.sub(rf"\b{re.escape(symbol)}\b", value, out)
         out = re.sub(rf"(?<!\w)params\[{idx}\](?!\w)", value, out)
     return out

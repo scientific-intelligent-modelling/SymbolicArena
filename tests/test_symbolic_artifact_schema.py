@@ -6,6 +6,7 @@ from scientific_intelligent_modelling.benchmarks.artifact_schema import (
     build_canonical_symbolic_program,
     extract_return_expression_from_python_function,
     infer_raw_equation_kind,
+    instantiate_expression,
     validate_canonical_symbolic_program,
 )
 
@@ -28,6 +29,14 @@ class _DummyWrapper(BaseWrapper):
 
 
 class SymbolicArtifactSchemaTest(unittest.TestCase):
+    def test_instantiate_expression_parenthesizes_negative_values(self):
+        instantiated = instantiate_expression(
+            "c0**2 + 1/c1",
+            parameter_symbols=["c0", "c1"],
+            parameter_values=[-2.0, -4.0],
+        )
+        self.assertEqual(instantiated, "(-2.0)**2 + 1/(-4.0)")
+
     def test_infer_raw_equation_kind(self):
         self.assertEqual(infer_raw_equation_kind("x0 + x1"), "plain_expression")
         self.assertEqual(

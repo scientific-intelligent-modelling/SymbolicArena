@@ -10,6 +10,7 @@ from .artifact_schema import (
     build_canonical_symbolic_program,
     extract_return_expression_from_python_function,
     infer_parameter_symbols,
+    instantiate_expression,
     validate_canonical_symbolic_program,
 )
 
@@ -19,8 +20,61 @@ except ModuleNotFoundError:  # pragma: no cover
     sp = None
 
 
-def _replace_param_tokens(expr: str) -> str:
-    return re.sub(r"\bparams\[(\d+)\]", lambda m: f"c{m.group(1)}", expr)
+def _replace_param_tokens(
+    expr: str,
+    *,
+    parameter_values: list[float] | None = None,
+) -> str:
+    """把 Python 参数下标映射为 canonical 常数槽位。
+
+    负下标必须按 Python 列表语义结合参数长度解析，不能把 `params[-1]`
+    交给 SymPy，也不能猜测它对应哪个常数。
+    """
+
+    class ParameterSubscriptNormalizer(ast.NodeTransformer):
+        @staticmethod
+        def literal_index(node: ast.AST) -> int | None:
+            if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool):
+                return int(node.value)
+            if (
+                isinstance(node, ast.UnaryOp)
+                and isinstance(node.op, (ast.USub, ast.UAdd))
+                and isinstance(node.operand, ast.Constant)
+                and isinstance(node.operand.value, int)
+                and not isinstance(node.operand.value, bool)
+            ):
+                value = int(node.operand.value)
+                return -value if isinstance(node.op, ast.USub) else value
+            return None
+
+        def visit_Subscript(self, node: ast.Subscript) -> ast.AST:  # noqa: N802 - ast API
+            node = self.generic_visit(node)
+            if not isinstance(node.value, ast.Name) or node.value.id != "params":
+                return node
+            raw_index = self.literal_index(node.slice)
+            if raw_index is None:
+                raise ValueError("params 下标必须是整数常量")
+            if raw_index < 0:
+                if parameter_values is None:
+                    raise ValueError("负参数下标需要 parameter_values 才能确定 Python 语义")
+                resolved_index = len(parameter_values) + raw_index
+            else:
+                resolved_index = raw_index
+            if resolved_index < 0 or (
+                parameter_values is not None and resolved_index >= len(parameter_values)
+            ):
+                raise ValueError(
+                    f"参数下标越界: params[{raw_index}], 参数长度={len(parameter_values or [])}"
+                )
+            return ast.copy_location(ast.Name(id=f"c{resolved_index}", ctx=ast.Load()), node)
+
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except SyntaxError as exc:
+        raise ValueError(f"无法解析 Python return 表达式: {exc}") from exc
+    transformed = ParameterSubscriptNormalizer().visit(tree)
+    ast.fix_missing_locations(transformed)
+    return ast.unparse(transformed.body).strip()
 
 
 def _replace_col_tokens(expr: str) -> str:
@@ -181,6 +235,10 @@ def _sympy_locals() -> dict[str, Any]:
             "Abs": sp.Abs,
             "Max": sp.Max,
             "Min": sp.Min,
+            # NumPy 的 maximum/minimum 是逐元素二元算子，不是 SymPy
+            # calculus.util 中求函数全局极值的 maximum/minimum。
+            "maximum": sp.Max,
+            "minimum": sp.Min,
             "sqrt": sp.sqrt,
             "log": sp.log,
             "exp": sp.exp,
@@ -190,6 +248,9 @@ def _sympy_locals() -> dict[str, Any]:
             "asin": sp.asin,
             "acos": sp.acos,
             "atan": sp.atan,
+            # 保留为显式函数，不能退化为 `x**(1/3)`，后者对负实数不再
+            # 具有 NumPy cbrt 的实数语义。
+            "cbrt": sp.Function("cbrt"),
             "square": lambda x: x**2,
             "cube": lambda x: x**3,
         }
@@ -307,7 +368,13 @@ def normalize_external_infix_artifact(
 
 
 def normalize_qlattice_artifact(raw_equation: str, *, expected_n_features: int | None = None) -> dict[str, Any]:
-    normalized_expression, parsed = _normalize_common_expression(raw_equation)
+    # wrapper 把 QLattice 的 DataFrame 输入列显式命名为 x0, x1, ...，因此
+    # sympify 导出的变量已经是零基编号。即使公式只使用 x1，也必须保留为
+    # 第二列，不能套用通用的“一基编号自动平移”启发式。
+    normalized_expression, parsed = _normalize_common_expression(
+        raw_equation,
+        shift_one_based=False,
+    )
     variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []
     artifact = build_canonical_symbolic_program(
         tool_name="QLattice",
@@ -594,7 +661,19 @@ def normalize_udsr_artifact(raw_equation: str, *, expected_n_features: int | Non
 
 
 def normalize_imcts_artifact(raw_equation: str, *, expected_n_features: int | None = None) -> dict[str, Any]:
-    normalized_expression, parsed = _normalize_common_expression(raw_equation)
+    normalized_expression, parsed = _normalize_common_expression(
+        raw_equation,
+        shift_one_based=False,
+    )
+    # `lambda x: ...` / `x[...]` 是仍保留的 vector source，可直接按其原始
+    # 运算树归一化；仅 simplified-only 文本缺少逆转 expand_log 的证据。
+    has_vector_source = str(raw_equation).lstrip().startswith("lambda x:") or bool(
+        re.search(r"\bx\s*\[\s*\d+\s*\]", str(raw_equation))
+    )
+    if not has_vector_source and _imcts_has_unrecoverable_expand_log_signature(parsed):
+        raise ValueError(
+            "iMCTS expand_log(force=True) 导出可能已改变实数域语义，且冻结结果缺少 vector expression"
+        )
     variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []
     artifact = build_canonical_symbolic_program(
         tool_name="iMCTS",
@@ -612,6 +691,48 @@ def normalize_imcts_artifact(raw_equation: str, *, expected_n_features: int | No
     artifact["sympy_parse_ok"] = parsed is not None
     artifact["sympy_expression"] = normalized_expression if parsed is not None else None
     return validate_canonical_symbolic_program(artifact)
+
+
+def _imcts_has_unrecoverable_expand_log_signature(parsed: Any | None) -> bool:
+    """识别无法从 iMCTS simplified-only 冻结结果逆转的对数展开。
+
+    上游会对所有表达式执行 ``expand(expand_log(..., force=True))``。跨变量
+    的裸对数拆分、复数单位、对数幂高度分布，或“含 log 的指数被拆成多个
+    exp 因子”都说明原始 vector tree 已丢失；此时继续声称 canonical
+    fidelity 会制造假一致。
+    """
+    if sp is None or parsed is None:
+        return False
+    if parsed.has(sp.I):
+        return True
+    log_nodes = [node for node in sp.preorder_traversal(parsed) if node.func == sp.log]
+    bare_log_variables = {
+        str(node.args[0])
+        for node in log_nodes
+        if node.args
+        and isinstance(node.args[0], sp.Symbol)
+        and str(node.args[0]).startswith("x")
+    }
+    if len(bare_log_variables) >= 2:
+        return True
+    for node in sp.preorder_traversal(parsed):
+        if not isinstance(node, sp.Mul):
+            continue
+        exp_factors = [factor for factor in node.args if factor.func == sp.exp]
+        if len(exp_factors) >= 2 and any(factor.has(sp.log) for factor in exp_factors):
+            return True
+    if isinstance(parsed, sp.Add) and len(parsed.args) >= 3:
+        terms_with_log = sum(1 for term in parsed.args if term.has(sp.log))
+        has_log_power = any(
+            isinstance(node, sp.Pow)
+            and node.base.func == sp.log
+            and node.exp.is_Integer
+            and node.exp >= 2
+            for node in sp.preorder_traversal(parsed)
+        )
+        if has_log_power and terms_with_log / len(parsed.args) >= 0.8:
+            return True
+    return False
 
 
 def _normalize_python_function_artifact(
@@ -639,14 +760,41 @@ def _normalize_python_function_artifact(
         if arg_notes:
             notes.append("function_arg_map:" + ",".join(arg_notes))
 
-    expr = _sanitize_expression(return_expr)
+    # Python 函数的变量槽位由函数签名唯一决定，不能再套用“没有 x0 就
+    # 整体减一”的文本启发式。
+    if tool_name == "drsr":
+        return_expr = _replace_legacy_drsr_tokens(return_expr)
+    expr = _sanitize_expression(return_expr, shift_one_based=False)
     if rename_cols:
         expr = _replace_col_tokens(expr)
-    expr = _replace_param_tokens(expr)
+    expr = _replace_param_tokens(expr, parameter_values=parameter_values)
 
-    normalized_expression, parsed = _normalize_common_expression(expr)
-    variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set()) if str(sym).startswith("x")}) if parsed is not None else []
     parameter_symbols = infer_parameter_symbols(parameter_values)
+    executable_expression = instantiate_expression(
+        _replace_param_tokens(return_expr, parameter_values=parameter_values),
+        parameter_symbols=parameter_symbols,
+        parameter_values=parameter_values,
+    )
+    if executable_expression and re.search(r"\bc\d+\b|\bparams\s*\[", executable_expression):
+        executable_expression = None
+
+    try:
+        normalized_expression, parsed = _normalize_common_expression(
+            expr,
+            shift_one_based=False,
+        )
+    except Exception as exc:
+        # display/SYM 路径不能理解某些合法 NumPy 调用（例如 linalg.norm、
+        # where + 比较）。只要 executable AST 已完整冻结，就保留原树供数值
+        # 回放，并明确记录 display parse 失败，不能让 SymPy 改写执行语义。
+        normalized_expression = expr
+        parsed = None
+        notes.append(f"sympy_display_parse_failed:{exc.__class__.__name__}:{exc}")
+    variables = (
+        sorted({str(sym) for sym in getattr(parsed, "free_symbols", set()) if str(sym).startswith("x")})
+        if parsed is not None
+        else sorted(set(re.findall(r"\bx\d+\b", expr)))
+    )
     artifact = build_canonical_symbolic_program(
         tool_name=tool_name,
         raw_equation=raw_equation,
@@ -665,6 +813,7 @@ def _normalize_python_function_artifact(
     )
     artifact["sympy_parse_ok"] = parsed is not None
     artifact["sympy_expression"] = normalized_expression if parsed is not None else None
+    artifact["executable_expression"] = executable_expression
     return validate_canonical_symbolic_program(artifact)
 
 
@@ -680,6 +829,7 @@ def normalize_llmsr_artifact(
         parameter_values=parameter_values,
         expected_n_features=expected_n_features,
         rename_cols=False,
+        rename_function_args=True,
     )
 
 
@@ -689,7 +839,7 @@ def normalize_drsr_artifact(
     parameter_values: list[float] | None = None,
     expected_n_features: int | None = None,
 ) -> dict[str, Any]:
-    artifact = _normalize_python_function_artifact(
+    return _normalize_python_function_artifact(
         tool_name="drsr",
         raw_equation=raw_equation,
         parameter_values=parameter_values,
@@ -697,17 +847,3 @@ def normalize_drsr_artifact(
         rename_cols=True,
         rename_function_args=True,
     )
-    normalized_expression = artifact.get("normalized_expression")
-    if isinstance(normalized_expression, str):
-        expr = _replace_legacy_drsr_tokens(normalized_expression)
-        normalized_expression, parsed = _normalize_common_expression(expr)
-        artifact["normalized_expression"] = normalized_expression
-        artifact["sympy_parse_ok"] = parsed is not None
-        artifact["sympy_expression"] = normalized_expression if parsed is not None else None
-        artifact["variables"] = sorted(
-            {str(sym) for sym in getattr(parsed, "free_symbols", set()) if str(sym).startswith("x")}
-        ) if parsed is not None else artifact.get("variables", [])
-        artifact["operator_set"] = _collect_operator_set(parsed)
-        artifact["ast_node_count"] = _count_sympy_nodes(parsed)
-        artifact["tree_depth"] = _sympy_tree_depth(parsed)
-    return validate_canonical_symbolic_program(artifact)

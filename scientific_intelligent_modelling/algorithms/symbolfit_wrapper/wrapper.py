@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
 import re
 import tempfile
@@ -58,6 +60,8 @@ class SymbolFitRegressor(BaseWrapper):
     }
     _MIN_BUDGET_REFIT_SECONDS = 5
     _CURRENT_BEST_FILENAME = ".symbolfit_current_best.json"
+    _SEARCH_BEST_FILENAME = ".symbolfit_search_best.json"
+    _SEARCH_HISTORY_FILENAME = ".symbolfit_pysr_candidates.jsonl"
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
         "random_state",
         "pysr_config",
@@ -81,6 +85,10 @@ class SymbolFitRegressor(BaseWrapper):
         self._best_equation = None
         self._equations: list[str] = []
         self._callable = None
+        self._fit_started_at: float | None = None
+        self._coordinate_transform: dict[str, Any] | None = None
+        self._search_best_loss: float | None = None
+        self._search_best_payload: dict[str, Any] | None = None
 
     @classmethod
     def _validate_and_normalize_params(cls, raw_params: dict[str, Any]) -> dict[str, Any]:
@@ -203,6 +211,79 @@ class SymbolFitRegressor(BaseWrapper):
             r2_value = -np.inf
         return rmse_value, -r2_value
 
+    @staticmethod
+    def _search_loss(candidate: Any) -> float | None:
+        """读取 PySR 的内部搜索 loss，而不是 LMFIT/ID/OOD 评价分数。"""
+        if candidate is None or not hasattr(candidate, "get"):
+            return None
+        for key in ("PySR loss", "Loss", "loss", "search_loss", "internal_loss"):
+            try:
+                value = float(candidate.get(key))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if np.isfinite(value):
+                return value
+        return None
+
+    @staticmethod
+    def _search_equation(candidate: Any) -> str | None:
+        if candidate is None or not hasattr(candidate, "get"):
+            return None
+        for key in ("PySR equation", "Equation", "equation"):
+            value = candidate.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    @staticmethod
+    def _build_coordinate_transform(
+        X: np.ndarray,
+        y: np.ndarray,
+        *,
+        input_rescale: bool,
+        scale_y_by: Any,
+    ) -> dict[str, Any]:
+        """记录 SymbolFit 对 PySR 输入/目标使用的仿射缩放。"""
+        X_arr = np.asarray(X, dtype=float)
+        y_arr = np.asarray(y, dtype=float).reshape(-1)
+        x_min = np.min(X_arr, axis=0)
+        x_max = np.max(X_arr, axis=0)
+        x_range = x_max - x_min
+        finite_y = y_arr[np.isfinite(y_arr)]
+
+        # 上游仅在 input_rescale=True 时调用 histogram_scale；关闭输入缩放时
+        # y_scale 固定为 1，即使参数仍携带 scale_y_by。
+        mode = str(scale_y_by).strip().lower() if scale_y_by is not None else "none"
+        if not input_rescale:
+            denominator = 1.0
+        elif mode == "max" and finite_y.size:
+            denominator = abs(float(np.max(finite_y)))
+        elif mode == "mean" and finite_y.size:
+            denominator = abs(float(np.mean(finite_y)))
+        elif mode == "l2" and finite_y.size:
+            denominator = float(np.linalg.norm(finite_y))
+        else:
+            denominator = 1.0
+        if not np.isfinite(denominator) or denominator <= 0.0:
+            denominator = 1.0
+        y_scale = 1.0 / denominator
+
+        return {
+            "version": "symbolfit_affine_v1",
+            "input_rescale": bool(input_rescale),
+            "x_min": [float(value) for value in x_min],
+            "x_max": [float(value) for value in x_max],
+            "x_range": [float(value) for value in x_range],
+            "y_scale": float(y_scale),
+            "y_unscale_factor": float(1.0 / y_scale),
+            "scale_y_by": scale_y_by,
+            "scaled_x_min": [0.0] * X_arr.shape[1],
+            "scaled_x_max": [1.0] * X_arr.shape[1],
+            "equation_space": "scaled_input_scaled_target"
+            if input_rescale
+            else "original_input_scaled_target",
+        }
+
     def _select_best_candidate(self):
         table = getattr(self.model, "func_candidates", None)
         if table is None or len(table) == 0:
@@ -254,6 +335,80 @@ class SymbolFitRegressor(BaseWrapper):
         except Exception:
             return
 
+    def _append_search_candidate_history(self, payload: dict[str, Any]) -> None:
+        if self._experiment_dir is None:
+            return
+        try:
+            path = self._experiment_dir / self._SEARCH_HISTORY_FILENAME
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+        except Exception:
+            return
+
+    def _write_search_best_snapshot(self, payload: dict[str, Any]) -> None:
+        if self._experiment_dir is None:
+            return
+        try:
+            path = self._experiment_dir / self._SEARCH_BEST_FILENAME
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = path.with_suffix(path.suffix + ".tmp")
+            tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp_path.replace(path)
+        except Exception:
+            return
+
+    def _record_internal_candidates(
+        self,
+        model: Any,
+        *,
+        attempt: int,
+        attempt_started_at: float,
+    ) -> None:
+        """把 PySR HOF 的内部候选持久化，跨 attempt 按内部 loss 维护 best。"""
+        table = getattr(model, "func_candidates", None)
+        if table is None:
+            return
+        try:
+            rows = [row for _, row in table.iterrows()]
+        except Exception:
+            return
+        observed_elapsed_seconds = max(
+            0.0,
+            float(time.monotonic() - (self._fit_started_at or attempt_started_at)),
+        )
+        observed_minute = max(1, int(math.ceil(observed_elapsed_seconds / 60.0)))
+        for row in rows:
+            equation = self._search_equation(row)
+            loss = self._search_loss(row)
+            if not equation or loss is None:
+                continue
+            candidate_key = hashlib.sha256(equation.encode("utf-8")).hexdigest()
+            try:
+                complexity = int(row.get("Complexity"))
+            except (TypeError, ValueError, OverflowError, AttributeError):
+                complexity = None
+            payload = {
+                "tool": "symbolfit",
+                "candidate_key": candidate_key,
+                "scaled_equation": equation,
+                "internal_loss": loss,
+                "loss": loss,
+                "complexity": complexity,
+                "attempt": int(attempt),
+                "first_discovered_attempt": int(attempt),
+                "first_discovered_minute": observed_minute,
+                "first_discovered_elapsed_seconds": observed_elapsed_seconds,
+                "coordinate_transform": self._coordinate_transform,
+                "source": "symbolfit_pysr_hof_postfit",
+                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            self._append_search_candidate_history(payload)
+            if self._search_best_loss is None or loss < self._search_best_loss:
+                self._search_best_loss = loss
+                self._search_best_payload = dict(payload)
+                self._write_search_best_snapshot(payload)
+
     @contextmanager
     def _attempt_work_dir(self, attempt: int):
         if self._experiment_dir is None:
@@ -268,15 +423,35 @@ class SymbolFitRegressor(BaseWrapper):
         work_dir.mkdir(parents=True, exist_ok=True)
         yield work_dir
 
-    def _write_active_run_snapshot(self, *, attempt: int, work_dir: Path) -> None:
+    def _write_active_run_snapshot(
+        self,
+        *,
+        attempt: int,
+        work_dir: Path,
+        attempt_started_at: float | None = None,
+    ) -> None:
         if self._experiment_dir is None:
             return
         payload = {
             "tool": "symbolfit",
             "attempt": int(attempt),
             "work_dir": str(work_dir),
+            "attempt_started_at": attempt_started_at,
+            "fit_started_at": self._fit_started_at,
+            "coordinate_transform": self._coordinate_transform,
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
+        if self._coordinate_transform:
+            payload.update(
+                {
+                    "input_rescale": self._coordinate_transform.get("input_rescale"),
+                    "x_min": self._coordinate_transform.get("x_min"),
+                    "x_max": self._coordinate_transform.get("x_max"),
+                    "x_range": self._coordinate_transform.get("x_range"),
+                    "y_scale": self._coordinate_transform.get("y_scale"),
+                    "y_unscale_factor": self._coordinate_transform.get("y_unscale_factor"),
+                }
+            )
         try:
             path = self._experiment_dir / ".symbolfit_active_run.json"
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -340,6 +515,15 @@ class SymbolFitRegressor(BaseWrapper):
 
         X_arr = np.asarray(X, dtype=float)
         y_arr = np.asarray(y, dtype=float).reshape(-1)
+        self._fit_started_at = time.monotonic()
+        self._coordinate_transform = self._build_coordinate_transform(
+            X_arr,
+            y_arr,
+            input_rescale=bool(self.params.get("input_rescale", True)),
+            scale_y_by=self.params.get("scale_y_by"),
+        )
+        self._search_best_loss = None
+        self._search_best_payload = None
         y_up = self.params.get("y_up")
         y_down = self.params.get("y_down")
         if y_up is None:
@@ -359,6 +543,7 @@ class SymbolFitRegressor(BaseWrapper):
             if attempt > 0 and remaining is not None and remaining < self._MIN_BUDGET_REFIT_SECONDS:
                 break
             attempt += 1
+            attempt_started_at = time.monotonic()
             iteration_params = dict(self.params)
             if remaining is not None:
                 iteration_params["timeout_in_seconds"] = self._iteration_timeout_seconds(
@@ -369,7 +554,11 @@ class SymbolFitRegressor(BaseWrapper):
                 iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
             with self._attempt_work_dir(attempt) as tmpdir:
                 try:
-                    self._write_active_run_snapshot(attempt=attempt, work_dir=tmpdir)
+                    self._write_active_run_snapshot(
+                        attempt=attempt,
+                        work_dir=tmpdir,
+                        attempt_started_at=attempt_started_at,
+                    )
                     os.chdir(tmpdir)
                     model = SymbolFit(
                         x=X_arr,
@@ -389,6 +578,11 @@ class SymbolFitRegressor(BaseWrapper):
                 finally:
                     os.chdir(cwd)
             self.model = model
+            self._record_internal_candidates(
+                model,
+                attempt=attempt,
+                attempt_started_at=attempt_started_at,
+            )
             candidate = self._select_best_candidate()
             score = self._candidate_score(candidate)
             if best_candidate is None or (best_score is not None and score < best_score):

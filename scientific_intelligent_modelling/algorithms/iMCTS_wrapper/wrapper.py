@@ -4,7 +4,7 @@ iMCTS 包装器
 将外部仓库 MCTS-4-SR 集成到本框架，提供统一的 BaseWrapper 接口：
 - fit(X, y): 训练并发现最佳表达式
 - predict(X): 使用找到的向量表达式进行预测
-- get_optimal_equation(): 返回最优的简化表达式（字符串）
+- get_optimal_equation(): 返回与 native predict 一致的向量表达式（字符串）
 - get_total_equations(): 返回候选表达式列表（此处仅返回最优表达式）
 
 实现要点：
@@ -17,6 +17,7 @@ iMCTS 包装器
 import os
 import sys
 import json
+import math
 import time
 from typing import Any, Dict, Optional, List
 
@@ -84,6 +85,7 @@ class iMCTSRegressor(BaseWrapper):
         # 运行时（fit 阶段）引用的底层回归器（仅在同一进程内可用）
         self._runtime_regressor = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+        self._fit_started_at: Optional[float] = None
 
     @staticmethod
     def _as_positive_float(value) -> Optional[float]:
@@ -110,16 +112,58 @@ class iMCTSRegressor(BaseWrapper):
             return
         if not isinstance(equation, str) or not equation.strip():
             return
+        observed_at = time.time()
+        existing = None
+        if os.path.isfile(self._progress_state_path):
+            try:
+                with open(self._progress_state_path, "r", encoding="utf-8") as handle:
+                    existing = json.load(handle)
+            except Exception:
+                existing = None
+
+        existing_score = existing.get("score") if isinstance(existing, dict) else None
+        existing_score = (
+            float(existing_score)
+            if isinstance(existing_score, (int, float))
+            and not isinstance(existing_score, bool)
+            and np.isfinite(float(existing_score))
+            else None
+        )
+        current_score = (
+            float(score)
+            if isinstance(score, (int, float))
+            and not isinstance(score, bool)
+            and np.isfinite(float(score))
+            else None
+        )
+        # 原生 score 是 reward（越大越好）。同一 best、较差 chunk 及 fit 收尾时
+        # 的无排名结果都不能覆盖首次发现证据。
+        if current_score is None:
+            return
+        if existing_score is not None and current_score <= existing_score:
+            return
+
+        started_at = self._fit_started_at
+        elapsed_seconds = (
+            max(0.0, observed_at - started_at)
+            if isinstance(started_at, (int, float)) and np.isfinite(float(started_at))
+            else 0.0
+        )
         payload = {
             "equation": equation,
-            "score": float(score) if isinstance(score, (int, float)) else None,
+            "score": current_score,
             "evaluations": int(evaluations) if isinstance(evaluations, (int, float)) else None,
+            "first_discovered_elapsed_seconds": round(elapsed_seconds, 6),
+            "first_discovered_minute": max(1, int(math.ceil(elapsed_seconds / 60.0))),
+            "source": "imcts_native_reward",
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
         try:
             os.makedirs(os.path.dirname(self._progress_state_path), exist_ok=True)
-            with open(self._progress_state_path, "w", encoding="utf-8") as f:
+            temporary_path = f"{self._progress_state_path}.tmp"
+            with open(temporary_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2)
+            os.replace(temporary_path, self._progress_state_path)
         except Exception:
             pass
 
@@ -161,6 +205,7 @@ class iMCTSRegressor(BaseWrapper):
         mcts_kwargs = {k: v for k, v in self.params.items() if k in allowed_keys}
 
         started_at = time.time()
+        self._fit_started_at = started_at
         base_seed = self.params.get('seed')
         max_chunks = int(self.params.get("budget_chunks", 1) or 1)
         if self._timeout_in_seconds is not None and "budget_chunks" not in self.params:
@@ -221,7 +266,7 @@ class iMCTSRegressor(BaseWrapper):
             self._best_path = path
 
         self._write_progress_state(
-            equation=self._best_expr_simplified or self._best_expr_vector or "",
+            equation=self._best_expr_vector or self._best_expr_simplified or "",
             score=None,
             evaluations=self._eval_count,
         )
@@ -274,12 +319,15 @@ class iMCTSRegressor(BaseWrapper):
             return None
 
     def get_optimal_equation(self):
-        # 返回简化后的标量表达式（便于阅读/记录）
-        return self._best_expr_simplified or ""
+        # native predict 始终执行 vector expression。上游 simplified expression
+        # 经过 expand_log(force=True)，在未知实数域可能改变语义，不能再把它
+        # 当成正式导出公式。
+        return self._best_expr_vector or self._best_expr_simplified or ""
 
     def get_total_equations(self):
         # 当前仅返回一个最优表达式
-        return [self._best_expr_simplified] if self._best_expr_simplified else []
+        equation = self.get_optimal_equation()
+        return [equation] if equation else []
 
     # ============ 序列化 / 反序列化 ============
     def serialize(self):
@@ -309,7 +357,7 @@ class iMCTSRegressor(BaseWrapper):
         return inst
 
     def export_canonical_symbolic_program(self):
-        equation = self.get_optimal_equation()
+        equation = self._best_expr_vector or self._best_expr_simplified
         if not equation:
             raise ValueError("iMCTS 当前没有可导出的最优方程")
         return normalize_imcts_artifact(

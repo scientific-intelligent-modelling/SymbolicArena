@@ -75,6 +75,10 @@ class DSORegressor(BaseWrapper):
         self._dso_input_indices = []
         self._dso_n_features = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+        # timeout 模式会以独立模型实例分 chunk 运行；这里保存跨 chunk 的全局 best，
+        # 避免新 chunk 的较差局部最优覆盖周期快照。
+        self._progress_best_reward = None
+        self._progress_best_payload = None
 
     @staticmethod
     def _as_positive_float(value):
@@ -350,15 +354,33 @@ class DSORegressor(BaseWrapper):
         complexity = getattr(program, "complexity", None)
         reward = getattr(program, "r", None)
         iteration = getattr(trainer, "iteration", None)
-        self._write_progress_state(
-            {
-                "equation": equation,
-                "score": float(reward) if isinstance(reward, (int, float, np.floating)) else None,
-                "complexity": int(complexity) if isinstance(complexity, (int, float, np.integer, np.floating)) else None,
-                "iteration": int(iteration) if isinstance(iteration, (int, np.integer)) else None,
-                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-        )
+        reward_value = None
+        if isinstance(reward, (int, float, np.integer, np.floating)):
+            try:
+                candidate_reward = float(reward)
+                if np.isfinite(candidate_reward):
+                    reward_value = candidate_reward
+            except (TypeError, ValueError, OverflowError):
+                reward_value = None
+
+        # DSO reward 越大越好。独立 timeout chunk 的 trainer 会从头开始，
+        # 所以只在新候选严格优于跨 chunk 历史 best 时更新落盘状态。
+        if self._progress_best_payload is not None:
+            if reward_value is None:
+                return
+            if self._progress_best_reward is not None and reward_value <= self._progress_best_reward:
+                return
+
+        payload = {
+            "equation": equation,
+            "score": reward_value,
+            "complexity": int(complexity) if isinstance(complexity, (int, float, np.integer, np.floating)) else None,
+            "iteration": int(iteration) if isinstance(iteration, (int, np.integer)) else None,
+            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        self._progress_best_reward = reward_value
+        self._progress_best_payload = payload
+        self._write_progress_state(payload)
 
     def _cache_post_fit_state(self):
         if self.model is None or not hasattr(self.model, "program_"):
