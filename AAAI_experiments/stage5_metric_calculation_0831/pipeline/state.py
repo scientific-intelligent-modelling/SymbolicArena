@@ -870,17 +870,29 @@ class TaskStateStore:
         ):
             if old_dependency == new_dependency:
                 continue
-            mapping = connection.execute(
-                """SELECT successor_evaluation_key
-                   FROM task_supersessions
-                   WHERE predecessor_evaluation_key=?""",
-                (old_dependency,),
-            ).fetchone()
-            if (
-                mapping is None
-                or str(mapping["successor_evaluation_key"]) != new_dependency
-                or old_dependency not in valid_superseded
-            ):
+            current = old_dependency
+            visited: set[str] = set()
+            while current != new_dependency:
+                if current in visited or current not in valid_superseded:
+                    break
+                visited.add(current)
+                supersession = connection.execute(
+                    """SELECT successor_evaluation_key AS replacement_key
+                       FROM task_supersessions
+                       WHERE predecessor_evaluation_key=?""",
+                    (current,),
+                ).fetchone()
+                retirement = connection.execute(
+                    """SELECT replacement_evaluation_key AS replacement_key
+                       FROM task_retirements
+                       WHERE exhausted_evaluation_key=?""",
+                    (current,),
+                ).fetchone()
+                if (supersession is None) == (retirement is None):
+                    break
+                edge = supersession if supersession is not None else retirement
+                current = str(edge["replacement_key"])
+            if current != new_dependency:
                 raise StateContractError(
                     f"任务 {predecessor_key!r} 的 dependency[{index}] "
                     f"{old_dependency!r}->{new_dependency!r} 未证明"

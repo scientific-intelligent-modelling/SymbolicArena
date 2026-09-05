@@ -178,6 +178,112 @@ def test_dependency_rebinding_supersession_accepts_only_proven_terminal_mapping(
     assert mapping == ("consumer_v1", "consumer_v2")
 
 
+def test_dependency_rebinding_accepts_supersession_followed_by_retirement(
+    tmp_path: Path,
+) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=20, logical_task_cap=10)
+    base = "pred_simplify::demo::g0001::s520::clean"
+    old_dependency = TaskSpec(
+        evaluation_key="dep_v1",
+        logical_id=base,
+        task_type="pred_simplify",
+        condition="clean",
+        priority=10,
+        input_hash="input::dep-v1",
+        prompt_version="simplify.v1",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+    stable = task("stable")
+    consumer = task(
+        "consumer_v1",
+        dependencies=("dep_v1", "stable"),
+        prompt_version="equivalence.v1",
+        schema_version="equivalence.v1",
+    )
+    store.register_tasks((old_dependency, stable, consumer), now=1.0)
+    for key, now in (("dep_v1", 2.0), ("stable", 3.0), ("consumer_v1", 4.0)):
+        _freeze_task(store, key, now=now)
+    exhausted = TaskSpec(
+        evaluation_key="dep_v2",
+        logical_id=f"{base}::v2",
+        task_type="pred_simplify",
+        condition="clean",
+        priority=10,
+        input_hash="input::dep-v2",
+        prompt_version="simplify.v2",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+    store.register_supersession(
+        "dep_v1",
+        exhausted,
+        identity="pred::v1-to-v2",
+        reason="final prediction changed",
+        predecessor_plan_sha256="plan::v1",
+        successor_plan_sha256="plan::v2",
+        now=5.0,
+    )
+    for number in range(3):
+        lease = store.reserve_attempt("dep_v2", now=6.0 + number)
+        store.finish_failure(
+            lease.attempt_id,
+            error_class="validation_failed",
+            retryable=True,
+            now=6.5 + number,
+        )
+    replacement = TaskSpec(
+        evaluation_key="dep_v3",
+        logical_id=f"{base}::v3",
+        task_type="pred_simplify",
+        condition="clean",
+        priority=10,
+        input_hash="input::dep-v3",
+        prompt_version="simplify.identity.v1",
+        schema_version="simplify.v1",
+        dependencies=(),
+    )
+    store.register_task(replacement, now=10.0)
+    _freeze_task(store, "dep_v3", now=11.0)
+    store.retire_exhausted_tasks(
+        (
+            TaskRetirement(
+                exhausted_evaluation_key="dep_v2",
+                replacement=replacement,
+                identity="pred::retire-v2-to-v3",
+                reason="identity recovery frozen",
+                exhausted_plan_sha256="plan::v2",
+                replacement_plan_sha256="plan::v3",
+            ),
+        ),
+        now=12.0,
+    )
+    consumer_v2 = TaskSpec(
+        evaluation_key="consumer_v2",
+        logical_id="logical::consumer_v2",
+        task_type=consumer.task_type,
+        condition=consumer.condition,
+        priority=consumer.priority,
+        input_hash="input::consumer-v2",
+        prompt_version="equivalence.v2",
+        schema_version="equivalence.v2",
+        dependencies=("dep_v3", "stable"),
+    )
+
+    store.register_dependency_rebinding_supersession(
+        "consumer_v1",
+        consumer_v2,
+        identity="consumer::v1-to-v2",
+        reason="upstream active replacement advanced through retirement",
+        predecessor_plan_sha256="plan::consumer-v1",
+        successor_plan_sha256="plan::consumer-v2",
+        now=13.0,
+    )
+
+    assert store.task_state("consumer_v1") == "superseded"
+    assert store.task_state("consumer_v2") == "pending"
+
+
 @pytest.mark.parametrize(
     ("replacement_terminal", "dependencies", "error"),
     [
