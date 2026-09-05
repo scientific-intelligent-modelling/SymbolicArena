@@ -323,3 +323,52 @@ def test_retirement_keeps_pred_clean_defaults() -> None:
     parameters = inspect.signature(retire_stale_exhausted_tasks).parameters
     assert parameters["task_type"].default == "pred_simplify"
     assert parameters["condition"].default == "clean"
+
+
+def test_retirement_reuses_existing_extended_retry_limit(tmp_path: Path) -> None:
+    old_row = _plan_row(
+        task_type="stab_structure",
+        logical_id="stab_structure::demo::g0001::s520-s521::v2",
+    )
+    successor_row = _plan_row(
+        task_type="stab_structure",
+        logical_id="stab_structure::demo::g0001::s520-s521::v3",
+    )
+    historical_plan = tmp_path / "historical.jsonl"
+    active_plan = tmp_path / "active.jsonl"
+    _write_plan(historical_plan, [old_row])
+    _write_plan(active_plan, [successor_row])
+    manifest_path, predecessor = _empty_predecessor_manifest(tmp_path)
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(
+        state_db,
+        max_attempts_per_task=5,
+        predecessor_attempt_manifest=predecessor,
+    )
+    for row in (old_row, successor_row):
+        store.register_task(TaskSpec(**row["task_spec"]))
+    for number in range(5):
+        lease = store.reserve_attempt(str(old_row["evaluation_key"]), now=1.0 + number)
+        store.finish_failure(
+            lease.attempt_id,
+            error_class="validation_failed",
+            retryable=True,
+            now=1.5 + number,
+        )
+    _close_frozen(store, successor_row, tmp_path)
+
+    report = retire_stale_exhausted_tasks(
+        state_db=state_db,
+        predecessor_attempt_manifest=manifest_path,
+        active_plan_jsonl=active_plan,
+        historical_plan_jsonls=[historical_plan],
+        backup_sqlite=tmp_path / "state.before_retirement.sqlite3",
+        manifest_jsonl=tmp_path / "retirement_manifest.jsonl",
+        report_json=tmp_path / "retirement_report.json",
+        expected_count=1,
+        task_type="stab_structure",
+        condition="clean",
+    )
+
+    assert report["retired_count"] == 1
+    assert report["state_summary"]["attempts"]["physical"] == 6

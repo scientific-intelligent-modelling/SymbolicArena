@@ -146,6 +146,7 @@ def retire_stale_exhausted_tasks(
     )
     with sqlite3.connect(state_db) as connection:
         connection.row_factory = sqlite3.Row
+        state_meta = dict(connection.execute("SELECT key, value FROM meta").fetchall())
         exhausted_rows = connection.execute(
             """SELECT evaluation_key, logical_id, attempt_count, last_error_class
                FROM tasks
@@ -255,6 +256,9 @@ def retire_stale_exhausted_tasks(
     )
     store = TaskStateStore(
         state_db.resolve(),
+        attempt_cap=int(state_meta["attempt_cap"]),
+        logical_task_cap=int(state_meta["logical_task_cap"]),
+        max_attempts_per_task=int(state_meta["max_attempts_per_task"]),
         predecessor_attempt_manifest=PredecessorAttemptManifest(
             path=str(loaded_predecessor_manifest.path),
             sha256=loaded_predecessor_manifest.sha256,
