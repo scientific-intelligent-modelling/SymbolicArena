@@ -624,6 +624,137 @@ def test_condition_dispatch_sequential_does_not_cross_condition_when_llm_limited
     assert picked is None
 
 
+def test_condition_dispatch_sequential_non_llm_backfill_crosses_blocked_llm_tail():
+    state = {
+        "tasks": {
+            "running_clean_turbo": {
+                "state": "running",
+                "tool": "drsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_clean_turbo": {
+                "state": "pending",
+                "tool": "llmsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_noise001_llm": {
+                "state": "pending",
+                "tool": "llmsr",
+                "seed": 520,
+                "noise_tag": "noise001",
+                "llm_model_bucket": "base",
+            },
+            "pending_noise001_non_llm": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "noise001",
+            },
+        },
+        "round_robin_cursor": 0,
+        "llm_round_robin_cursor": 0,
+    }
+
+    picked = scheduler._next_pending_task_id(
+        state,
+        _scheduler_args(
+            condition_dispatch_mode="sequential-non-llm-backfill",
+            llm_model_bucket_limits_parsed={"base": 1, "turbo": 1},
+        ),
+    )
+
+    assert picked == "pending_noise001_non_llm"
+
+
+def test_condition_dispatch_sequential_non_llm_backfill_does_not_cross_to_llm():
+    state = {
+        "tasks": {
+            "running_clean_turbo": {
+                "state": "running",
+                "tool": "drsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_clean_turbo": {
+                "state": "pending",
+                "tool": "llmsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_noise001_base": {
+                "state": "pending",
+                "tool": "llmsr",
+                "seed": 520,
+                "noise_tag": "noise001",
+                "llm_model_bucket": "base",
+            },
+        },
+        "round_robin_cursor": 0,
+        "llm_round_robin_cursor": 0,
+    }
+
+    picked = scheduler._next_pending_task_id(
+        state,
+        _scheduler_args(
+            condition_dispatch_mode="sequential-non-llm-backfill",
+            llm_model_bucket_limits_parsed={"base": 1, "turbo": 1},
+        ),
+    )
+
+    assert picked is None
+
+
+def test_condition_dispatch_sequential_non_llm_backfill_keeps_current_non_llm_first():
+    state = {
+        "tasks": {
+            "running_clean_turbo": {
+                "state": "running",
+                "tool": "drsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_clean_turbo": {
+                "state": "pending",
+                "tool": "llmsr",
+                "seed": 520,
+                "noise_tag": "clean",
+                "llm_model_bucket": "turbo",
+            },
+            "pending_clean_non_llm": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "clean",
+            },
+            "pending_noise001_non_llm": {
+                "state": "pending",
+                "tool": "gplearn",
+                "seed": 520,
+                "noise_tag": "noise001",
+            },
+        },
+        "round_robin_cursor": 0,
+        "llm_round_robin_cursor": 0,
+    }
+
+    picked = scheduler._next_pending_task_id(
+        state,
+        _scheduler_args(
+            condition_dispatch_mode="sequential-non-llm-backfill",
+            llm_model_bucket_limits_parsed={"turbo": 1},
+        ),
+    )
+
+    assert picked == "pending_clean_non_llm"
+
+
 def test_condition_and_seed_sequential_compose_with_condition_precedence():
     state = {
         "tasks": {

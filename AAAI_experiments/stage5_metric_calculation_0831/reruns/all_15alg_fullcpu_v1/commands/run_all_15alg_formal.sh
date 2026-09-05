@@ -23,7 +23,7 @@ python "$REPO_ROOT/check/run_e1_candidate200_12alg_load_queue.py" \
   --tools gplearn llmsr pyoperon drsr pysr dso tpsr e2esr fepysr jaxsr qlattice imcts udsr ragsr symbolfit \
   --seeds 520 521 522 \
   --noise-sigmas 0 0.01 0.05 \
-  --condition-dispatch-mode sequential \
+  --condition-dispatch-mode sequential-non-llm-backfill \
   --controller-host iaaccn22 \
   --use-internal-ips \
   --remote-root /home/zhangziwen/workplace/scientific-intelligent-modelling \

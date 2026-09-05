@@ -121,7 +121,7 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
         assert f"--hosts {expected_hosts}" in text
         assert f"--tools {expected_tools}" in text
         assert "--noise-sigmas 0 0.01 0.05" in text
-        assert "--condition-dispatch-mode sequential" in text
+        assert "--condition-dispatch-mode sequential-non-llm-backfill" in text
         assert "--max-jobs-per-host 256" in text
         assert "--max-cpu-used-ratio" not in text
         assert "--max-new-jobs-per-host-per-poll 128" in text
@@ -148,6 +148,7 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
     assert "取消固定 CPU weight 硬封顶" in readme
     assert "真实 load 同时逼近 1.00" in readme
     assert "clean -> noise001 -> noise005" in readme
+    assert "非 LLM 任务回填空闲 CPU" in readme
     assert "143 + 6607 = 6750" in readme
 
     environment = dict(os.environ)

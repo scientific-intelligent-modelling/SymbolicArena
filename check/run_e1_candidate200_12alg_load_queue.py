@@ -2310,7 +2310,10 @@ def _ordered_pending_ids_for_tools(
 def _active_dispatch_noise_tag(
     state: dict[str, Any], args: argparse.Namespace
 ) -> str | None:
-    if getattr(args, "condition_dispatch_mode", "mixed") != "sequential":
+    if getattr(args, "condition_dispatch_mode", "mixed") not in {
+        "sequential",
+        "sequential-non-llm-backfill",
+    }:
         return None
     configured_sigmas = getattr(args, "noise_sigmas", None)
     if configured_sigmas is None:
@@ -2323,6 +2326,87 @@ def _active_dispatch_noise_tag(
         seen.add(noise_tag)
         if _pending_task_ids(state, dispatch_noise_tag=noise_tag):
             return noise_tag
+    return None
+
+
+def _next_condition_non_llm_backfill(
+    state: dict[str, Any],
+    args: argparse.Namespace,
+    dispatch_noise_tag: str | None,
+    *,
+    max_cpu_weight: int | None = None,
+) -> str | None:
+    if (
+        getattr(args, "condition_dispatch_mode", "mixed")
+        != "sequential-non-llm-backfill"
+        or dispatch_noise_tag is None
+    ):
+        return None
+
+    current_pending = _pending_task_ids(
+        state,
+        dispatch_noise_tag=dispatch_noise_tag,
+    )
+    if not current_pending:
+        return None
+    for task_id in current_pending:
+        task = state["tasks"][task_id]
+        if task.get("tool") not in LLM_TOOLS:
+            return None
+        eligible, reason = _task_within_global_limits(state, task_id, args)
+        if eligible or not reason.startswith("llm_bucket_limit:"):
+            return None
+
+    configured_sigmas = getattr(args, "noise_sigmas", None) or [0.0]
+    noise_tags: list[str] = []
+    for sigma in configured_sigmas:
+        noise_tag = _noise_tag_for_sigma(float(sigma))
+        if noise_tag not in noise_tags:
+            noise_tags.append(noise_tag)
+    try:
+        following_tags = noise_tags[noise_tags.index(dispatch_noise_tag) + 1 :]
+    except ValueError:
+        return None
+
+    non_llm_tools = [tool for tool in args.tools if tool not in LLM_TOOLS]
+    for noise_tag in following_tags:
+        dispatch_seed = _active_dispatch_seed(state, args, noise_tag)
+        if args.round_robin_tools:
+            start = int(state.get("round_robin_cursor") or 0)
+            for offset in range(len(non_llm_tools)):
+                idx = (start + offset) % len(non_llm_tools)
+                tool = non_llm_tools[idx]
+                picked = _first_eligible_pending(
+                    _pending_task_ids_by_tool(
+                        state,
+                        tool,
+                        dispatch_seed,
+                        noise_tag,
+                    ),
+                    state,
+                    args,
+                    max_cpu_weight=max_cpu_weight,
+                )
+                if picked is not None:
+                    state["round_robin_cursor"] = (idx + 1) % len(non_llm_tools)
+                    return picked
+        else:
+            pending = [
+                task_id
+                for task_id, task in state["tasks"].items()
+                if task.get("state") == "pending"
+                and task.get("tool") not in LLM_TOOLS
+                and (dispatch_seed is None or int(task.get("seed")) == dispatch_seed)
+                and task.get("noise_tag") == noise_tag
+            ]
+            picked = _first_eligible_pending(
+                pending,
+                state,
+                args,
+                max_cpu_weight=max_cpu_weight,
+            )
+            if picked is not None:
+                return picked
     return None
 
 
@@ -2399,11 +2483,24 @@ def _next_pending_task_id(
         if picked is not None:
             return picked
         if args.prioritize_llm:
-            return None
-        return _first_eligible_pending(
+            return _next_condition_non_llm_backfill(
+                state,
+                args,
+                dispatch_noise_tag,
+                max_cpu_weight=max_cpu_weight,
+            )
+        picked = _first_eligible_pending(
             _pending_task_ids(state, dispatch_seed, dispatch_noise_tag),
             state,
             args,
+            max_cpu_weight=max_cpu_weight,
+        )
+        if picked is not None:
+            return picked
+        return _next_condition_non_llm_backfill(
+            state,
+            args,
+            dispatch_noise_tag,
             max_cpu_weight=max_cpu_weight,
         )
 
@@ -2424,7 +2521,12 @@ def _next_pending_task_id(
         if picked:
             state["round_robin_cursor"] = (idx + 1) % len(tools)
             return picked
-    return None
+    return _next_condition_non_llm_backfill(
+        state,
+        args,
+        dispatch_noise_tag,
+        max_cpu_weight=max_cpu_weight,
+    )
 
 
 def _run_scheduler(tasks: list[QueueTask], args: argparse.Namespace) -> None:
@@ -3103,11 +3205,13 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--condition-dispatch-mode",
-        choices=["mixed", "sequential"],
+        choices=["mixed", "sequential", "sequential-non-llm-backfill"],
         default="mixed",
         help=(
             "任务派发 condition 策略。mixed 保持原有混合派发；sequential 按 "
-            "--noise-sigmas 顺序派完当前 condition 的 pending 后再进入下一 condition。"
+            "--noise-sigmas 顺序派完当前 condition 的 pending 后再进入下一 condition；"
+            "sequential-non-llm-backfill 在当前 condition 仅剩受模型桶限流的 LLM "
+            "任务时，允许后续 condition 的非 LLM 任务补位。"
         ),
     )
     parser.add_argument(
