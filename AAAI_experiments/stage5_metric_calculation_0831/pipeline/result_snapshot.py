@@ -16,6 +16,8 @@ from pathlib import Path, PurePosixPath
 from tempfile import NamedTemporaryFile
 from typing import Any, Mapping, Sequence
 
+from .source_provenance import SourceProvenanceError, reject_aborted_fullcpu_source
+
 
 SUPPORTED_CONDITIONS = ("clean", "noise001", "noise005")
 SEEDS = frozenset({520, 521, 522})
@@ -133,6 +135,10 @@ def _read_source_rows(
     seen_remote: set[tuple[str, str]] = set()
     for row in rows:
         task_id = row["task_id"]
+        try:
+            reject_aborted_fullcpu_source(row, context=f"source_runs[{task_id}]")
+        except SourceProvenanceError as exc:
+            raise ResultSnapshotError(str(exc)) from exc
         match = TASK_ID_RE.fullmatch(task_id)
         if match is None or match.group("condition") != condition:
             raise ResultSnapshotError(f"task_id 与 condition 不一致: {task_id!r}")

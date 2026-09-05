@@ -136,6 +136,26 @@ def test_prepare_rejects_unsafe_or_noncanonical_source_identity(tmp_path: Path) 
         )
 
 
+def test_prepare_rejects_aborted_fullcpu_source(tmp_path: Path) -> None:
+    source_csv = tmp_path / "source_runs.csv"
+    row = _source_row(
+        task_id="demoalg_s520_noise001_g0001",
+        host="iaaccn22",
+        path="/experiments/all_15alg_fullcpu_v1_formal/demo/result.json",
+        dataset="D1",
+    )
+    row["batch"] = "all_15alg_fullcpu_v1_formal"
+    _write_csv(source_csv, [row])
+
+    with pytest.raises(ResultSnapshotError, match="已中止"):
+        prepare_rsync_lists(
+            source_runs_csv=source_csv,
+            condition="noise001",
+            output_root=tmp_path / "lists",
+            expected_count=1,
+        )
+
+
 def test_finalize_refuses_existing_drift_and_preserves_it(tmp_path: Path) -> None:
     source_csv = tmp_path / "source_runs.csv"
     row = _source_row(

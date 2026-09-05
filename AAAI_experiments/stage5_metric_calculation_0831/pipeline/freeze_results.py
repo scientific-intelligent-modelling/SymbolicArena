@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .source_provenance import reject_aborted_fullcpu_source
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
@@ -31,6 +33,9 @@ def load_source_runs(source_runs_csv: Path, *, noise_tag: str) -> list[dict[str,
         for row in reader:
             if row["noise_tag"] != noise_tag:
                 continue
+            reject_aborted_fullcpu_source(
+                row, context=f"source_runs[{row.get('logical_key', '<unknown>')}]"
+            )
             rows.append(
                 {
                     "logical_key": row["logical_key"],

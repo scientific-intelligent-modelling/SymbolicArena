@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import sys
 import tempfile
@@ -15,10 +16,39 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.freeze_results imp
     _build_index_row,
     _copy_remote_file,
     _local_result_path,
+    load_source_runs,
+)
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.source_provenance import (
+    SourceProvenanceError,
 )
 
 
 class FreezeResultsTest(unittest.TestCase):
+    def test_load_source_runs_rejects_aborted_fullcpu_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            source_csv = Path(tmp_dir) / "source_runs.csv"
+            row = {
+                "logical_key": "demo::D1::s520::clean",
+                "batch": "all_15alg_fullcpu_v1_formal",
+                "algorithm": "demo",
+                "dataset_id": "D1",
+                "seed": "520",
+                "noise_tag": "clean",
+                "task_id": "demo_s520_clean_g0001",
+                "host": "iaaccn22",
+                "status": "ok",
+                "id_nmse": "0.1",
+                "ood_nmse": "0.2",
+                "path": "/experiments/all_15alg_fullcpu_v1_formal/result.json",
+            }
+            with source_csv.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(row))
+                writer.writeheader()
+                writer.writerow(row)
+
+            with self.assertRaisesRegex(SourceProvenanceError, "已中止"):
+                load_source_runs(source_csv, noise_tag="clean")
+
     def test_local_result_path_is_deterministic(self) -> None:
         row = {
             "noise_tag": "clean",
