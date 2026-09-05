@@ -909,6 +909,9 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                 started_at=time.time() - 5400,
                 experiment_dir=exp_dir,
                 checkpoint_index=9,
+                task_label="g0001_demo",
+                task_global_index=1,
+                expected_dataset_dir=str(dataset_dir),
             )
 
             self.assertIsNotNone(payload)
@@ -919,6 +922,9 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["source_iteration"], 3)
             self.assertEqual(payload["source_complexity"], 5)
             self.assertEqual(payload["elapsed_minutes"], 90)
+            self.assertEqual(payload["task_label"], "g0001_demo")
+            self.assertEqual(payload["task_global_index"], 1)
+            self.assertTrue(payload["dataset_identity_check"]["match"])
             self.assertEqual(
                 payload["canonical_artifact"]["instantiated_expression"],
                 "2*x0 + 3*x1 + 1",
@@ -1147,7 +1153,7 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
     def test_build_periodic_snapshot_payload_records_heartbeat_without_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            dataset_dir = root / "dataset"
+            dataset_dir = root / "sim-datasets-data" / "demo"
             exp_dir = root / "exp"
             exp_dir.mkdir(parents=True, exist_ok=True)
             _write_dataset(dataset_dir)
@@ -1161,6 +1167,10 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                 started_at=time.time() - 120,
                 experiment_dir=exp_dir,
                 checkpoint_index=1,
+                task_label="g0001_demo",
+                task_global_index=1,
+                expected_dataset_rel="sim-datasets-data/demo",
+                expected_dataset_dir=str(dataset_dir),
             )
 
             self.assertIsNotNone(payload)
@@ -1169,6 +1179,11 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["status"], "running")
             self.assertFalse(payload["candidate_available"])
             self.assertIsNone(payload["equation"])
+            self.assertEqual(payload["task_label"], "g0001_demo")
+            self.assertEqual(payload["task_global_index"], 1)
+            self.assertEqual(payload["expected_dataset_rel"], "sim-datasets-data/demo")
+            self.assertEqual(payload["expected_dataset_dir"], str(dataset_dir))
+            self.assertTrue(payload["dataset_identity_check"]["match"])
 
     def test_write_progress_payload_writes_outer_and_experiment_json(self):
         with tempfile.TemporaryDirectory() as tmp:

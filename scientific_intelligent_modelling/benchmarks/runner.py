@@ -1783,6 +1783,10 @@ def _build_periodic_snapshot_payload(
     started_at: float,
     experiment_dir: str | Path,
     checkpoint_index: int,
+    task_label: str | None = None,
+    task_global_index: int | None = None,
+    expected_dataset_rel: str | None = None,
+    expected_dataset_dir: str | None = None,
 ) -> dict[str, Any] | None:
     snapshot_elapsed_seconds = max(0.0, time.time() - started_at)
     candidate = _extract_periodic_candidate(
@@ -1809,6 +1813,10 @@ def _build_periodic_snapshot_payload(
             id_metrics=None,
             ood_metrics=None,
             experiment_dir=str(experiment_dir),
+            task_label=task_label,
+            task_global_index=task_global_index,
+            expected_dataset_rel=expected_dataset_rel,
+            expected_dataset_dir=expected_dataset_dir,
         )
         payload["record_type"] = "periodic_heartbeat"
         payload["checkpoint_index"] = int(checkpoint_index)
@@ -1873,6 +1881,10 @@ def _build_periodic_snapshot_payload(
         id_metrics=id_metrics,
         ood_metrics=ood_metrics,
         experiment_dir=str(experiment_dir),
+        task_label=task_label,
+        task_global_index=task_global_index,
+        expected_dataset_rel=expected_dataset_rel,
+        expected_dataset_dir=expected_dataset_dir,
     )
     payload["record_type"] = "periodic_best"
     payload["checkpoint_index"] = int(checkpoint_index)
@@ -2058,6 +2070,10 @@ def _periodic_snapshot_loop(
     started_at: float,
     output_dir: Path,
     experiment_dir: str | Path,
+    task_label: str | None = None,
+    task_global_index: int | None = None,
+    expected_dataset_rel: str | None = None,
+    expected_dataset_dir: str | None = None,
 ) -> None:
     last_written_minute_index = 0
     next_target_minute_index = 1
@@ -2075,6 +2091,10 @@ def _periodic_snapshot_loop(
                 started_at=started_at,
                 experiment_dir=experiment_dir,
                 checkpoint_index=next_target_minute_index,
+                task_label=task_label,
+                task_global_index=task_global_index,
+                expected_dataset_rel=expected_dataset_rel,
+                expected_dataset_dir=expected_dataset_dir,
             )
             if payload is None:
                 next_target_minute_index += 1
@@ -2123,6 +2143,10 @@ def _write_final_progress_payload_if_requested(
     params: dict[str, Any] | None = None,
     seed: int | None = None,
     started_at: float | None = None,
+    task_label: str | None = None,
+    task_global_index: int | None = None,
+    expected_dataset_rel: str | None = None,
+    expected_dataset_dir: str | None = None,
 ) -> None:
     if not progress_snapshot_interval_seconds:
         return
@@ -2158,6 +2182,10 @@ def _write_final_progress_payload_if_requested(
                 started_at=started_at,
                 experiment_dir=experiment_dir,
                 checkpoint_index=snapshot_minute_index,
+                task_label=task_label,
+                task_global_index=task_global_index,
+                expected_dataset_rel=expected_dataset_rel,
+                expected_dataset_dir=expected_dataset_dir,
             )
         except Exception:
             payload = None
@@ -2476,6 +2504,10 @@ def run_benchmark_task(
                 "started_at": started_at,
                 "output_dir": output_dir,
                 "experiment_dir": experiment_dir,
+                "task_label": task_label,
+                "task_global_index": task_global_index,
+                "expected_dataset_rel": task_identity.get("expected_dataset_rel"),
+                "expected_dataset_dir": task_identity.get("expected_dataset_dir"),
             },
             daemon=True,
         )
@@ -2644,6 +2676,10 @@ def run_benchmark_task(
         params=params,
         seed=seed,
         started_at=started_at,
+        task_label=task_label,
+        task_global_index=task_global_index,
+        expected_dataset_rel=task_identity.get("expected_dataset_rel"),
+        expected_dataset_dir=task_identity.get("expected_dataset_dir"),
     )
 
     result_path = output_dir / "result.json"

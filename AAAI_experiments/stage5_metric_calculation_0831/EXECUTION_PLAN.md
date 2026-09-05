@@ -229,9 +229,19 @@ EFF 衡量“算法内部搜索的真实进展”，使用固定 180 点网格�
 10. 只有确认整次运行从未产生有效公式时，EFF 才记 0；
 11. 因产物丢失而无法重建时，标记 unavailable，不伪造分数。
 
+每个分钟快照还必须绑定任务身份：`task_label`、`task_global_index`、
+`expected_dataset_rel`、`expected_dataset_dir` 和 `dataset_identity_check`。新产生的快照
+必须由 runner 直接写入这些字段。对身份字段部署前已经启动的运行，只允许从冻结的调度
+state 和唯一任务目录补全，并逐条验证快照中的 `dataset_dir` 与期望数据集完全一致；无法唯一
+绑定时按 unavailable 处理，禁止仅凭文件名猜测。
+
 SymbolFit 必须额外满足：快照记录 PySR 在缩放搜索空间中的在线历史最优内部 loss，同时保存把候选确定性逆变换回原始变量和目标尺度所需的元数据。不得用事后 LMFIT 结果回填早期分钟，也不得用 canonical replay 的 ID/OOD 质量反向选择 PySR 候选。由于既有 150 条 clean 运行缺少完整的可证明遥测，这 150 条必须按相同 3 小时预算重新运行。
 
 2026-09-05 的在线抽查进一步确认：旧 QLattice wrapper 每个 epoch 都用“当轮最优”覆盖状态，默认 BIC 在分钟间明显反向波动，最终结果也不保证来自全预算历史最优。该口径已由提交 `5894ad03` 修复为全程最小内部 criterion 锁存，并显式写入 `internal_loss`。所有 450 条 QLattice 任务必须淘汰旧代码产物后重新运行；不得用分钟采样点的累计最小值冒充全 epoch 历史最优。重置前 state、旧分配、进程回收结果、新 wrapper SHA-256 和重置后 state 必须写入独立审计文件。`iaaccn25` 在修复部署时若仍无法通过 SSH 校验新代码，必须先从调度主机列表隔离，待同步及 SHA-256 校验成功后才能重新接收任务。
+
+QLattice 复用任务输出目录时，冻结器必须额外拒绝重置前遗留的分钟文件。每条被接纳的
+快照须晚于该任务本轮重新分配时间，包含修复后的 `source_internal_loss`，并与当前
+`dataset_dir`、seed、condition 和任务索引一致；180 个点未被本轮完整覆盖时不得混入旧点补齐。
 
 不同算法的轨迹格式可能需要独立 adapter。每个 adapter 都必须通过相同的 180 点契约测试。任一 clean EFF 仍不可重建时，不发布正式六轴榜单。
 
@@ -513,6 +523,7 @@ stage5_metric_calculation_0831/
 - 50 条 GT reference 全部通过；
 - 每条 clean final result 存在，或有源层面的算法无效记录；
 - 2250 条 clean EFF 轨迹均能按冻结 adapter 契约重建；
+- 每条已接纳快照都有可验证的任务身份；QLattice 不含重置前遗留分钟点；
 - 所有必需 clean Claude 任务 accepted 或合法 non-applicable；
 - 物理尝试总数不超过 23700；
 - accepted 调用不存在 model、effort、stream、响应类型或渠道身份违规；
