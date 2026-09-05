@@ -286,6 +286,53 @@ def test_qlattice_standardizes_large_target_and_restores_predictions(monkeypatch
     np.testing.assert_allclose(reg.predict(np.asarray([[0.0], [1.0]])), expected)
 
 
+def test_qlattice_incremental_search_latches_global_criterion_best(monkeypatch, tmp_path) -> None:
+    class FakeModel:
+        def __init__(self, equation: str, bic: float, multiplier: float) -> None:
+            self._equation = equation
+            self.bic = bic
+            self._multiplier = multiplier
+
+        def sympify(self, signif=4):
+            return self._equation
+
+        def predict(self, data):
+            return self._multiplier * np.asarray(data["x0"], dtype=float)
+
+    epoch_models = iter(
+        [
+            [FakeModel("x0", 10.0, 1.0)],
+            [FakeModel("2*x0", 2.0, 2.0)],
+            [FakeModel("3*x0", 5.0, 3.0)],
+        ]
+    )
+
+    class FakeQLattice:
+        def auto_run(self, **kwargs):
+            return next(epoch_models)
+
+    monkeypatch.setitem(sys.modules, "feyn", types.SimpleNamespace(QLattice=FakeQLattice))
+
+    reg = QLatticeRegressor(
+        n_epochs=3,
+        target_standardize=False,
+        exp_path=str(tmp_path),
+        exp_name="case",
+    )
+    X = np.asarray([[0.0], [1.0], [2.0]])
+    reg.fit(X, 2.0 * X[:, 0])
+
+    assert reg.get_optimal_equation() == "2*x0"
+    np.testing.assert_allclose(reg.predict(X), 2.0 * X[:, 0])
+    progress = json.loads(
+        (tmp_path / "case" / ".qlattice_current_best.json").read_text(encoding="utf-8")
+    )
+    assert progress["equation"] == "2*x0"
+    assert progress["loss"] == 2.0
+    assert progress["internal_loss"] == 2.0
+    assert progress["epoch"] == 2
+
+
 def test_qlattice_export_preserves_native_zero_based_feature_semantics(monkeypatch) -> None:
     """导出的 canonical artifact 应与 QLattice 原生 x1 预测使用同一列。"""
     from scientific_intelligent_modelling.benchmarks.runner import _predict_from_canonical_artifact

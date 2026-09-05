@@ -890,6 +890,7 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                     {
                         "equation": "2*x0 + 3*x1 + 1",
                         "loss": -12.0,
+                        "internal_loss": -12.0,
                         "criterion": "bic",
                         "complexity": 5,
                         "epoch": 3,
@@ -914,6 +915,7 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["tool"], "QLattice")
             self.assertEqual(payload["status"], "ok")
             self.assertEqual(payload["source_loss"], -12.0)
+            self.assertEqual(payload["source_internal_loss"], -12.0)
             self.assertEqual(payload["source_complexity"], 5)
             self.assertEqual(payload["elapsed_minutes"], 90)
             self.assertEqual(

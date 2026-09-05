@@ -177,7 +177,9 @@ class QLatticeRegressor(BaseWrapper):
                 value = None
             if value is not None:
                 try:
-                    return float(value)
+                    value = float(value)
+                    if np.isfinite(value):
+                        return value
                 except Exception:
                     pass
         for fallback in ("bic", "aic"):
@@ -187,7 +189,9 @@ class QLatticeRegressor(BaseWrapper):
                 value = None
             if value is not None:
                 try:
-                    return float(value)
+                    value = float(value)
+                    if np.isfinite(value):
+                        return value
                 except Exception:
                     pass
         return None
@@ -214,20 +218,6 @@ class QLatticeRegressor(BaseWrapper):
             return scored[0][1]
         return models[0]
 
-    def _write_progress_state_from_models(self, models, *, epoch: int, signif: int, criterion_name: Optional[str]) -> None:
-        if not self._progress_state_path or not models:
-            return
-        best_model = self._select_best_model(models, criterion_name)
-        if best_model is None:
-            return
-        equation = self._model_equation(best_model, signif)
-        self._write_progress_state_from_equation(
-            equation,
-            epoch=epoch,
-            loss=self._criterion_value(best_model, criterion_name),
-            criterion_name=criterion_name,
-        )
-
     def _write_progress_state_from_equation(
         self,
         equation: Optional[str],
@@ -243,6 +233,7 @@ class QLatticeRegressor(BaseWrapper):
         payload = {
             "equation": equation,
             "loss": loss,
+            "internal_loss": loss,
             "criterion": criterion_name,
             "complexity": self._estimate_complexity(equation),
             "epoch": int(epoch),
@@ -308,6 +299,9 @@ class QLatticeRegressor(BaseWrapper):
         if self._progress_state_path:
             running_models = auto_args.get('starting_models')
             models = []
+            global_best_model = None
+            global_best_loss = None
+            global_best_epoch = 0
             epoch_args = dict(auto_args)
             epoch_args['n_epochs'] = 1
             started_at = time.time()
@@ -327,10 +321,19 @@ class QLatticeRegressor(BaseWrapper):
                     continue
                 models = epoch_models
                 running_models = epoch_models
-                self._write_progress_state_from_models(
-                    models,
-                    epoch=epoch,
-                    signif=signif,
+                epoch_best_model = self._select_best_model(epoch_models, criterion_name)
+                epoch_best_loss = self._criterion_value(epoch_best_model, criterion_name)
+                if global_best_model is None or (
+                    epoch_best_loss is not None
+                    and (global_best_loss is None or epoch_best_loss < global_best_loss)
+                ):
+                    global_best_model = epoch_best_model
+                    global_best_loss = epoch_best_loss
+                    global_best_epoch = epoch
+                self._write_progress_state_from_equation(
+                    self._model_equation(global_best_model, signif),
+                    epoch=global_best_epoch,
+                    loss=global_best_loss,
                     criterion_name=criterion_name,
                 )
             if not models:
@@ -339,9 +342,11 @@ class QLatticeRegressor(BaseWrapper):
             models = list(self._ql.auto_run(**auto_args))
             if not models:
                 return self._fit_constant_fallback(y, reason='QLattice.auto_run 未返回任何模型。')
+            global_best_model = self._select_best_model(models, criterion_name)
 
-        self._models = models
-        self._best_model = self._select_best_model(models, criterion_name)
+        self._best_model = global_best_model
+        self._models = [self._best_model]
+        self._models.extend(model for model in models if model is not self._best_model)
         self.model = True
 
         # 提取最优与候选表达式
