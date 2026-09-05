@@ -15,6 +15,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Mapping, Sequence
 
+from .source_provenance import SourceProvenanceError, reject_aborted_fullcpu_source
+
 
 SUPPORTED_CONDITIONS = ("clean", "noise001", "noise005")
 CONDITION_SIGMA = {"clean": 0.0, "noise001": 0.01, "noise005": 0.05}
@@ -178,6 +180,14 @@ def build_result_freeze_bundle(
     if condition not in SUPPORTED_CONDITIONS:
         raise ResultFreezeAdapterError(f"未知 condition: {condition!r}")
     source_rows_all = _read_csv(source_runs_csv.resolve(), context="source_runs")
+    for row in source_rows_all:
+        try:
+            reject_aborted_fullcpu_source(
+                row,
+                context=f"source_runs[{row.get('logical_key', '<unknown>')}]",
+            )
+        except SourceProvenanceError as exc:
+            raise ResultFreezeAdapterError(str(exc)) from exc
     source_rows = [row for row in source_rows_all if row.get("noise_tag") == condition]
     index_rows_all = _read_csv(result_index_csv.resolve(), context="result_index")
     index_rows = [row for row in index_rows_all if row.get("noise_tag") == condition]

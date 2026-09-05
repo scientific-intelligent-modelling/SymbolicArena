@@ -150,6 +150,24 @@ def test_adapter_rejects_sha_status_and_nmse_drift(tmp_path: Path) -> None:
         )
 
 
+def test_adapter_rejects_aborted_fullcpu_source(tmp_path: Path) -> None:
+    source, index, _ = _fixture(tmp_path)
+    rows = list(csv.DictReader(source.open(encoding="utf-8")))
+    rows[0]["batch"] = "all_15alg_fullcpu_v1_formal"
+    rows[0]["path"] = "/experiments/all_15alg_fullcpu_v1_formal/result.json"
+    _write_csv(source, rows)
+
+    with pytest.raises(ResultFreezeAdapterError, match="已中止"):
+        build_result_freeze_bundle(
+            source_runs_csv=source,
+            result_index_csv=index,
+            condition="noise001",
+            output_jsonl_gz=tmp_path / "freeze.jsonl.gz",
+            report_json=tmp_path / "report.json",
+            expected_count=1,
+        )
+
+
 @pytest.mark.parametrize(
     ("replacement", "expected_error"),
     [

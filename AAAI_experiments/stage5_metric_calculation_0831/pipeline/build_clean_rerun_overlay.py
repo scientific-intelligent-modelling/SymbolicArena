@@ -21,6 +21,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from .source_provenance import SourceProvenanceError, reject_aborted_fullcpu_source
+
 
 SCHEMA_VERSION = "clean_rerun_eff_overlay_v1"
 SCOPE = "mixed_clean_rerun_overlay"
@@ -231,6 +233,13 @@ def _load_clean_source_rows(
         )
     by_key: dict[str, dict[str, str]] = {}
     for row in rows:
+        try:
+            reject_aborted_fullcpu_source(
+                row,
+                context=f"source_runs[{row.get('logical_key', '<unknown>')}]",
+            )
+        except SourceProvenanceError as exc:
+            raise CleanRerunOverlayError(str(exc)) from exc
         expected_key = _logical_key(row["algorithm"], row["dataset_id"], row["seed"])
         if row["logical_key"] != expected_key:
             raise CleanRerunOverlayError(

@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.build_clean_rerun_overlay import (  # noqa: E402
     CleanRerunOverlayError,
+    _load_clean_source_rows,
     _parse_checksum_manifest,
     _symbolfit_record,
     _verify_manifest_file,
@@ -280,6 +281,20 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
         "strict": strict,
         "strict_result": strict_dataset / "result.json",
     }
+
+
+def test_base_source_rejects_aborted_fullcpu_batch(tmp_path: Path) -> None:
+    source_csv = tmp_path / "source_runs.csv"
+    row = _source_row("jaxsr", "demo", 520, index=1)
+    row["batch"] = "all_15alg_fullcpu_v1_formal"
+    row["path"] = "/experiments/all_15alg_fullcpu_v1_formal/result.json"
+    with source_csv.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=FIELDS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerow(row)
+
+    with pytest.raises(CleanRerunOverlayError, match="已中止"):
+        _load_clean_source_rows(source_csv, expected_clean_rows=1)
 
 
 def _build(paths: dict[str, Path], output_dir: Path) -> dict[str, object]:
