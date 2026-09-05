@@ -270,6 +270,7 @@ def _build(
     tmp_path: Path,
     *,
     apply_state_db: Path | None = None,
+    pred_retirement_manifest_jsonl: Path | None = None,
     expected_eq: int | None = None,
     expected_structure: int | None = None,
     expected_single: int | None = None,
@@ -282,6 +283,7 @@ def _build(
         fresh_structure_plan_jsonl=fixture["fresh_structure_path"],
         binding_manifest_json=fixture["binding_path"],
         pred_supersession_manifest_json=fixture["pred_manifest_path"],
+        pred_retirement_manifest_jsonl=pred_retirement_manifest_jsonl,
         output_equivalence_plan_jsonl=tmp_path / "hybrid_eq.jsonl",
         output_structure_plan_jsonl=tmp_path / "hybrid_structure.jsonl",
         supersession_manifest_json=tmp_path / "downstream_supersessions.json",
@@ -379,6 +381,55 @@ def test_rejects_wrong_or_reordered_dependency_binding(tmp_path: Path, phase: st
     with pytest.raises(CleanDownstreamHybridPlanError, match="dependency"):
         _build(fixture, tmp_path)
     assert not (tmp_path / "hybrid_eq.jsonl").exists()
+
+
+def test_composes_pred_retirement_into_active_dependency_binding(tmp_path: Path) -> None:
+    fixture = _build_fixture(tmp_path, formal_size=False)
+    retired = fixture["pred_mappings"][0]
+    old_successor = retired["successor_evaluation_key"]
+    active_successor = _dependency_key("identity-recovery-v3")
+    base = retired["base_logical_id"]
+    for collection, path_key in (
+        (fixture["fresh_eq"], "fresh_eq_path"),
+        (fixture["fresh_structure"], "fresh_structure_path"),
+    ):
+        for row in collection:
+            dependencies = [
+                active_successor if item == old_successor else item
+                for item in row["dependencies"]
+            ]
+            row["dependencies"] = dependencies
+            row["task_spec"]["dependencies"] = dependencies
+        _write_plan(fixture[path_key], collection)
+    retirement_manifest = tmp_path / "pred_retirement.jsonl"
+    retirement_manifest.write_text(
+        canonical_json(
+            {
+                "schema_version": "stale_exhausted_retirement.v1",
+                "revision_base": base,
+                "exhausted_evaluation_key": old_successor,
+                "replacement_evaluation_key": active_successor,
+                "replacement_logical_id": f"{base}::v3",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = _build(
+        fixture,
+        tmp_path,
+        pred_retirement_manifest_jsonl=retirement_manifest,
+    )
+
+    assert report["inputs"]["pred_retirement_manifest"]["row_count"] == 1
+    fresh = load_plan_jsonl(tmp_path / "hybrid_eq.jsonl")
+    changed = next(
+        entry
+        for entry in fresh.entries
+        if entry.logical_id.startswith(f"equivalence::{base.split('::')[1]}::{base.split('::')[2]}::s520")
+    )
+    assert active_successor in changed.definition.task_spec.dependencies
 
 
 def _freeze(store: TaskStateStore, spec: TaskSpec, *, now: float) -> None:

@@ -214,6 +214,69 @@ def _load_pred_supersessions(
     return mapping, payload
 
 
+def _compose_pred_retirements(
+    path: Path,
+    *,
+    required_pred: set[str],
+    pred_mapping: dict[str, str],
+) -> int:
+    """把 exhausted replacement 的后继链合并为原始 pred 到当前 active pred 的映射。"""
+
+    active_source_by_key = {value: key for key, value in pred_mapping.items()}
+    if len(active_source_by_key) != len(pred_mapping):
+        raise CleanDownstreamHybridPlanError("pred supersession active key 不唯一")
+    seen_exhausted: set[str] = set()
+    row_count = 0
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line_number, raw_line in enumerate(handle, 1):
+                if not raw_line.strip():
+                    continue
+                row = json.loads(raw_line)
+                if not isinstance(row, Mapping):
+                    raise CleanDownstreamHybridPlanError(
+                        f"pred retirement manifest:{line_number} 顶层不是 JSON object"
+                    )
+                if row.get("schema_version") != "stale_exhausted_retirement.v1":
+                    raise CleanDownstreamHybridPlanError(
+                        f"pred retirement manifest:{line_number} schema_version 非法"
+                    )
+                base = str(row.get("revision_base", ""))
+                exhausted_key = str(row.get("exhausted_evaluation_key", ""))
+                replacement_key = str(row.get("replacement_evaluation_key", ""))
+                replacement_logical_id = str(row.get("replacement_logical_id", ""))
+                match = re.fullmatch(re.escape(base) + r"::v([1-9]\d*)", replacement_logical_id)
+                if base not in required_pred or match is None or int(match.group(1)) < 2:
+                    raise CleanDownstreamHybridPlanError(
+                        f"pred retirement manifest:{line_number} logical identity 漂移"
+                    )
+                source_key = active_source_by_key.get(exhausted_key)
+                if source_key is None or exhausted_key in seen_exhausted:
+                    raise CleanDownstreamHybridPlanError(
+                        f"pred retirement manifest:{line_number} exhausted binding 不在 active 链"
+                    )
+                if not replacement_key or replacement_key == exhausted_key:
+                    raise CleanDownstreamHybridPlanError(
+                        f"pred retirement manifest:{line_number} replacement key 非法"
+                    )
+                if replacement_key in active_source_by_key:
+                    raise CleanDownstreamHybridPlanError(
+                        f"pred retirement manifest:{line_number} replacement key 重复"
+                    )
+                pred_mapping[source_key] = replacement_key
+                del active_source_by_key[exhausted_key]
+                active_source_by_key[replacement_key] = source_key
+                seen_exhausted.add(exhausted_key)
+                row_count += 1
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise CleanDownstreamHybridPlanError(
+            f"pred retirement manifest 不可读: {exc}"
+        ) from exc
+    if row_count == 0:
+        raise CleanDownstreamHybridPlanError("pred retirement manifest 不能为空")
+    return row_count
+
+
 def _load_plan_rows(
     path: Path,
     *,
@@ -624,6 +687,7 @@ def build_clean_downstream_hybrid_plan(
     output_structure_plan_jsonl: str | Path,
     supersession_manifest_json: str | Path,
     report_json: str | Path,
+    pred_retirement_manifest_jsonl: str | Path | None = None,
     expected_total_count: int | None = 2250,
     expected_equivalence_count: int | None = 75,
     expected_structure_count: int | None = 87,
@@ -643,6 +707,10 @@ def build_clean_downstream_hybrid_plan(
         "supersession_manifest": Path(supersession_manifest_json).resolve(),
         "report": Path(report_json).resolve(),
     }
+    if pred_retirement_manifest_jsonl is not None:
+        paths["pred_retirement_manifest"] = Path(
+            pred_retirement_manifest_jsonl
+        ).resolve()
     output_paths = {
         paths["output_eq"],
         paths["output_structure"],
@@ -650,7 +718,19 @@ def build_clean_downstream_hybrid_plan(
         paths["report"],
     }
     if len(output_paths) != 4 or output_paths.intersection(
-        {paths["old_eq"], paths["fresh_eq"], paths["old_structure"], paths["fresh_structure"], paths["binding"], paths["pred_manifest"]}
+        {
+            paths[name]
+            for name in (
+                "old_eq",
+                "fresh_eq",
+                "old_structure",
+                "fresh_structure",
+                "binding",
+                "pred_manifest",
+                "pred_retirement_manifest",
+            )
+            if name in paths
+        }
     ):
         raise CleanDownstreamHybridPlanError("输入输出路径必须互异且禁止覆盖输入")
 
@@ -662,6 +742,13 @@ def build_clean_downstream_hybrid_plan(
     pred_mapping, _ = _load_pred_supersessions(
         paths["pred_manifest"], required_pred=required_pred
     )
+    pred_retirement_count = 0
+    if "pred_retirement_manifest" in paths:
+        pred_retirement_count = _compose_pred_retirements(
+            paths["pred_retirement_manifest"],
+            required_pred=required_pred,
+            pred_mapping=pred_mapping,
+        )
     old_eq, old_eq_sha = _load_plan_rows(
         paths["old_eq"],
         label="predecessor equivalence plan",
@@ -749,6 +836,11 @@ def build_clean_downstream_hybrid_plan(
             "successor_structure": structure_output_sha,
         },
         "pred_supersession_manifest_sha256": _sha256_file(paths["pred_manifest"]),
+        "pred_retirement_manifest_sha256": (
+            _sha256_file(paths["pred_retirement_manifest"])
+            if "pred_retirement_manifest" in paths
+            else None
+        ),
         "binding_manifest_sha256": _sha256_file(paths["binding"]),
         "supersessions": public_bindings,
     }
@@ -757,7 +849,7 @@ def build_clean_downstream_hybrid_plan(
     input_hashes_before_apply = {
         name: _sha256_file(path)
         for name, path in paths.items()
-        if name in {"old_eq", "fresh_eq", "old_structure", "fresh_structure", "binding", "pred_manifest", "output_eq", "output_structure", "supersession_manifest"}
+        if name in {"old_eq", "fresh_eq", "old_structure", "fresh_structure", "binding", "pred_manifest", "pred_retirement_manifest", "output_eq", "output_structure", "supersession_manifest"}
     }
     state_registration: JsonDict = {"requested": False, "mutated": False}
     if apply_state_db is not None:
@@ -804,6 +896,15 @@ def build_clean_downstream_hybrid_plan(
             "fresh_structure_plan": {"path": str(paths["fresh_structure"]), "sha256": fresh_structure_sha},
             "binding_manifest": {"path": str(paths["binding"]), "sha256": _sha256_file(paths["binding"])},
             "pred_supersession_manifest": {"path": str(paths["pred_manifest"]), "sha256": _sha256_file(paths["pred_manifest"])},
+            "pred_retirement_manifest": (
+                {
+                    "path": str(paths["pred_retirement_manifest"]),
+                    "sha256": _sha256_file(paths["pred_retirement_manifest"]),
+                    "row_count": pred_retirement_count,
+                }
+                if "pred_retirement_manifest" in paths
+                else None
+            ),
         },
         "outputs": {
             "equivalence_hybrid_plan": {"path": str(paths["output_eq"]), "sha256": eq_output_sha},
@@ -826,6 +927,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--fresh-structure-plan-jsonl", type=Path, required=True)
     parser.add_argument("--binding-manifest-json", type=Path, required=True)
     parser.add_argument("--pred-supersession-manifest-json", type=Path, required=True)
+    parser.add_argument("--pred-retirement-manifest-jsonl", type=Path)
     parser.add_argument("--output-equivalence-plan-jsonl", type=Path, required=True)
     parser.add_argument("--output-structure-plan-jsonl", type=Path, required=True)
     parser.add_argument("--supersession-manifest-json", type=Path, required=True)
@@ -857,6 +959,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             fresh_structure_plan_jsonl=args.fresh_structure_plan_jsonl,
             binding_manifest_json=args.binding_manifest_json,
             pred_supersession_manifest_json=args.pred_supersession_manifest_json,
+            pred_retirement_manifest_jsonl=args.pred_retirement_manifest_jsonl,
             output_equivalence_plan_jsonl=args.output_equivalence_plan_jsonl,
             output_structure_plan_jsonl=args.output_structure_plan_jsonl,
             supersession_manifest_json=args.supersession_manifest_json,
