@@ -11,6 +11,7 @@ import argparse
 from collections import Counter
 import hashlib
 import json
+import sqlite3
 import sys
 import time
 from dataclasses import dataclass
@@ -448,6 +449,34 @@ def _final_state_distribution(store: TaskStateStore, evaluation_keys: Sequence[s
     return dict(sorted(counter.items()))
 
 
+def _load_existing_state_limits(path: Path) -> dict[str, int]:
+    """恢复已有状态库时复用其冻结预算，避免注册工具把默认值写回去。"""
+
+    if not path.is_file() or path.stat().st_size == 0:
+        return {}
+    try:
+        connection = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+        try:
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            if "meta" not in tables:
+                return {}
+            meta = dict(connection.execute("SELECT key, value FROM meta").fetchall())
+        finally:
+            connection.close()
+    except (OSError, sqlite3.Error) as exc:
+        raise RegisterSymbolicPlanError(f"状态库预算元数据不可读: {exc}") from exc
+    required = ("attempt_cap", "logical_task_cap", "max_attempts_per_task")
+    try:
+        return {key: int(meta[key]) for key in required}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RegisterSymbolicPlanError("已有状态库缺少合法的冻结预算元数据") from exc
+
+
 def register_symbolic_plan(
     *,
     plan_jsonl: str | Path,
@@ -476,8 +505,10 @@ def register_symbolic_plan(
             )
         except PlanContractError as exc:
             raise RegisterSymbolicPlanError(str(exc)) from exc
+    state_path = Path(state_db).resolve()
     store = TaskStateStore(
-        Path(state_db).resolve(),
+        state_path,
+        **_load_existing_state_limits(state_path),
         predecessor_attempt_manifest=(
             PredecessorAttemptManifest(
                 path=str(loaded_predecessor_manifest.path),

@@ -340,6 +340,34 @@ def test_register_symbolic_plan_rejects_cross_plan_overlap_without_state_write(t
     assert not state_db.exists()
 
 
+def test_register_symbolic_plan_reuses_existing_state_limits(tmp_path: Path) -> None:
+    call_row = _build_task_row(tmp_path, "equivalence::extended-retry-state")
+    plan_path = tmp_path / "plan.jsonl"
+    no_call_path = tmp_path / "no_call.jsonl"
+    state_db = tmp_path / "control" / "state.sqlite3"
+    _write_jsonl(plan_path, [call_row])
+    _write_jsonl(no_call_path, [])
+    TaskStateStore(
+        state_db,
+        attempt_cap=101,
+        logical_task_cap=17,
+        max_attempts_per_task=5,
+    )
+
+    report = register_symbolic_plan(
+        plan_jsonl=plan_path,
+        non_applicable_index_jsonl=no_call_path,
+        state_db=state_db,
+    )
+
+    assert report["counts"]["newly_registered_task_count"] == 1
+    with sqlite3.connect(state_db) as connection:
+        meta = dict(connection.execute("SELECT key, value FROM meta"))
+    assert meta["attempt_cap"] == "101"
+    assert meta["logical_task_cap"] == "17"
+    assert meta["max_attempts_per_task"] == "5"
+
+
 def test_register_symbolic_plan_rejects_duplicate_non_applicable_identity_without_state_write(
     tmp_path: Path,
 ) -> None:
