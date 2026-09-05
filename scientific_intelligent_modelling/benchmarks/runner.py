@@ -1878,7 +1878,11 @@ def _build_periodic_snapshot_payload(
     payload["checkpoint_index"] = int(checkpoint_index)
     payload["elapsed_seconds"] = round(time.time() - started_at, 3)
     payload["elapsed_minutes"] = max(0, int(round(payload["elapsed_seconds"] / 60.0)))
-    payload["source_iteration"] = candidate.get("iteration")
+    payload["source_iteration"] = (
+        candidate.get("iteration")
+        if candidate.get("iteration") is not None
+        else candidate.get("epoch")
+    )
     payload["source_sample_order"] = candidate.get("sample_order")
     payload["source_score"] = candidate.get("score")
     payload["source_loss"] = candidate.get("loss")

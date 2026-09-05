@@ -916,6 +916,7 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["status"], "ok")
             self.assertEqual(payload["source_loss"], -12.0)
             self.assertEqual(payload["source_internal_loss"], -12.0)
+            self.assertEqual(payload["source_iteration"], 3)
             self.assertEqual(payload["source_complexity"], 5)
             self.assertEqual(payload["elapsed_minutes"], 90)
             self.assertEqual(
