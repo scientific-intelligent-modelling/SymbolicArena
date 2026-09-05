@@ -167,6 +167,7 @@ def revise_exhausted_pred_plan(
     logical_id_suffix: str = "v2",
     expected_task_count: int | None = 2250,
     expected_exhausted_count: int | None = None,
+    expected_exhausted_attempt_count: int = 3,
 ) -> JsonDict:
     if condition not in SUPPORTED_CONDITIONS:
         raise ReviseExhaustedPredPlanError(
@@ -176,6 +177,10 @@ def revise_exhausted_pred_plan(
         raise ReviseExhaustedPredPlanError("logical_id_suffix 格式无效")
     if int(logical_id_suffix[1:]) < 2:
         raise ReviseExhaustedPredPlanError("logical_id_suffix 必须从 v2 开始")
+    if expected_exhausted_attempt_count <= 0:
+        raise ReviseExhaustedPredPlanError(
+            "expected_exhausted_attempt_count 必须为正整数"
+        )
     predecessor_path = Path(predecessor_plan_jsonl).resolve()
     try:
         loaded = load_plan_jsonl(predecessor_path)
@@ -271,9 +276,14 @@ def revise_exhausted_pred_plan(
                 f"exhausted 任务与 frozen binding 冲突: {entry.logical_id}"
             )
         counts = attempt_counts.get(entry.evaluation_key)
-        if int(task["attempt_count"]) != 3 or counts != (3, 3):
+        expected_attempts = expected_exhausted_attempt_count
+        if (
+            int(task["attempt_count"]) != expected_attempts
+            or counts != (expected_attempts, expected_attempts)
+        ):
             raise ReviseExhaustedPredPlanError(
-                f"exhausted 任务必须恰有三次 failed attempts: {entry.logical_id}"
+                "exhausted 任务 failed attempts 数量不符: "
+                f"{entry.logical_id} != {expected_attempts}"
             )
         successor = _successor_row(
             predecessor_row,
@@ -290,7 +300,7 @@ def revise_exhausted_pred_plan(
                 "predecessor_logical_id": entry.logical_id,
                 "successor_evaluation_key": successor["evaluation_key"],
                 "successor_logical_id": successor["logical_id"],
-                "predecessor_attempt_count": 3,
+                "predecessor_attempt_count": expected_attempts,
             }
         )
 
@@ -327,6 +337,7 @@ def revise_exhausted_pred_plan(
         "recovery_prompt_version": prompt_path.stem,
         "recovery_prompt_sha256": prompt_sha256,
         "logical_id_suffix": logical_id_suffix,
+        "expected_exhausted_attempt_count": expected_exhausted_attempt_count,
         "preserved_frozen_count": preserved_frozen_count,
         "successor_task_count": len(successor_bindings),
         "output_task_count": len(output_rows),
@@ -349,6 +360,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--logical-id-suffix", default="v2")
     parser.add_argument("--expected-task-count", type=int, default=2250)
     parser.add_argument("--expected-exhausted-count", type=int, default=None)
+    parser.add_argument("--expected-exhausted-attempt-count", type=int, default=3)
     return parser.parse_args(argv)
 
 
@@ -365,6 +377,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             logical_id_suffix=args.logical_id_suffix,
             expected_task_count=args.expected_task_count,
             expected_exhausted_count=args.expected_exhausted_count,
+            expected_exhausted_attempt_count=args.expected_exhausted_attempt_count,
         )
     except ReviseExhaustedPredPlanError as exc:
         print(str(exc), file=sys.stderr)

@@ -216,6 +216,47 @@ def test_revises_noise_exhausted_tasks_without_condition_drift(tmp_path: Path) -
     assert report["condition"] == "noise001"
 
 
+def test_revises_exhausted_task_after_audited_extended_retry_limit(
+    tmp_path: Path,
+) -> None:
+    logical_id = "pred_simplify::demo::g0001::s520::clean::v2"
+    exhausted_row = _plan_row(logical_id)
+    predecessor_plan = tmp_path / "predecessor.jsonl"
+    predecessor_plan.write_text(canonical_json(exhausted_row) + "\n", encoding="utf-8")
+
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, max_attempts_per_task=5)
+    store.register_task(TaskSpec(**exhausted_row["task_spec"]))
+    for number in range(5):
+        lease = store.reserve_attempt(
+            str(exhausted_row["evaluation_key"]),
+            now=1.0 + number,
+        )
+        store.finish_failure(
+            lease.attempt_id,
+            error_class="validation_failed",
+            retryable=True,
+            now=1.5 + number,
+        )
+
+    identity_prompt = tmp_path / "simplify.identity.v1.txt"
+    identity_prompt.write_text("Return identity JSON.\n{{REQUEST_JSON}}\n", encoding="utf-8")
+    report = revise_exhausted_pred_plan(
+        predecessor_plan_jsonl=predecessor_plan,
+        state_db=state_db,
+        recovery_prompt_path=identity_prompt,
+        output_jsonl=tmp_path / "successor.jsonl",
+        report_json=tmp_path / "report.json",
+        logical_id_suffix="v3",
+        expected_task_count=1,
+        expected_exhausted_count=1,
+        expected_exhausted_attempt_count=5,
+    )
+
+    assert report["expected_exhausted_attempt_count"] == 5
+    assert report["successor_bindings"][0]["predecessor_attempt_count"] == 5
+
+
 def test_replaces_only_frozen_audit_failures_and_registers_successors(tmp_path: Path) -> None:
     passed_row = _plan_row("pred_simplify::demo::g0001::s520::clean")
     failed_row = _plan_row("pred_simplify::demo::g0001::s521::clean")
