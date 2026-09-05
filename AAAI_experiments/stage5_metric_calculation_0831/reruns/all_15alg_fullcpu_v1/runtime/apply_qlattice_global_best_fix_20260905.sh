@@ -9,10 +9,13 @@ STATE="$ASSET_ROOT/queues/formal/state/${BATCH}.state.json"
 EVENTS="$ASSET_ROOT/queues/formal/state/${BATCH}.events.jsonl"
 WRAPPER_REL=scientific_intelligent_modelling/algorithms/QLattice_wrapper/wrapper.py
 WRAPPER="$REPO_ROOT/$WRAPPER_REL"
+REAPER_REL=AAAI_experiments/stage5_metric_calculation_0831/reruns/all_15alg_fullcpu_v1/runtime/reap_all_qlattice_processes_20260905.py
+REAPER="$REPO_ROOT/$REAPER_REL"
 WRAPPER_SHA256=738746dc26e7d721efee0ac169843353f209baba2f602d5f9e35de37f72f9d4e
 FIX_COMMIT=5894ad03
 AUDIT="$ASSET_ROOT/runtime/qlattice_global_best_requeue_20260905.audit.json"
 SYNC_AUDIT="$ASSET_ROOT/runtime/qlattice_global_best_sync_20260905.audit"
+PROCESS_AUDIT="$ASSET_ROOT/runtime/qlattice_global_best_process_reap_20260905.audit"
 CONTROLLER_LOG="$ASSET_ROOT/logs/controller_formal.log"
 HOSTS=(iaaccn22 iaaccn23 iaaccn24 iaaccn26 iaaccn27 iaaccn28 iaaccn29)
 
@@ -88,7 +91,7 @@ fi
 
 for host in iaaccn23 iaaccn24 iaaccn26 iaaccn27 iaaccn28 iaaccn29; do
   ip="10.10.100.${host#iaaccn}"
-  if timeout 90 rsync -a --relative "$WRAPPER_REL" "$ip:$REPO_ROOT/"; then
+  if timeout 90 rsync -a --relative "$WRAPPER_REL" "$REAPER_REL" "$ip:$REPO_ROOT/"; then
     actual=$(timeout 30 ssh -o BatchMode=yes -o ConnectTimeout=10 "$ip" "sha256sum '$WRAPPER'" | awk '{print $1}')
     echo "$host=$actual" >>"$SYNC_AUDIT"
   else
@@ -105,7 +108,26 @@ else
   exit 1
 fi
 
-cd "$REPO_ROOT"
+: >"$PROCESS_AUDIT"
+PYTHONPATH=. python "$REAPER" >>"$PROCESS_AUDIT"
+for host in iaaccn23 iaaccn24 iaaccn26 iaaccn27 iaaccn28 iaaccn29; do
+  ip="10.10.100.${host#iaaccn}"
+  reaped=0
+  for _ in 1 2 3; do
+    if timeout 60 ssh -o BatchMode=yes -o ConnectTimeout=10 "$ip" \
+      "cd '$REPO_ROOT' && PYTHONPATH=. python '$REAPER'" >>"$PROCESS_AUDIT"; then
+      reaped=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$reaped" != "1" ]]; then
+    echo "process_reap_failed=$host" >>"$PROCESS_AUDIT"
+    exit 1
+  fi
+done
+echo '{"host":"iaaccn25","ok":false,"reason":"quarantined_ssh_unavailable"}' >>"$PROCESS_AUDIT"
+
 PYTHONPATH=. python "$ASSET_ROOT/runtime/requeue_qlattice_global_best_20260905.py" \
   --state "$STATE" \
   --events "$EVENTS" \
