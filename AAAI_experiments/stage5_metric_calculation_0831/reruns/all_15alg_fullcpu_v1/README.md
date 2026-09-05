@@ -1,39 +1,36 @@
-# all_15alg_fullcpu_v1
+# all_15alg_fullcpu_v1（已中止，非权威来源）
 
-这是 SSR-50 十五算法、三随机种子、三条件的全量 CPU 重跑队列资产。生成资产和 dry-run 不会连接远端；只有 `run_all_15alg_preflight.sh` 与 `run_all_15alg_formal.sh` 会访问服务器。
+该批次已于 2026-09-05 中止，仅保留作调度事故与资源审计证据。禁止恢复 controller、继续派发、冻结其 partial outputs，或将其用于正式六轴聚合。`commands/run_all_15alg_preflight.sh` 与 `commands/run_all_15alg_formal.sh` 已永久熔断并直接退出。
 
-## 范围与排除
+## 历史计划范围
 
 - 逻辑母集：`15 x 50 x 3 x 3 = 6750`。
 - 已由 `all_conditions_cpu_v2` 覆盖且从新队列排除：`143`。
-- 新队列：`6607`。
-- `manifests/composite_ledger_6750.csv` 逐行记录母集归属，严格证明 `143 + 6607 = 6750`、集合无交集且并集等于母集。
+- 历史新队列：`6607`。
+- `143 + 6607 = 6750` 仅证明原计划分区，不表示执行完成，也不构成正式来源证明。
 - 算法：gplearn, llmsr, pyoperon, drsr, pysr, dso, tpsr, e2esr, fepysr, jaxsr, qlattice, imcts, udsr, ragsr, symbolfit。
 - 条件：`clean`、`noise001`、`noise005`；种子：520、521、522。
 
-## CPU 饱和口径
+## 中止状态
 
-机器固定为 `iaaccn22~29`，每机实测 `256` 个逻辑 CPU、`128` 个物理核。首轮 115 weight 时实测仍有 64%~78% CPU idle，提高到 230 weight 后真实 load 仍只有 0.52~0.64，因此本版取消固定 CPU weight 硬封顶，改为由真实 load、内存与会话数共同控制。
+- 批次：`all_15alg_fullcpu_v1_formal`。
+- 已完成但隔离：`2118`；已取消：`4489`。
+- `iaaccn22~29` 的匹配进程和 tmux 会话均已清零，controller 已停止。
+- 隔离标记：`ABORTED_DO_NOT_USE.json`。
+- 紧凑审计：`runtime/abort_fullcpu_20260905-1118/`。
 
-这里的“打满”是按 `0.50:128,0.75:64,0.90:32,0.98:8,1.00:2` 分段滚动补位，使八台机器的真实 load 同时逼近 1.00；每机最多 256 个任务。LLM 等等待型任务不会再因保守 weight 估算提前卡住整机。重启控制器会复用同一 state 和会话前缀，只补充空余配额，不停止或重复已启动任务。
+没有删除任何结果文件。隔离的 `2118` 条 partial outputs 只能用于事故审计，不得补数、续跑或进入正式来源清单。
 
-资源保护：load 上限为 1.00，内存使用率上限仍为 0.90，每机至少保留 32 GB 可用内存，轮询间隔 30 秒。LLMSR 与 DRSR 共用 turbo 全局并发上限 30。
+## 正式数据来源
 
-条件调度优先级为 `clean -> noise001 -> noise005`。LLMSR/DRSR 始终严格按该顺序使用 LLM 桶；当当前 condition 只剩被模型桶限流的 LLM 任务时，允许后续 condition 的非 LLM 任务回填空闲 CPU。回填不会让带噪 LLM 任务抢占 clean 的 30 个 turbo 槽位。首次启动在加入该保护前已经产生的 noise001 任务继续保留，避免浪费已投入的计算。
+正式六轴采用原始未受影响结果作为基底，仅按冻结的 replacement scope 覆盖已完成的 `368` 个针对性重跑。任何来源路径、batch 或 manifest 只要引用 `all_15alg_fullcpu_v1_formal`，冻结与聚合都必须失败。
 
-新旧 controller 的 `--session-prefix` 与 `--host-session-count-prefix` 都精确使用 `all_conditions_cpu_v2_`。因此新 controller 会把旧 143 个会话计入资源占用；同时 143 个 task_id 已从新 allowlist 排除，不会产生同名 session 冲突。
+这 `368` 个针对性任务包括：SymbolFit clean `150`、JAXSR clean `35`、iMCTS clean `40`，以及 noisy `143`（DRSR `1`、JAXSR `63`、iMCTS `79`）。
 
-## 冻结输入
+## 历史资产
 
-三份 source CSV 均为 50 行且 SHA256 完全一致。参数来自 formal3h 的 13 个算法、DRSR 和 LLMSR，共 `45` 个 condition 参数；每份均验证 `timeout_in_seconds=10800`、`progress_snapshot_interval_seconds=60` 及噪声字段。
+三份 source CSV、参数、composite ledger、历史启动命令和运行时代码指纹继续保留，目的仅为复盘当时如何构建与调度队列。它们不是正式结果输入或权威 provenance。
 
-`manifests/runtime_code_fingerprints.json` 固化 scheduler、launcher、runner、subprocess runner、artifact schema、normalizers、15 个 wrapper、iMCTS native regressor 与 toolbox config 的哈希。资产只复制算法参数，不复制 LLM config、API 密钥或其它凭证。
+`commands/run_all_15alg_dry_run.sh` 仍可用于本地审计，不连接远端。其余部署、preflight、formal 命令不得执行。
 
-## 执行顺序
-
-1. `commands/run_all_15alg_dry_run.sh`：仅本地构建/检查 6607 任务，不连接远端。
-2. `commands/deploy_via_iaaccn22.sh`：先从本机同步到 iaaccn22，再由 iaaccn22 经内网同步到 23~29；本生成器不会执行它。
-3. `commands/run_all_15alg_preflight.sh`：对八台 CPU 服务器执行正式前检查。
-4. `commands/run_all_15alg_formal.sh`：单 controller 位于 iaaccn22，启用 `--force-rerun-existing` 并持续滚动补位。
-
-生成器不会启动远端。资产哈希见 `asset_manifest.json` 与 `asset_manifest.sha256`。
+资产哈希见 `asset_manifest.json` 与 `asset_manifest.sha256`；中止后的状态与审计证据另由 `ABORTED_DO_NOT_USE.json` 和 `runtime/abort_fullcpu_20260905-1118/` 固化。

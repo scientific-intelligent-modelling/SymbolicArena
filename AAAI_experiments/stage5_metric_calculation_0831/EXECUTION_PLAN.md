@@ -18,20 +18,18 @@
 
 本文件定义 Goal 的执行路径；正式大模型任务通过双渠道 Anthropic Messages API 直接执行，不再经过 Claude Code CLI。
 
-### 1.0 当前 Goal（2026-09-05 重置）
+### 1.0 当前权威输入（2026-09-05 修订）
 
-当前 Goal 以“全量重跑后再统一重放与聚合”为准，不再只修补少数算法：
+`6750` 条逻辑评测网格保持不变，但正式输入不再来自全量重跑。权威来源采用 hybrid provenance：
 
-- 在 `iaaccn22~29` 八台纯 CPU 服务器上执行完整的 `6750` 条运行；
-- 覆盖 `15` 个算法、`50` 个任务、`3` 个随机种子和 `clean/noise001/noise005` 三种条件；
-- 调度优先级为 `clean -> noise001 -> noise005`：LLMSR/DRSR 严格按条件顺序使用 LLM 槽位；当 clean 只剩被模型桶限流的 LLM 尾部任务时，允许后续条件的非 LLM 任务回填空闲 CPU，但不得让带噪 LLM 抢占 clean 的 turbo 槽位；
-- 所有算法统一记录可用于 canonical replay 的最终结果；clean 额外记录 `180` 个分钟级候选，用于“算法内部搜索的真实进展”口径的 EFF；
-- 八台机器按实时 CPU load 饱和调度，不预留 CPU；每台最多 `256` 个会话，负载阈值为 `1.00`；
-- 保留 `90%` 内存使用率和 `32 GiB` 可用内存两道熔断，避免内存耗尽导致整批结果损坏；
-- 运行完成后统一执行最终公式 replay、轨迹 best-so-far 重建、Opus5 化简/裁决、六轴聚合与噪声补充指标聚合；
-- 发布前必须证明完整笛卡尔积、来源哈希、重放路径、失败重试和最终覆盖率均闭合。
+- 原始未受影响结果作为基底；
+- 已完成的 `368` 个针对性重跑按冻结的 replacement scope 覆盖对应 final 和/或 EFF 输入；
+- clean replacement 共 `225` 个：SymbolFit `150`、JAXSR `35`、iMCTS `40`；
+- noisy replacement 共 `143` 个：DRSR `1`、JAXSR `63`、iMCTS `79`；
+- 每个 logical key 只能绑定一个明确来源，并冻结源路径、SHA-256、replacement scope 和替换理由；
+- 发布前必须证明完整逻辑网格、来源哈希、重放路径、失败重试和最终覆盖率均闭合。
 
-当前正式队列由 `all_15alg_fullcpu_v1` 资产管理。该队列与此前已经启动的 `143` 条任务互斥，二者并集恰好覆盖 `6750` 条运行，禁止重复计数。
+`all_15alg_fullcpu_v1_formal` 已于 2026-09-05 中止。该批次的 state、result、progress 和 partial outputs 全部隔离，禁止补数、续跑或进入正式冻结与聚合。批次标记与停机审计见 `reruns/all_15alg_fullcpu_v1/ABORTED_DO_NOT_USE.json` 和 `reruns/all_15alg_fullcpu_v1/runtime/abort_fullcpu_20260905-1118/`。
 
 ### 1.1 EFF 正式口径更新
 
@@ -45,8 +43,8 @@
 - ID/OOD 质量只用于重放并评价已经选出的候选，不得参与候选选择；
 - 分钟轨迹必须单调保留预算内的内部历史最优，后续较差候选不得覆盖先前最优；
 - 不使用“最终可交付公式出现时间”替代内部搜索进度；
-- SymbolFit 现有快照不能完整证明上述口径，因此需要重跑全部 `150` 个 clean runs；
-- `noise001` 和 `noise005` 仍只进入补充噪声诊断，不计算正式 EFF；但为统一最终结果评估路径，本轮同样重跑它们的全部 task-seed 组合。
+- SymbolFit 所需的 `150` 个 clean runs 已包含在完成的针对性 replacement 中；
+- `noise001` 和 `noise005` 仍只进入补充噪声诊断，不计算正式 EFF；只有上述 `143` 个 noisy replacement 可以覆盖原始输入，未列入 replacement manifest 的 noisy 结果沿用原始权威来源。
 
 ## 2. 冻结的实验范围
 
@@ -60,13 +58,13 @@
 - 2250 条 clean 运行进入正式六轴；
 - 每条 clean 运行最多 180 个分钟级检查点，用于 EFF。
 
-Stage 4 权威索引为：
+Stage 4 原始基底索引为：
 
 ```text
 ../stage4_ssr50_15algs_3seeds_3noise_3h/selected_runs_with_fepysr_rerun.csv
 ```
 
-本地预检确认该表当前包含 6750 个唯一 run，且全部标记为 `ok`，ID/OOD NMSE 均为有限值。但该表只有远端 `result.json` 路径，没有最终公式列，因此它只能作为选择索引，不能直接作为完整评分输入。
+本地预检确认该表当前包含 6750 个唯一 run，且全部标记为 `ok`，ID/OOD NMSE 均为有限值。但该表只是原始基底，不是最终唯一权威来源。最终权威索引必须由该基底与 `368` 个针对性 replacement 按 logical key 合成，显式记录 `selected_source`、`replacement_scope` 和输入 SHA-256；它仍需冻结 `result.json` 才能形成完整评分输入。
 
 SSR-50 Ground Truth 清单为：
 
@@ -123,7 +121,7 @@ B_{\mathrm{attempt}}
 ```text
 阶段 0：冻结清单、来源和哈希
   |
-  +--> 阶段 1：采集并核验 6750 条原始最终结果
+  +--> 阶段 1：按 hybrid 权威清单冻结并核验 6750 个逻辑 final 输入
   |      |
   |      +--> ID/OOD 数值输入
   |      +--> 最终公式和确定性证据
@@ -165,14 +163,15 @@ B_{\mathrm{attempt}}
 - 每个算法恰好 450 条；
 - 每个条件恰好 2250 条；
 - 不存在意外算法、任务、seed 或条件；
-- 每条路径都能映射到 Stage 4 声明过的实验源；
+- 每条路径都能映射到 Stage 4 原始来源或冻结的针对性 replacement；
+- 来源集合不含 `all_15alg_fullcpu_v1_formal` 的任何路径、batch、result 或 progress；
 - `status=ok` 时，索引内 ID/OOD NMSE 为有限值。
 
 任一断言失败都必须在第一次 Claude 调用前停止。
 
-### 5.2 冻结 6750 条最终结果
+### 5.2 冻结 6750 个 hybrid final 输入
 
-对每条选中记录，只读采集远端 `result.json` 及其引用的 canonical artifact，写入不可变的本地 source snapshot。
+按 hybrid authoritative manifest，只读采集每个 logical key 最终选中的 `result.json` 及其引用的 canonical artifact，写入不可变的本地 source snapshot。任何指向 `all_15alg_fullcpu_v1_formal` 的记录必须立即拒绝。
 
 采集器必须：
 
@@ -198,7 +197,7 @@ B_{\mathrm{attempt}}
 
 只有归一化内容完全相同时，outer/inner 副本才能折叠。若同一逻辑键内容冲突，必须标记为来源冲突并阻断该 run 的 EFF，不能按路径顺序或 mtime 猜一个。
 
-当前本地只保存了部分 LLMSR 轨迹，不足以覆盖 2250 条 clean run。因此完整远端覆盖报告是硬前置条件。缺失遥测不得换成旧 runtime proxy，也不得直接解释为“该分钟还没有找到公式”。
+轨迹覆盖以原始冻结轨迹与 `225` 个 clean 针对性 replacement 的合成清单为准。缺失遥测不得换成旧 runtime proxy，不得直接解释为“该分钟还没有找到公式”，也不得用已中止 fullcpu 批次的 partial outputs 填补。
 
 ## 6. 阶段 1：新指标确定性核心
 
@@ -235,13 +234,11 @@ EFF 衡量“算法内部搜索的真实进展”，使用固定 180 点网格�
 state 和唯一任务目录补全，并逐条验证快照中的 `dataset_dir` 与期望数据集完全一致；无法唯一
 绑定时按 unavailable 处理，禁止仅凭文件名猜测。
 
-SymbolFit 必须额外满足：快照记录 PySR 在缩放搜索空间中的在线历史最优内部 loss，同时保存把候选确定性逆变换回原始变量和目标尺度所需的元数据。不得用事后 LMFIT 结果回填早期分钟，也不得用 canonical replay 的 ID/OOD 质量反向选择 PySR 候选。由于既有 150 条 clean 运行缺少完整的可证明遥测，这 150 条必须按相同 3 小时预算重新运行。
+SymbolFit 必须额外满足：快照记录 PySR 在缩放搜索空间中的在线历史最优内部 loss，同时保存把候选确定性逆变换回原始变量和目标尺度所需的元数据。不得用事后 LMFIT 结果回填早期分钟，也不得用 canonical replay 的 ID/OOD 质量反向选择 PySR 候选。所需 `150` 条 clean replacement 已完成，只接纳其冻结清单声明的证据。
 
-2026-09-05 的在线抽查进一步确认：旧 QLattice wrapper 每个 epoch 都用“当轮最优”覆盖状态，默认 BIC 在分钟间明显反向波动，最终结果也不保证来自全预算历史最优。该口径已由提交 `5894ad03` 修复为全程最小内部 criterion 锁存，并显式写入 `internal_loss`。所有 450 条 QLattice 任务必须淘汰旧代码产物后重新运行；不得用分钟采样点的累计最小值冒充全 epoch 历史最优。重置前 state、旧分配、进程回收结果、新 wrapper SHA-256 和重置后 state 必须写入独立审计文件。`iaaccn25` 在修复部署时若仍无法通过 SSH 校验新代码，必须先从调度主机列表隔离，待同步及 SHA-256 校验成功后才能重新接收任务。
+QLattice、DSO 和 gplearn 的 EFF 优先从原始冻结证据按各自内部目标重建 best-so-far；确定性的 adapter/replay 修复不等于重跑训练。只有独立 replacement manifest 明确列出的任务才可覆盖原始输入。已中止 fullcpu 批次产生的 QLattice 或其它算法文件即使看似完整，也不得进入 freeze 或 EFF。
 
-QLattice 复用任务输出目录时，冻结器必须额外拒绝重置前遗留的分钟文件。每条被接纳的
-快照须晚于该任务本轮重新分配时间，包含修复后的 `source_internal_loss`，并与当前
-`dataset_dir`、seed、condition 和任务索引一致；180 个点未被本轮完整覆盖时不得混入旧点补齐。
+每条被接纳的针对性 replacement 快照必须包含可验证的内部目标，并与 `dataset_dir`、seed、condition、任务索引和 replacement scope 一致；180 个点未被本轮完整覆盖时不得混入 fullcpu 或其它实验代际的旧点补齐。
 
 不同算法的轨迹格式可能需要独立 adapter。每个 adapter 都必须通过相同的 180 点契约测试。任一 clean EFF 仍不可重建时，不发布正式六轴榜单。
 
@@ -440,7 +437,7 @@ canary 报告未通过前，不启动付费全量任务。
 
 ### 10.2 SYM 与 MIN
 
-6750 条运行中每个可用最终公式都接受化简和等价裁决。4500 条 noisy 结果只形成补充产物；只有 2250 条 clean 结果进入正式 SYM/MIN。
+6750 个逻辑运行中每个可用最终公式都接受化简和等价裁决。4500 条 noisy 结果只形成补充产物；只有 2250 条 clean 结果进入正式 SYM/MIN。未替换 final 的运行复用原始冻结公式和既有依赖结果；`final_and_eff` replacement 才重建 final 下游链，`eff_only` replacement 不触发新的公式化简。
 
 clean 组装规则：
 
@@ -519,10 +516,11 @@ stage5_metric_calculation_0831/
 
 ### 12.2 发布前硬门
 
-- 6750 条来源网格完整且 checksum 冻结；
+- 6750 条 hybrid 来源网格完整，`368` 个 replacement 精确覆盖且无重复，所有输入 checksum 已冻结；
+- 来源集合中不存在 `all_15alg_fullcpu_v1_formal` 的任何 state、result、progress 或 partial output；
 - 50 条 GT reference 全部通过；
 - 每条 clean final result 存在，或有源层面的算法无效记录；
-- 2250 条 clean EFF 轨迹均能按冻结 adapter 契约重建；
+- 2250 条 clean EFF 轨迹均能从原始冻结轨迹与 `225` 个 clean replacement 的闭合合成按 adapter 契约重建；
 - 每条已接纳快照都有可验证的任务身份；QLattice 不含重置前遗留分钟点；
 - 所有必需 clean Claude 任务 accepted 或合法 non-applicable；
 - 物理尝试总数不超过 23700；
@@ -553,8 +551,10 @@ stage5_metric_calculation_0831/
 
 ```text
 在 AAAI_experiments/stage5_metric_calculation_0831 内，严格依据
-SymbolicArena_SixAxis_Revised.md 和 EXECUTION_PLAN.md，冻结并审计 AAAI Stage 4
-的 6750 条最终结果、50 条 Ground Truth 以及 2250 条 clean 运行的 180 分钟轨迹，
+SymbolicArena_SixAxis_Revised.md 和 EXECUTION_PLAN.md，以 AAAI Stage 4 原始未受影响结果
+为基底，叠加已完成的 368 个针对性重跑，冻结并审计 6750 个逻辑 final 输入、50 条
+Ground Truth 以及 2250 条 clean 运行的 180 分钟轨迹；明确排除并禁止消费已中止的
+all_15alg_fullcpu_v1_formal 批次。
 实现并执行新的 ID/OOD/SYM/MIN/EFF/STAB 计算管线。所有文档规定的大模型化简与
 裁决都必须使用 `claude-opus-5`、`xhigh`、`stream=false` 的双渠道 Anthropic Messages API
 独立单轮请求；逻辑任务最多 15800，物理尝试硬上限 23700，每任务首次加最多两次
