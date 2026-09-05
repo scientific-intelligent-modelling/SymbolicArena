@@ -111,33 +111,50 @@ def test_sources_params_and_local_dry_run_are_strict(generated) -> None:
     assert (root / "queues/dry_run_validation/state").is_dir()
 
 
-def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> None:
+def test_commands_keep_only_local_dry_run_and_block_remote_dispatch(generated) -> None:
     module, root, report = generated
     expected_hosts = "iaaccn22 iaaccn23 iaaccn24 iaaccn25 iaaccn26 iaaccn27 iaaccn28 iaaccn29"
     expected_tools = " ".join(module.TOOLS)
-    for mode in ("preflight", "dry_run", "formal"):
-        text = (root / f"commands/run_all_15alg_{mode}.sh").read_text(encoding="utf-8")
-        assert "\n+" not in text
-        assert f"--hosts {expected_hosts}" in text
-        assert f"--tools {expected_tools}" in text
-        assert "--noise-sigmas 0 0.01 0.05" in text
-        assert "--condition-dispatch-mode sequential-non-llm-backfill" in text
-        assert "--max-jobs-per-host 256" in text
-        assert "--max-cpu-used-ratio" not in text
-        assert "--max-new-jobs-per-host-per-poll 128" in text
-        assert '"0.50:128,0.75:64,0.90:32,0.98:8,1.00:2"' in text
-        assert "--max-load-ratio 1.00" in text
-        assert "--max-memory-used-ratio 0.90" in text
-        assert "--min-free-mem-gb 32" in text
-        assert "--poll-seconds 30" in text
-        assert "--session-prefix all_conditions_cpu_v2_" in text
-        assert "--host-session-count-prefix all_conditions_cpu_v2_" in text
-        assert "--llm-model-bucket-limits base:0,turbo:30" in text
-    formal = (root / "commands/run_all_15alg_formal.sh").read_text(encoding="utf-8")
-    assert "--force-rerun-existing" in formal
-    assert "SIM_RESUME_EXISTING_QUEUE" in formal
-    assert "RESUME_ARGS+=(--skip-support-sync)" in formal
-    assert '"${RESUME_ARGS[@]}"' in formal
+    dry_run_text = (root / "commands/run_all_15alg_dry_run.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "\n+" not in dry_run_text
+    assert f"--hosts {expected_hosts}" in dry_run_text
+    assert f"--tools {expected_tools}" in dry_run_text
+    for expected in (
+        "--noise-sigmas 0 0.01 0.05",
+        "--condition-dispatch-mode sequential-non-llm-backfill",
+        "--max-jobs-per-host 256",
+        "--max-new-jobs-per-host-per-poll 128",
+        '"0.50:128,0.75:64,0.90:32,0.98:8,1.00:2"',
+        "--max-load-ratio 1.00",
+        "--max-memory-used-ratio 0.90",
+        "--min-free-mem-gb 32",
+        "--poll-seconds 30",
+        "--session-prefix all_conditions_cpu_v2_",
+        "--host-session-count-prefix all_conditions_cpu_v2_",
+        "--llm-model-bucket-limits base:0,turbo:30",
+    ):
+        assert expected in dry_run_text
+    assert "--max-cpu-used-ratio" not in dry_run_text
+
+    for mode in ("preflight", "formal"):
+        command = root / f"commands/run_all_15alg_{mode}.sh"
+        command_text = command.read_text(encoding="utf-8")
+        assert "exit 64" in command_text
+        assert "禁止恢复或重新派发" in command_text
+        assert "run_e1_candidate200_12alg_load_queue.py" not in command_text
+        blocked = subprocess.run(
+            ["bash", str(command)],
+            cwd=module.REPO_ROOT,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        assert blocked.returncode == 64
+        assert "禁止恢复或重新派发" in blocked.stderr
+
     assert report["resources"]["cpu_weight_budget_per_host"] is None
     assert report["resources"]["max_cpu_used_ratio"] is None
     assert report["resources"]["load_driven_dispatch"] is True
@@ -145,10 +162,9 @@ def test_commands_encode_full_cpu_guard_and_shared_old_sessions(generated) -> No
     assert report["resources"]["physical_cpus_per_host"] == 128
 
     readme = (root / "README.md").read_text(encoding="utf-8")
-    assert "取消固定 CPU weight 硬封顶" in readme
-    assert "真实 load 同时逼近 1.00" in readme
-    assert "clean -> noise001 -> noise005" in readme
-    assert "非 LLM 任务回填空闲 CPU" in readme
+    assert "已中止，非权威来源" in readme
+    assert "禁止恢复 controller" in readme
+    assert "368" in readme
     assert "143 + 6607 = 6750" in readme
 
     environment = dict(os.environ)
