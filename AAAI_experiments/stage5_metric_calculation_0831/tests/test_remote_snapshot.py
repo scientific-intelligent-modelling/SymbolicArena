@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import pytest
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.remote_snapshot import (
     scan_task,
@@ -104,6 +107,57 @@ def test_missing_snapshot_is_explicit(tmp_path: Path) -> None:
     record = scan_task(task, horizon=3, freeze_raw=False)
     assert record["summary"]["missing_snapshots"] == 1
     assert record["snapshots"][1]["status"] == "missing"
+
+
+def test_strict_freeze_rejects_snapshot_from_before_current_assignment(tmp_path: Path) -> None:
+    task = make_task(tmp_path)
+    assigned_at = datetime(2026, 9, 5, 10, 30, tzinfo=timezone(timedelta(hours=8)))
+    task["started_at"] = assigned_at.isoformat()
+    stale_path = Path(str(task["path"])).parent / "progress/minute_0002.json"
+    stale_payload = json.loads(stale_path.read_text(encoding="utf-8"))
+    stale_payload["started_at"] = (assigned_at - timedelta(hours=1)).isoformat()
+    write_json(stale_path, stale_payload)
+    stale_mtime = (assigned_at - timedelta(minutes=30)).timestamp()
+    os.utime(stale_path, (stale_mtime, stale_mtime))
+
+    with pytest.raises(ValueError):
+        scan_task(task, horizon=3, freeze_raw=True, verify_inner=False)
+
+
+@pytest.mark.parametrize(
+    ("field", "mismatched_value"),
+    [
+        ("dataset_dir", "/datasets/wrong"),
+        ("seed", 521),
+        ("task_global_index", 2),
+    ],
+)
+def test_strict_freeze_rejects_snapshot_identity_mismatch(
+    tmp_path: Path,
+    field: str,
+    mismatched_value: object,
+) -> None:
+    task = make_task(tmp_path)
+    task.update(
+        algorithm="QLattice",
+        dataset_dir="/datasets/dataset",
+        task_id="qlattice_s520_clean_g0001",
+    )
+    result_path = Path(str(task["path"]))
+    for minute in range(1, 4):
+        snapshot_path = result_path.parent / "progress" / f"minute_{minute:04d}.json"
+        payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        payload.update(
+            tool="QLattice",
+            dataset_dir=task["dataset_dir"],
+            seed=task["seed"],
+            task_global_index=1,
+        )
+        payload[field] = mismatched_value
+        write_json(snapshot_path, payload)
+
+    with pytest.raises(ValueError):
+        scan_task(task, horizon=3, freeze_raw=True, verify_inner=False)
 
 
 def test_controller_returns_nonzero_when_any_host_fails(tmp_path: Path) -> None:
