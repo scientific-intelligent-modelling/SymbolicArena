@@ -27,13 +27,16 @@ JsonDict = dict[str, Any]
 SCHEMA_VERSION = "clean_downstream_hybrid_plan.v1"
 _VERSION_SUFFIX = re.compile(r"::v([1-9]\d*)$")
 _EQUIVALENCE_ID = re.compile(
-    r"^equivalence::[a-z0-9_]+::g\d{4}::s(?:520|521|522)::clean$"
+    r"^equivalence::[a-z0-9_]+::g\d{4}::s(?:520|521|522)::"
+    r"(?P<condition>clean|noise001|noise005)$"
 )
 _STRUCTURE_ID = re.compile(
-    r"^stab_structure::[a-z0-9_]+::g\d{4}::s(520|521|522)-s(520|521|522)$"
+    r"^stab_structure::[a-z0-9_]+::g\d{4}::s(?P<seed_a>520|521|522)-"
+    r"s(?P<seed_b>520|521|522)(?:::(?P<condition>noise001|noise005))?$"
 )
 _PRED_ID = re.compile(
-    r"^pred_simplify::[a-z0-9_]+::g\d{4}::s(?:520|521|522)::clean$"
+    r"^pred_simplify::[a-z0-9_]+::g\d{4}::s(?:520|521|522)::"
+    r"(?P<condition>clean|noise001|noise005)$"
 )
 _STAGE_ROOT = Path(__file__).resolve().parents[1]
 _KNOWN_WRONG_PRODUCTION_DB = (_STAGE_ROOT / "state_v2.sqlite3").resolve()
@@ -103,12 +106,52 @@ def _base_logical_id(logical_id: object) -> str:
     return _VERSION_SUFFIX.sub("", str(logical_id))
 
 
+def _next_logical_id(logical_id: object) -> str:
+    text = str(logical_id)
+    base = _base_logical_id(text)
+    match = _VERSION_SUFFIX.search(text)
+    next_version = 2 if match is None else int(match.group(1)) + 1
+    return f"{base}::v{next_version}"
+
+
+def _required_condition(
+    *, pred: set[str], equivalence: set[str], structure: set[str]
+) -> str:
+    conditions: set[str] = set()
+    for logical_id in pred:
+        match = _PRED_ID.fullmatch(logical_id)
+        if match is None:
+            raise CleanDownstreamHybridPlanError(
+                "required pred logical id 非 canonical"
+            )
+        conditions.add(match.group("condition"))
+    for logical_id in equivalence:
+        match = _EQUIVALENCE_ID.fullmatch(logical_id)
+        if match is None:
+            raise CleanDownstreamHybridPlanError(
+                "required equivalence logical id 非 canonical"
+            )
+        conditions.add(match.group("condition"))
+    for logical_id in structure:
+        match = _STRUCTURE_ID.fullmatch(logical_id)
+        if match is None or int(match.group("seed_a")) >= int(match.group("seed_b")):
+            raise CleanDownstreamHybridPlanError(
+                "required structure logical id 的 seed pair 非 canonical"
+            )
+        conditions.add(match.group("condition") or "clean")
+    if len(conditions) != 1:
+        raise CleanDownstreamHybridPlanError(
+            f"required logical ids 的 condition 不唯一: {sorted(conditions)}"
+        )
+    return next(iter(conditions))
+
+
 def _read_required_sets(
     path: Path,
     *,
     expected_equivalence_count: int | None,
     expected_structure_count: int | None,
-) -> tuple[set[str], set[str], set[str]]:
+) -> tuple[set[str], set[str], set[str], str]:
     payload = _read_json_object(path, label="binding manifest")
     readiness = payload.get("aggregation_readiness")
     if not isinstance(readiness, Mapping):
@@ -133,18 +176,9 @@ def _read_required_sets(
             label="required structure logical ids",
         )
     )
-    if any(_PRED_ID.fullmatch(item) is None for item in pred):
-        raise CleanDownstreamHybridPlanError("required pred logical id 非 canonical")
-    if any(_EQUIVALENCE_ID.fullmatch(item) is None for item in equivalence):
-        raise CleanDownstreamHybridPlanError(
-            "required equivalence logical id 非 canonical"
-        )
-    for item in structure:
-        match = _STRUCTURE_ID.fullmatch(item)
-        if match is None or int(match.group(1)) >= int(match.group(2)):
-            raise CleanDownstreamHybridPlanError(
-                "required structure logical id 的 seed pair 非 canonical"
-            )
+    condition = _required_condition(
+        pred=pred, equivalence=equivalence, structure=structure
+    )
     manifest_structure_count = readiness.get("required_structure_count")
     if manifest_structure_count is not None and manifest_structure_count != len(structure):
         raise CleanDownstreamHybridPlanError(
@@ -158,7 +192,7 @@ def _read_required_sets(
         raise CleanDownstreamHybridPlanError(
             f"required structure 数量不符: {len(structure)} != {expected_structure_count}"
         )
-    return pred, equivalence, structure
+    return pred, equivalence, structure, condition
 
 
 def _load_pred_supersessions(
@@ -194,7 +228,11 @@ def _load_pred_supersessions(
         new_key = str(raw.get("successor_evaluation_key", ""))
         old_logical_id = str(raw.get("predecessor_logical_id", ""))
         new_logical_id = str(raw.get("successor_logical_id", ""))
-        if base not in required_pred or old_logical_id != base or new_logical_id != f"{base}::v2":
+        if (
+            base not in required_pred
+            or _base_logical_id(old_logical_id) != base
+            or new_logical_id != _next_logical_id(old_logical_id)
+        ):
             raise CleanDownstreamHybridPlanError(
                 f"pred supersession[{index}] logical identity 漂移"
             )
@@ -282,6 +320,7 @@ def _load_plan_rows(
     *,
     label: str,
     expected_task_type: str,
+    expected_condition: str,
     expected_total_count: int | None,
 ) -> tuple[list[tuple[str, JsonDict]], str]:
     try:
@@ -310,9 +349,9 @@ def _load_plan_rows(
                     raise CleanDownstreamHybridPlanError(
                         f"{label}:{line_number}.task_type 漂移"
                     )
-                if payload.get("condition") != "clean":
+                if payload.get("condition") != expected_condition:
                     raise CleanDownstreamHybridPlanError(
-                        f"{label}:{line_number}.condition 必须为 clean"
+                        f"{label}:{line_number}.condition 必须为 {expected_condition}"
                     )
                 evaluation = str(payload.get("evaluation_key", ""))
                 logical_id = str(payload.get("logical_id", ""))
@@ -362,10 +401,6 @@ def _successor_row(
     expected_task_type: str,
 ) -> JsonDict:
     base = _base_logical_id(predecessor.get("logical_id"))
-    if str(predecessor.get("logical_id")) != base:
-        raise CleanDownstreamHybridPlanError(
-            f"required predecessor 必须是未版本化 v1: {predecessor.get('logical_id')}"
-        )
     if str(fresh.get("logical_id")) != base:
         raise CleanDownstreamHybridPlanError(
             f"fresh row 不是未版本化 base identity: {base}"
@@ -398,7 +433,7 @@ def _successor_row(
         request.get("evidence_hash"), label=f"{base}.request.evidence_hash"
     )
     dependencies = tuple(str(item) for item in fresh.get("dependencies", []))
-    logical_id = f"{base}::v2"
+    logical_id = _next_logical_id(predecessor.get("logical_id"))
     task_key = evaluation_key(
         task_type=expected_task_type,
         logical_id=logical_id,
@@ -413,7 +448,7 @@ def _successor_row(
         evaluation_key=task_key,
         logical_id=logical_id,
         task_type=expected_task_type,
-        condition="clean",
+        condition=str(fresh["condition"]),
         priority=int(fresh["priority"]),
         input_hash=input_hash,
         prompt_version=str(fresh["prompt_version"]),
@@ -505,9 +540,10 @@ def _build_phase(
             output_lines.append(raw_line)
             output_rows.append(predecessor)
             continue
-        if f"{base}::v2" in existing_logical_ids:
+        successor_logical_id = _next_logical_id(predecessor["logical_id"])
+        if successor_logical_id in existing_logical_ids:
             raise CleanDownstreamHybridPlanError(
-                f"{task_type} successor ::v2 版本冲突: {base}"
+                f"{task_type} successor 版本冲突: {successor_logical_id}"
             )
         fresh = fresh_by_base[base]
         changed_count = _validate_dependency_change(
@@ -523,6 +559,12 @@ def _build_phase(
         )
         output_lines.append(canonical_json(successor) + "\n")
         output_rows.append(successor)
+        condition = str(successor["condition"])
+        identity_prefix = (
+            "clean_downstream_final_replacement"
+            if condition == "clean"
+            else f"{condition}_downstream_final_replacement"
+        )
         bindings.append(
             {
                 "base_logical_id": base,
@@ -534,8 +576,11 @@ def _build_phase(
                 "changed_dependency_count": changed_count,
                 "old_dependencies": list(predecessor["dependencies"]),
                 "new_dependencies": list(successor["dependencies"]),
-                "identity": f"clean_downstream_final_replacement::{task_type}::{base}",
-                "reason": "clean pred replacement changed downstream evidence and dependency",
+                "identity": f"{identity_prefix}::{task_type}::{base}",
+                "reason": (
+                    f"{condition} pred replacement changed downstream evidence "
+                    "and dependency"
+                ),
                 "successor_spec": _task_spec(successor),
             }
         )
@@ -734,7 +779,7 @@ def build_clean_downstream_hybrid_plan(
     ):
         raise CleanDownstreamHybridPlanError("输入输出路径必须互异且禁止覆盖输入")
 
-    required_pred, required_eq, required_structure = _read_required_sets(
+    required_pred, required_eq, required_structure, condition = _read_required_sets(
         paths["binding"],
         expected_equivalence_count=expected_equivalence_count,
         expected_structure_count=expected_structure_count,
@@ -753,24 +798,28 @@ def build_clean_downstream_hybrid_plan(
         paths["old_eq"],
         label="predecessor equivalence plan",
         expected_task_type="equivalence",
+        expected_condition=condition,
         expected_total_count=expected_total_count,
     )
     fresh_eq, fresh_eq_sha = _load_plan_rows(
         paths["fresh_eq"],
         label="fresh equivalence plan",
         expected_task_type="equivalence",
+        expected_condition=condition,
         expected_total_count=expected_total_count,
     )
     old_structure, old_structure_sha = _load_plan_rows(
         paths["old_structure"],
         label="predecessor structure plan",
         expected_task_type="stab_structure",
+        expected_condition=condition,
         expected_total_count=expected_total_count,
     )
     fresh_structure, fresh_structure_sha = _load_plan_rows(
         paths["fresh_structure"],
         label="fresh structure plan",
         expected_task_type="stab_structure",
+        expected_condition=condition,
         expected_total_count=expected_total_count,
     )
     eq_lines, eq_rows, eq_bindings, _ = _build_phase(
@@ -824,6 +873,7 @@ def build_clean_downstream_hybrid_plan(
     supersession_manifest: JsonDict = {
         "schema_version": SCHEMA_VERSION,
         "status": "ok",
+        "condition": condition,
         "counts": {
             "equivalence": len(eq_bindings),
             "structure": len(structure_bindings),
@@ -887,6 +937,7 @@ def build_clean_downstream_hybrid_plan(
     report: JsonDict = {
         "schema_version": SCHEMA_VERSION,
         "status": "ok",
+        "condition": condition,
         "model_invoked": False,
         "counts": counts,
         "inputs": {

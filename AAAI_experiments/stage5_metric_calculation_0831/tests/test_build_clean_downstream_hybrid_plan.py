@@ -51,6 +51,7 @@ def _plan_row(
     task_type: str,
     dependencies: tuple[str, ...],
     marker: str,
+    condition: str = "clean",
 ) -> dict[str, object]:
     phase = "equivalence" if task_type == "equivalence" else "structure"
     prompt_path = STAGE_ROOT / f"config/prompts/{phase}.v1.txt"
@@ -84,7 +85,7 @@ def _plan_row(
         evaluation_key=key,
         logical_id=logical_id,
         task_type=task_type,
-        condition="clean",
+        condition=condition,
         priority=priority,
         input_hash=input_hash,
         prompt_version=prompt_path.stem,
@@ -92,7 +93,7 @@ def _plan_row(
         dependencies=dependencies,
     )
     return {
-        "condition": "clean",
+        "condition": condition,
         "dependencies": list(dependencies),
         "evaluation_key": key,
         "input_hash": input_hash,
@@ -121,7 +122,13 @@ def _write_plan(path: Path, rows: list[dict[str, object]]) -> list[str]:
     return lines
 
 
-def _build_fixture(tmp_path: Path, *, formal_size: bool) -> dict[str, object]:
+def _build_fixture(
+    tmp_path: Path,
+    *,
+    formal_size: bool,
+    condition: str = "clean",
+    downstream_predecessor_version: int | None = None,
+) -> dict[str, object]:
     algorithms = [f"alg{index:02d}" for index in range(15 if formal_size else 1)]
     datasets = range(1, 51 if formal_size else 3)
     groups = [(algorithm, f"g{dataset:04d}") for algorithm in algorithms for dataset in datasets]
@@ -154,7 +161,7 @@ def _build_fixture(tmp_path: Path, *, formal_size: bool) -> dict[str, object]:
         }
         new_pred_by_seed = dict(old_pred_by_seed)
         for seed in sorted(changed_seeds):
-            base = f"pred_simplify::{algorithm}::{dataset}::s{seed}::clean"
+            base = f"pred_simplify::{algorithm}::{dataset}::s{seed}::{condition}"
             new_key = _dependency_key(f"new-pred:{algorithm}:{dataset}:{seed}")
             new_pred_by_seed[seed] = new_key
             required_pred.append(base)
@@ -173,11 +180,22 @@ def _build_fixture(tmp_path: Path, *, formal_size: bool) -> dict[str, object]:
 
         gt_key = _dependency_key(f"gt:{dataset}")
         for seed in (520, 521, 522):
-            logical_id = f"equivalence::{algorithm}::{dataset}::s{seed}::clean"
+            logical_id = f"equivalence::{algorithm}::{dataset}::s{seed}::{condition}"
+            predecessor_logical_id = (
+                f"{logical_id}::v{downstream_predecessor_version}"
+                if downstream_predecessor_version is not None
+                else logical_id
+            )
             old_deps = (gt_key, old_pred_by_seed[seed])
             fresh_deps = (gt_key, new_pred_by_seed[seed])
             old_eq.append(
-                _plan_row(logical_id, task_type="equivalence", dependencies=old_deps, marker="old")
+                _plan_row(
+                    predecessor_logical_id,
+                    task_type="equivalence",
+                    dependencies=old_deps,
+                    marker="old",
+                    condition=condition,
+                )
             )
             fresh_eq.append(
                 _plan_row(
@@ -185,17 +203,33 @@ def _build_fixture(tmp_path: Path, *, formal_size: bool) -> dict[str, object]:
                     task_type="equivalence",
                     dependencies=fresh_deps,
                     marker="fresh",
+                    condition=condition,
                 )
             )
             if seed in changed_seeds:
                 required_eq.append(logical_id)
 
         for seed_a, seed_b in SEED_PAIRS:
-            logical_id = f"stab_structure::{algorithm}::{dataset}::s{seed_a}-s{seed_b}"
+            condition_suffix = "" if condition == "clean" else f"::{condition}"
+            logical_id = (
+                f"stab_structure::{algorithm}::{dataset}::s{seed_a}-s{seed_b}"
+                f"{condition_suffix}"
+            )
+            predecessor_logical_id = (
+                f"{logical_id}::v{downstream_predecessor_version}"
+                if downstream_predecessor_version is not None
+                else logical_id
+            )
             old_deps = (old_pred_by_seed[seed_a], old_pred_by_seed[seed_b])
             fresh_deps = (new_pred_by_seed[seed_a], new_pred_by_seed[seed_b])
             old_structure.append(
-                _plan_row(logical_id, task_type="stab_structure", dependencies=old_deps, marker="old")
+                _plan_row(
+                    predecessor_logical_id,
+                    task_type="stab_structure",
+                    dependencies=old_deps,
+                    marker="old",
+                    condition=condition,
+                )
             )
             fresh_structure.append(
                 _plan_row(
@@ -203,6 +237,7 @@ def _build_fixture(tmp_path: Path, *, formal_size: bool) -> dict[str, object]:
                     task_type="stab_structure",
                     dependencies=fresh_deps,
                     marker="fresh",
+                    condition=condition,
                 )
             )
             if changed_seeds.intersection({seed_a, seed_b}):
@@ -362,6 +397,55 @@ def test_builds_exact_formal_hybrids_and_preserves_non_targets(tmp_path: Path) -
     assert changed_profiles == {1: 24, 2: 63}
     assert len(load_plan_jsonl(tmp_path / "hybrid_eq.jsonl").entries) == 2250
     assert len(load_plan_jsonl(tmp_path / "hybrid_structure.jsonl").entries) == 2250
+
+
+@pytest.mark.parametrize("condition", ["noise001", "noise005"])
+def test_builds_noise_condition_hybrids(tmp_path: Path, condition: str) -> None:
+    fixture = _build_fixture(tmp_path, formal_size=False, condition=condition)
+
+    report = _build(
+        fixture,
+        tmp_path,
+        expected_eq=2,
+        expected_structure=3,
+        expected_single=2,
+        expected_double=1,
+    )
+
+    assert report["condition"] == condition
+    for path in (tmp_path / "hybrid_eq.jsonl", tmp_path / "hybrid_structure.jsonl"):
+        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+        assert {row["condition"] for row in rows} == {condition}
+        assert all(f"::{condition}" in _base for _base in map(lambda row: VERSION_SUFFIX.sub("", row["logical_id"]), rows))
+
+
+def test_increments_versioned_downstream_predecessors(tmp_path: Path) -> None:
+    fixture = _build_fixture(
+        tmp_path,
+        formal_size=False,
+        downstream_predecessor_version=2,
+    )
+
+    _build(
+        fixture,
+        tmp_path,
+        expected_eq=2,
+        expected_structure=3,
+        expected_single=2,
+        expected_double=1,
+    )
+
+    changed_bases = fixture["required_eq"] | fixture["required_structure"]
+    output_rows = [
+        json.loads(line)
+        for path in (tmp_path / "hybrid_eq.jsonl", tmp_path / "hybrid_structure.jsonl")
+        for line in path.read_text(encoding="utf-8").splitlines()
+    ]
+    changed = [
+        row for row in output_rows if VERSION_SUFFIX.sub("", row["logical_id"]) in changed_bases
+    ]
+    assert len(changed) == 5
+    assert all(row["logical_id"].endswith("::v3") for row in changed)
 
 
 @pytest.mark.parametrize("phase", ["equivalence", "structure"])
