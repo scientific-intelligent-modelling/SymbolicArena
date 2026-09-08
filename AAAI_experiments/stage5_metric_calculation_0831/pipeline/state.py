@@ -453,12 +453,18 @@ class TaskStateStore:
                JOIN tasks predecessor
                  ON predecessor.evaluation_key = ts.predecessor_evaluation_key
                 AND predecessor.logical_id = ts.predecessor_logical_id
-               JOIN frozen_results predecessor_frozen
+               LEFT JOIN frozen_results predecessor_frozen
                  ON predecessor_frozen.evaluation_key = ts.predecessor_evaluation_key
+               LEFT JOIN non_applicable_results predecessor_non_applicable
+                 ON predecessor_non_applicable.evaluation_key = ts.predecessor_evaluation_key
                JOIN tasks successor
                  ON successor.evaluation_key = ts.successor_evaluation_key
                 AND successor.logical_id = ts.successor_logical_id
-               WHERE predecessor.state='superseded'"""
+               WHERE predecessor.state='superseded'
+                 AND (
+                       predecessor_frozen.evaluation_key IS NOT NULL
+                    OR predecessor_non_applicable.evaluation_key IS NOT NULL
+                 )"""
         ).fetchall()
         retirement_rows = connection.execute(
             """SELECT tr.exhausted_evaluation_key AS predecessor_evaluation_key
@@ -705,6 +711,26 @@ class TaskStateStore:
             for row in connection.execute(query, chunk).fetchall():
                 frozen_keys.add(str(row["evaluation_key"]))
         return frozen_keys
+
+    @staticmethod
+    def _fetch_non_applicable_bindings(
+        connection: sqlite3.Connection,
+        evaluation_keys: Sequence[str],
+    ) -> set[str]:
+        non_applicable_keys: set[str] = set()
+        values = tuple(dict.fromkeys(str(item) for item in evaluation_keys if str(item)))
+        for start in range(0, len(values), 500):
+            chunk = values[start : start + 500]
+            if not chunk:
+                continue
+            placeholders = ",".join("?" for _ in chunk)
+            query = (
+                "SELECT evaluation_key FROM non_applicable_results "
+                f"WHERE evaluation_key IN ({placeholders})"
+            )
+            for row in connection.execute(query, chunk).fetchall():
+                non_applicable_keys.add(str(row["evaluation_key"]))
+        return non_applicable_keys
 
     @staticmethod
     def _fetch_existing_supersessions(
@@ -978,6 +1004,10 @@ class TaskStateStore:
                 connection,
                 [item.predecessor_evaluation_key for item, _, _ in prepared],
             )
+            non_applicable_bindings = self._fetch_non_applicable_bindings(
+                connection,
+                [item.predecessor_evaluation_key for item, _, _ in prepared],
+            )
             known_by_evaluation, known_by_logical = self._load_existing_task_specs(
                 connection,
                 evaluation_keys=[item.successor.evaluation_key for item, _, _ in prepared],
@@ -1075,13 +1105,26 @@ class TaskStateStore:
                             f"任务 {successor.logical_id!r} 已存在，但 supersession successor 契约漂移"
                         )
                     continue
-                if predecessor_state != "frozen":
+                allowed_predecessor_states = (
+                    {"frozen", "non_applicable"}
+                    if allow_proven_dependency_rebinding
+                    else {"frozen"}
+                )
+                if predecessor_state not in allowed_predecessor_states:
                     raise StateContractError(
                         f"任务 {predecessor_key!r} 当前状态 {predecessor_state!r}，不可 supersede"
                     )
-                if predecessor_key not in frozen_bindings:
+                predecessor_bindings = (
+                    frozen_bindings
+                    if predecessor_state == "frozen"
+                    else non_applicable_bindings
+                )
+                if predecessor_key not in predecessor_bindings:
+                    binding_name = (
+                        "frozen" if predecessor_state == "frozen" else "non_applicable"
+                    )
                     raise StateContractError(
-                        f"任务 {predecessor_key!r} 缺少 frozen binding，禁止 supersede"
+                        f"任务 {predecessor_key!r} 缺少 {binding_name} binding，禁止 supersede"
                     )
                 if self._has_running_attempt(connection, predecessor_key):
                     raise StateContractError(

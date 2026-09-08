@@ -284,6 +284,131 @@ def test_dependency_rebinding_accepts_supersession_followed_by_retirement(
     assert store.task_state("consumer_v2") == "pending"
 
 
+def test_dependency_rebinding_upgrades_audited_non_applicable_to_callable_successor(
+    tmp_path: Path,
+) -> None:
+    store = TaskStateStore(tmp_path / "state.sqlite3", attempt_cap=20, logical_task_cap=10)
+    old_dependency = task("dep_v1")
+    stable_dependency = task("stable")
+    consumer = task(
+        "consumer_v1",
+        dependencies=("dep_v1", "stable"),
+        prompt_version="equivalence.v1",
+        schema_version="equivalence.v1",
+    )
+    store.register_tasks((old_dependency, stable_dependency), now=1.0)
+    store.mark_non_applicable(
+        "dep_v1",
+        reason="旧公式不可解析",
+        evidence_path="audit/dep_v1.json",
+        evidence_sha256="sha-dep-v1-evidence",
+        now=2.0,
+    )
+    _freeze_task(store, "stable", now=3.0)
+    store.register_task(consumer, now=4.0)
+    store.mark_non_applicable(
+        "consumer_v1",
+        reason="依赖公式不可用",
+        evidence_path="audit/consumer_v1.json",
+        evidence_sha256="sha-consumer-v1-evidence",
+        now=5.0,
+    )
+
+    new_dependency = task(
+        "dep_v2",
+        prompt_version="simplify.v2",
+        schema_version="simplify.v2",
+    )
+    store.register_dependency_rebinding_supersession(
+        "dep_v1",
+        new_dependency,
+        identity="dataset::dep",
+        reason="原不可用公式已由新结果替换",
+        predecessor_plan_sha256="plan::dep-v1",
+        successor_plan_sha256="plan::dep-v2",
+        now=6.0,
+    )
+    _freeze_task(store, "dep_v2", now=7.0)
+
+    callable_successor = TaskSpec(
+        evaluation_key="consumer_v2",
+        logical_id="logical::consumer_v2",
+        task_type=consumer.task_type,
+        condition=consumer.condition,
+        priority=consumer.priority,
+        input_hash="input::consumer-v2",
+        prompt_version="equivalence.v2",
+        schema_version="equivalence.v2",
+        dependencies=("dep_v2", "stable"),
+    )
+    store.register_dependency_rebinding_supersession(
+        "consumer_v1",
+        callable_successor,
+        identity="dataset::consumer",
+        reason="上游依赖已恢复为可调用结果",
+        predecessor_plan_sha256="plan::consumer-v1",
+        successor_plan_sha256="plan::consumer-v2",
+        now=8.0,
+    )
+    store.register_dependency_rebinding_supersession(
+        "consumer_v1",
+        callable_successor,
+        identity="dataset::consumer",
+        reason="上游依赖已恢复为可调用结果",
+        predecessor_plan_sha256="plan::consumer-v1",
+        successor_plan_sha256="plan::consumer-v2",
+        now=9.0,
+    )
+
+    assert store.task_state("dep_v1") == "superseded"
+    assert store.task_state("consumer_v1") == "superseded"
+    assert store.task_state("consumer_v2") == "pending"
+    assert _table_count(tmp_path / "state.sqlite3", "task_supersessions") == 2
+
+
+def test_dependency_rebinding_rejects_non_applicable_without_audit_binding(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "state.sqlite3"
+    store = TaskStateStore(state_db, attempt_cap=10, logical_task_cap=5)
+    predecessor = task("pred_v1")
+    store.register_task(predecessor, now=1.0)
+    store.mark_non_applicable(
+        "pred_v1",
+        reason="无可用表达式",
+        evidence_path="audit/pred_v1.json",
+        evidence_sha256="sha-pred-v1-evidence",
+        now=2.0,
+    )
+    with sqlite3.connect(state_db) as connection:
+        connection.execute(
+            "DELETE FROM non_applicable_results WHERE evaluation_key='pred_v1'"
+        )
+        connection.commit()
+
+    successor = task(
+        "pred_v2",
+        prompt_version="simplify.v2",
+        schema_version="simplify.v2",
+    )
+    with pytest.raises(StateContractError, match="缺少 non_applicable binding"):
+        store.register_dependency_rebinding_supersession(
+            "pred_v1",
+            successor,
+            identity="dataset::pred",
+            reason="恢复可调用任务",
+            predecessor_plan_sha256="plan::pred-v1",
+            successor_plan_sha256="plan::pred-v2",
+            now=3.0,
+        )
+
+    assert store.task_state("pred_v1") == "non_applicable"
+    with sqlite3.connect(state_db) as connection:
+        assert connection.execute(
+            "SELECT 1 FROM tasks WHERE evaluation_key='pred_v2'"
+        ).fetchone() is None
+
+
 @pytest.mark.parametrize(
     ("replacement_terminal", "dependencies", "error"),
     [
