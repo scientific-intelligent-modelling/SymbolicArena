@@ -196,11 +196,16 @@ def test_builds_hybrid_plan_and_preserves_nonrequired_rows_byte_for_byte(tmp_pat
     assert manifest["hybrid_plan_sha256"] == _sha(tmp_path / "hybrid.jsonl")
 
 
-def test_rejects_required_v2_conflict_without_outputs(tmp_path: Path) -> None:
+def test_advances_required_v2_predecessor_to_v3(tmp_path: Path) -> None:
     paths = _fixture(tmp_path, conflict_version=True)
-    with pytest.raises(CleanPredHybridPlanError, match="版本冲突"):
-        _build(paths, tmp_path)
-    assert not (tmp_path / "hybrid.jsonl").exists()
+    _build(paths, tmp_path)
+
+    rows = [
+        json.loads(line)
+        for line in (tmp_path / "hybrid.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert rows[0]["logical_id"] == f"{paths['bases'][0]}::v3"
+    assert rows[1]["logical_id"] == f"{paths['bases'][1]}::v2"
 
 
 def _register_old_plan(state_db: Path, rows: list[dict[str, object]], *, pending_index: int | None) -> None:

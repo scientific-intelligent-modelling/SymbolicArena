@@ -65,6 +65,14 @@ def _base_logical_id(logical_id: object) -> str:
     return _VERSION_SUFFIX.sub("", str(logical_id))
 
 
+def _next_logical_id(logical_id: object) -> str:
+    text = str(logical_id)
+    base = _base_logical_id(text)
+    match = _VERSION_SUFFIX.search(text)
+    next_version = 2 if match is None else int(match.group(1)) + 1
+    return f"{base}::v{next_version}"
+
+
 def _load_required(path: Path, *, expected_count: int | None) -> set[str]:
     payload = _read_json_object(path, label="binding manifest")
     readiness = payload.get("aggregation_readiness")
@@ -138,9 +146,6 @@ def _read_plan_rows(
 
 def _successor_row(predecessor: Mapping[str, Any], fresh: Mapping[str, Any]) -> JsonDict:
     base = _base_logical_id(predecessor["logical_id"])
-    suffix = _VERSION_SUFFIX.search(str(predecessor["logical_id"]))
-    if suffix is not None and int(suffix.group(1)) >= 2:
-        raise CleanPredHybridPlanError(f"required predecessor 已存在版本冲突: {predecessor['logical_id']}")
     if str(fresh.get("logical_id")) != base:
         raise CleanPredHybridPlanError(f"fresh row 不是未版本化 base identity: {base}")
     for field in ("task_type", "condition", "priority", "dependencies"):
@@ -156,7 +161,7 @@ def _successor_row(predecessor: Mapping[str, Any], fresh: Mapping[str, Any]) -> 
     prompt_sha = str(fresh.get("prompt_sha256", ""))
     schema_sha = str(fresh.get("schema_sha256", ""))
     prompt_template = str(fresh.get("prompt_template", ""))
-    logical_id = f"{base}::v2"
+    logical_id = _next_logical_id(predecessor["logical_id"])
     normalized_input = {
         "request": request,
         "prompt_sha256": prompt_sha,
@@ -416,9 +421,9 @@ def build_clean_pred_hybrid_plan(
                 {"logical_id": predecessor["logical_id"], "sha256": _sha256_text(raw_line.rstrip("\n"))}
             )
             continue
-        successor_logical_id = f"{base}::v2"
+        successor_logical_id = _next_logical_id(predecessor["logical_id"])
         if successor_logical_id in existing_logical_ids:
-            raise CleanPredHybridPlanError(f"successor ::v2 版本冲突: {successor_logical_id}")
+            raise CleanPredHybridPlanError(f"successor 版本冲突: {successor_logical_id}")
         successor = _successor_row(predecessor, fresh_by_base[base])
         successor_line = canonical_json(successor) + "\n"
         output_lines.append(successor_line)
