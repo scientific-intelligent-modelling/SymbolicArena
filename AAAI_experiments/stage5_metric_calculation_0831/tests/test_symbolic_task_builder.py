@@ -652,16 +652,24 @@ def _make_fixture(
     }
 
 
-@pytest.mark.parametrize("condition", ["noise001", "noise005"])
-def test_noise_symbolic_plan_reuses_clean_gt_and_builds_equivalence_only(
-    tmp_path: Path, condition: str
+def test_noise_symbolic_plan_reuses_clean_gt_and_builds_condition_scoped_tasks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import (
-        SymbolicTaskBuilderError,
-        build_symbolic_task_plan,
-    )
+    from AAAI_experiments.stage5_metric_calculation_0831.pipeline import symbolic_task_builder
 
-    fixture = _make_fixture(tmp_path, full_counts=True, condition=condition)
+    monkeypatch.setattr(
+        symbolic_task_builder,
+        "build_pair_evidence",
+        lambda *args, **kwargs: {
+            "probe_count": 1,
+            "symbolic_relation": "undetermined",
+        },
+    )
+    build_symbolic_task_plan = symbolic_task_builder.build_symbolic_task_plan
+
+    condition = "noise001"
+    fixture = _make_fixture(tmp_path, full_counts=False, condition=condition)
     tasks, report = build_symbolic_task_plan(
         gt_frozen_index_jsonl=fixture["gt_frozen"],
         pred_frozen_index_jsonl=fixture["pred_frozen"],
@@ -672,14 +680,14 @@ def test_noise_symbolic_plan_reuses_clean_gt_and_builds_equivalence_only(
         clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
         non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
         repo_root=fixture["repo_root"],
-        expected_gt_count=50,
-        expected_pred_count=2250,
+        expected_gt_count=1,
+        expected_pred_count=3,
         expected_pair_count=None,
         condition=condition,
         phase="equivalence",
     )
 
-    assert len(tasks) == 2250
+    assert len(tasks) == 3
     assert all(task.task_type == "equivalence" for task in tasks)
     assert all(task.condition == condition for task in tasks)
     assert all(task.logical_id.endswith(f"::{condition}") for task in tasks)
@@ -687,22 +695,30 @@ def test_noise_symbolic_plan_reuses_clean_gt_and_builds_equivalence_only(
     assert report["condition"] == condition
     assert report["planning_counts"]["structure_total"] == 0
 
-    with pytest.raises(SymbolicTaskBuilderError, match="noise 条件只允许 phase=equivalence"):
-        build_symbolic_task_plan(
-            gt_frozen_index_jsonl=fixture["gt_frozen"],
-            pred_frozen_index_jsonl=fixture["pred_frozen"],
-            gt_frozen_summary_json=fixture["gt_summary"],
-            pred_frozen_summary_json=fixture["pred_summary"],
-            gt_plan_jsonl=fixture["gt_plan"],
-            pred_plan_jsonl=fixture["pred_plan"],
-            clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
-            non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
-            repo_root=fixture["repo_root"],
-            expected_gt_count=50,
-            expected_pred_count=2250,
-            condition=condition,
-            phase="structure",
-        )
+    structure_tasks, structure_report = build_symbolic_task_plan(
+        gt_frozen_index_jsonl=fixture["gt_frozen"],
+        pred_frozen_index_jsonl=fixture["pred_frozen"],
+        gt_frozen_summary_json=fixture["gt_summary"],
+        pred_frozen_summary_json=fixture["pred_summary"],
+        gt_plan_jsonl=fixture["gt_plan"],
+        pred_plan_jsonl=fixture["pred_plan"],
+        clean_run_metrics_csv=fixture["clean_run_metrics_csv"],
+        non_applicable_evidence_dir=fixture["non_applicable_evidence_dir"],
+        repo_root=fixture["repo_root"],
+        expected_gt_count=1,
+        expected_pred_count=3,
+        expected_pair_count=3,
+        condition=condition,
+        phase="structure",
+    )
+
+    assert len(structure_tasks) == 3
+    assert all(task.task_type == "stab_structure" for task in structure_tasks)
+    assert all(task.condition == condition for task in structure_tasks)
+    assert all(task.logical_id.endswith(f"::{condition}") for task in structure_tasks)
+    assert all(task.request["noise_tag"] == condition for task in structure_tasks)
+    assert structure_report["condition"] == condition
+    assert structure_report["planning_counts"]["structure_closed_total"] == 3
 
 
 def test_full_plan_uses_numeric_validity_and_closes_2250_per_phase(tmp_path: Path) -> None:

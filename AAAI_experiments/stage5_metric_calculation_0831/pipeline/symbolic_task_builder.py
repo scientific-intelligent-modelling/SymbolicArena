@@ -1,4 +1,4 @@
-"""Stage5 clean 下游符号任务计划构建器。"""
+"""Stage5 各条件下游符号任务计划构建器。"""
 
 from __future__ import annotations
 
@@ -712,10 +712,18 @@ def _load_frozen_index(
     return result
 
 
-def _structure_logical_id(algorithm_slug: str, dataset_index: str, seed_a: int, seed_b: int) -> str:
+def _structure_logical_id(
+    algorithm_slug: str,
+    dataset_index: str,
+    seed_a: int,
+    seed_b: int,
+    *,
+    condition: str = CONDITION,
+) -> str:
     left = min(seed_a, seed_b)
     right = max(seed_a, seed_b)
-    return f"{STRUCTURE_TASK_TYPE}::{algorithm_slug}::{dataset_index}::s{left}-s{right}"
+    logical_id = f"{STRUCTURE_TASK_TYPE}::{algorithm_slug}::{dataset_index}::s{left}-s{right}"
+    return logical_id if condition == CONDITION else f"{logical_id}::{condition}"
 
 
 def _pred_logical_id(
@@ -1479,10 +1487,6 @@ def build_symbolic_task_plan(
         raise SymbolicTaskBuilderError(f"未知 phase: {phase!r}")
     if condition not in SUPPORTED_CONDITIONS:
         raise SymbolicTaskBuilderError(f"未知 condition: {condition!r}")
-    if condition != CONDITION and phase != "equivalence":
-        raise SymbolicTaskBuilderError(
-            "noise 条件只允许 phase=equivalence；STAB structure 仅使用 clean"
-        )
     if gt_frozen_summary_json is None or pred_frozen_summary_json is None:
         raise SymbolicTaskBuilderError("gt_frozen_summary_json 与 pred_frozen_summary_json 为必填")
     if clean_run_metrics_csv is None:
@@ -1694,7 +1698,13 @@ def build_symbolic_task_plan(
         else []
     )
     for group, seed_a, seed_b in structure_source_pairs:
-        logical_id = _structure_logical_id(group.algorithm_slug, group.dataset_index, seed_a, seed_b)
+        logical_id = _structure_logical_id(
+            group.algorithm_slug,
+            group.dataset_index,
+            seed_a,
+            seed_b,
+            condition=condition,
+        )
         pred_plan_a = group.by_seed[seed_a]
         pred_plan_b = group.by_seed[seed_b]
         pred_record_a = pred_frozen[pred_plan_a.logical_id]
@@ -1725,7 +1735,7 @@ def build_symbolic_task_plan(
             "dataset_index": group.dataset_index,
             "algorithm": group.algorithm,
             "algorithm_slug": group.algorithm_slug,
-            "noise_tag": CONDITION,
+            "noise_tag": condition,
             "allowed_functions": sorted(
                 _pair_allowed_functions(pred_plan_a, pred_record_a)
                 | _pair_allowed_functions(pred_plan_b, pred_record_b)
@@ -1895,7 +1905,7 @@ def build_symbolic_task_plan(
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     repo_root = _repo_root()
     stage_root = repo_root / STAGE_ROOT_RELATIVE
-    parser = argparse.ArgumentParser(description="构建 Stage5 clean equivalence/structure 任务计划")
+    parser = argparse.ArgumentParser(description="构建 Stage5 各条件 equivalence/structure 任务计划")
     parser.add_argument("--gt-frozen-index-jsonl", type=Path, required=True)
     parser.add_argument("--pred-frozen-index-jsonl", type=Path, required=True)
     parser.add_argument("--gt-frozen-summary-json", type=Path, required=True)
