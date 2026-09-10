@@ -7,6 +7,7 @@ ASSET_ROOT="$REPO_ROOT/AAAI_experiments/stage5_metric_calculation_0831/reruns/sy
 FORMAL_ROOT="$REPO_ROOT/benchmark-runs/formal3h/formal3h_13alg_ssr50_seed520-522_noise0-001-005_20260622-014658"
 
 cd "$REPO_ROOT"
+export SIM_QUEUE_CONTROLLER_IS_LOCAL=1
 PYTHONPATH=. python check/run_e1_candidate200_12alg_load_queue.py \
   --batch-name symbolfit_noise_internal_progress_v1_20260910_full \
   --source-csv "$FORMAL_ROOT/queues/ssr50_source.csv" \
