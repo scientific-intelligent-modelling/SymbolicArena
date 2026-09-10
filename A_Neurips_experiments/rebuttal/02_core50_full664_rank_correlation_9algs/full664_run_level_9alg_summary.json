@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-10T17:25:37+08:00",
+  "sources": {
+    "full7": {
+      "path": "A_Neurips_experiments/rebuttal/01_new3algs_full664_3seeds_clean_1h/analysis/full664_7alg_run_level.csv",
+      "sha256": "7260f49f2f4af600aff746daf6f575fe8adeeb10e3ef2052e4e5d00449856b52"
+    },
+    "stage3_raw": {
+      "path": "A_Neurips_experiments/stage3_664dats_4probes_3seeds_1h/probe4_current_run_level_raw_digest_7968.csv",
+      "sha256": "1a588501a0b31b5b392592b05c3105489aee18ab19e3cffb190102e6bee5ddcb"
+    },
+    "probe2": {
+      "path": "A_Neurips_experiments/stage1_664dats_2probes_1seed_1h/01_probe_run_results/one_seed_probe_task_results_1328.csv",
+      "sha256": "069451f0520eb1a2449da125111c922bdf2843f916dd20120fca3b2fa3e8a81a"
+    },
+    "core50": {
+      "path": "A_Neurips_experiments/stage4_core50_12algs_5seeds_4noise_1h/core50_manifest/core50_datasets.csv",
+      "sha256": "5a0824c10f57009b13f2ebc16059e1472baac3743473a47f170df2cdcc5ecf65"
+    }
+  },
+  "semantics": {
+    "id_nmse": "raw finite nonnegative ID NMSE from the recorded run; blank when absent",
+    "ood_nmse": "raw finite nonnegative OOD NMSE from the recorded run; blank when absent",
+    "missing_policy": "blank; no log inversion and no penalty imputation",
+    "valid_output_full7": "source valid_output field",
+    "valid_output_probe2": "canonical_artifact_present and both raw NMSE values present",
+    "valid_output_source": "row-level field stating whether valid_output is observed or derived",
+    "core50_binding": "normalized dataset_dir membership in the frozen Core-50 manifest"
+  },
+  "coverage": {
+    "run_rows": 15272,
+    "unique_run_keys": 15272,
+    "algorithm_count": 9,
+    "dataset_count": 664,
+    "core_dataset_count": 50,
+    "core_run_rows": 1150,
+    "runs_by_algorithm": {
+      "dso": 1992,
+      "imcts": 1992,
+      "pyoperon": 1992,
+      "udsr": 1992,
+      "fepysr": 1992,
+      "jaxsr": 1992,
+      "symbolfit": 1992,
+      "llmsr": 664,
+      "pysr": 664
+    }
+  },
+  "quality": {
+    "metric_complete_by_algorithm": {
+      "dso": 1937,
+      "imcts": 1979,
+      "pyoperon": 1746,
+      "udsr": 1979,
+      "fepysr": 1992,
+      "jaxsr": 1992,
+      "symbolfit": 1992,
+      "llmsr": 655,
+      "pysr": 520
+    },
+    "valid_output_by_algorithm": {
+      "dso": 1930,
+      "imcts": 1963,
+      "pyoperon": 1746,
+      "udsr": 1977,
+      "fepysr": 1992,
+      "jaxsr": 1992,
+      "symbolfit": 1992,
+      "llmsr": 655,
+      "pysr": 520
+    },
+    "missing_id_nmse_by_algorithm": {
+      "dso": 25,
+      "imcts": 9,
+      "pyoperon": 225,
+      "udsr": 7,
+      "fepysr": 0,
+      "jaxsr": 0,
+      "symbolfit": 0,
+      "llmsr": 4,
+      "pysr": 143
+    },
+    "missing_ood_nmse_by_algorithm": {
+      "dso": 46,
+      "imcts": 7,
+      "pyoperon": 243,
+      "udsr": 7,
+      "fepysr": 0,
+      "jaxsr": 0,
+      "symbolfit": 0,
+      "llmsr": 9,
+      "pysr": 138
+    },
+    "status_by_algorithm": {
+      "dso": {
+        "error": 15,
+        "ok": 1976,
+        "timed_out": 1
+      },
+      "imcts": {
+        "ok": 1987,
+        "timed_out": 5
+      },
+      "pyoperon": {
+        "error": 20,
+        "ok": 1972
+      },
+      "udsr": {
+        "ok": 1988,
+        "timed_out": 4
+      },
+      "fepysr": {
+        "ok": 1992
+      },
+      "jaxsr": {
+        "ok": 1992
+      },
+      "symbolfit": {
+        "ok": 1992
+      },
+      "llmsr": {
+        "ok": 656,
+        "timed_out": 8
+      },
+      "pysr": {
+        "timed_out": 664
+      }
+    }
+  },
+  "outputs": {
+    "run_level": "A_Neurips_experiments/rebuttal/02_core50_full664_rank_correlation_9algs/full664_run_level_9alg.csv",
+    "core50_task_ids": "A_Neurips_experiments/rebuttal/02_core50_full664_rank_correlation_9algs/core50_task_ids.csv",
+    "summary": "A_Neurips_experiments/rebuttal/02_core50_full664_rank_correlation_9algs/full664_run_level_9alg_summary.json"
+  }
+}
