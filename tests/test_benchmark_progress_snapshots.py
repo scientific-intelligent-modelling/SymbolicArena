@@ -268,6 +268,15 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
 
         fake_stop = FakeStopEvent()
         writes = []
+        train_label_noise = {
+            "enabled": True,
+            "requested": True,
+            "sigma": 0.01,
+            "y_std": 2.0,
+            "scale": 0.02,
+            "rng_seed": 123,
+            "protocol": "frozen-noise-protocol",
+        }
 
         def fake_time():
             return fake_stop.now
@@ -282,7 +291,15 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             }
 
         def fake_write_payload(payload, *, primary_dir, experiment_dir=None, snapshot_minute_index=None):
-            writes.append((snapshot_minute_index, payload["record_type"], payload.get("backfilled_from_minute")))
+            writes.append(
+                (
+                    snapshot_minute_index,
+                    payload["record_type"],
+                    payload.get("backfilled_from_minute"),
+                    payload.get("condition"),
+                    payload.get("train_label_noise"),
+                )
+            )
             fake_stop.write_count += 1
             return [Path(primary_dir) / f"minute_{snapshot_minute_index:04d}.json"]
 
@@ -304,13 +321,115 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                 started_at=100.0,
                 output_dir=Path("/tmp/out"),
                 experiment_dir=Path("/tmp/exp"),
+                train_label_noise=train_label_noise,
             )
         finally:
             runner.time.time = old_time
             runner._build_periodic_snapshot_payload = old_build
             runner._write_progress_payload = old_write
 
-        self.assertEqual(writes, [(1, "periodic_backfill", 3), (2, "periodic_backfill", 3), (3, "periodic_best", None)])
+        self.assertEqual(
+            [(minute, record_type, source, condition) for minute, record_type, source, condition, _ in writes],
+            [
+                (1, "periodic_backfill", 3, "noise001"),
+                (2, "periodic_backfill", 3, "noise001"),
+                (3, "periodic_best", None, "noise001"),
+            ],
+        )
+        self.assertTrue(all(evidence == train_label_noise for *_, evidence in writes))
+        self.assertTrue(all(evidence is not train_label_noise for *_, evidence in writes))
+
+    def test_periodic_heartbeat_records_clean_condition_and_frozen_noise_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            exp_dir = root / "exp"
+            exp_dir.mkdir(parents=True, exist_ok=True)
+            _write_dataset(dataset_dir)
+            train_label_noise = {
+                "enabled": False,
+                "requested": False,
+                "sigma": 0.0,
+                "y_std": 3.0,
+                "scale": 0.0,
+                "rng_seed": 456,
+                "protocol": "frozen-clean-protocol",
+            }
+
+            payload = runner._build_periodic_snapshot_payload(
+                tool_name="fepysr",
+                dataset=runner.load_canonical_dataset(dataset_dir),
+                params={"timeout_in_seconds": 180},
+                seed=520,
+                started_at=time.time() - 60,
+                experiment_dir=exp_dir,
+                checkpoint_index=1,
+                train_label_noise=train_label_noise,
+            )
+
+            self.assertEqual(payload["record_type"], "periodic_heartbeat")
+            self.assertEqual(payload["condition"], "clean")
+            self.assertEqual(payload["train_label_noise"], train_label_noise)
+            self.assertIsNot(payload["train_label_noise"], train_label_noise)
+
+    def test_budget_end_and_final_best_record_noise_condition(self):
+        noise = {
+            "enabled": True,
+            "requested": True,
+            "sigma": 0.05,
+            "y_std": 2.0,
+            "scale": 0.1,
+            "rng_seed": 789,
+            "protocol": "frozen-noise-protocol",
+        }
+        for snapshot_tool in (False, True):
+            with self.subTest(snapshot_tool=snapshot_tool), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                exp_dir = root / "exp"
+                result = {
+                    "status": "ok",
+                    "equation": "x0 + 1",
+                    "canonical_artifact": {"normalized_expression": "x0 + 1"},
+                    "seconds": 180.0,
+                    "params": {"timeout_in_seconds": 180},
+                }
+                old_build = runner._build_periodic_snapshot_payload
+                try:
+                    if snapshot_tool:
+                        runner._build_periodic_snapshot_payload = lambda **_: {
+                            "record_type": "periodic_best",
+                            "checkpoint_index": 3,
+                            "status": "ok",
+                            "equation": "x0 + 1",
+                            "canonical_artifact": {"normalized_expression": "x0 + 1"},
+                            "source_internal_loss": 0.1,
+                        }
+                    runner._write_final_progress_payload_if_requested(
+                        result=result,
+                        progress_snapshot_interval_seconds=60,
+                        output_dir=root / "out",
+                        experiment_dir=exp_dir,
+                        tool_name="symbolfit" if snapshot_tool else None,
+                        dataset=object() if snapshot_tool else None,
+                        params={"timeout_in_seconds": 180} if snapshot_tool else None,
+                        seed=520 if snapshot_tool else None,
+                        started_at=time.time() - 180 if snapshot_tool else None,
+                        train_label_noise=noise,
+                    )
+                finally:
+                    runner._build_periodic_snapshot_payload = old_build
+
+                payload = json.loads(
+                    (root / "out" / "progress" / "minute_0003.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(
+                    payload["record_type"],
+                    "budget_end_internal_best" if snapshot_tool else "final_best",
+                )
+                self.assertEqual(payload["condition"], "noise005")
+                self.assertEqual(payload["train_label_noise"], noise)
 
     def test_build_periodic_snapshot_payload_for_llmsr(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1258,7 +1377,11 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                     dataset_dir=dataset_dir,
                     output_root=output_root,
                     seed=520,
-                    params_override={"progress_snapshot_interval_seconds": 60},
+                    params_override={
+                        "progress_snapshot_interval_seconds": 60,
+                        "train_label_noise_enabled": True,
+                        "train_label_noise_sigma": 0.01,
+                    },
                 )
             finally:
                 runner.SymbolicRegressor = old_symbolic_regressor
@@ -1269,6 +1392,9 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["record_type"], "final_best")
             self.assertEqual(payload["tool"], "symbolfit")
             self.assertEqual(payload["status"], "ok")
+            self.assertEqual(payload["condition"], "noise001")
+            self.assertTrue(payload["train_label_noise"]["requested"])
+            self.assertEqual(payload["train_label_noise"]["sigma"], 0.01)
             self.assertAlmostEqual(payload["valid"]["rmse"], 0.0, places=10)
 
     def test_build_periodic_snapshot_payload_for_symbolfit_active_pysr_hof(self):

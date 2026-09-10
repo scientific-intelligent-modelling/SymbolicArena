@@ -82,6 +82,9 @@ _TRAIN_LABEL_NOISE_SEED_KEYS = (
     "label_noise_seed",
     "noise_seed",
 )
+_TRAIN_LABEL_NOISE_PROTOCOL = (
+    "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation"
+)
 
 
 @dataclass
@@ -320,8 +323,45 @@ def _resolve_train_label_noise_config(
         "y_std": y_std,
         "scale": scale,
         "rng_seed": int(rng_seed),
-        "protocol": "y_noisy = y + sigma * std(y) * N(0, 1); clean labels are used for evaluation",
+        "protocol": _TRAIN_LABEL_NOISE_PROTOCOL,
     }
+
+
+def _freeze_train_label_noise_evidence(
+    noise_config: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """复制一次运行级噪声合同，避免分钟快照持有可变配置引用。"""
+    evidence = dict(noise_config or {})
+    evidence.setdefault("enabled", False)
+    evidence.setdefault("requested", False)
+    evidence.setdefault("sigma", 0.0)
+    evidence.setdefault("y_std", None)
+    evidence.setdefault("scale", 0.0)
+    evidence.setdefault("rng_seed", None)
+    evidence.setdefault("protocol", _TRAIN_LABEL_NOISE_PROTOCOL)
+    return evidence
+
+
+def _condition_from_train_label_noise(noise_config: Mapping[str, Any]) -> str:
+    try:
+        sigma = float(noise_config.get("sigma") or 0.0)
+    except (TypeError, ValueError, OverflowError):
+        sigma = 0.0
+    if not bool(noise_config.get("requested")) or not math.isfinite(sigma) or sigma <= 0:
+        return "clean"
+    return f"noise{int(round(sigma * 100)):03d}"
+
+
+def _attach_progress_run_context(
+    payload: Mapping[str, Any],
+    *,
+    train_label_noise: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    contextualized = dict(payload)
+    evidence = _freeze_train_label_noise_evidence(train_label_noise)
+    contextualized["condition"] = _condition_from_train_label_noise(evidence)
+    contextualized["train_label_noise"] = evidence
+    return contextualized
 
 
 def _train_labels_for_fit(split: DatasetSplit, noise_config: dict[str, Any]) -> np.ndarray:
@@ -1787,6 +1827,7 @@ def _build_periodic_snapshot_payload(
     task_global_index: int | None = None,
     expected_dataset_rel: str | None = None,
     expected_dataset_dir: str | None = None,
+    train_label_noise: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     snapshot_elapsed_seconds = max(0.0, time.time() - started_at)
     candidate = _extract_periodic_candidate(
@@ -1823,7 +1864,10 @@ def _build_periodic_snapshot_payload(
         payload["elapsed_seconds"] = round(time.time() - started_at, 3)
         payload["elapsed_minutes"] = max(0, int(round(payload["elapsed_seconds"] / 60.0)))
         payload["candidate_available"] = False
-        return payload
+        return _attach_progress_run_context(
+            payload,
+            train_label_noise=train_label_noise,
+        )
 
     candidate_fidelity, fidelity_export_error = _jaxsr_candidate_fidelity(
         tool_name,
@@ -1912,7 +1956,10 @@ def _build_periodic_snapshot_payload(
     payload["candidate_available"] = True
     if candidate_fidelity is not None:
         payload["candidate_fidelity"] = dict(candidate_fidelity)
-    return payload
+    return _attach_progress_run_context(
+        payload,
+        train_label_noise=train_label_noise,
+    )
 
 
 def _recover_timeout_payload_from_candidate(
@@ -2074,6 +2121,7 @@ def _periodic_snapshot_loop(
     task_global_index: int | None = None,
     expected_dataset_rel: str | None = None,
     expected_dataset_dir: str | None = None,
+    train_label_noise: Mapping[str, Any] | None = None,
 ) -> None:
     last_written_minute_index = 0
     next_target_minute_index = 1
@@ -2095,10 +2143,15 @@ def _periodic_snapshot_loop(
                 task_global_index=task_global_index,
                 expected_dataset_rel=expected_dataset_rel,
                 expected_dataset_dir=expected_dataset_dir,
+                train_label_noise=train_label_noise,
             )
             if payload is None:
                 next_target_minute_index += 1
                 continue
+            payload = _attach_progress_run_context(
+                payload,
+                train_label_noise=train_label_noise,
+            )
             elapsed_minute_index = _progress_minute_index_from_elapsed(
                 payload.get("elapsed_seconds"),
                 interval_seconds=interval_seconds,
@@ -2147,6 +2200,7 @@ def _write_final_progress_payload_if_requested(
     task_global_index: int | None = None,
     expected_dataset_rel: str | None = None,
     expected_dataset_dir: str | None = None,
+    train_label_noise: Mapping[str, Any] | None = None,
 ) -> None:
     if not progress_snapshot_interval_seconds:
         return
@@ -2161,6 +2215,11 @@ def _write_final_progress_payload_if_requested(
     snapshot_minute_index = _progress_budget_minute_index(
         result,
         interval_seconds=progress_snapshot_interval_seconds,
+    )
+    frozen_train_label_noise = _freeze_train_label_noise_evidence(
+        train_label_noise
+        if train_label_noise is not None
+        else result.get("train_label_noise")
     )
     payload = None
     normalized_tool = str(tool_name or result.get("tool") or "").strip()
@@ -2186,6 +2245,7 @@ def _write_final_progress_payload_if_requested(
                 task_global_index=task_global_index,
                 expected_dataset_rel=expected_dataset_rel,
                 expected_dataset_dir=expected_dataset_dir,
+                train_label_noise=frozen_train_label_noise,
             )
         except Exception:
             payload = None
@@ -2205,6 +2265,11 @@ def _write_final_progress_payload_if_requested(
             elapsed_seconds = 0.0
         payload["elapsed_seconds"] = round(elapsed_seconds, 3)
         payload["elapsed_minutes"] = max(0, int(round(elapsed_seconds / 60.0)))
+
+    payload = _attach_progress_run_context(
+        payload,
+        train_label_noise=frozen_train_label_noise,
+    )
     _write_progress_payload(
         payload,
         primary_dir=output_dir / _PROGRESS_DIRNAME,
@@ -2457,7 +2522,9 @@ def run_benchmark_task(
         params_override=params_override_clean,
     )
     progress_snapshot_interval_seconds = _resolve_progress_snapshot_interval_seconds(tool_name, params)
-    train_label_noise = _resolve_train_label_noise_config(params, dataset=dataset, seed=seed)
+    train_label_noise = _freeze_train_label_noise_evidence(
+        _resolve_train_label_noise_config(params, dataset=dataset, seed=seed)
+    )
     y_train_for_fit = _train_labels_for_fit(dataset.train, train_label_noise)
 
     started_at = time.time()
@@ -2508,6 +2575,7 @@ def run_benchmark_task(
                 "task_global_index": task_global_index,
                 "expected_dataset_rel": task_identity.get("expected_dataset_rel"),
                 "expected_dataset_dir": task_identity.get("expected_dataset_dir"),
+                "train_label_noise": train_label_noise,
             },
             daemon=True,
         )
@@ -2651,6 +2719,7 @@ def run_benchmark_task(
     result["recovered_from_error"] = recovered_from_error
     result["no_valid_output_reason"] = no_valid_output_reason
     result["train_label_noise"] = train_label_noise
+    result["condition"] = _condition_from_train_label_noise(train_label_noise)
     if str(tool_name).strip().lower() in {"imcts", "imcts_wrapper"}:
         if not internal_candidate_evidence and experiment_dir:
             internal_candidate_evidence = _imcts_candidate_evidence(
@@ -2680,6 +2749,7 @@ def run_benchmark_task(
         task_global_index=task_global_index,
         expected_dataset_rel=task_identity.get("expected_dataset_rel"),
         expected_dataset_dir=task_identity.get("expected_dataset_dir"),
+        train_label_noise=train_label_noise,
     )
 
     result_path = output_dir / "result.json"
