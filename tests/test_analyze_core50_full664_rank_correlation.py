@@ -151,6 +151,33 @@ def test_end_to_end_writes_auditable_outputs(tmp_path: Path) -> None:
     assert (output_dir / "ood_score_comparison.png").is_file()
     assert (output_dir / "ood_score_comparison.png").stat().st_size > 10_000
 
+    compact_fields = [
+        "algorithm",
+        "algorithm_key",
+        "seeds",
+        "dataset_count",
+        "run_count",
+        "ID",
+        "OOD",
+    ]
+    full664_rows = _read_csv(output_dir / "664_id_ood_9alg.csv")
+    core50_rows = _read_csv(output_dir / "core50_id_ood_9alg.csv")
+    assert len(full664_rows) == 9
+    assert len(core50_rows) == 9
+    assert list(full664_rows[0]) == compact_fields
+    assert list(core50_rows[0]) == compact_fields
+    assert {row["dataset_count"] for row in full664_rows} == {"3"}
+    assert {row["dataset_count"] for row in core50_rows} == {"2"}
+    dso_summary = next(
+        row for row in summary["algorithm_scores"] if row["algorithm"] == "dso"
+    )
+    dso_full = next(row for row in full664_rows if row["algorithm_key"] == "dso")
+    dso_core = next(row for row in core50_rows if row["algorithm_key"] == "dso")
+    assert float(dso_full["ID"]) == pytest.approx(dso_summary["full664_id_score"])
+    assert float(dso_full["OOD"]) == pytest.approx(dso_summary["full664_ood_score"])
+    assert float(dso_core["ID"]) == pytest.approx(dso_summary["core50_id_score"])
+    assert float(dso_core["OOD"]) == pytest.approx(dso_summary["core50_ood_score"])
+
     ood_rows = _read_csv(output_dir / "ood_score_comparison.csv")
     assert list(ood_rows[0]) == [
         "algorithm",

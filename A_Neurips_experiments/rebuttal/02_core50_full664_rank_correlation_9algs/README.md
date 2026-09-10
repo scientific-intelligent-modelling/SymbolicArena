@@ -27,6 +27,10 @@ and 32 of the 36 pairwise method orderings are preserved. The largest change is
 DSO moving from rank 3 to rank 6; the methods originally ranked 3--6 remain the
 same four-method block.
 
+The matching compact ID/OOD tables are `664_id_ood_9alg.csv` and
+`core50_id_ood_9alg.csv`. In both files, `ID` and `OOD` use the same penalized
+log-NMSE scale and lower values are better.
+
 ## Two statistics to report
 
 - **Pearson `r=0.967`** measures whether the actual OOD score

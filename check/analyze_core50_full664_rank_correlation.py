@@ -430,6 +430,14 @@ def summarize_algorithms(
                 + run_counts[(algorithm, True)],
                 "core50_dataset_count": len(core_rows),
                 "core50_run_count": run_counts[(algorithm, True)],
+                "full664_id_score": statistics.mean(
+                    float(row["id_log_nmse_seed_median_penalized"])
+                    for row in full_rows
+                ),
+                "core50_id_score": statistics.mean(
+                    float(row["id_log_nmse_seed_median_penalized"])
+                    for row in core_rows
+                ),
                 "full664_ood_score": statistics.mean(
                     float(row["ood_log_nmse_seed_median_penalized"])
                     for row in full_rows
@@ -475,6 +483,27 @@ def summarize_algorithms(
         )
     )
     return summaries
+
+
+def build_compact_id_ood_rows(
+    summaries: Sequence[dict[str, Any]],
+    *,
+    scope: str,
+) -> list[dict[str, Any]]:
+    if scope not in {"full664", "core50"}:
+        raise ValueError(f"未知 ID/OOD 导出范围: {scope}")
+    return [
+        {
+            "algorithm": row["algorithm_display"],
+            "algorithm_key": row["algorithm"],
+            "seeds": row["seeds"],
+            "dataset_count": row[f"{scope}_dataset_count"],
+            "run_count": row[f"{scope}_run_count"],
+            "ID": row[f"{scope}_id_score"],
+            "OOD": row[f"{scope}_ood_score"],
+        }
+        for row in summaries
+    ]
 
 
 def _pearson(xs: Sequence[float], ys: Sequence[float]) -> float:
@@ -956,6 +985,10 @@ and 32 of the 36 pairwise method orderings are preserved. The largest change is
 DSO moving from rank 3 to rank 6; the methods originally ranked 3--6 remain the
 same four-method block.
 
+The matching compact ID/OOD tables are `664_id_ood_9alg.csv` and
+`core50_id_ood_9alg.csv`. In both files, `ID` and `OOD` use the same penalized
+log-NMSE scale and lower values are better.
+
 ## Two statistics to report
 
 - **Pearson `r={pearson_score:.3f}`** measures whether the actual OOD score
@@ -1039,11 +1072,15 @@ def analyze(
     summaries = summarize_algorithms(dataset_scores, runs)
     correlation_rows = build_correlation_rows(summaries)
     ood_rows = build_ood_comparison_rows(summaries)
+    full664_id_ood_rows = build_compact_id_ood_rows(summaries, scope="full664")
+    core50_id_ood_rows = build_compact_id_ood_rows(summaries, scope="core50")
     correlations = {(row["panel"], row["metric"]): row for row in correlation_rows}
     primary_ood = correlations[("all_9", "ood")]
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(output_dir / "dataset_algorithm_scores.csv", dataset_scores)
     _write_csv(output_dir / "algorithm_scores_and_ranks.csv", summaries)
+    _write_csv(output_dir / "664_id_ood_9alg.csv", full664_id_ood_rows)
+    _write_csv(output_dir / "core50_id_ood_9alg.csv", core50_id_ood_rows)
     _write_csv(output_dir / "correlation_metrics.csv", correlation_rows)
     _write_csv(output_dir / "ood_score_comparison.csv", ood_rows)
     (output_dir / "ood_score_comparison.md").write_text(
@@ -1096,6 +1133,12 @@ def analyze(
             ),
             "algorithm_scores_and_ranks": _repo_relative(
                 output_dir / "algorithm_scores_and_ranks.csv", repo_root
+            ),
+            "full664_id_ood_9alg": _repo_relative(
+                output_dir / "664_id_ood_9alg.csv", repo_root
+            ),
+            "core50_id_ood_9alg": _repo_relative(
+                output_dir / "core50_id_ood_9alg.csv", repo_root
             ),
             "correlation_metrics": _repo_relative(
                 output_dir / "correlation_metrics.csv", repo_root
