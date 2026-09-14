@@ -14,6 +14,7 @@ import gzip
 import hashlib
 import io
 import json
+import os
 import re
 import tarfile
 import tempfile
@@ -88,6 +89,7 @@ class RawObject:
     minute: int | None
     evidence_kind: str
     container_path: str
+    logical_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -213,7 +215,7 @@ def iter_recovery_evidence(spec: SourceSpec) -> Iterator[RawObject]:
             digest = _verify_raw(raw, record.get("progress_sha256"), label=f"{task_id}:progress")
             yield RawObject(
                 task_id, "recovery", raw, digest, str(record.get("progress_path") or ""), None,
-                "recovery_progress", str(spec.path),
+                "recovery_progress", str(spec.path), source.get("logical_key"),
             )
         candidates = record.get("candidates") or []
         if not isinstance(candidates, list):
@@ -227,7 +229,7 @@ def iter_recovery_evidence(spec: SourceSpec) -> Iterator[RawObject]:
             )
             yield RawObject(
                 task_id, "recovery", raw, digest, str(candidate.get("path") or ""), None,
-                "recovery_candidate", str(spec.path),
+                "recovery_candidate", str(spec.path), source.get("logical_key"),
             )
 
 
@@ -310,22 +312,23 @@ def _close_gzip_csv(handles: tuple) -> None:
 def _read_authoritative(
     paths: Sequence[Path], repo_root: Path, horizon: int, expected_runs: int | None
 ) -> tuple[
-    dict[str, RunHeader], dict[str, tuple[str, str]], set[tuple[str, str]],
-    dict[str, set[str]], dict[str, int]
+    dict[str, RunHeader], dict[str, tuple[str, str]], dict[tuple[str, str], str],
+    set[tuple[str, str, str]], dict[str, set[str]], dict[str, list[str]], dict[str, int]
 ]:
     runs: dict[str, RunHeader] = {}
     selected: dict[str, tuple[str, str]] = {}
-    required_pairs: set[tuple[str, str]] = set()
-    required_sha_by_task: dict[str, set[str]] = {}
+    ordinary_locator: dict[tuple[str, str], str] = {}
+    required_pairs: set[tuple[str, str, str]] = set()
+    required_sha_by_logical: dict[str, set[str]] = {}
+    logical_keys_by_task: dict[str, list[str]] = {}
     container_counts: dict[str, int] = {}
-    logical_keys: set[str] = set()
     for path in paths:
         for _, record in _json_lines(path):
             task_id = record.get("task_id")
             logical_key = record.get("logical_key")
             if not isinstance(task_id, str) or not isinstance(logical_key, str):
                 raise ArchiveBuildError(f"{path}: authoritative run lacks identity")
-            if task_id in runs or logical_key in logical_keys:
+            if logical_key in runs:
                 raise ArchiveBuildError(f"duplicate authoritative run: {task_id}/{logical_key}")
             source_paths = record.get("source_path")
             source_shas = record.get("source_sha256")
@@ -348,23 +351,39 @@ def _read_authoritative(
                 bundle_path=bundle_path,
                 bundle_sha256=bundle_sha,
             )
-            runs[task_id] = header
-            logical_keys.add(logical_key)
+            runs[logical_key] = header
             normalized_bundle = _normal_path(bundle_path, repo_root)
-            selected[task_id] = (normalized_bundle, bundle_sha)
+            selected[logical_key] = (normalized_bundle, bundle_sha)
+            locator_key = (normalized_bundle, task_id)
+            previous_logical = ordinary_locator.setdefault(locator_key, logical_key)
+            if previous_logical != logical_key:
+                raise ArchiveBuildError(
+                    f"ordinary source identity is ambiguous: {normalized_bundle}/{task_id}"
+                )
+            logical_keys_by_task.setdefault(task_id, []).append(logical_key)
             container_counts[normalized_bundle] = container_counts.get(normalized_bundle, 0) + 1
-            task_shas = required_sha_by_task.setdefault(task_id, set())
+            logical_shas = required_sha_by_logical.setdefault(logical_key, set())
             for source_path, source_sha in zip(source_paths, source_shas):
                 if source_sha in (None, ""):
                     continue
                 if not isinstance(source_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", source_sha):
                     raise ArchiveBuildError(f"{logical_key}: invalid source SHA")
-                task_shas.add(source_sha)
+                logical_shas.add(source_sha)
                 if source_path not in (None, ""):
-                    required_pairs.add((_normal_path(str(source_path), repo_root), source_sha))
+                    required_pairs.add(
+                        (logical_key, _normal_path(str(source_path), repo_root), source_sha)
+                    )
     if expected_runs is not None and len(runs) != expected_runs:
         raise ArchiveBuildError(f"authoritative runs={len(runs)} != {expected_runs}")
-    return runs, selected, required_pairs, required_sha_by_task, container_counts
+    return (
+        runs,
+        selected,
+        ordinary_locator,
+        required_pairs,
+        required_sha_by_logical,
+        logical_keys_by_task,
+        container_counts,
+    )
 
 
 def discover_default_sources(repo_root: Path, release_root: Path) -> list[SourceSpec]:
@@ -428,9 +447,15 @@ def build_archive(
     expected_runs: int | None = 6750,
     expected_historical_missing: int | None = 17,
     compression_level: int = 10,
+    compression_threads: int = 4,
 ) -> dict:
     repo_root = repo_root.resolve()
     release_root = release_root.resolve()
+    output = output.resolve()
+    if output.exists():
+        raise ArchiveBuildError(f"archive output already exists: {output}")
+    if compression_threads <= 0:
+        raise ArchiveBuildError("compression_threads must be positive")
     if authoritative_paths is None:
         authoritative_paths = [
             release_root / f"provenance/eff_revision_v3/{condition}/native_trajectories.jsonl.gz"
@@ -444,9 +469,15 @@ def build_archive(
     if not specs:
         raise ArchiveBuildError("no raw source containers discovered")
 
-    runs, selected, required_pairs, required_sha_by_task, container_counts = _read_authoritative(
-        authoritative_paths, repo_root, horizon, expected_runs
-    )
+    (
+        runs,
+        selected,
+        ordinary_locator,
+        required_pairs,
+        required_sha_by_logical,
+        logical_keys_by_task,
+        container_counts,
+    ) = _read_authoritative(authoritative_paths, repo_root, horizon, expected_runs)
     selected_expected_sha: dict[str, str] = {}
     for _, (container, declared_sha) in selected.items():
         if Path(container).is_file():
@@ -455,19 +486,22 @@ def build_archive(
                 raise ArchiveBuildError(f"container has conflicting declared SHA: {container}")
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary_output = output.with_name(f".{output.name}.tmp")
+    temporary_output = output.with_name(f".{output.name}.{os.getpid()}.tmp")
     if temporary_output.exists():
-        temporary_output.unlink()
+        raise ArchiveBuildError(f"temporary archive already exists: {temporary_output}")
 
-    pair_to_member: dict[tuple[str, str], str] = {}
-    task_sha_to_member: dict[tuple[str, str], str] = {}
-    recovery_seen: set[tuple[str, str]] = set()
+    pair_to_member: dict[tuple[str, str, str], str] = {}
+    logical_sha_to_member: dict[tuple[str, str], str] = {}
+    recovery_seen: set[tuple[str, str, str]] = set()
     counts = {
         "runs": len(runs), "logical_minutes": 0, "physical_records": 0,
         "historical_missing": 0, "carry_forward": 0, "invalid_output_minutes": 0,
         "source_containers": len(specs),
     }
-    with tempfile.TemporaryDirectory(prefix="core50_raw_snapshot_") as tmp_name:
+    with tempfile.TemporaryDirectory(
+        prefix=".core50_raw_snapshot_",
+        dir=output.parent,
+    ) as tmp_name:
         tmp = Path(tmp_name)
         runs_csv = tmp / "runs.csv"
         physical_csv = tmp / "physical_records.csv.gz"
@@ -499,7 +533,9 @@ def build_archive(
         try:
             with temporary_output.open("wb") as compressed_file:
                 compressor = zstandard.ZstdCompressor(
-                    level=compression_level, threads=-1, write_checksum=True
+                    level=compression_level,
+                    threads=compression_threads,
+                    write_checksum=True,
                 )
                 with compressor.stream_writer(compressed_file, closefd=False) as compressed:
                     with tarfile.open(fileobj=compressed, mode="w|", format=tarfile.PAX_FORMAT) as archive:
@@ -541,18 +577,46 @@ def build_archive(
                                     unavailable_writer.writerow(item.__dict__)
                                     counts["historical_missing"] += 1
                                     continue
-                                run = runs.get(item.task_id)
-                                if run is None:
-                                    continue
-                                selected_container, _ = selected[item.task_id]
                                 if spec.kind in {"task_freeze", "flat_raw", "symbolfit"}:
-                                    if normalized_container != selected_container:
+                                    logical_key = ordinary_locator.get(
+                                        (normalized_container, item.task_id)
+                                    )
+                                    if logical_key is None:
                                         continue
+                                    run = runs[logical_key]
                                 else:
-                                    # Recovery evidence is selected by its raw SHA, not its evidence bundle.
-                                    if item.sha256 not in required_sha_by_task[item.task_id]:
+                                    # Recovery evidence is selected by logical identity and raw SHA.
+                                    logical_key = item.logical_key
+                                    if (
+                                        logical_key in runs
+                                        and runs[logical_key].task_id != item.task_id
+                                    ):
+                                        raise ArchiveBuildError(
+                                            f"recovery logical identity disagrees with task_id: "
+                                            f"{logical_key}/{item.task_id}"
+                                        )
+                                    if logical_key not in runs:
+                                        matching = [
+                                            candidate
+                                            for candidate in logical_keys_by_task.get(item.task_id, [])
+                                            if item.sha256 in required_sha_by_logical[candidate]
+                                        ]
+                                        if len(matching) > 1:
+                                            raise ArchiveBuildError(
+                                                f"recovery identity is ambiguous for {item.task_id}: "
+                                                f"{matching}"
+                                            )
+                                        logical_key = matching[0] if matching else None
+                                    if logical_key is None:
                                         continue
-                                    recovery_key = (_normal_path(item.source_path, repo_root), item.sha256)
+                                    if item.sha256 not in required_sha_by_logical[logical_key]:
+                                        continue
+                                    run = runs[logical_key]
+                                    recovery_key = (
+                                        logical_key,
+                                        _normal_path(item.source_path, repo_root),
+                                        item.sha256,
+                                    )
                                     if recovery_key in recovery_seen:
                                         continue
                                     recovery_seen.add(recovery_key)
@@ -579,11 +643,13 @@ def build_archive(
                                 )
                                 counts["physical_records"] += 1
                                 normalized_source = _normal_path(item.source_path, repo_root)
-                                pair = (normalized_source, item.sha256)
+                                pair = (run.logical_key, normalized_source, item.sha256)
                                 if pair in required_pairs:
                                     pair_to_member.setdefault(pair, member)
-                                if item.sha256 in required_sha_by_task[item.task_id]:
-                                    task_sha_to_member.setdefault((item.task_id, item.sha256), member)
+                                if item.sha256 in required_sha_by_logical[run.logical_key]:
+                                    logical_sha_to_member.setdefault(
+                                        (run.logical_key, item.sha256), member
+                                    )
 
                         _close_gzip_csv(physical_handles)
                         physical_handles = None
@@ -606,7 +672,7 @@ def build_archive(
                         try:
                             for path in authoritative_paths:
                                 for _, record in _json_lines(path):
-                                    run = runs[record["task_id"]]
+                                    run = runs[record["logical_key"]]
                                     arrays = zip(
                                         record["trajectory_source"],
                                         record["incumbent_source_minute"],
@@ -620,12 +686,16 @@ def build_archive(
                                         member = ""
                                         if source_sha:
                                             pair = (
-                                                _normal_path(str(source_path), repo_root), source_sha
+                                                run.logical_key,
+                                                _normal_path(str(source_path), repo_root),
+                                                source_sha,
                                             ) if source_path not in (None, "") else None
                                             if pair is not None:
                                                 member = pair_to_member.get(pair, "")
                                             if not member:
-                                                member = task_sha_to_member.get((run.task_id, source_sha), "")
+                                                member = logical_sha_to_member.get(
+                                                    (run.logical_key, source_sha), ""
+                                                )
                                             if not member:
                                                 raise ArchiveBuildError(
                                                     f"{run.logical_key}: minute {minute}: "
@@ -674,6 +744,7 @@ def build_archive(
                             "candidate_selection_source": "eff_revision_v3/native_trajectories",
                             "carry_forward_materialized": False,
                             "remote_access_used": False,
+                            "compression_threads": compression_threads,
                         }
                         readme = (
                             "# Core-50 raw snapshot archive\n\n"
@@ -721,6 +792,7 @@ def build_archive(
         **counts,
         "horizon_minutes": horizon,
         "remote_access_used": False,
+        "compression_threads": compression_threads,
     }
     report_path = output.with_suffix(output.suffix + ".report.json")
     sha_path = output.with_suffix(output.suffix + ".sha256")
@@ -742,6 +814,7 @@ def parse_args() -> argparse.Namespace:
         default=Path("AAAI_experiments/Core50_raw_snapshots_20260914.tar.zst"),
     )
     parser.add_argument("--compression-level", type=int, default=10)
+    parser.add_argument("--compression-threads", type=int, default=4)
     return parser.parse_args()
 
 
@@ -759,6 +832,7 @@ def main() -> None:
         release_root=release_root,
         output=output,
         compression_level=args.compression_level,
+        compression_threads=args.compression_threads,
     )
     print(json.dumps(report, ensure_ascii=False, sort_keys=True))
 

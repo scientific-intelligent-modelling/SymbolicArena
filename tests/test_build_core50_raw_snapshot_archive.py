@@ -314,3 +314,143 @@ def test_missing_required_raw_object_fails_closed(tmp_path: Path) -> None:
             expected_historical_missing=1,
             compression_level=1,
         )
+
+
+def test_build_archive_refuses_to_overwrite_existing_delivery(tmp_path: Path) -> None:
+    output = tmp_path / "existing.tar.zst"
+    output.write_bytes(b"keep")
+    with pytest.raises(ArchiveBuildError, match="already exists"):
+        build_archive(
+            repo_root=tmp_path,
+            release_root=tmp_path,
+            output=output,
+            authoritative_paths=[],
+            source_specs=[],
+            expected_runs=0,
+            expected_historical_missing=0,
+            compression_level=1,
+        )
+    assert output.read_bytes() == b"keep"
+
+
+def test_same_task_id_in_different_bundles_uses_logical_key_identity(tmp_path: Path) -> None:
+    first_bundle = tmp_path / "first.jsonl.gz"
+    second_bundle = tmp_path / "second.jsonl.gz"
+    first = task_freeze_record("shared_task", Path("/remote/first"), ["first-1", "first-2"])
+    second = task_freeze_record("shared_task", Path("/remote/second"), ["second-1", "second-2"])
+    write_jsonl_gz(first_bundle, [first])
+    write_jsonl_gz(second_bundle, [second])
+
+    first_authority = authoritative_record(
+        task_id="shared_task",
+        algorithm="first_alg",
+        bundle=str(first_bundle),
+        bundle_sha=digest(first_bundle.read_bytes()),
+        source_paths=[item["selected_path"] for item in first["snapshots"]],
+        source_shas=[item["selected_sha256"] for item in first["snapshots"]],
+        trajectory=["native_incumbent:1", "native_incumbent:2"],
+    )
+    second_authority = authoritative_record(
+        task_id="shared_task",
+        algorithm="second_alg",
+        bundle=str(second_bundle),
+        bundle_sha=digest(second_bundle.read_bytes()),
+        source_paths=[item["selected_path"] for item in second["snapshots"]],
+        source_shas=[item["selected_sha256"] for item in second["snapshots"]],
+        trajectory=["native_incumbent:1", "native_incumbent:2"],
+    )
+    authority = tmp_path / "authority.jsonl.gz"
+    write_jsonl_gz(authority, [first_authority, second_authority])
+
+    output = tmp_path / "duplicate-task-id.tar.zst"
+    report = build_archive(
+        repo_root=tmp_path,
+        release_root=tmp_path,
+        output=output,
+        authoritative_paths=[authority],
+        source_specs=[
+            SourceSpec("task_freeze", first_bundle),
+            SourceSpec("task_freeze", second_bundle),
+        ],
+        horizon=2,
+        expected_runs=2,
+        expected_historical_missing=0,
+        compression_level=1,
+    )
+    assert report["runs"] == 2
+    members = read_tar_zst(output)
+    bindings = list(csv.DictReader(io.TextIOWrapper(gzip.GzipFile(fileobj=io.BytesIO(
+        members["logical_minute_bindings.csv.gz"]
+    )))))
+    assert {row["logical_key"] for row in bindings} == {
+        first_authority["logical_key"], second_authority["logical_key"]
+    }
+    assert any("/first_alg/" in name for name in members)
+    assert any("/second_alg/" in name for name in members)
+
+
+def test_recovery_prefers_source_logical_key_for_repeated_task_id(tmp_path: Path) -> None:
+    shared_raw = b'{"updates":["same-content"]}'
+    shared_sha = digest(shared_raw)
+    first_key = "llmsr::first_dataset::s520::clean"
+    second_key = "llmsr::second_dataset::s520::clean"
+    first_path = "/remote/first/progress.json"
+    second_path = "/remote/second/progress.json"
+    recovery = tmp_path / "recovery.jsonl.gz"
+    write_jsonl_gz(
+        recovery,
+        [
+            {
+                "status": "ok",
+                "source": {"task_id": "shared_task", "logical_key": logical_key},
+                "progress_path": source_path,
+                "progress_sha256": shared_sha,
+                "progress_raw_text": shared_raw.decode(),
+                "candidates": [],
+            }
+            for logical_key, source_path in ((first_key, first_path), (second_key, second_path))
+        ],
+    )
+    authority = tmp_path / "authority.jsonl.gz"
+    write_jsonl_gz(
+        authority,
+        [
+            {
+                "logical_key": logical_key,
+                "task_id": "shared_task",
+                "condition": "clean",
+                "algorithm": "llmsr",
+                "dataset_id": dataset_id,
+                "seed": 520,
+                "host": "fixture",
+                "bundle_path": source_path,
+                "bundle_sha256": shared_sha,
+                "source_path": [source_path],
+                "source_sha256": [shared_sha],
+                "trajectory_source": ["recovered_native_incumbent:1"],
+                "incumbent_source_minute": [1],
+                "valid_output": [True],
+            }
+            for logical_key, dataset_id, source_path in (
+                (first_key, "first_dataset", first_path),
+                (second_key, "second_dataset", second_path),
+            )
+        ],
+    )
+
+    output = tmp_path / "recovery-identity.tar.zst"
+    report = build_archive(
+        repo_root=tmp_path,
+        release_root=tmp_path,
+        output=output,
+        authoritative_paths=[authority],
+        source_specs=[SourceSpec("recovery", recovery)],
+        horizon=1,
+        expected_runs=2,
+        expected_historical_missing=0,
+        compression_level=1,
+    )
+    assert report["physical_records"] == 2
+    members = read_tar_zst(output)
+    assert any("/first_dataset/" in name for name in members)
+    assert any("/second_dataset/" in name for name in members)
