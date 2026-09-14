@@ -483,6 +483,30 @@ def load_openai_profile(path: str | Path, *, provider: str = "custom") -> ApiPro
     )
 
 
+def derive_openai_profile_from_anthropic(anthropic: ApiProfile) -> ApiProfile:
+    """复用同一 Routify 凭据，但固定切换到 OpenAI Responses 端口。"""
+
+    token = anthropic.headers.get("x-api-key")
+    if not isinstance(token, str) or not token:
+        raise ReviewError("Anthropic profile 未提供可复用的 Routify 凭据")
+    return ApiProfile(
+        protocol="openai_responses",
+        base_url=OPENAI_BASE_URL,
+        headers={"content-type": "application/json", "Authorization": f"Bearer {token}"},
+        safe_metadata=_safe_endpoint_metadata(OPENAI_BASE_URL, "openai_responses"),
+    )
+
+
+def load_review_profiles(args: argparse.Namespace) -> dict[str, ApiProfile]:
+    anthropic = load_anthropic_profile(args.anthropic_profile)
+    openai = (
+        derive_openai_profile_from_anthropic(anthropic)
+        if args.reuse_anthropic_token_for_openai
+        else load_openai_profile(args.openai_profile, provider=args.openai_provider)
+    )
+    return {"anthropic": anthropic, "openai_responses": openai}
+
+
 def render_review_prompt(sample: Mapping[str, Any]) -> str:
     occurrence = sample["occurrences"][0] if sample.get("occurrences") else {}
     algorithm = str(occurrence.get("algorithm") or "ground_truth")
@@ -826,7 +850,12 @@ def _write_csv(path: Path, fieldnames: Sequence[str], rows: Iterable[Mapping[str
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     with temporary.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
     temporary.replace(path)
@@ -1005,8 +1034,9 @@ def run_preflight(args: argparse.Namespace) -> int:
         sample_size=args.sample_size,
         seed=args.seed,
     )
-    anthropic = load_anthropic_profile(args.anthropic_profile)
-    openai = load_openai_profile(args.openai_profile, provider=args.openai_provider)
+    profiles = load_review_profiles(args)
+    anthropic = profiles["anthropic"]
+    openai = profiles["openai_responses"]
     root = Path(args.output_root).expanduser().resolve()
     report = {
         "status": "preflight_passed_no_network",
@@ -1039,10 +1069,7 @@ def run_batch(args: argparse.Namespace) -> int:
     )
     if not 1 <= args.concurrency_per_model <= CONCURRENCY_PER_MODEL:
         raise ReviewError(f"concurrency_per_model 必须位于 [1,{CONCURRENCY_PER_MODEL}]")
-    profiles = {
-        "anthropic": load_anthropic_profile(args.anthropic_profile),
-        "openai_responses": load_openai_profile(args.openai_profile, provider=args.openai_provider),
-    }
+    profiles = load_review_profiles(args)
     root = Path(args.output_root).expanduser().resolve()
     budget = RequestBudget(root / "request_budget.json", cap=physical_request_cap(len(samples)))
     errors: list[str] = []
@@ -1136,6 +1163,11 @@ def build_parser() -> argparse.ArgumentParser:
         subparser.add_argument("--anthropic-profile", type=Path, default=DEFAULT_ANTHROPIC_PROFILE)
         subparser.add_argument("--openai-profile", type=Path, default=DEFAULT_OPENAI_PROFILE)
         subparser.add_argument("--openai-provider", default="custom")
+        subparser.add_argument(
+            "--reuse-anthropic-token-for-openai",
+            action="store_true",
+            help="复用已加载的 Routify 凭据并固定路由到 OpenAI Responses 端口",
+        )
         if command == "run":
             subparser.add_argument("--timeout", type=float, default=3000.0)
             subparser.add_argument("--retry-delay", type=float, default=2.0)

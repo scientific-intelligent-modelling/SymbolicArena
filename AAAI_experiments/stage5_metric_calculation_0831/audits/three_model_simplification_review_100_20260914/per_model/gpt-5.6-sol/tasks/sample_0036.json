@@ -1,0 +1,46 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 135,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "stream": false
+      },
+      "response_id": "resp_021807db1af05912016aa807cd707087d0aa179d15bc2c6ce3",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1292,
+        "output_tokens": 1187,
+        "total_tokens": 2479
+      }
+    }
+  ],
+  "logical_task_id": "gpt-5.6-sol::sample_0036",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "e9c771aed59bffe30a4eb996692d93700086f485e1e03ab9fb6d615c998edf90",
+  "prompt_version": "three_model_simplification_review.v1",
+  "review": {
+    "brief_reason": "The factorization matches all symbolic terms except the final fitted constant. Expansion requires the coefficient 7.527696196521596*1.0024578366721326, which is not exactly the fixed decimal 7.5461980442900799 under exact real-decimal semantics. Thus the expressions differ by a small nonzero multiple of x2.",
+    "confidence": 1.0,
+    "counterexample": "Set x0=x3=x4=x5=0 and x2=1. The original evaluates to 1.0024578366721326+7.5461980442900799, while the proposal evaluates to 1.0024578366721326+(7.527696196521596*1.0024578366721326); these are not exactly equal.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "9f91a4cc098cc686d30b79fe0927819afb8b81344f01a5f93f7d03a7aef78a6c",
+  "sample_id": "sample_0036",
+  "schema_version": 1,
+  "status": "completed"
+}

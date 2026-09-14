@@ -1,0 +1,34 @@
+{
+  "concurrency_per_model": 32,
+  "logical_tasks": 300,
+  "max_attempts_per_task": 2,
+  "models": [
+    "kimi-k3",
+    "glm-5.2",
+    "gpt-5.6-sol"
+  ],
+  "physical_request_cap": 450,
+  "profiles": {
+    "anthropic": {
+      "api_host": "routify-pub.alibaba-inc.com",
+      "api_path": "/protocol/anthropic",
+      "credential_loaded": true,
+      "protocol": "anthropic_messages"
+    },
+    "openai": {
+      "api_host": "routify-pub.alibaba-inc.com",
+      "api_path": "/protocol/openai/v1",
+      "credential_loaded": true,
+      "protocol": "openai_responses"
+    }
+  },
+  "sample_seed": 20260914,
+  "sample_size": 100,
+  "source_outcomes": {
+    "simplified": 2852,
+    "unable": 100,
+    "unchanged": 3848
+  },
+  "status": "preflight_passed_no_network",
+  "stream": false
+}

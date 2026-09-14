@@ -1,0 +1,45 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 277,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "protocol": "anthropic_messages",
+        "stream": false
+      },
+      "response_id": "chatcmpl-a18698ac-7f7f-9ebb-b560-3b638301524e",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 836,
+        "output_tokens": 1626,
+        "total_tokens": 2718
+      }
+    }
+  ],
+  "logical_task_id": "kimi-k3::sample_0061",
+  "model": "kimi-k3",
+  "pair_sha256": "8657a4dd832216273b011b65c97a5485cb62188f4c11731bd40250159ea104a4",
+  "prompt_version": "three_model_simplification_review.v1",
+  "review": {
+    "brief_reason": "Term-by-term verification under real semantics confirms exact equivalence: (1) sin term: (-a)*sin(-b*x1) = a*sin(b*x1) by oddness of sin; (2) exp term: -(-c) = c, so (-d)*exp(-(-c)*x1^2) = -d*exp(c*x1^2); (3) log term: (-e)*x1 + 1 = 1 - e*x1, identical argument to Max(1e-6, .); (4) rational term: denominator reorder x1 + f = f + x1 by commutativity; (5) constant and quadratic terms unchanged. All decimal literals preserved verbatim, x1 identity preserved, protected Max(1e-6,.) log guard and the pole at x1 = -0.290128004464075 are identical, so domains match. The proposed form is simpler because it removes unary negations and the double negation without altering semantics.",
+    "confidence": 0.98,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "329000cd1f8f410b142e8c8335f0d3b9167d1f3d6c5dd8003a6f1da63327fdc9",
+  "sample_id": "sample_0061",
+  "schema_version": 1,
+  "status": "completed"
+}

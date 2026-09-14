@@ -176,6 +176,7 @@ def test_profiles_route_models_to_the_correct_protocol_without_leaking_tokens(tm
 
     anthropic = review.load_anthropic_profile(anthropic_profile)
     openai = review.load_openai_profile(openai_profile, provider="custom")
+    derived_openai = review.derive_openai_profile_from_anthropic(anthropic)
     kimi = review.build_http_request(review.MODELS["kimi-k3"], anthropic, "fixture")
     glm = review.build_http_request(review.MODELS["glm-5.2"], anthropic, "fixture")
     gpt = review.build_http_request(review.MODELS["gpt-5.6-sol"], openai, "fixture")
@@ -189,7 +190,15 @@ def test_profiles_route_models_to_the_correct_protocol_without_leaking_tokens(tm
     assert gpt_body["stream"] is False
     assert gpt_body["store"] is False
     assert gpt_body["text"]["format"]["strict"] is True
-    safe = json.dumps([anthropic.safe_metadata, openai.safe_metadata, kimi.safe_metadata, gpt.safe_metadata])
+    assert derived_openai.base_url == review.OPENAI_BASE_URL
+    assert derived_openai.headers["Authorization"] == "Bearer sk-anthropic-secret"
+    safe = json.dumps([
+        anthropic.safe_metadata,
+        openai.safe_metadata,
+        derived_openai.safe_metadata,
+        kimi.safe_metadata,
+        gpt.safe_metadata,
+    ])
     assert "sk-anthropic-secret" not in safe
     assert "sk-openai-secret" not in safe
 
