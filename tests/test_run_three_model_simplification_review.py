@@ -218,6 +218,136 @@ def test_strict_parser_accepts_fenced_json_and_rejects_extra_or_inconsistent_fie
         review.parse_review_json(json.dumps(inconsistent))
 
 
+def test_common_domain_policy_accepts_domain_only_exp_log_power_rewrite() -> None:
+    verdict = _valid_verdict()
+    verdict.update(
+        {
+            "domain_preserved": False,
+            "brief_reason": (
+                "exp(x*log(x)/d) and x**(x/d) agree wherever both real-valued; "
+                "the power form merely has a larger real domain."
+            ),
+        }
+    )
+
+    parsed = review.parse_review_json(
+        json.dumps(verdict), review_policy="common_domain_approx"
+    )
+
+    assert parsed["verdict"] == "pass"
+    assert parsed["domain_preserved"] is False
+    with pytest.raises(review.ReviewError, match="pass"):
+        review.parse_review_json(json.dumps(verdict), review_policy="strict")
+
+
+def test_common_domain_policy_accepts_fitted_constant_rounding_within_tolerance() -> None:
+    verdict = _valid_verdict()
+    verdict["brief_reason"] = (
+        "The fitted coefficients differ only within abs_tol=1e-9 and rel_tol=1e-6."
+    )
+
+    parsed = review.parse_review_json(
+        json.dumps(verdict), review_policy="common_domain_approx"
+    )
+
+    assert parsed["verdict"] == "pass"
+
+
+@pytest.mark.parametrize(
+    ("expression_pair", "failed_field"),
+    [
+        (("sqrt(x**2)", "x"), "equivalence"),
+        (("x_0 + x_1", "x_0 + x_2"), "variable_mapping_preserved"),
+    ],
+)
+def test_common_domain_policy_still_rejects_value_or_variable_changes(
+    expression_pair: tuple[str, str], failed_field: str
+) -> None:
+    verdict = _valid_verdict("fail")
+    verdict.update(
+        {
+            "domain_preserved": True,
+            "variable_mapping_preserved": failed_field != "variable_mapping_preserved",
+            "operator_semantics_preserved": True,
+            "brief_reason": f"Counterexample for {expression_pair!r}.",
+            "counterexample": "x=-1" if expression_pair[0] == "sqrt(x**2)" else "x_1 != x_2",
+        }
+    )
+
+    parsed = review.parse_review_json(
+        json.dumps(verdict), review_policy="common_domain_approx"
+    )
+
+    assert parsed["verdict"] == "fail"
+    assert parsed[failed_field] in {False, "fail"}
+
+
+def test_review_policy_changes_prompt_version_key_and_contract() -> None:
+    sample = {
+        "sample_id": "sample_0001",
+        "review_key": "b" * 64,
+        "pair_sha256": "a" * 64,
+        "original_expression": "exp(x*log(x))",
+        "effective_expression": "x**x",
+        "occurrences": [],
+    }
+
+    strict = review.apply_review_policy(sample, "strict")
+    relaxed = review.apply_review_policy(sample, "common_domain_approx")
+    prompt = review.render_review_prompt(relaxed, review_policy="common_domain_approx")
+
+    assert strict["review_key"] != relaxed["review_key"]
+    assert strict["prompt_version"] != relaxed["prompt_version"]
+    assert "strict" in strict["prompt_version"]
+    assert "common_domain_approx" in relaxed["prompt_version"]
+    assert "abs_tol=1e-9" in prompt
+    assert "rel_tol=1e-6" in prompt
+    assert "common real-valued domain" in prompt
+    assert "domain expansion or contraction alone" in prompt
+
+
+def test_sample_jsonl_reuses_same_items_but_rekeys_for_v2(tmp_path: Path) -> None:
+    source = tmp_path / "sample-v1.jsonl"
+    rows = [
+        {
+            "sample_id": f"sample_{index:04d}",
+            "review_key": str(index) * 64,
+            "pair_sha256": "a" * 64,
+            "original_expression": f"x + {index} - {index}",
+            "effective_expression": "x",
+            "occurrences": [],
+        }
+        for index in range(1, 4)
+    ]
+    _write_jsonl(source, rows)
+
+    reused = review.prepare_sample(
+        release_root=tmp_path / "unused",
+        output_root=tmp_path / "audit-v2",
+        sample_size=3,
+        seed=20260914,
+        review_policy="common_domain_approx",
+        sample_jsonl=source,
+    )
+
+    assert [row["sample_id"] for row in reused] == [row["sample_id"] for row in rows]
+    assert [row["original_expression"] for row in reused] == [
+        row["original_expression"] for row in rows
+    ]
+    assert all(row["review_key"] != source_row["review_key"] for row, source_row in zip(reused, rows))
+
+
+def test_cli_defaults_to_v2_and_keeps_policy_output_roots_separate() -> None:
+    parser = review.build_parser()
+    relaxed = parser.parse_args(["preflight"])
+    strict = parser.parse_args(["preflight", "--review-policy", "strict"])
+
+    assert relaxed.review_policy == "common_domain_approx"
+    assert review._resolve_output_root(relaxed) == review.DEFAULT_OUTPUT_ROOT_V2.resolve()
+    assert review._resolve_output_root(strict) == review.DEFAULT_OUTPUT_ROOT.resolve()
+    assert review._resolve_output_root(relaxed) != review._resolve_output_root(strict)
+
+
 def test_task_record_is_redacted_and_completed_task_resumes_without_request(
     tmp_path: Path,
 ) -> None:

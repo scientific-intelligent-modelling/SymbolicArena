@@ -34,6 +34,11 @@ DEFAULT_OUTPUT_ROOT = (
     / "AAAI_experiments/stage5_metric_calculation_0831/audits"
     / "three_model_simplification_review_100_20260914"
 )
+DEFAULT_OUTPUT_ROOT_V2 = (
+    REPO_ROOT
+    / "AAAI_experiments/stage5_metric_calculation_0831/audits"
+    / "three_model_simplification_review_100_common_domain_approx_20260914"
+)
 DEFAULT_ANTHROPIC_PROFILE = Path.home() / ".claude/settings-jyh.json"
 DEFAULT_OPENAI_PROFILE = Path.home() / ".codex/routify-openai.toml"
 
@@ -44,7 +49,15 @@ SAMPLE_SIZE = 100
 SAMPLE_SEED = 20260914
 CONCURRENCY_PER_MODEL = 32
 MAX_ATTEMPTS_PER_TASK = 2
-PROMPT_VERSION = "three_model_simplification_review.v1"
+REVIEW_POLICIES = ("strict", "common_domain_approx")
+DEFAULT_REVIEW_POLICY = "common_domain_approx"
+PROMPT_VERSIONS = {
+    "strict": "three_model_simplification_review.strict.v1",
+    "common_domain_approx": "three_model_simplification_review.common_domain_approx.v2",
+}
+PROMPT_VERSION = PROMPT_VERSIONS["strict"]
+COMMON_DOMAIN_ABS_TOL = 1e-9
+COMMON_DOMAIN_REL_TOL = 1e-6
 
 
 class ReviewError(ValueError):
@@ -119,13 +132,27 @@ REVIEW_SCHEMA: dict[str, Any] = {
 REVIEW_FIELDS = tuple(REVIEW_SCHEMA["required"])
 
 
-SYSTEM_PROMPT = """You are an independent mathematical audit reviewer. Compare the original
+STRICT_SYSTEM_PROMPT = """You are an independent mathematical audit reviewer. Compare the original
 expression with the proposed simplification under real-valued semantics. Check exact mathematical
 equivalence, domain preservation, fixed variable-to-input-column identity, and operator semantics.
 Do not infer that a transformation is correct merely because it looks simpler. A concrete domain,
 variable, or numerical counterexample requires a fail verdict. If protected-operator semantics are
 material but unavailable, return undetermined rather than guessing. Judge simplicity separately.
 Return exactly one JSON object matching the supplied schema, with no Markdown or extra fields."""
+
+COMMON_DOMAIN_APPROX_SYSTEM_PROMPT = """You are an independent mathematical audit reviewer. Compare
+the original expression with the proposed simplification only on their common real-valued domain.
+A domain expansion or contraction alone is not a failure. Treat fixed decimal and fitted constants
+as numerically equivalent when their induced values agree within abs_tol=1e-9 and rel_tol=1e-6;
+do not refit constants. Variable-to-input-column identity and operator value semantics must remain
+unchanged. For protected operators, ignore a difference that only changes the domain, but fail if
+the expressions change values anywhere in their common real-valued domain. A counterexample in the
+common domain, including sqrt(x**2) -> x at x<0, requires fail. A passing simplification must also be
+same complexity or simpler. Return undetermined rather than guessing. Return exactly one JSON object
+matching the supplied schema, with no Markdown or extra fields."""
+
+# 保留旧名称，避免导入方读取严格策略提示词时失效。
+SYSTEM_PROMPT = STRICT_SYSTEM_PROMPT
 
 
 def canonical_json(value: object) -> str:
@@ -142,6 +169,51 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _validate_review_policy(review_policy: str) -> str:
+    if review_policy not in REVIEW_POLICIES:
+        raise ReviewError(f"review_policy 必须是 {REVIEW_POLICIES} 之一")
+    return review_policy
+
+
+def prompt_version_for_policy(review_policy: str) -> str:
+    return PROMPT_VERSIONS[_validate_review_policy(review_policy)]
+
+
+def system_prompt_for_policy(review_policy: str) -> str:
+    policy = _validate_review_policy(review_policy)
+    return (
+        STRICT_SYSTEM_PROMPT
+        if policy == "strict"
+        else COMMON_DOMAIN_APPROX_SYSTEM_PROMPT
+    )
+
+
+def apply_review_policy(
+    sample: Mapping[str, Any], review_policy: str
+) -> dict[str, Any]:
+    """给冻结样本绑定策略专属 key，阻止跨策略复用历史裁决。"""
+
+    policy = _validate_review_policy(review_policy)
+    row = dict(sample)
+    existing_key = row.get("base_review_key") or row.get("review_key")
+    if not isinstance(existing_key, str) or not existing_key:
+        raise ReviewError("样本缺少 review_key")
+    prompt_version = prompt_version_for_policy(policy)
+    row["base_review_key"] = existing_key
+    row["review_policy"] = policy
+    row["prompt_version"] = prompt_version
+    row["review_key"] = _sha256_bytes(
+        canonical_json(
+            {
+                "base_review_key": existing_key,
+                "review_policy": policy,
+                "prompt_version": prompt_version,
+            }
+        ).encode("utf-8")
+    )
+    return row
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
@@ -507,7 +579,10 @@ def load_review_profiles(args: argparse.Namespace) -> dict[str, ApiProfile]:
     return {"anthropic": anthropic, "openai_responses": openai}
 
 
-def render_review_prompt(sample: Mapping[str, Any]) -> str:
+def render_review_prompt(
+    sample: Mapping[str, Any], *, review_policy: str = "strict"
+) -> str:
+    policy = _validate_review_policy(review_policy)
     occurrence = sample["occurrences"][0] if sample.get("occurrences") else {}
     algorithm = str(occurrence.get("algorithm") or "ground_truth")
     operator_semantics = (
@@ -517,11 +592,34 @@ def render_review_prompt(sample: Mapping[str, Any]) -> str:
         else "No additional algorithm-specific protected-operator contract is asserted; return "
         "undetermined if the written expressions do not preserve required semantics."
     )
+    if policy == "strict":
+        number_semantics = "Decimal literals are fixed fitted constants; do not refit them."
+        domain_semantics = "Ordinary real semantics; exact domain preservation is required."
+        pass_contract = "Require exact equivalence and preservation of the real-valued domain."
+    else:
+        number_semantics = (
+            "Decimal literals are fixed fitted constants; do not refit them. Treat their induced "
+            "values as matching when abs(a-b) <= abs_tol + rel_tol*max(abs(a),abs(b)), with "
+            "abs_tol=1e-9 and rel_tol=1e-6."
+        )
+        domain_semantics = (
+            "Compare values only on the common real-valued domain. A domain expansion or "
+            "contraction alone is not a failure; still report domain_preserved accurately."
+        )
+        pass_contract = (
+            "Pass only when common-domain values agree within tolerance, variable mapping and "
+            "operator value semantics are preserved, and simplicity is same or simpler. For a "
+            "protected operator, ignore domain-only differences but fail value differences on "
+            "the common domain."
+        )
     payload = {
         "audit_contract": {
-            "number_semantics": "Decimal literals are fixed fitted constants; do not refit them.",
+            "review_policy": policy,
+            "prompt_version": prompt_version_for_policy(policy),
+            "number_semantics": number_semantics,
             "variable_semantics": "Variable names denote fixed input columns and may not be renamed or permuted.",
-            "domain": "Ordinary real semantics unless a protected operator is explicitly present.",
+            "domain": domain_semantics,
+            "pass_contract": pass_contract,
             "uncertainty": "Return undetermined when available evidence cannot establish the required claim.",
             "operator_semantics": operator_semantics,
         },
@@ -540,10 +638,19 @@ def render_review_prompt(sample: Mapping[str, Any]) -> str:
         "proposed_simplification": sample["effective_expression"],
         "output_schema": REVIEW_SCHEMA,
     }
-    return SYSTEM_PROMPT + "\n\nAUDIT INPUT:\n" + json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    return system_prompt_for_policy(policy) + "\n\nAUDIT INPUT:\n" + json.dumps(
+        payload, ensure_ascii=False, sort_keys=True
+    )
 
 
-def build_http_request(model: ModelSpec, profile: ApiProfile, prompt: str) -> HttpRequest:
+def build_http_request(
+    model: ModelSpec,
+    profile: ApiProfile,
+    prompt: str,
+    *,
+    review_policy: str = "strict",
+) -> HttpRequest:
+    system_prompt = system_prompt_for_policy(review_policy)
     if model.protocol != profile.protocol:
         raise ReviewError(f"模型 {model.name} 与 profile 协议不匹配")
     if model.protocol == "anthropic":
@@ -553,7 +660,7 @@ def build_http_request(model: ModelSpec, profile: ApiProfile, prompt: str) -> Ht
             "stream": False,
             "temperature": 0,
             "max_tokens": 1200,
-            "system": SYSTEM_PROMPT,
+            "system": system_prompt,
             "messages": [{"role": "user", "content": prompt}],
         }
     elif model.protocol == "openai_responses":
@@ -563,7 +670,7 @@ def build_http_request(model: ModelSpec, profile: ApiProfile, prompt: str) -> Ht
             "stream": False,
             "store": False,
             "input": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             "text": {
@@ -578,7 +685,14 @@ def build_http_request(model: ModelSpec, profile: ApiProfile, prompt: str) -> Ht
     else:
         raise ReviewError(f"未知 API 协议: {model.protocol}")
     safe = dict(profile.safe_metadata)
-    safe.update({"model": model.name, "stream": False})
+    safe.update(
+        {
+            "model": model.name,
+            "stream": False,
+            "review_policy": review_policy,
+            "prompt_version": prompt_version_for_policy(review_policy),
+        }
+    )
     if model.protocol == "openai_responses":
         safe["requested_store"] = False
     return HttpRequest(
@@ -595,7 +709,10 @@ def _strip_json_fence(text: str) -> str:
     return match.group(1).strip() if match else stripped
 
 
-def parse_review_json(text: str) -> dict[str, Any]:
+def parse_review_json(
+    text: str, *, review_policy: str = "strict"
+) -> dict[str, Any]:
+    policy = _validate_review_policy(review_policy)
     try:
         value = json.loads(_strip_json_fence(text))
     except json.JSONDecodeError as error:
@@ -620,14 +737,24 @@ def parse_review_json(text: str) -> dict[str, Any]:
         raise ReviewError("brief_reason 不能为空")
     if value["counterexample"] is not None and not isinstance(value["counterexample"], str):
         raise ReviewError("counterexample 必须为 string 或 null")
-    semantics_ok = all(
-        value[field]
-        for field in ("domain_preserved", "variable_mapping_preserved", "operator_semantics_preserved")
+    required_semantics = ["variable_mapping_preserved", "operator_semantics_preserved"]
+    if policy == "strict":
+        required_semantics.insert(0, "domain_preserved")
+    semantics_ok = all(value[field] for field in required_semantics)
+    simplicity_ok = policy == "strict" or value["simplicity"] in {"same", "simpler"}
+    if value["verdict"] == "pass" and (
+        value["equivalence"] != "pass" or not semantics_ok or not simplicity_ok
+    ):
+        raise ReviewError("pass verdict 与等价性、语义保持或简洁性字段冲突")
+    hard_failure = (
+        value["equivalence"] == "fail"
+        or not semantics_ok
+        or (policy == "common_domain_approx" and not simplicity_ok)
     )
-    if value["verdict"] == "pass" and (value["equivalence"] != "pass" or not semantics_ok):
-        raise ReviewError("pass verdict 与等价性或语义保持字段冲突")
-    if (value["equivalence"] == "fail" or not semantics_ok) and value["verdict"] != "fail":
+    if hard_failure and value["verdict"] != "fail":
         raise ReviewError("确定失败证据必须给出 fail verdict")
+    if value["equivalence"] == "undetermined" and not hard_failure and value["verdict"] != "undetermined":
+        raise ReviewError("等价性未确定时 verdict 必须为 undetermined")
     return value
 
 
@@ -748,12 +875,21 @@ def _task_path(output_root: Path, model: str, sample_id: str) -> Path:
     return output_root / "per_model" / model / "tasks" / f"{sample_id}.json"
 
 
-def _load_task_record(path: Path, *, model: str, sample: Mapping[str, Any]) -> dict[str, Any]:
+def _load_task_record(
+    path: Path,
+    *,
+    model: str,
+    sample: Mapping[str, Any],
+    review_policy: str = "strict",
+) -> dict[str, Any]:
+    policy = _validate_review_policy(review_policy)
+    prompt_version = prompt_version_for_policy(policy)
     if not path.exists():
         return {
             "schema_version": 1,
-            "prompt_version": PROMPT_VERSION,
-            "logical_task_id": f"{model}::{sample['sample_id']}",
+            "prompt_version": prompt_version,
+            "review_policy": policy,
+            "logical_task_id": f"{policy}::{model}::{sample['sample_id']}",
             "sample_id": sample["sample_id"],
             "review_key": sample["review_key"],
             "pair_sha256": sample["pair_sha256"],
@@ -763,11 +899,20 @@ def _load_task_record(path: Path, *, model: str, sample: Mapping[str, Any]) -> d
         }
     value = json.loads(path.read_text(encoding="utf-8"))
     expected = (
-        PROMPT_VERSION, model, sample["sample_id"], sample["review_key"], sample["pair_sha256"]
+        prompt_version,
+        policy,
+        model,
+        sample["sample_id"],
+        sample["review_key"],
+        sample["pair_sha256"],
     )
     actual = (
-        value.get("prompt_version"), value.get("model"), value.get("sample_id"),
-        value.get("review_key"), value.get("pair_sha256")
+        value.get("prompt_version"),
+        value.get("review_policy"),
+        value.get("model"),
+        value.get("sample_id"),
+        value.get("review_key"),
+        value.get("pair_sha256"),
     )
     if actual != expected:
         raise ReviewError(f"断点记录与当前样本/提示词不一致: {path}")
@@ -794,14 +939,19 @@ def review_one_task(
     transport: Callable[[HttpRequest, float], HttpResponse] = default_transport,
     timeout: float = 3000.0,
     retry_delay_seconds: float = 2.0,
+    review_policy: str = "strict",
 ) -> dict[str, Any]:
     root = Path(output_root)
     path = _task_path(root, model.name, str(sample["sample_id"]))
-    record = _load_task_record(path, model=model.name, sample=sample)
+    record = _load_task_record(
+        path, model=model.name, sample=sample, review_policy=review_policy
+    )
     if record.get("status") == "completed":
         return record
-    prompt = render_review_prompt(sample)
-    request = build_http_request(model, profile, prompt)
+    prompt = render_review_prompt(sample, review_policy=review_policy)
+    request = build_http_request(
+        model, profile, prompt, review_policy=review_policy
+    )
     attempts: list[dict[str, Any]] = record["attempts"]
     while len(attempts) < MAX_ATTEMPTS_PER_TASK:
         attempt_number = len(attempts) + 1
@@ -821,7 +971,9 @@ def review_one_task(
             response = transport(request, timeout)
             if not 200 <= response.status < 300:
                 raise ReviewError(f"HTTP {response.status}")
-            parsed = parse_review_json(_response_text(model, response.payload))
+            parsed = parse_review_json(
+                _response_text(model, response.payload), review_policy=review_policy
+            )
             attempt.update(
                 {
                     "status": "accepted",
@@ -1013,35 +1165,82 @@ def _write_checksums(output_root: Path) -> None:
     _atomic_write_text(checksum_path, "".join(rows))
 
 
+def _load_frozen_sample(path: str | Path) -> list[dict[str, Any]]:
+    rows = [row for _, row in _read_jsonl(Path(path).expanduser().resolve())]
+    if not rows:
+        raise ReviewError("--sample-jsonl 不包含样本")
+    required = {
+        "sample_id",
+        "review_key",
+        "pair_sha256",
+        "original_expression",
+        "effective_expression",
+        "occurrences",
+    }
+    for index, row in enumerate(rows, start=1):
+        if not required.issubset(row):
+            raise ReviewError(f"--sample-jsonl 第 {index} 条缺少必填字段")
+    sample_ids = [str(row["sample_id"]) for row in rows]
+    if len(set(sample_ids)) != len(sample_ids):
+        raise ReviewError("--sample-jsonl 包含重复 sample_id")
+    return rows
+
+
 def prepare_sample(
     *,
     release_root: str | Path,
     output_root: str | Path,
     sample_size: int,
     seed: int,
+    review_policy: str = "strict",
+    sample_jsonl: str | Path | None = None,
 ) -> list[dict[str, Any]]:
-    universe = build_review_universe(release_root)
-    samples = stratified_sample(universe, sample_size=sample_size, seed=seed)
+    if sample_jsonl is None:
+        universe = build_review_universe(release_root)
+        samples = stratified_sample(universe, sample_size=sample_size, seed=seed)
+    else:
+        samples = _load_frozen_sample(sample_jsonl)
+        if len(samples) != sample_size:
+            raise ReviewError(
+                f"--sample-jsonl 含 {len(samples)} 条，但 --sample-size={sample_size}"
+            )
+    samples = [apply_review_policy(sample, review_policy) for sample in samples]
     root = Path(output_root).expanduser().resolve()
     _write_sample(root / "sample.jsonl", samples)
     return samples
 
 
+def _resolve_output_root(args: argparse.Namespace) -> Path:
+    if args.output_root is not None:
+        return Path(args.output_root).expanduser().resolve()
+    return (
+        DEFAULT_OUTPUT_ROOT
+        if args.review_policy == "strict"
+        else DEFAULT_OUTPUT_ROOT_V2
+    ).resolve()
+
+
 def run_preflight(args: argparse.Namespace) -> int:
+    output_root = _resolve_output_root(args)
     samples = prepare_sample(
         release_root=args.release_root,
-        output_root=args.output_root,
+        output_root=output_root,
         sample_size=args.sample_size,
         seed=args.seed,
+        review_policy=args.review_policy,
+        sample_jsonl=args.sample_jsonl,
     )
     profiles = load_review_profiles(args)
     anthropic = profiles["anthropic"]
     openai = profiles["openai_responses"]
-    root = Path(args.output_root).expanduser().resolve()
+    root = output_root
     report = {
         "status": "preflight_passed_no_network",
         "sample_size": len(samples),
         "sample_seed": args.seed,
+        "sample_source": str(args.sample_jsonl) if args.sample_jsonl else "stratified_release",
+        "review_policy": args.review_policy,
+        "prompt_version": prompt_version_for_policy(args.review_policy),
         "models": list(MODELS),
         "concurrency_per_model": args.concurrency_per_model,
         "logical_tasks": logical_task_count(len(samples)),
@@ -1061,16 +1260,19 @@ def run_preflight(args: argparse.Namespace) -> int:
 
 
 def run_batch(args: argparse.Namespace) -> int:
+    output_root = _resolve_output_root(args)
     samples = prepare_sample(
         release_root=args.release_root,
-        output_root=args.output_root,
+        output_root=output_root,
         sample_size=args.sample_size,
         seed=args.seed,
+        review_policy=args.review_policy,
+        sample_jsonl=args.sample_jsonl,
     )
     if not 1 <= args.concurrency_per_model <= CONCURRENCY_PER_MODEL:
         raise ReviewError(f"concurrency_per_model 必须位于 [1,{CONCURRENCY_PER_MODEL}]")
     profiles = load_review_profiles(args)
-    root = Path(args.output_root).expanduser().resolve()
+    root = output_root
     budget = RequestBudget(root / "request_budget.json", cap=physical_request_cap(len(samples)))
     errors: list[str] = []
     executors = {
@@ -1091,6 +1293,7 @@ def run_batch(args: argparse.Namespace) -> int:
                 budget=budget,
                 timeout=args.timeout,
                 retry_delay_seconds=args.retry_delay,
+                review_policy=args.review_policy,
             ): (sample["sample_id"], model.name)
             for model in MODELS.values()
             for sample in samples
@@ -1125,6 +1328,9 @@ def run_batch(args: argparse.Namespace) -> int:
         "status": "completed" if not errors and all(row["unavailable_count"] == 0 for row in consensus_rows) else "partial",
         "sample_size": len(samples),
         "sample_seed": args.seed,
+        "sample_source": str(args.sample_jsonl) if args.sample_jsonl else "stratified_release",
+        "review_policy": args.review_policy,
+        "prompt_version": prompt_version_for_policy(args.review_policy),
         "logical_tasks": logical_task_count(len(samples)),
         "physical_request_cap": physical_request_cap(len(samples)),
         "physical_requests_reserved": budget.used,
@@ -1156,7 +1362,24 @@ def build_parser() -> argparse.ArgumentParser:
     for command in ("preflight", "run"):
         subparser = subparsers.add_parser(command)
         subparser.add_argument("--release-root", type=Path, default=DEFAULT_RELEASE_ROOT)
-        subparser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+        subparser.add_argument(
+            "--review-policy",
+            choices=REVIEW_POLICIES,
+            default=DEFAULT_REVIEW_POLICY,
+            help="strict 为原严格合同；common_domain_approx 为共同实数域近似等价合同",
+        )
+        subparser.add_argument(
+            "--output-root",
+            type=Path,
+            default=None,
+            help="省略时按 review policy 写入互相隔离的默认目录",
+        )
+        subparser.add_argument(
+            "--sample-jsonl",
+            type=Path,
+            default=None,
+            help="复用已冻结样本；表达式和 sample_id 不变，但按当前 policy 重新生成 review_key",
+        )
         subparser.add_argument("--sample-size", type=int, default=SAMPLE_SIZE)
         subparser.add_argument("--seed", type=int, default=SAMPLE_SEED)
         subparser.add_argument("--concurrency-per-model", type=int, default=CONCURRENCY_PER_MODEL)
