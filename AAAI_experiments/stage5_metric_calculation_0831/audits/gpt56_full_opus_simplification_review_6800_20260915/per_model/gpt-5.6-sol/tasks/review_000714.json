@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 705,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_01cf0e327c89f89e016aa82c7b32b887d09d23bf93bee32d23",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1843,
+        "output_tokens": 1462,
+        "total_tokens": 3305
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000714",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "31d73d7b7895e17c357428076f8636b5ca13332a0aa1fe6e084a11cf1a6b11e4",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The proposed algebra does not preserve the authoritative protected-division semantics. At Pol=n=epsilon=Ef=1, an inner zero denominator in the native program triggers protected div(a,0)=1, producing a different value from the proposed expression. The proposed fractional powers also restrict the otherwise total native protected domain.",
+    "confidence": 1.0,
+    "counterexample": "Pol=1, n=1, epsilon=1, Ef=1: authoritative native original = 1/0.358 ≈ 2.793296089385475, while proposed = 1/1.358 ≈ 0.736377025036819.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "176f4f875999913f3d9321b101849f95b9ebe1fd2839ed5080793bea30c38143",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000714",
+  "schema_version": 1,
+  "status": "completed"
+}

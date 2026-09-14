@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5103,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0967040cc75fd53d016aa8313d011887d0803ec49e2395d445",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2745,
+        "output_tokens": 1227,
+        "total_tokens": 3972
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005168",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "7141832aa5718e040aa649243ff2cf7f2f93ca56454902173fd53cf6176fa779",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The scaled-division rewrite is invalid under gplearn's protected division cutoff. Although 0.683/(2*epsilon-1.244) and 0.3415/(epsilon-0.622) agree under ordinary division, scaling the denominator changes when the protected fallback value 1 is used. The protected-log expansion can likewise differ near its cutoffs. Both expressions remain real-valued for all real epsilon and T, and the variable mapping is unchanged.",
+    "confidence": 0.999,
+    "counterexample": "epsilon=0.62275, T=1. Then |2*epsilon-1.244|=0.0015>0.001, so the original term is 0.683/0.0015≈455.3333333333, while |epsilon-0.622|=0.00075<=0.001, so the proposed protected-division term equals 1. The outer factor is approximately -0.804, so the complete expression values differ substantially.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "same",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "a5d6f243e20a9d08929146cd8da4597bad0cd64135d2117a22a4501d7a734737",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005168",
+  "schema_version": 1,
+  "status": "completed"
+}

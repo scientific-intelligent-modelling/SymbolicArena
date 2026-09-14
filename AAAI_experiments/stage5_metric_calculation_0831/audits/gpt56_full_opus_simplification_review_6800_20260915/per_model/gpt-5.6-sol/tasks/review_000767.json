@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 746,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0538c0b935966f2d016aa82c860e8887d0ac14a1043afc7b84",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1926,
+        "output_tokens": 1824,
+        "total_tokens": 3750
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000767",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "3ffc75441a2485b3bd8d28c3d4943f45e6acae9c883c0baa0de738f6e2bd037f",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The simplification incorrectly extracts sign-sensitive factors from protected square roots. With protected sqrt(a)=sqrt(abs(a)), the original outer square root removes the sign caused by j, whereas the proposed A_vec/j factor retains it. Fractional powers also contract the real-valued domain, though domain differences alone are not the failure.",
+    "confidence": 0.99,
+    "counterexample": "On the common domain, take j=-1, rho_c_0=1, q=1, A_vec=1. The shared nested denominator is approximately 4.145, while the original evaluates to approximately +0.2413 and the proposed expression to approximately -0.2413.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "70d64899f5cac66f152ba3ff65ffc57c89d04fab3633550bb8656b66cb96ff4c",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000767",
+  "schema_version": 1,
+  "status": "completed"
+}

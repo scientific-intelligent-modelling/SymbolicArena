@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 718,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_07d4aee035afb3ec016aa82c7ec8ec87d0a69863ee99ecb827",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1813,
+        "output_tokens": 1276,
+        "total_tokens": 3089
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000730",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "73416cdd1eebd0d1b793884a0271d900afdd3c82307d12b3da326dad2919a950",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The factoring 0.425*x-0.425*y to 0.425*(x-y) is valid, but log(sqrt(A)) is not equivalent to log(A)/2 under gplearn's protected operators. The original protected log activates when |A|>1e-6 after protected sqrt, whereas the proposed protected log activates only when |A|>0.001, producing different values in between.",
+    "confidence": 0.999,
+    "counterexample": "At x=0, y=8600, A=x*(x+cos(log(y)))+div(0.86,y)=0.0001. Original: log(sqrt(A))=log(0.01)=log(0.01), while proposed: div(log(A),2)=0 because protected log(0.0001)=0. Consequently the outer cos(cos(...)) terms differ by about 0.454, well beyond tolerance.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "6a982e379061dc0dec0f07efaab0f8d43a5e09a6e8f8f21878ecd276569b3784",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000730",
+  "schema_version": 1,
+  "status": "completed"
+}

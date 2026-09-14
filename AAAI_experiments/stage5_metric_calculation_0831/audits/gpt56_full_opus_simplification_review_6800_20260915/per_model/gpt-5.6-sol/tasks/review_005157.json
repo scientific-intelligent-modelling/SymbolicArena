@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5094,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_00df025bbf2036b2016aa8313b19f887d08cd286ae6be704b0",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1591,
+        "output_tokens": 888,
+        "total_tokens": 2479
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005157",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "4fe561410c63a7891be387e1aece5d3f98188bf399c22ddd7933e9d028481e3f",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The cancellation leading to P**(-3) does not preserve gplearn's protected-division values. In the authoritative native program, thresholded divisions retain dependence on t at exceptional denominators, while the proposal removes t and is nonzero for P=2.",
+    "confidence": 1.0,
+    "counterexample": "At t=0, P=2: protected div(t,P)=0, then div(0,P*P)=0, and protected div(0,t)=1, so the authoritative original is sqrt(0.131*log(1)^2)=0. The proposal is 1.085817664251231*|log(2)|≈0.7526.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "d30d832eed92372c3bb65d751c796e976d89261275313da5d00bc5d7f224fdad",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005157",
+  "schema_version": 1,
+  "status": "completed"
+}

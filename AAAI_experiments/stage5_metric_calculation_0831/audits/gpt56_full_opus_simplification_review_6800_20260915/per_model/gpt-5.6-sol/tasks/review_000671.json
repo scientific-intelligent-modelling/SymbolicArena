@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 670,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0e0cc23e74d678fe016aa82c7360e487d0bc7edc1898be900c",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1645,
+        "output_tokens": 429,
+        "total_tokens": 2074
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000671",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "79b41d0279459c15e865456774c5cc69b1e270948130b5a17be4d0130cdef3a1",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The authoritative native expression is -0.586*sqrt(abs(x2*sqrt(abs(x2))*A)), where A is the trigonometric sum. On the proposed expression's common real domain (x2>=0), this equals -0.586*x2^(3/4)*sqrt(abs(A)), exactly the proposed value under protected sqrt semantics. The proposal excludes negative x2, so the domain is not preserved, but domain-only differences do not cause failure.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": false,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "a510dc1d59011b43e9dab1fdc0f297bda4adfa980463ce8fc082d37947109df9",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000671",
+  "schema_version": 1,
+  "status": "completed"
+}

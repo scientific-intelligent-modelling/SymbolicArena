@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5153,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_07ac86d5c9a8946f016aa83146d9bc87d0afe5ee0908e36a72",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2069,
+        "output_tokens": 853,
+        "total_tokens": 2922
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005232",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "bd38d6840b37b5fc2ca4f5b49a90d4013230cf1dd334cc2c69a7de7a171a2a9d",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The simplification replaces protected log(x**2) with 2*protected log(x). This identity fails when 0.001 < abs(x) <= sqrt(0.001), because log(x) is active while log(x**2) returns 0. Thus values differ on the common real-valued domain.",
+    "confidence": 0.99,
+    "counterexample": "x=0.01, y=pi/2. Protected log(x)=log(0.01)=-4.605170185988091, but protected log(x**2)=0 since x**2=0.0001<=0.001. The proposed value differs from the original by approximately 0.12178.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "96bc001f1b9acce6aa4756a9c5f63994b1e9da6080f850879d3b52c54d219fca",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005232",
+  "schema_version": 1,
+  "status": "completed"
+}

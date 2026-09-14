@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 755,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_08cc5bafa814eebd016aa82c8fbaa487d09626f9820d2d5aeb",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1802,
+        "output_tokens": 833,
+        "total_tokens": 2635
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000777",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "e79e08fb01e8293c6c0659f0fe2d02a57f0fb3f7b0a2cafaec2bdc5ced78c3c3",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic rearrangement is invalid under gplearn protected division. When c is near zero, each protected division returns 1 independently, so moving factors across and combining divisions changes values.",
+    "confidence": 1.0,
+    "counterexample": "Set c=0, omega=0, theta=pi/2, and v=0. Every division by c or c**2 returns 1. The original evaluates to 0 because its outer factor cos(theta)=0, while the proposed expression evaluates to -2.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "e70c3e841044863518a389e73c4cab330a9c51e0bc19eca81ac523ec2e3f27c2",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000777",
+  "schema_version": 1,
+  "status": "completed"
+}

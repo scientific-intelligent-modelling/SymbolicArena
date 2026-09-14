@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5179,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_074f207e4af92e49016aa83151b0c887d0b9635b9a96d77ba7",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1673,
+        "output_tokens": 1345,
+        "total_tokens": 3018
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005265",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "f455046995728d8cfe0f3c773ea3f8e1e2e3e64625a70a5a8c04686fb4172830",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic denominator rewrite is valid for ordinary division but not for gplearn's protected division, because regrouping changes when the 0.001 cutoff is applied. The proposed q**(1/4) also excludes negative q that the authoritative nested protected square roots accept, though that domain difference alone is not the failure.",
+    "confidence": 0.99,
+    "counterexample": "mom=1, q=1, r=0.0005. In the authoritative prefix program, both divisions by r return 1, so the output is sqrt(cos(sin(1))/(1-sin(1))) ≈ 2.05. In the proposal, r**2*(1-sin(1)) has magnitude below 0.001, so the protected outer division returns 1 and the output is 1.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "2d026c461cd18434fc4e2c2e2abf7b3494b29c3bd31f0733b1b22ab90b8f8527",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005265",
+  "schema_version": 1,
+  "status": "completed"
+}

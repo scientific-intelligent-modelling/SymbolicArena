@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2034,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_01ac221120f5c86e016aa82e1943ac87d0b1c0712244a3eb29",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1351,
+        "output_tokens": 3332,
+        "total_tokens": 4683
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002061",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "a9b43d5106897f71e356d3e0e173c5ba99ed5379e195c544784990dab350334c",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "Both expressions are real for all real A,t and the proposed form is structurally simpler, but its rounded normalized linear coefficients are not exactly proportional to the original factor. The resulting error can be amplified without bound, so values disagree on the common domain.",
+    "confidence": 0.99,
+    "counterexample": "Take t=10000000000 and A=(1.502-1.06*t)/3.031. Then the original factor 1.06*t+3.031*A-1.502 is exactly 0, giving an original value near -0.0004. In the proposed expression, A+0.349719564500165*t-0.495546024414385 is about 3.8e-7; multiplied by the other factor it is about -66.5, so the proposed value is about 66.5.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "1a85951c24474cf403327da97e58d9b9385d193f3314daa31a4f3bccfc60c079",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002061",
+  "schema_version": 1,
+  "status": "completed"
+}

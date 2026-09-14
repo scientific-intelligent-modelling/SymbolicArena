@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 1676,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_07d3f16fbf91d82a016aa82da7284c87d08bfce278f9f67b78",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2194,
+        "output_tokens": 446,
+        "total_tokens": 2640
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_001703",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "e9430867c40fda64f7107a878d04a06ac0fe8bf21f5d72ef1976f1ef738388cd",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The only change removes Abs around the sine raised to the 1/8 power. Wherever the proposed expression is real, that sine is nonnegative, so Abs(sine)=sine and both expressions have the same value. Negative sine values remain valid for the original via Abs but are outside the proposed real domain, making this only a permitted domain contraction. Variable identities are unchanged and the proposal is simpler.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": false,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "6dd81f59b2f36b41f348725f8de741e36d8fd81babeec4646182b17ad6c5ad7d",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_001703",
+  "schema_version": 1,
+  "status": "completed"
+}

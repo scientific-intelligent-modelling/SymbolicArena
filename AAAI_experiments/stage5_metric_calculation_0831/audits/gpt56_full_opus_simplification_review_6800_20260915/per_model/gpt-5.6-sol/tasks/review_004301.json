@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 4241,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_007241a74d54c303016aa83041e0f487d0beaf201e22de15b4",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1295,
+        "output_tokens": 1090,
+        "total_tokens": 2385
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_004301",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "6439469ea98ac4bb59969aa732939ccf9b3fba23821223665fe182246bda079b",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The denominator factorization is exact and preserves the domain, but replacing 0.43000000000000002 by 0.43 creates a small coefficient difference that can be amplified without bound. Thus the expressions exceed the required value tolerance at some common-domain inputs.",
+    "confidence": 0.99,
+    "counterexample": "At x2=1000000000 and x1=9999999.57, the proposed outer factor is exactly 0, so its value is 0. The original outer factor is 2e-17, while the second factor is approximately 2699999999.8, giving an original value approximately 5.3999999996e-8, exceeding the tolerance relative to 0.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "0078aed2e6f37b5b5367784ceb20b50014f4f8b843ba936bfb6a6ea6755e533d",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_004301",
+  "schema_version": 1,
+  "status": "completed"
+}

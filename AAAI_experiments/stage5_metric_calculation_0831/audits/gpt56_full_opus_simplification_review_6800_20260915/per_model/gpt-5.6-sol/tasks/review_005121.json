@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5059,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_00024bf41812a1ee016aa831347cec87d09ffbe2d816fa29b6",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1266,
+        "output_tokens": 302,
+        "total_tokens": 1568
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005121",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "5dcf5a562e3e9b331d2720cdaf45a8985c6c18d2c04c297c932e89499a99803d",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The original denominator is exactly 2*(-x1 + x2 + 1.248921), so the inner coefficient reduces from 3.1787424/2 to 1.5893712. Replacing (cos(x1**2) - 0.24599184) by its negative absorbs the outer minus via -sin(z) = sin(-z). The denominator-zero sets are identical, so the real domains also match.",
+    "confidence": 1.0,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "a7ccc83e3243273c47bf2a0d745931f1519b1a7b643ea5042ada7e443fc2fc51",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005121",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 465,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_09eab60363dcd1eb016aa82c4d48c087d0b856770e912e96ff",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1373,
+        "output_tokens": 639,
+        "total_tokens": 2012
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000466",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "64eba7fe1b5d9cf0baac0493b1a7bbcef824617050db4b82131db80da25fb8fe",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The reciprocal theta-dependent term is correctly reducible to 13.5*(theta-2)*(theta+1)/((0.034*Ef-0.03)*(epsilon+4.5)), but the independent 0.01 was incorrectly replaced by 0.0003*(theta-2)*(theta+1). Thus values differ on the common domain.",
+    "confidence": 1.0,
+    "counterexample": "At Ef=1, epsilon=0, theta=2, p_d=0, all denominators are nonzero. The original square-root argument before Abs is 0.01-0.0111111111111111=-0.0011111111111111, while the proposed one is -0.0111111111111111, so the outputs differ.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "e097292002ec7127bddd2da26b0bf0535eebbcca3ec92d2b0419f74947c11498",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000466",
+  "schema_version": 1,
+  "status": "completed"
+}

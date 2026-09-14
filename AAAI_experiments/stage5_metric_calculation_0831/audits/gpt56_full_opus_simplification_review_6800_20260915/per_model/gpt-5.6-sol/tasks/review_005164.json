@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5101,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_05f65bfecd76770f016aa8313c598087d09fe5420f0c9c7118",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1749,
+        "output_tokens": 1616,
+        "total_tokens": 3365
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005164",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "29d9927b920fca8633efa1bc482cf205eaa14a4d5d8503c965bfdc385787ef2d",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic consolidation changes gplearn protected-division values when denominators are at or below the 0.001 threshold. Although the variables and real-valued domain are preserved, the proposed single division is not value-equivalent to the native program's separate protected divisions.",
+    "confidence": 0.99,
+    "counterexample": "Pol=1, Ef=0, n=0.0005, epsilon=1. The authoritative native program evaluates to sqrt(0.515*(3-0.515)) = sqrt(1.279775) ≈ 1.13127, while the proposed expression's division by epsilon*n**2 is protected to 1, giving 0.515.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "6ebd1a5d4b857a610569a681472995453b2785bca4e8a7ef599bbae61a0be406",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005164",
+  "schema_version": 1,
+  "status": "completed"
+}

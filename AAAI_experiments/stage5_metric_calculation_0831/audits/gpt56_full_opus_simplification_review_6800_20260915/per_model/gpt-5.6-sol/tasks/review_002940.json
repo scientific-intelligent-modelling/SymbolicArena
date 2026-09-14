@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2904,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_084a617e654701f9016aa82ed69a2487d08d0725e49149caf8",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1792,
+        "output_tokens": 1085,
+        "total_tokens": 2877
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002940",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "dd2958437e61ebe9af707ae4c8c826a949d75ee0f4ab8dce09ef82ae713564bf",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite is not value-preserving under gplearn's protected division. It replaces forms such as x1/sqrt(x1*(x0+1)) with sqrt(x1/(x0+1)); protected-division thresholding occurs at different intermediate values, producing substantially different results on the common domain.",
+    "confidence": 0.99,
+    "counterexample": "At x0=1 and x1=0.0001, the original first ratio is approximately 0.007071 because its denominator exceeds 0.001, while the proposed inner division 0.0001/2 is protected to 1, making the corresponding angle 1. The complete original value is approximately 1.000025, whereas the proposed value is approximately 0.3601.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "01ca214a3582429945fd98f0514e0f1757e2bbaa37d62e08f1ba70c8a3a5f86a",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002940",
+  "schema_version": 1,
+  "status": "completed"
+}

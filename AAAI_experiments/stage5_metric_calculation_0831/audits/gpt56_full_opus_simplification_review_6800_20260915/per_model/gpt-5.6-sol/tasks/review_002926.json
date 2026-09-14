@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2895,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_08756343c31ba1d9016aa82ed4673487d09cd847cfa9df7b10",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1659,
+        "output_tokens": 1278,
+        "total_tokens": 2937
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002926",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "66e2df961e9728cb6a2dc1a010093220007a429a8370d8aa8ca15e0eed90daaa",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite is valid for ordinary division but not for gplearn protected division. When abs(n)<=0.001, each div(d2,n) in the original returns 1, leaving a factor dependent on log(d1), whereas the proposed outer division returns 1 and removes that dependence.",
+    "confidence": 0.99,
+    "counterexample": "Let d1=exp(16), d2=1, n=0. Then protected log(d1)=16 and div(d2,n)=1. The original equals 2*sin(sin(1)), while the proposed expression equals sin(sin(1)); both are real and unequal.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "5782e52674c82989dc4a8922c36a2a85b10db7254c0538f29fa3e5af2e0b8a03",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002926",
+  "schema_version": 1,
+  "status": "completed"
+}

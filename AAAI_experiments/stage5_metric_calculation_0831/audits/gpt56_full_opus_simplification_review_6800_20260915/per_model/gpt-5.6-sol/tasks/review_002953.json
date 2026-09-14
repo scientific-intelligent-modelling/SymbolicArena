@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2915,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_08d00e3626dc5f29016aa82ed9dd9c87d0b37078bf84a9e7dc",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2139,
+        "output_tokens": 2084,
+        "total_tokens": 4223
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002953",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "f1085a9be65c2d91331f74ebde4b2abe8b66c628efb808a1ab52a60e1393fc56",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The simplification combines several protected divisions by x5 and replaces the protected composition (x5/x2)/x5 with 1/x2. These algebraic steps are invalid when a protected denominator has absolute value at most 0.001. Although the variables and real-valued domain are unchanged, values differ on that domain.",
+    "confidence": 0.99,
+    "counterexample": "At x2=1, x4=1, x5=0, every original protected division by x5 returns 1 separately. Using the authoritative native program, the original is approximately 9.07704, while the proposed expression is approximately 2.07704.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "b5d0cd1a844ba495c873d90a70e52f15aa99f0b82f10c02ecf53c382aa9e47f2",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002953",
+  "schema_version": 1,
+  "status": "completed"
+}

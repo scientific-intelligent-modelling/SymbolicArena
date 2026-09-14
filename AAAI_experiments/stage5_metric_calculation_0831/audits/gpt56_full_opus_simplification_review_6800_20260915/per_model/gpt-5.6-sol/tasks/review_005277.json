@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5190,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0529a91267611a57016aa8315462e487d0b72b97538b3beda9",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1701,
+        "output_tokens": 1411,
+        "total_tokens": 3112
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005277",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "896715d4f2a1ec8ecb93eb67ffb7b4b497c1276bd5b6385229059b2ee8a4f8c2",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic rewrite is valid for ordinary division away from the protection threshold, but not for nested gplearn protected divisions. Squaring the denominator changes when the protected-division fallback is activated, producing different values on the common domain.",
+    "confidence": 0.999,
+    "counterexample": "Let c=0.0005, v=0, omega=1, theta=0, and s=sin(1). In the original, every division by c is protected and returns 1, so the value is 1-2s ≈ -0.6829419696. In the proposal, c**2=2.5e-7 triggers protected division for the combined quotient, which returns 1, so the value is 1*(1-1)=0.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "a30559aed804c5a6c3886c4c05f9c5d9918892cda22c5985387908067278b1a9",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005277",
+  "schema_version": 1,
+  "status": "completed"
+}

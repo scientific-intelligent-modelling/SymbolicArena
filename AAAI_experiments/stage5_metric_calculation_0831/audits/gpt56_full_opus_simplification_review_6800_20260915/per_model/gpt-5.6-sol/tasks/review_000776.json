@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 754,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_04056ff54e1a3bdc016aa82c86da3887d08082bd0a0902d916",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1556,
+        "output_tokens": 387,
+        "total_tokens": 1943
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000776",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "bcd23f68be25c76f3960950b0af37c06d78e8a157b9b23f1d2c78f668db69043",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic rewrite is invalid under gplearn's protected division and also adds an operation. When d1=0, d2=1, and n=1, the original inner division returns 1, so the original value is 1/(1+1)=0.5; the proposed expression evaluates to 0/1=0.",
+    "confidence": 1.0,
+    "counterexample": "d1=0, d2=1, n=1: original=0.5, proposed=0",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "more_complex",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "783ef4e98182729782f46c7e8490e298e111e6a1a7e3df139a0e7c49f9328921",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000776",
+  "schema_version": 1,
+  "status": "completed"
+}

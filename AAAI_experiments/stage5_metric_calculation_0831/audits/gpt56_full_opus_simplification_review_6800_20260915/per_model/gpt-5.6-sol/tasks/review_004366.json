@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 4306,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0c6e6d0d6977dcca016aa8305708d887d097bec0d71fd77956",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1454,
+        "output_tokens": 1993,
+        "total_tokens": 3447
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_004366",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "9e1b4ee85d7c9dcc79e4a53a21292c0a413e29e00186ae5eaa9df92ed606242d",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The polynomial expansion is correct, but replacing 0.09000000000000001 by 0.09 inside a denominator shifts its singularity. Near the two distinct poles, while remaining in both real-valued domains, the reciprocal and resulting square-root values differ far beyond tolerance. The outer coefficient change can also be amplified for large square-root values.",
+    "confidence": 0.99,
+    "counterexample": "Set epsilon=0, p_d=0, theta=0. Let E2=0.07/0.09, E1=0.07/0.09000000000000001, and Ef=E2+(E2-E1)/100. Both expressions are defined, but their relevant denominator factors differ by about a factor of 101, producing square-root terms that differ by roughly an order of magnitude and hence outputs far outside tolerance.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "d5c4f8390d34ffc4ed0bbc14b29af5d50efb55e0971b3a4fd3178e9a6888e023",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_004366",
+  "schema_version": 1,
+  "status": "completed"
+}

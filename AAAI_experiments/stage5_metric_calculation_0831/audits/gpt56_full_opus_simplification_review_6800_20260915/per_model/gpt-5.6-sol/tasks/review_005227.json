@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5150,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_02bbc708d3ccba6b016aa83146f59087d0b5dde80f0c98e42b",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1583,
+        "output_tokens": 464,
+        "total_tokens": 2047
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005227",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "dca45d44bd9782fdcbef9dc88a3d2ba89cc45ccdcab4f7788b2b52282af8f4b3",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The authoritative native program uses nested protected divisions, whose values are not generally equal to ordinary algebraic division. For c=1, v=0, omega=1, theta=0, the native protected expression evaluates to 0, while the proposal evaluates to 1. The proposal also excludes c=0, whereas the native protected program remains defined there.",
+    "confidence": 1.0,
+    "counterexample": "c=1, v=0, omega=1, theta=0: native = sub(1, div(1, div(div(1,1),0))) = sub(1, div(1,1)) = 0; proposed = 1 - 1*0*1/1 = 1.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "same",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "4cc89a075146d0beec8d2eba3e182723a8a54589979dd78659fd1f0f4898a220",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005227",
+  "schema_version": 1,
+  "status": "completed"
+}

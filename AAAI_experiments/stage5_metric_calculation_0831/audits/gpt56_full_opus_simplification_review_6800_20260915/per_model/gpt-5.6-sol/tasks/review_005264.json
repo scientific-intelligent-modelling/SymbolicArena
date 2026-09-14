@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5178,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_030c526ff5f071cf016aa8314ffe3087d0a4966f58b030b264",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1727,
+        "output_tokens": 867,
+        "total_tokens": 2594
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005264",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "fc1c0b4ccb45f3e5e9f61f6b6d0fad3dad2619340cf419fc3ac80ae3d031f418",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The authoritative native program contains sqrt(epsilon)*sqrt(epsilon)=abs(epsilon), whereas the proposed expression uses epsilon. These differ for negative epsilon under gplearn's protected sqrt semantics, so factoring as proposed changes values on the common domain.",
+    "confidence": 0.99,
+    "counterexample": "Pol=1, n=1, epsilon=-1, Ef=1. The native denominator uses +abs(epsilon)*Ef*sin(sin(0.818*epsilon))*sin(Ef*sin(sin(sin(0.818*epsilon)))), while the proposal uses +epsilon times that product; the product is nonzero, and both protected-division denominators have magnitude >0.001, yielding different outputs.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "fa410197d718567a2c4af765b54f4e94cb61a5956b5925e91017efc5a1e7b140",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005264",
+  "schema_version": 1,
+  "status": "completed"
+}

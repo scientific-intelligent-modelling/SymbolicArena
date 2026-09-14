@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2953,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_074f3f4080d8f4cf016aa82ee5c86487d0a21fb7baf3787246",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2039,
+        "output_tokens": 421,
+        "total_tokens": 2460
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_003003",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "159689894e167a572354614e6e937b1f9e7f62db7c55c452a409dc9868881487",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The outer division is gplearn protected division, so extracting 0.225*x5/x5 is not value-preserving when |x5|<=0.001. In that region the original protected division returns 1, while the proposed quotient returns 1 and then adds 0.225, giving 1.225.",
+    "confidence": 1.0,
+    "counterexample": "At x1=0, x2=0, x4=0, x5=0 (x3 arbitrary), the original evaluates to 1 under protected div, while the proposed expression evaluates to 1.225.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "69d2a95de73b1204374a90c4d122d2f801356991b71379f4cd3f4cd262785b72",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_003003",
+  "schema_version": 1,
+  "status": "completed"
+}

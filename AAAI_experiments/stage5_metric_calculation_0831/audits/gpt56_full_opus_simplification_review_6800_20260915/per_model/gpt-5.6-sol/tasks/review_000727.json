@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 716,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_03f687b2c256dfbc016aa82c7eaae487d099d9acc3658190aa",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1725,
+        "output_tokens": 985,
+        "total_tokens": 2710
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000727",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "7d5e654e678735b81cb619beacf5893fc6d6209a352a98cd51db64029642818d",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic rearrangement is valid for ordinary division away from singularities, but it does not preserve gplearn's protected-division values. Reassociating and combining the nested divisions changes the result when protected thresholds are triggered.",
+    "confidence": 1.0,
+    "counterexample": "At c=0, v=1, omega=1, theta=0, using div(a,b)=1 when |b|<=0.001, the authoritative native expression evaluates to -2, while the proposed expression evaluates to 1.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "593f34c971fe18b1afe1e39e0fbb5b7a6ead7eabb6743e7d6ab19553911fd61c",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000727",
+  "schema_version": 1,
+  "status": "completed"
+}

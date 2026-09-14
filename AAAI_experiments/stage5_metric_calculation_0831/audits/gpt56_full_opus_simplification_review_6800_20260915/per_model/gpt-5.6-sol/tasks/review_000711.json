@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 702,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_099d0e9a6b203a08016aa82c7a554c87d0bc017ac8df8760c5",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1573,
+        "output_tokens": 623,
+        "total_tokens": 2196
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000711",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "9c5c680edd71ec514fc84d295e678772b85fae1e2a097629dfd2ce89dd016550",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "Protected log prevents log(A**2)=2*log(A) near the threshold. For 0.001<|A|<=sqrt(0.001), log(A**2) returns 0 while log(A) is nonzero, so the inner terms differ.",
+    "confidence": 1.0,
+    "counterexample": "A=0.01: original inner log(A**2)=log(0.0001)=0, giving original value -log(0.01)=4.605170186; proposed uses 2*log(0.01)=-9.210340372 and adds sin(sin(sqrt(9.210340372)))≈0.1063, so the values differ.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "5391ddf4d96702d625a8c3d61b2c29adc68b260692fdec3f0323b99a8b0fce14",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000711",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2036,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0b49e5812558f286016aa82e19e05887d0959a360bd45b0993",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1365,
+        "output_tokens": 722,
+        "total_tokens": 2087
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002063",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "1a7bd3cb14f95535c7a0a5cb2cdc0086c296a7ee9281cb4e74a6a32c0dabf1e0",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "Let d=3.6*x2+9.3 and B=(A+2.9)*(0.7000000000000001*x3+9.0)*(0.6*y3+7.0)-(0.8*x1+2.0)*(7.8*y1+19.7). The original is (-0.003-0.7/d)*B=((0.003*d+0.7)/d)*(-B), and 0.003*d+0.7=0.0108*x2+0.7279, matching the proposal on the shared domain d!=0. Variables, division semantics, and domain are preserved. However, the proposed form adds an arithmetic operation rather than reducing complexity, so it does not satisfy the pass contract.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "more_complex",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "f4387ea6aa529647dc74a3043f17f1284b32cdd9cdee8c246c555a49d02d08ab",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002063",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5157,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0b16a7340da7d407016aa8314918dc87d0aae23375f2b2bf76",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1738,
+        "output_tokens": 1322,
+        "total_tokens": 3060
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005240",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "37d89c9b0bacca03a31dc638bf3071ad7b6116a57e354d8f2d8276151ed999a1",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "Combining the square roots and divisions changes gplearn protected-division behavior. In particular, for 0.001<|x2-x3|<=sqrt(0.001), the original sequential divisions use ordinary division, while the proposed division by (x2-x3)^2 returns the protected fallback value 1. Thus values differ despite unchanged variables and domain.",
+    "confidence": 0.999,
+    "counterexample": "At x0=1, x1=1, x2=0.01, x3=0, the original is approximately 1.9999747, whereas the proposed expression is approximately 1.6445.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "09773ff42c23d80c39b2723836a335b91393ccec33123005fac810969f93afb9",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005240",
+  "schema_version": 1,
+  "status": "completed"
+}

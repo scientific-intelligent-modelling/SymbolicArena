@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2884,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_03b662fbfb499f30016aa82ed2e51c87d0b8ff6e6831989716",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1860,
+        "output_tokens": 1425,
+        "total_tokens": 3285
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002914",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "6658946c21a859fc7a168fa4fe3169f1ef599dbbb2cd7ed4efe9e2da8b360176",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic fraction rewrite is valid for ordinary division but not for gplearn protected division. When epsilon is small, the original division by epsilon**2 can return the protected fallback value 1, whereas the proposed combined fraction does not, changing the result on the common domain.",
+    "confidence": 0.99,
+    "counterexample": "Pol=1, epsilon=0.0001, Ef=1, n=100. With protected division, the original is approximately 51.5025748, while the proposed expression is approximately 51.5000000; the difference exceeds tolerance.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "93e867b98dfd81c100fbf3e6d332734bca030bfc7d334ff87f34b68363f18850",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002914",
+  "schema_version": 1,
+  "status": "completed"
+}

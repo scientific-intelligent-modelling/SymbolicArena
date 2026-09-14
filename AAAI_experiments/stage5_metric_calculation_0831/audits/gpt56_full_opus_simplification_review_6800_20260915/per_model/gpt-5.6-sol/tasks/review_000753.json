@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 736,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0fadc997cb574eaf016aa82c8363fc87d08236a878adcca537",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1898,
+        "output_tokens": 842,
+        "total_tokens": 2740
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000753",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "fe8a703f2ea913824d74a5358188383a4cab4fe1d69d900a865613f93110aee0",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "Combining multiple protected divisions into one changes values when |x5| <= 0.001. In that region, each original protected division independently returns 1, whereas the proposed expression has only one protected division returning 1. They agree for |x5| > 0.001 but not throughout the common domain.",
+    "confidence": 1.0,
+    "counterexample": "At x2=0, x4=0, x5=0, the original evaluates to 6.069926927559544, while the proposed simplification evaluates to 1.234.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "dbf90061fe0bf67919d186249326f4435e0d116a6d71e028b84ed4bb5e624a3f",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000753",
+  "schema_version": 1,
+  "status": "completed"
+}

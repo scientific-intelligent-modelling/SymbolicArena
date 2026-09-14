@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5093,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0a56de6d0199e150016aa8313af6fc87d0af43d65f5a9df2fe",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2004,
+        "output_tokens": 1572,
+        "total_tokens": 3576
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005156",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "a331212e0caa95d4979cfbc04c9be1d0885baac8ef8ad5e7ad2918ee244be069",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite uses sign and division identities that are invalid for gplearn's protected division when a denominator has absolute value at most 0.001. In particular, at t=0 both protected quotients involving division by t return 1, so sin(sin(sin((-P-1.91054300521802)/t))) is not the negative of sin(sin(sin((P+1.91054300521802)/t))). The rewritten reciprocal term also changes value there. Thus the expressions differ on their common real-valued domain.",
+    "confidence": 0.999,
+    "counterexample": "t=0, P=0: all protected operations are real-valued, but the original is approximately 18.5 while the proposed expression is approximately 0.162.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "b610c27da90b5a0b583830124317e806451974fbf6023347bea0c4c84c023170",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005156",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 708,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_05ac99b6bc5d0bf5016aa82c7b8f2c87d080eb64118edc2d51",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1597,
+        "output_tokens": 329,
+        "total_tokens": 1926
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000717",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "c662c9770f1f25c98628ff221ae18a4942babaf0891ccc83e15ab3501277a4d9",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The native expression contains two protected sqrt(div(rho_c_0,j)) factors. Their product is abs(protected_div(rho_c_0,j)), not ordinary rho_c_0/j in general. The proposal also becomes undefined at j=0, whereas protected division remains defined.",
+    "confidence": 1.0,
+    "counterexample": "Let j=1, rho_c_0=-1, q=1, and A_vec=1. Native protected evaluation gives sqrt(abs(-1))^2=1, while A_vec*q*rho_c_0/j=-1.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "5a0055b04bdc2744d2ec4b8422d6ad175de4eac2f982ecd2e90d18d9d0ac5a9c",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000717",
+  "schema_version": 1,
+  "status": "completed"
+}

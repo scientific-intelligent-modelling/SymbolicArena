@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 6635,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_04645ec671fbba96016aa832c2500487d0bd693b7c896f21ee",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1432,
+        "output_tokens": 201,
+        "total_tokens": 1633
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_006732",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "ff0ed4468ba0cad0763d24b332441febc58a6d346134ddf5fffe5876a6885fe5",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The proposed expression only removes multiplicative identity factors 1.0: 1.0*x + 1.0 becomes x + 1, and sin(1.0*exp(...)) becomes sin(exp(...)). These changes preserve exact real-valued semantics and the variables remain mapped identically. Both expressions are defined for all real x and y because exp(x+y)+1 is strictly positive.",
+    "confidence": 1.0,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "c771063bdc2918718143a5c4c4a58a9a8369584c4a435fcf9a2511f1c73444a7",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_006732",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2003,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_00b1226333b11960016aa82e11d47c87d0a4ede80c98f125e4",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1320,
+        "output_tokens": 1742,
+        "total_tokens": 3062
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002030",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "685a44aec55147dab84b36161723ab993d2a96c8c4a196c752bb606a83a8eaf0",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The expansion would be algebraically valid if 0.030000000000000002 were exactly 0.03, but the fixed literal difference is amplified on the unbounded real domain. The expanded form is also more operation-heavy than the factored original.",
+    "confidence": 0.99,
+    "counterexample": "At x=1e18 and y=3, the proposed arctan argument is exactly 0, so its value is -2. The original argument is approximately 179.67 because 0.030000000000000002-0.01*3=2e-18, giving an output approximately 1.7565; the difference greatly exceeds tolerance.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "more_complex",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "1b67f442331f75c796147097b8923a7cf088be70946c2ff49416edbb097b7fd1",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002030",
+  "schema_version": 1,
+  "status": "completed"
+}

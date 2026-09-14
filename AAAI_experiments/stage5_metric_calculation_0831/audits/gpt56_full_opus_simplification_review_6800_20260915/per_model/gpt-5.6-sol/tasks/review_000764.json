@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 744,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_035b4d2f8b1fd1a6016aa82c862ad487d08553d606c07eb130",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1772,
+        "output_tokens": 1953,
+        "total_tokens": 3725
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_000764",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "7fedad125cf9f5fdd49d8cd7d7e603f6ffc7d6019ce43496a23eb7dab3c1b546",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic rewrite is invalid under gplearn's protected division. When |Pol|<=0.001, the original subexpression div(0.13,Pol) returns 1, so clearing Pol from the nested denominator changes values on the common real-valued domain.",
+    "confidence": 0.999,
+    "counterexample": "Pol=0.0005, n=1, epsilon=0, Ef=1. Under protected semantics, the original is approximately 0.0597510, while the proposed expression is approximately 0.000179354.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "093da46322bc74717a8b3eaab9262dcfa62bae20e626f95f75e2df993ad29733",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_000764",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2893,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0a278c926ac55186016aa82ed4492487d08cc002d26ee54014",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1939,
+        "output_tokens": 1569,
+        "total_tokens": 3508
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002924",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "521fb5afba772b1d8ae9873db769eb947ae1051f046206581dd2300e36f0062c",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The protected-log threshold makes log(mom**2) unequal to 2*log(mom) when 0.001 < |mom| <= sqrt(0.001). Thus the rewrite changes values on the common real-valued domain, although variable mapping and domain are unchanged.",
+    "confidence": 0.99,
+    "counterexample": "mom=0.01, B=100, theta=1. Protected log(mom**2)=log(0.0001)=0, while 2*protected_log(mom)=2*log(0.01)≈-9.210340372; the resulting full-expression values differ by approximately 0.299.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "same",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "8c9daa0dd59fec6018ad0fd1f087925192f506d81e7da409745e21bfe1b13f9b",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002924",
+  "schema_version": 1,
+  "status": "completed"
+}

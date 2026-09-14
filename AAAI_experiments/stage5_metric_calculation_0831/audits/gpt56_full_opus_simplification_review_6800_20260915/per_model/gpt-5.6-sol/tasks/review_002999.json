@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2950,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0203f01b2ec8f0a4016aa82ee3b3f887d0833b4e168b73fac1",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2203,
+        "output_tokens": 1277,
+        "total_tokens": 3480
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002999",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "2a412a72d16e67f710c04f1d4e5fa1dfd4c16ef82a8791ac8ad0937e448da604",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite log(sqrt(x3)) -> log(x3)/2 is invalid under gplearn protected semantics. The original protected log becomes nonzero when |x3|>1e-6, while the proposed protected log remains zero until |x3|>0.001, causing value differences on the common domain.",
+    "confidence": 1.0,
+    "counterexample": "At x0=1 and x3=0.0001, both expressions are real-valued, but the original is approximately 0.7084 while the proposed expression is approximately 0.8736.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "eca602905edddd5acbce7a6440778a7ec4e4ec917857f76e204feae29daf34f3",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002999",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5757,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_08e66456db9a8a3a016aa831e2843087d09e0d2f6a00b62c80",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1432,
+        "output_tokens": 367,
+        "total_tokens": 1799
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005851",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "1af1b810c518d5f3afe744f77ccee7f7f66401ad542b1c176c4da59b4e134518",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "For all real inputs, exp(u)>0, so sqrt(exp(u))=exp(u/2). Thus the two square-root terms become exp(-0.04001*x1) and exp(0.5*sin(...)). Also exp(a)*exp(b)=exp(a+b), validating the merged exponential. The denominator is always positive because sin(...)^2+1>=1. Both expressions therefore have the same all-real domain and values, with unchanged variables and fewer operations.",
+    "confidence": 0.999,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "9bcdde915fff101c51e0648ba29f75f5eb36bc59abd8865086bce158c914e836",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005851",
+  "schema_version": 1,
+  "status": "completed"
+}

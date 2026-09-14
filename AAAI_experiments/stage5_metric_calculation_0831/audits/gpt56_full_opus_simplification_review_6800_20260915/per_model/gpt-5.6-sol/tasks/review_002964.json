@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2924,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_06640b59ad7a061b016aa82edba10c87d0a387e530c091c460",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1691,
+        "output_tokens": 1327,
+        "total_tokens": 3018
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002964",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "f584046e76af2204ea2bfe4b0a2e3588747982dc356ebb523e7c7265dd2b85ad",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite assumes sqrt(log(sqrt(Ef))) = sqrt(log(Ef))*sqrt(2)/2, but this fails under gplearn's protected-log threshold. For 1e-6 < abs(Ef) <= 0.001, log(Ef) returns 0 while log(sqrt(Ef)) need not return 0, producing different values on the common domain.",
+    "confidence": 0.99,
+    "counterexample": "Pol=1, epsilon=1, Ef=0.0001, n=10000. The protected denominator is 1. The original is approximately 1.100, because log(Ef)=0 but log(sqrt(Ef))=log(0.01), whereas the proposed expression is 0.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "06af8f40a1deb6a4b21f0e925d66de1e5ef0bb7a00da0317b06d2c0d84530095",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002964",
+  "schema_version": 1,
+  "status": "completed"
+}

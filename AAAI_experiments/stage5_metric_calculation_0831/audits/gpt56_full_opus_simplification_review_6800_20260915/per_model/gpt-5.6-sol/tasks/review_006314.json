@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 6220,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0ff33b1d26afb2f2016aa8325720bc87d0b9b5186d835ae86c",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1708,
+        "output_tokens": 313,
+        "total_tokens": 2021
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_006314",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "6b2735e10dd06658258772af9f65672026d5fc1de570b7df9081f26031753db6",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "Both removed Abs operators are applied to Min expressions that are always nonnegative: each Min combines a positive constant with a nonnegative square-root or absolute-value power term. Therefore sqrt(Abs(Min(...))) equals sqrt(Min(...)) everywhere, with no domain or variable-mapping change.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "4bdce1726f15c259b525b133811107e0dcd2e3e86c703b629a9f904192fc1f1a",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_006314",
+  "schema_version": 1,
+  "status": "completed"
+}

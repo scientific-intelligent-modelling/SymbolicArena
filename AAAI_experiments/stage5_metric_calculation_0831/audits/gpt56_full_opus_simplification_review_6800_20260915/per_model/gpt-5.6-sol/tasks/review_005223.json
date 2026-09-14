@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5146,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_061acb379db638a8016aa83145f5d887d0a0100de1cedb2cb3",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1637,
+        "output_tokens": 1708,
+        "total_tokens": 3345
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005223",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "6a7952d54f4a53127a877a5886529185050c7e00ff597770dbf22617adce2ebc",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite is invalid under protected gplearn semantics. If t=log(x2), then the original protected composition log(sqrt(t)) activates when |t|>1e-6, whereas protected log(t)/2 activates only when |t|>0.001. Thus they produce different values in the common real-valued domain. The explicit fourth-root notation can also contract the real domain when its base is negative.",
+    "confidence": 0.99,
+    "counterexample": "Let x1=0 and x2=exp(0.0001). Then protected log(x2)=0.0001. The original inner term is log(sqrt(0.0001))=log(0.01)≈-4.605170186, while the proposed inner term is protected_log(0.0001)/2=0. Both fourth-root bases are nonnegative here, so both expressions are real, but their final values differ (approximately 0.846 versus 0.648).",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "c6af8aedb00803af455b73394c1728dae13e99c3df17bd5756196210a78a033e",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005223",
+  "schema_version": 1,
+  "status": "completed"
+}

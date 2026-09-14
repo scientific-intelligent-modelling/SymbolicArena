@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2973,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0506f2c41dd2013e016aa82eeaeab087d0a69991c05735be09",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1730,
+        "output_tokens": 963,
+        "total_tokens": 2693
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_003027",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "3d04801623be935efbe4190679e461f2e223861898518274a1fe84eaf34ec173",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic rewrite is valid for ordinary division when |c|>0.001, but it does not preserve gplearn's protected-division values near zero. The original is defined at c=0, while the proposed expression with c**2 in the denominator is not, so the domains also differ.",
+    "confidence": 1.0,
+    "counterexample": "At c=0.0005, v=pi/2, theta=0, omega=1, every original division by c is protected and returns 1, so the original value is 1-2=-1. The proposed expression under ordinary division equals 1-1.618(0.0005)/(0.0005^2)=-3235, so they differ on their common real-valued domain.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "d35d4015c1d4c698f950edc8467b51a3b36b170712e7ca4390a06046ee73e461",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_003027",
+  "schema_version": 1,
+  "status": "completed"
+}

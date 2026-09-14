@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5100,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0892ed2d172e6982016aa8313cdc9487d0bfe99410da308415",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2094,
+        "output_tokens": 1297,
+        "total_tokens": 3391
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005163",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "e3bea7adf5bf0797c2f9ab334c848aa7f21c407ccac3fb8b771331f844d1c170",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The algebraic clearing of y3 and x2 factors is invalid under gplearn's protected division. When a protected denominator is small, the original nested divisions return 1 at that operation, whereas the rewritten fractions can have different values. Thus values differ despite unchanged variable identities and an equally broad real domain.",
+    "confidence": 0.99,
+    "counterexample": "Set A=1, x1=1, x2=1, x3=0, y3=0, and y1=sin(cos(1)). In the authoritative original second term, div(A,y3)=1, so the term is div(1,sin(1)-1)=1/(sin(1)-1)≈-6.30799. The proposed corresponding term is div(A*y3, x1*x2*(y3*sin(x2)-A))=div(0,-1)=0. The other rewritten sine term agrees because y1-sin(cos(x1))=0, so the full expressions differ on their common domain.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "6114082f36b60cf9d78a578b9939e501c8ed3be3e08452a22dfa13231c45c605",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005163",
+  "schema_version": 1,
+  "status": "completed"
+}

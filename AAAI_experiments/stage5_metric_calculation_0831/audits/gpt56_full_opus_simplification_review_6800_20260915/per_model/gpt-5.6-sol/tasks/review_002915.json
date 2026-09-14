@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 2885,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_031a7bca2a10eb29016aa82ed3126887d0bdd360ae2f2f450b",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2196,
+        "output_tokens": 2540,
+        "total_tokens": 4736
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_002915",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "e5c73f5fa6631e82f4a9c30d301e5ad2e5d2f8caba101803d505388062c91c48",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite does not preserve gplearn protected-log/division values. In particular, log(log(sqrt(q))) is not equivalent to log(log(q)/2) near the protected-log threshold. Consolidating nested protected divisions into a single rational expression can also change values.",
+    "confidence": 0.99,
+    "counterexample": "At mom=0, q=0.0001, r=0, all other rewritten components agree, but original log(log(sqrt(q))) = log(|log(0.01)|) = log(4.605170185988091) ≈ 1.52718, while proposed log(log(q)/2) = log(0) = 0 under protected log semantics. Thus the full expressions differ by approximately 1.52718 on their common real-valued domain.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "c889a2ac51549cb976d9537526517beb334c6870758bd5b04de263330313d2ea",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_002915",
+  "schema_version": 1,
+  "status": "completed"
+}

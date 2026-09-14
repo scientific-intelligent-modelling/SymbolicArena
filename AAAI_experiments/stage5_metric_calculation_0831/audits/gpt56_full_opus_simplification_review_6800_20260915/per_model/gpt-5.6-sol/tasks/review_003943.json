@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 3881,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_006662d0d5541d50016aa82fd6f24887d0b95540d70b4a53de",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1419,
+        "output_tokens": 2029,
+        "total_tokens": 3448
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_003943",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "38d93eba94ebbeadde9dd1919e2e1acfd60c13ff6d88bd207172ce33be99156c",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The expanded coefficients are rounded independently and are not exactly proportional to the original affine factor. This creates a nonzero residual at the original factor's root, which can be amplified without bound by x3, producing values outside the stated tolerance on the common domain.",
+    "confidence": 0.99,
+    "counterexample": "Take x1=2.1970816/(4.72905e-23), x4=0.000118587360594796, and x3=1e30. The original affine factor is exactly zero, so the original value is 27537129.896932229. The proposed affine factor has a nonzero residual of about 3e-8; after multiplication by (0.007085*x3-0.02646) and the positive exponential factor, the proposed value differs by roughly 1e17, far beyond tolerance.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "c4df6e2d6c0942e526f300d0ad545a614120777c976c9b214ebc86c147f94d5c",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_003943",
+  "schema_version": 1,
+  "status": "completed"
+}

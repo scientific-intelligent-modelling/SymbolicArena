@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 5149,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_01f02f47ef2d46db016aa83146da0087d0a2d24ebdc669087d",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1689,
+        "output_tokens": 1215,
+        "total_tokens": 2904
+      }
+    }
+  ],
+  "logical_task_id": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1::gpt-5.6-sol::review_005226",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "1711a6a7b8926d7bdbab09bdeb7a64ead1dbe5611b51e25b0275a4a60135b3b0",
+  "prompt_version": "gpt56_full_opus_review.common_domain_approx.native_evidence.v1",
+  "review": {
+    "brief_reason": "The rewrite log(sqrt(A)) -> log(A)/2 is invalid under protected gplearn semantics. For 1e-6 < |A| <= 0.001, the original protected log evaluates log(sqrt(|A|)), while the proposed protected log(A) evaluates 0 before division by 2. The quarter-power rewrite also contracts the real domain relative to nested protected sqrt operations.",
+    "confidence": 0.99,
+    "counterexample": "Let n=1, d2=1, and d1=0.0001-sqrt(1+sin(sin(1))), so A=d1+sqrt(n+sin(sin(d2/sqrt(n))))=0.0001. The original sine argument is log(sqrt(A))=log(0.01), whereas the proposed argument is log(A)/2=0/2=0 under the protected-log threshold. The nonzero common prefactor makes the expression values unequal.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "aaaed9ee83e859c785f6ca0d3ddcb57f4b86cc304f179aa1354ddb9590edea76",
+  "review_policy": "common_domain_approx",
+  "sample_id": "review_005226",
+  "schema_version": 1,
+  "status": "completed"
+}
