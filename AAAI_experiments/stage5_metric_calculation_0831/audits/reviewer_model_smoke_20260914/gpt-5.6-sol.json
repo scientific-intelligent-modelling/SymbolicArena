@@ -1,0 +1,112 @@
+{
+  "schema_version": "reviewer_model_smoke.v1",
+  "created_at_utc": "2026-09-14T14:02:30.092779+00:00",
+  "request": {
+    "api_style": "anthropic_messages_compatible",
+    "endpoint_origin": "https://routify-pub.alibaba-inc.com",
+    "endpoint_path": "/protocol/anthropic/v1/messages",
+    "model": "gpt-5.6-sol",
+    "stream": false,
+    "temperature": 0,
+    "max_tokens": 800,
+    "prompt_sha256": "56beb782329474b793a3828b0ce89d781c469ad42ebe65bde53f84f86a21cad2",
+    "prompt_case_count": 3,
+    "auth_redacted": true
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "http_status": 400,
+      "elapsed_seconds": 0.359,
+      "error": {
+        "routify_response": {
+          "trace_id": "0bf8e49917893945488506297e0ff9",
+          "request_id": "fcb6efa69158463c828e4719042587e2",
+          "success": false,
+          "status": 400,
+          "error_source": "CLIENT_ERROR",
+          "error_message": "NoAvailableModels: gpt-5.6-sol",
+          "error_detail": {
+            "errorMessage": "NoAvailableModels: gpt-5.6-sol"
+          },
+          "model_name": "gpt-5.6-sol",
+          "ak_quota": {
+            "api_key": "[REDACTED]",
+            "status": "NORMAL",
+            "rpm_limit": 600,
+            "current_rpm": 1
+          },
+          "is_fall_back_triggered": false
+        }
+      }
+    },
+    {
+      "attempt": 2,
+      "http_status": 400,
+      "elapsed_seconds": 0.22,
+      "error": {
+        "routify_response": {
+          "trace_id": "2150811c17893945500811929e0dc7",
+          "request_id": "eac7d2d7d5884cb8a217654775d45e8c",
+          "success": false,
+          "status": 400,
+          "error_source": "CLIENT_ERROR",
+          "error_message": "NoAvailableModels: gpt-5.6-sol",
+          "error_detail": {
+            "errorMessage": "NoAvailableModels: gpt-5.6-sol"
+          },
+          "model_name": "gpt-5.6-sol",
+          "ak_quota": {
+            "api_key": "[REDACTED]",
+            "status": "NORMAL",
+            "rpm_limit": 600,
+            "current_rpm": 2
+          },
+          "is_fall_back_triggered": false
+        }
+      }
+    }
+  ],
+  "http_status": 400,
+  "response_model": null,
+  "provider_fallback_triggered": false,
+  "usage": null,
+  "assistant_output_text": "",
+  "parsed_output": null,
+  "parse_error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+  "grading": {
+    "expected": {
+      "A": "pass",
+      "B": "fail",
+      "C": "fail"
+    },
+    "received": {},
+    "correct_count": 0,
+    "total_count": 3,
+    "strict_json_shape": false,
+    "api_success": false,
+    "model_identity_match": false,
+    "usable_for_review": false
+  },
+  "raw_response": {
+    "routify_response": {
+      "trace_id": "2150811c17893945500811929e0dc7",
+      "request_id": "eac7d2d7d5884cb8a217654775d45e8c",
+      "success": false,
+      "status": 400,
+      "error_source": "CLIENT_ERROR",
+      "error_message": "NoAvailableModels: gpt-5.6-sol",
+      "error_detail": {
+        "errorMessage": "NoAvailableModels: gpt-5.6-sol"
+      },
+      "model_name": "gpt-5.6-sol",
+      "ak_quota": {
+        "api_key": "[REDACTED]",
+        "status": "NORMAL",
+        "rpm_limit": 600,
+        "current_rpm": 2
+      },
+      "is_fall_back_triggered": false
+    }
+  }
+}
