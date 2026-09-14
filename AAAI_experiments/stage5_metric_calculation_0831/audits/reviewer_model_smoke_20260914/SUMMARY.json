@@ -1,0 +1,42 @@
+{
+  "schema_version": "reviewer_model_smoke_summary.v1",
+  "status": "partial_pass",
+  "channel": "routify",
+  "stream": false,
+  "credential_persisted": false,
+  "physical_request_count": 4,
+  "successful_request_count": 2,
+  "models": {
+    "kimi-k3": {
+      "available": true,
+      "http_status": 200,
+      "attempts": 1,
+      "correct_cases": 3,
+      "total_cases": 3,
+      "input_tokens": 313,
+      "output_tokens": 211
+    },
+    "glm-5.2": {
+      "available": true,
+      "http_status": 200,
+      "attempts": 1,
+      "correct_cases": 3,
+      "total_cases": 3,
+      "input_tokens": 154,
+      "output_tokens": 141
+    },
+    "gpt-5.5": {
+      "available": false,
+      "http_status": 400,
+      "attempts": 2,
+      "error": "NoAvailableModels: gpt-5.5",
+      "correct_cases": 0,
+      "total_cases": 3,
+      "input_tokens": 0,
+      "output_tokens": 0
+    }
+  },
+  "conservative_reference_cost_cny": 0.006681,
+  "cost_note": "Uses the previously supplied Opus5 tariff only as a conservative reference; actual model billing may differ.",
+  "recommendation": "Calibrate kimi-k3 and glm-5.2 on a larger frozen labeled set before bulk review; replace gpt-5.5 or test another deployed third model."
+}

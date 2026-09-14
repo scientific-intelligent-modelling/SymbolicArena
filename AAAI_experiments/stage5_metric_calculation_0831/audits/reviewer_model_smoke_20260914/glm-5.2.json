@@ -1,0 +1,75 @@
+{
+  "audit_version": "reviewer_model_smoke.v1",
+  "tested_at": "2026-09-14T21:56:29+08:00",
+  "request": {
+    "endpoint": "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages",
+    "protocol": "anthropic_messages",
+    "auth": "redacted",
+    "model": "glm-5.2",
+    "stream": false,
+    "temperature": 0,
+    "max_tokens": 800,
+    "attempts": 1,
+    "retries": 0,
+    "prompt_case_ids": [
+      "A",
+      "B",
+      "C"
+    ],
+    "expected_verdicts": {
+      "A": "pass",
+      "B": "fail",
+      "C": "fail"
+    }
+  },
+  "transport": {
+    "http_status": 200,
+    "request_succeeded": true,
+    "provider_success": true,
+    "provider_fallback_triggered": false
+  },
+  "response": {
+    "response_model": "glm-5.2",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 154,
+      "output_tokens": 141,
+      "cache_read_input_tokens": 0
+    },
+    "raw_response_text": "{\"id\":\"msg_202609142156299726232b5a944a88\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"glm-5.2\",\"content\":[{\"type\":\"text\",\"text\":\"{\\\"model_claimed\\\":\\\"A: pass; B: fail; C: fail\\\",\\\"reviews\\\":[{\\\"id\\\":\\\"A\\\",\\\"verdict\\\":\\\"pass\\\",\\\"reason\\\":\\\"x+x equals 2*x for all real x, so the simplification preserves semantics over the real domain.\\\"},{\\\"id\\\":\\\"B\\\",\\\"verdict\\\":\\\"fail\\\",\\\"reason\\\":\\\"sqrt(x**2) equals abs(x), not x, over the reals; for negative x the simplification changes the value/sign.\\\"},{\\\"id\\\":\\\"C\\\",\\\"verdict\\\":\\\"fail\\\",\\\"reason\\\":\\\"gplearn protected_sqrt(z)=sqrt(abs(z)) is defined for all real z, while ordinary sqrt(z) is undefined for negative z, so protected semantics are lost.\\\"}]}\"}],\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"usage\":{\"input_tokens\":154,\"output_tokens\":141,\"cache_read_input_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0},\"service_tier\":\"standard\"},\"routify_response\":{\"trace_id\":\"213dd3da17893941896403650e1a8c\",\"request_id\":\"d81132996caf496ab6334f84a62cee8f\",\"success\":true,\"status\":200,\"model_name\":\"glm-5.2\",\"ak_quota\":{\"api_key\":\"sk******3921de\",\"status\":\"NORMAL\",\"rpm_limit\":600,\"current_rpm\":1},\"provider_code_md5\":\"137a27\",\"is_fall_back_triggered\":false}}"
+  },
+  "parsed_output": {
+    "json_valid": true,
+    "schema_valid": true,
+    "model_claimed": "A: pass; B: fail; C: fail",
+    "reviews": [
+      {
+        "id": "A",
+        "verdict": "pass",
+        "reason": "x+x equals 2*x for all real x, so the simplification preserves semantics over the real domain."
+      },
+      {
+        "id": "B",
+        "verdict": "fail",
+        "reason": "sqrt(x**2) equals abs(x), not x, over the reals; for negative x the simplification changes the value/sign."
+      },
+      {
+        "id": "C",
+        "verdict": "fail",
+        "reason": "gplearn protected_sqrt(z)=sqrt(abs(z)) is defined for all real z, while ordinary sqrt(z) is undefined for negative z, so protected semantics are lost."
+      }
+    ]
+  },
+  "grading": {
+    "correct_cases": 3,
+    "total_cases": 3,
+    "accuracy": 1.0,
+    "case_results": {
+      "A": true,
+      "B": true,
+      "C": true
+    },
+    "usable_for_review_smoke": true,
+    "notes": "The response used the requested model, returned HTTP 200 without provider fallback, produced parseable strict JSON, and judged all three semantic test cases correctly."
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "audit_version": "reviewer_model_smoke.v1",
+  "created_at_utc": "2026-09-14T13:57:17.444997+00:00",
+  "request": {
+    "channel": "routify_jyh",
+    "endpoint": "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages",
+    "authentication": "Bearer [REDACTED]",
+    "header_names": [
+      "Authorization",
+      "anthropic-version",
+      "content-type"
+    ],
+    "requested_model": "kimi-k3",
+    "non_streaming": true,
+    "max_tokens": 800,
+    "temperature": 0,
+    "system_prompt": "You are a strict mathematical review auditor. Judge whether each proposed simplification preserves the real-valued function, including its domain and any explicitly declared protected operator semantics. Return only one JSON object matching the requested schema, without markdown.",
+    "user_prompt": "Review exactly these three proposed simplifications over real variables.\nA. original: x + x; proposed: 2*x; domain: all real x.\nB. original: sqrt(x**2); proposed: x; domain: all real x; sqrt is ordinary nonnegative real square root.\nC. original: protected_sqrt(z), where protected_sqrt(z) is defined as sqrt(abs(z)); proposed: ordinary sqrt(z); domain: all real z.\nFor each case, verdict must be \"pass\" iff the proposed expression preserves both values and real domain; otherwise \"fail\".\nReturn exactly:\n{\"cases\":[{\"id\":\"A\",\"verdict\":\"pass\"|\"fail\",\"reason\":\"short reason\"},{\"id\":\"B\",\"verdict\":\"pass\"|\"fail\",\"reason\":\"short reason\"},{\"id\":\"C\",\"verdict\":\"pass\"|\"fail\",\"reason\":\"short reason\"}]}",
+    "prompt_sha256": "e9e9a9884a7b6ecfb6f939939fa16e773250fd74faedc497afcb3c6da4d7c51d"
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "started_at_utc": "2026-09-14T13:57:10.472434+00:00",
+      "elapsed_seconds": 6.972484,
+      "http_status": 200,
+      "response_headers": {},
+      "transport_error": null
+    }
+  ],
+  "http_status": 200,
+  "response_headers": {},
+  "response_model": "kimi-k3",
+  "usage": {
+    "input_tokens": 313,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 211,
+    "output_tokens_details": {
+      "thinking_tokens": 94
+    },
+    "service_tier": "standard",
+    "inference_geo": "not_available",
+    "prompt_tokens": 313,
+    "cached_tokens": 0,
+    "completion_tokens": 211,
+    "total_tokens": 524
+  },
+  "raw_response_text": "{\"id\":\"chatcmpl-48464912-58a6-9d85-9076-76769e73dd99\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"A. x + x vs 2*x over all real x: equivalent, pass.\\n\\nB. sqrt(x**2) = |x|, not x. Over all real x, fails for negative x. Fail.\\n\\nC. protected_sqrt(z) = sqrt(abs(z)), defined for all real z; ordinary sqrt(z) only defined for z >= 0. Domain changes and values differ for z < 0 (protected defined, ordinary undefined over reals). Fail.\"},{\"type\":\"text\",\"text\":\"{\\\"cases\\\":[{\\\"id\\\":\\\"A\\\",\\\"verdict\\\":\\\"pass\\\",\\\"reason\\\":\\\"x+x equals 2*x for all real x; same domain.\\\"},{\\\"id\\\":\\\"B\\\",\\\"verdict\\\":\\\"fail\\\",\\\"reason\\\":\\\"sqrt(x**2) equals |x|, which differs from x for negative x.\\\"},{\\\"id\\\":\\\"C\\\",\\\"verdict\\\":\\\"fail\\\",\\\"reason\\\":\\\"protected_sqrt(z)=sqrt(abs(z)) is defined for all real z, while ordinary sqrt(z) is undefined for z<0; domain and values differ.\\\"}]}\"}],\"model\":\"kimi-k3\",\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"usage\":{\"input_tokens\":313,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":211,\"output_tokens_details\":{\"thinking_tokens\":94},\"service_tier\":\"standard\",\"inference_geo\":\"not_available\",\"prompt_tokens\":313,\"cached_tokens\":0,\"completion_tokens\":211,\"total_tokens\":524},\"routify_response\":{\"trace_id\":\"21045f2e17893942311058993e0e55\",\"request_id\":\"1135c9f829174c3c8233d1a9f8714de8\",\"success\":true,\"status\":200,\"model_name\":\"kimi-k3\",\"ak_quota\":{\"api_key\":\"sk******3921de\",\"status\":\"NORMAL\",\"rpm_limit\":600,\"current_rpm\":1},\"provider_code_md5\":\"060606\",\"is_fall_back_triggered\":false}}",
+  "assistant_output_text": "{\"cases\":[{\"id\":\"A\",\"verdict\":\"pass\",\"reason\":\"x+x equals 2*x for all real x; same domain.\"},{\"id\":\"B\",\"verdict\":\"fail\",\"reason\":\"sqrt(x**2) equals |x|, which differs from x for negative x.\"},{\"id\":\"C\",\"verdict\":\"fail\",\"reason\":\"protected_sqrt(z)=sqrt(abs(z)) is defined for all real z, while ordinary sqrt(z) is undefined for z<0; domain and values differ.\"}]}",
+  "parsed_output": {
+    "cases": [
+      {
+        "id": "A",
+        "verdict": "pass",
+        "reason": "x+x equals 2*x for all real x; same domain."
+      },
+      {
+        "id": "B",
+        "verdict": "fail",
+        "reason": "sqrt(x**2) equals |x|, which differs from x for negative x."
+      },
+      {
+        "id": "C",
+        "verdict": "fail",
+        "reason": "protected_sqrt(z)=sqrt(abs(z)) is defined for all real z, while ordinary sqrt(z) is undefined for z<0; domain and values differ."
+      }
+    ]
+  },
+  "parse_error": null,
+  "grading": {
+    "strict_json_shape": true,
+    "case_results": [
+      {
+        "id": "A",
+        "expected": "pass",
+        "actual": "pass",
+        "correct": true,
+        "reason": "x+x equals 2*x for all real x; same domain."
+      },
+      {
+        "id": "B",
+        "expected": "fail",
+        "actual": "fail",
+        "correct": true,
+        "reason": "sqrt(x**2) equals |x|, which differs from x for negative x."
+      },
+      {
+        "id": "C",
+        "expected": "fail",
+        "actual": "fail",
+        "correct": true,
+        "reason": "protected_sqrt(z)=sqrt(abs(z)) is defined for all real z, while ordinary sqrt(z) is undefined for z<0; domain and values differ."
+      }
+    ],
+    "correct_cases": 3,
+    "total_cases": 3
+  },
+  "usable_for_review": true,
+  "transport_error": null
+}

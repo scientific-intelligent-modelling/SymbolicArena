@@ -1,0 +1,72 @@
+{
+  "schema_version": "reviewer_model_smoke.v1",
+  "created_at_utc": "2026-09-14T13:57:15.436574+00:00",
+  "request": {
+    "api_style": "anthropic_messages_compatible",
+    "endpoint_origin": "https://routify-pub.alibaba-inc.com",
+    "endpoint_path": "/protocol/anthropic/v1/messages",
+    "model": "gpt-5.5",
+    "stream": false,
+    "max_tokens": 800,
+    "prompt_sha256": "65a62c0134ee72fe46fc40fcbfcad12528e1d5f53e5c62416b659ffa626c005a",
+    "prompt_case_count": 3,
+    "auth_redacted": true
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "http_status": 400,
+      "elapsed_seconds": 0.215,
+      "error": {
+        "type": "CLIENT_ERROR",
+        "message": "NoAvailableModels: gpt-5.5",
+        "model_name": "gpt-5.5"
+      }
+    },
+    {
+      "attempt": 2,
+      "http_status": 400,
+      "elapsed_seconds": 0.209,
+      "error": {
+        "type": "CLIENT_ERROR",
+        "message": "NoAvailableModels: gpt-5.5",
+        "model_name": "gpt-5.5"
+      }
+    }
+  ],
+  "http_status": 400,
+  "response_model": null,
+  "usage": null,
+  "response_text": "",
+  "parsed_response": null,
+  "parse_error": null,
+  "grading": {
+    "expected": {
+      "A": "pass",
+      "B": "fail",
+      "C": "fail"
+    },
+    "per_case": {
+      "A": {
+        "expected": "pass",
+        "received": null,
+        "correct": false
+      },
+      "B": {
+        "expected": "fail",
+        "received": null,
+        "correct": false
+      },
+      "C": {
+        "expected": "fail",
+        "received": null,
+        "correct": false
+      }
+    },
+    "correct_count": 0,
+    "total_count": 3,
+    "strict_json_shape": false,
+    "api_success": false,
+    "usable_for_review": false
+  }
+}
