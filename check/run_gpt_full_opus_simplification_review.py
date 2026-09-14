@@ -350,11 +350,23 @@ def review_one_task(
     transport: Callable[[base_review.HttpRequest, float], base_review.HttpResponse] = base_review.default_transport,
     timeout: float = 300.0,
     retry_delay_seconds: float = 2.0,
+    allow_terminal_retry: bool = False,
 ) -> dict[str, Any]:
     path = task_path(output_root, str(task["sample_id"]))
     record = _load_full_task_record(path, task)
     if record.get("status") == "completed":
         return record
+    attempts: list[dict[str, Any]] = record["attempts"]
+    if allow_terminal_retry:
+        if (
+            record.get("status") != "failed"
+            or len(attempts) != MAX_ATTEMPTS
+            or any(attempt.get("status") != "failed" for attempt in attempts)
+        ):
+            raise FullReviewError("显式恢复仅允许已有两次终态失败的任务")
+        attempt_limit = MAX_ATTEMPTS + 1
+    else:
+        attempt_limit = MAX_ATTEMPTS
     request = base_review.build_http_request(
         MODEL,
         profile,
@@ -369,8 +381,7 @@ def review_one_task(
         body=request.body,
         safe_metadata=safe_metadata,
     )
-    attempts: list[dict[str, Any]] = record["attempts"]
-    while len(attempts) < MAX_ATTEMPTS:
+    while len(attempts) < attempt_limit:
         attempt_number = len(attempts) + 1
         ordinal = budget.reserve(record["logical_task_id"], attempt_number)
         attempt: dict[str, Any] = {
@@ -414,7 +425,7 @@ def review_one_task(
             )
             record["status"] = "failed"
             base_review._atomic_write_json(path, record)
-            if attempt_number < MAX_ATTEMPTS and retry_delay_seconds > 0:
+            if attempt_number < attempt_limit and retry_delay_seconds > 0:
                 time.sleep(retry_delay_seconds)
     return record
 
@@ -779,12 +790,81 @@ def run_batch(args: argparse.Namespace) -> int:
     return 0 if final["status"] == "completed" else 2
 
 
+def resolve_explicit_task(
+    tasks: Sequence[Mapping[str, Any]],
+    *,
+    sample_id: str | None,
+    logical_id: str | None,
+) -> dict[str, Any]:
+    if (sample_id is None) == (logical_id is None):
+        raise FullReviewError("必须且只能显式提供 sample_id 或 logical_id")
+    matches = [
+        task
+        for task in tasks
+        if (
+            (sample_id is not None and task["sample_id"] == sample_id)
+            or (
+                logical_id is not None
+                and task["occurrences"][0].get("logical_id") == logical_id
+            )
+        )
+    ]
+    if len(matches) != 1:
+        identity = sample_id if sample_id is not None else logical_id
+        raise FullReviewError(f"显式任务身份必须唯一命中，当前为 {len(matches)}: {identity}")
+    task = dict(matches[0])
+    if task.get("review_applicable") is not True:
+        raise FullReviewError("显式任务没有可复核的 Opus 候选")
+    return task
+
+
+def run_retry_one(args: argparse.Namespace) -> int:
+    root = args.output_root.expanduser().resolve()
+    tasks = prepare_manifest(args.release_root, root)
+    task = resolve_explicit_task(
+        tasks, sample_id=args.sample_id, logical_id=args.logical_id
+    )
+    profile = _load_profile(args)
+    budget = base_review.RequestBudget(
+        root / "request_budget.json",
+        cap=physical_request_cap(EXPECTED_REVIEWABLE),
+    )
+    record = review_one_task(
+        task=task,
+        profile=profile,
+        output_root=root,
+        budget=budget,
+        timeout=args.timeout,
+        retry_delay_seconds=0,
+        allow_terminal_retry=True,
+    )
+    final = build_progress_summary(tasks, root, trigger="explicit_terminal_retry")
+    final.update(
+        {
+            "status": completion_status(final["overall"]),
+            "retried_sample_id": task["sample_id"],
+            "retried_logical_id": task["occurrences"][0]["logical_id"],
+            "retry_result": record.get("status"),
+            "physical_request_cap": physical_request_cap(EXPECTED_REVIEWABLE),
+            "physical_requests_reserved": budget.used,
+            "stream": False,
+            "store": False,
+        }
+    )
+    base_review._atomic_write_json(root / "summary.json", final)
+    base_review._atomic_write_json(root / "checkpoint_latest.json", final)
+    _write_index(root, tasks)
+    base_review._write_checksums(root)
+    print(json.dumps(final, ensure_ascii=False, sort_keys=True))
+    return 0 if record.get("status") == "completed" else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="GPT-5.6-Sol 32 并发全量复核 6800 条 Core50 Opus5 记录"
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
-    for command in ("preflight", "run"):
+    for command in ("preflight", "run", "retry-one"):
         subparser = subparsers.add_parser(command)
         subparser.add_argument("--release-root", type=Path, default=DEFAULT_RELEASE_ROOT)
         subparser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
@@ -803,10 +883,15 @@ def build_parser() -> argparse.ArgumentParser:
             action="store_true",
             help="仅在内存中复用 Routify 凭据并切换到 OpenAI Responses 端口",
         )
+        if command in {"run", "retry-one"}:
+            subparser.add_argument("--timeout", type=float, default=300.0)
         if command == "run":
             subparser.add_argument("--limit", type=int, default=None)
-            subparser.add_argument("--timeout", type=float, default=300.0)
             subparser.add_argument("--retry-delay", type=float, default=2.0)
+        elif command == "retry-one":
+            identity = subparser.add_mutually_exclusive_group(required=True)
+            identity.add_argument("--sample-id")
+            identity.add_argument("--logical-id")
     return parser
 
 
@@ -814,6 +899,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "preflight":
         return run_preflight(args)
+    if args.command == "retry-one":
+        return run_retry_one(args)
     return run_batch(args)
 
 

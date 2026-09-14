@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -276,3 +278,109 @@ def test_completion_requires_no_pending_failed_or_unavailable() -> None:
     assert full_review.completion_status(
         {"pending": 1, "failed": 0, "unavailable": 0}
     ) == "partial"
+
+
+def test_explicit_terminal_retry_appends_third_attempt_without_erasing_history(
+    tmp_path: Path,
+) -> None:
+    tasks = full_review.build_full_manifest(
+        _release_fixture(tmp_path, prediction_count=2),
+        expected_ground_truth=1,
+        expected_per_condition=2,
+    )
+    task = next(item for item in tasks if item["review_applicable"])
+    output_root = tmp_path / "output"
+    path = full_review.task_path(output_root, task["sample_id"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    failed = {
+        **_completed_record(task),
+        "status": "failed",
+        "review": None,
+        "attempts": [
+            {"attempt_number": 1, "status": "failed", "marker": "keep-one"},
+            {"attempt_number": 2, "status": "failed", "marker": "keep-two"},
+        ],
+    }
+    path.write_text(json.dumps(failed), encoding="utf-8")
+    profile = full_review.base_review.ApiProfile(
+        protocol="openai_responses",
+        base_url=full_review.base_review.OPENAI_BASE_URL,
+        headers={"Authorization": "Bearer sk-never-persist", "content-type": "application/json"},
+        safe_metadata={"api_host": "routify-pub.alibaba-inc.com"},
+    )
+
+    def transport(
+        request: full_review.base_review.HttpRequest, timeout: float
+    ) -> full_review.base_review.HttpResponse:
+        return full_review.base_review.HttpResponse(
+            status=200,
+            payload={
+                "id": "resp-recovery",
+                "model": "gpt-5.6-sol",
+                "output_text": json.dumps(_completed_record(task)["review"]),
+                "usage": {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30},
+            },
+        )
+
+    result = full_review.review_one_task(
+        task=task,
+        profile=profile,
+        output_root=output_root,
+        budget=full_review.base_review.RequestBudget(
+            output_root / "request_budget.json", cap=10050
+        ),
+        transport=transport,
+        allow_terminal_retry=True,
+        retry_delay_seconds=0,
+    )
+
+    assert result["status"] == "completed"
+    assert [attempt["attempt_number"] for attempt in result["attempts"]] == [1, 2, 3]
+    assert result["attempts"][0]["marker"] == "keep-one"
+    assert result["attempts"][1]["marker"] == "keep-two"
+    assert result["attempts"][2]["status"] == "accepted"
+    assert "sk-never-persist" not in path.read_text(encoding="utf-8")
+
+
+def test_explicit_retry_requires_exactly_two_terminal_failures(tmp_path: Path) -> None:
+    tasks = full_review.build_full_manifest(
+        _release_fixture(tmp_path, prediction_count=2),
+        expected_ground_truth=1,
+        expected_per_condition=2,
+    )
+    task = next(item for item in tasks if item["review_applicable"])
+    output_root = tmp_path / "output"
+    profile = full_review.base_review.ApiProfile(
+        protocol="openai_responses",
+        base_url=full_review.base_review.OPENAI_BASE_URL,
+        headers={"Authorization": "Bearer sk-test", "content-type": "application/json"},
+        safe_metadata={},
+    )
+
+    with pytest.raises(full_review.FullReviewError, match="两次终态失败"):
+        full_review.review_one_task(
+            task=task,
+            profile=profile,
+            output_root=output_root,
+            budget=full_review.base_review.RequestBudget(
+                output_root / "request_budget.json", cap=10050
+            ),
+            transport=lambda request, timeout: pytest.fail("不应发请求"),
+            allow_terminal_retry=True,
+            retry_delay_seconds=0,
+        )
+
+
+def test_retry_cli_requires_one_explicit_task_identity() -> None:
+    parser = full_review.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["retry-one"])
+    by_sample = parser.parse_args(["retry-one", "--sample-id", "review_005745"])
+    by_logical = parser.parse_args(
+        ["retry-one", "--logical-id", "pred_simplify::gplearn::g0049::s521::noise001"]
+    )
+
+    assert by_sample.sample_id == "review_005745"
+    assert by_sample.logical_id is None
+    assert by_logical.logical_id.endswith("noise001")
+    assert by_logical.sample_id is None
