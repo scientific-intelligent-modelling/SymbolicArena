@@ -26,7 +26,7 @@
 - `results/<condition>/id_ood_eff_minute.csv.gz`：逐 algorithm-task-seed-minute 的 ID/OOD 数值质量与 EFF。
 - `results/<condition>/curves_2700.csv`：15 算法乘 180 分钟的聚合曲线。
 - `results/<condition>/run_eff_status.csv`：逐运行 EFF 完整性与来源状态。
-- `provenance/`：来源清单、SHA256、EFF v3 审计、原始远端补跑包及唯一未解决 Opus5 裁决。
+- `provenance/`：来源清单、SHA256、EFF v3 审计、原始远端补跑包，以及 gplearn 结构重裁的完整提示词、请求和响应。
 - `code/`：生成、校验、聚合所用的关键代码快照。
 
 ## EFF 正式口径
@@ -35,16 +35,16 @@ EFF 使用 `algorithm-native internal best-so-far.v1`。每分钟只按算法原
 
 为补齐这一口径，精确重跑了 474 条：clean 165 条、noise001 154 条、noise005 155 条。这些重跑全部冻结为 `eff_only`，原正式实验的最终公式和 ID/OOD/SYM/MIN/STAB 均保持不变。
 
-## Opus5 状态与严格例外
+## Opus5 状态与 gplearn 重裁
 
-新增大模型请求全部使用 Routify 的 `claude-opus-5`、`xhigh`、非流式接口；未使用 yapi。当前账本记录 3114 次尝试，其中 2360 次通过严格校验、754 次失败，估算费用为 97.7278566 元。
+新增大模型请求全部使用 Routify 的 `claude-opus-5`、`xhigh`、非流式接口；未使用 yapi。连同本次 gplearn 重裁，当前账本记录 3115 次尝试，其中 2361 次通过严格校验、754 次失败，估算费用为 97.7543616 元。
 
-clean 条件仍有一条显式未解决的结构裁决：`gplearn / strogatz_barmag2 / g0029 / s520-s521`。两个逻辑版本各重试 3 次，Opus5 响应都因额外的 schema 禁止字段而未通过 Draft-07 严格校验。按 fail-closed 规则，响应未被投影、删字段、改写或伪造成有效决定。因此：
+`gplearn / strogatz_barmag2 / g0029 / s520-s521` 曾因普通显示表达式丢失 gplearn protected `log/sqrt` 语义而无法裁决。修正提示词并绑定原生 prefix tree 后，Opus5 在第一次请求即通过 Draft-07 严格校验，返回 `different_structure`，置信度 0.96。因此：
 
-- clean 的 EFF 仍为 15/15 完整；
-- clean 的 gplearn STAB 留空，clean 六轴正式就绪为 14/15；
-- noise001 与 noise005 六轴正式就绪均为 15/15；
-- 六次原始失败尝试与哈希保存在 `provenance/opus_unresolved_clean_structure/`。
+- clean 的该任务结构一致性为 0，任务 STAB 为 0；
+- clean 的 gplearn STAB 为 23.577217230298906；
+- clean、noise001、noise005 的六轴均为 15/15 正式就绪；
+- 新裁决完整证据保存在 `provenance/gplearn_structure_resolution_20260914/`；此前六次失败尝试保留在 `provenance/opus_unresolved_clean_structure/` 作为历史审计证据。
 
 本发布包含最终 SYM、MIN、STAB 和完整逐分钟 ID/OOD/EFF；它不宣称已经计算逐分钟 SYM、MIN、STAB。
 

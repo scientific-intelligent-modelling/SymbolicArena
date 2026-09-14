@@ -1,6 +1,6 @@
 {
   "schema_version": "core50_final_release_status_v1",
-  "status": "passed_fail_closed",
+  "status": "passed",
   "release_date": "2026-09-14",
   "current_only": true,
   "dataset_count": 50,
@@ -25,8 +25,8 @@
       "minute_id_ood_eff_rows": 405000,
       "algorithm_minute_curve_rows": 2700,
       "eff_formal_ready_algorithms": 15,
-      "six_axis_formal_ready_algorithms": 14,
-      "six_axis_unresolved_algorithms": 1
+      "six_axis_formal_ready_algorithms": 15,
+      "six_axis_unresolved_algorithms": 0
     },
     "noise001": {
       "final_runs": 2250,
@@ -63,23 +63,25 @@
     "base_final_results_preserved": true
   },
   "opus5": {
-    "status": "completed_with_frozen_clean_structure_exception",
+    "status": "completed",
     "channel": "routify",
     "model": "claude-opus-5",
     "effort": "xhigh",
     "stream": false,
     "yapi_used_for_new_calls": false,
-    "attempt_count": 3114,
-    "accepted_count": 2360,
+    "attempt_count": 3115,
+    "accepted_count": 2361,
     "failed_count": 754,
-    "estimated_cost_cny": 97.7278566,
-    "unresolved_clean_structure_count": 1,
-    "unresolved_logical_base": "stab_structure::gplearn::g0029::s520-s521",
+    "estimated_cost_cny": 97.7543616,
+    "unresolved_clean_structure_count": 0,
+    "resolved_clean_structure_count": 1,
+    "resolved_logical_id": "stab_structure::gplearn::g0029::s520-s521::v4",
+    "resolved_decision": "different_structure",
+    "resolved_confidence": 0.96,
     "projection_applied": false,
-    "new_prompt_applied": false
+    "new_prompt_applied": true
   },
   "limitations": [
-    "clean 的 gplearn/strogatz_barmag2/g0029/s520-s521 结构裁决严格 unresolved，因此 gplearn STAB 为空。",
     "本发布含最终 SYM/MIN/STAB，不宣称含逐分钟 SYM/MIN/STAB。"
   ],
   "source_manifests": {
@@ -88,7 +90,8 @@
     "dataset_files": "provenance/datasets.csv",
     "eff_revision": "provenance/eff_revision_v3/manifest.json",
     "eff_validation": "provenance/eff_revision_v3/validation_report.json",
-    "opus_exception": "provenance/opus_unresolved_clean_structure/FINAL_OPUS_STATUS.json",
-    "opus_attempts": "provenance/opus_unresolved_clean_structure/MANIFEST.json"
+    "opus_resolution": "provenance/gplearn_structure_resolution_20260914/MANIFEST.json",
+    "opus_exception_history": "provenance/opus_unresolved_clean_structure/FINAL_OPUS_STATUS.json",
+    "opus_failed_attempt_history": "provenance/opus_unresolved_clean_structure/MANIFEST.json"
   }
 }

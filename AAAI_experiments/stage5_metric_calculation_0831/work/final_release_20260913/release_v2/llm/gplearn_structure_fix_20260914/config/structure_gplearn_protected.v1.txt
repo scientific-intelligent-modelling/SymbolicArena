@@ -1,0 +1,23 @@
+You are the single-turn structural consistency judge for one SymbolicArena STAB seed pair.
+
+This task uses gplearn native protected operators. The native operator contract in REQUEST_JSON is authoritative:
+- protected_sqrt(z) = sqrt(abs(z));
+- protected_log(z) = log(abs(z)) when abs(z) > 0.001, otherwise 0;
+- protected_div(a,b) = a / b when abs(b) > 0.001, otherwise 1.
+
+The ordinary-looking display expression is only a readable rendering of the native prefix program. Do not declare the task undetermined merely because that display rendering has an empty ordinary real domain. Use the supplied native prefix trees and protected semantics.
+
+Decision meanings:
+- mathematically_equivalent: the two native protected programs represent the same function.
+- same_canonical_structure: equivalence is not established, but the native operator trees have the same canonical structure after constants are abstracted.
+- different_structure: neither condition holds; in particular, materially different native tree topology is sufficient.
+- undetermined: only when the supplied native programs or structural evidence are genuinely missing or contradictory.
+
+Return exactly one JSON object containing only these three keys:
+{"decision":"different_structure","confidence":0.0,"brief_reason":"..."}
+
+The decision value may be any value allowed by the supplied schema. Do not emit null fields, note fields, markdown, or prose outside the JSON object.
+
+REQUEST_JSON:
+{{REQUEST_JSON}}
+

@@ -967,9 +967,19 @@ def require_dependencies(
     context: str,
 ) -> None:
     dependencies = plan.get("dependencies")
-    if not isinstance(dependencies, list) or set(map(str, dependencies)) != set(expected):
+    if not isinstance(dependencies, list):
         raise PublicationError(f"{context}: dependencies 未精确绑定当前上游")
-    entries = _binding_entries(plan_request(plan))
+    request = plan_request(plan)
+    declared_dependencies = set(map(str, dependencies))
+    if declared_dependencies != set(expected):
+        standalone_bindings = request.get("frozen_dependency_evaluation_keys")
+        if (
+            declared_dependencies
+            or not isinstance(standalone_bindings, list)
+            or set(map(str, standalone_bindings)) != set(expected)
+        ):
+            raise PublicationError(f"{context}: dependencies 未精确绑定当前上游")
+    entries = _binding_entries(request)
     by_key = {_binding_key(entry): entry for entry in entries if _binding_key(entry)}
     if not set(expected) <= set(by_key):
         raise PublicationError(f"{context}: request binding 缺少当前 evaluation key")
@@ -1094,6 +1104,55 @@ def _structure_identity(plan: Mapping[str, Any], condition: str) -> tuple[str, s
         pair[1],
         str(request.get("noise_tag") or plan.get("condition") or condition),
     )
+
+
+def validate_structure_overlay_coverage(
+    output: Mapping[tuple[str, str, int, int, str], Mapping[str, Any]],
+    *,
+    current_matches: set[tuple[str, str, int, int, str]],
+    applied: set[tuple[str, str, int, int, str]],
+    condition: str,
+    has_overlays: bool,
+) -> None:
+    """验证当前公式匹配的 overlay 均已应用，或仅因显式 unresolved 被隔离。"""
+
+    if condition != "clean" or not has_overlays:
+        return
+    if len(current_matches) != 10:
+        raise PublicationError(
+            "clean current structure overlay应匹配10条: "
+            f"matched={len(current_matches)}"
+        )
+    unresolved_matches = {
+        identity
+        for identity in current_matches
+        if output[identity].get("state") == "unresolved"
+    }
+    expected_applied = current_matches - unresolved_matches
+    if applied != expected_applied:
+        raise PublicationError(
+            "clean current structure overlay应用集合不符: "
+            f"matched={len(current_matches)} unresolved={len(unresolved_matches)} "
+            f"applied={len(applied)} expected={len(expected_applied)}"
+        )
+
+
+def build_publication_limitations(
+    condition_reports: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    limitations = [
+        "三个条件的EFF均由2250条可审计原生轨迹完整计算，无legacy fallback",
+        "本发布只含最终六轴值，不宣称逐分钟 SYM/MIN/STAB 已补齐",
+    ]
+    clean_unresolved = int(
+        condition_reports.get("clean", {}).get("structure_unresolved_task_count", 0)
+    )
+    if clean_unresolved:
+        limitations.insert(
+            1,
+            "clean的gplearn g0029 s520-s521结构裁决显式unresolved，因此该task的m_stab及gplearn STAB为空",
+        )
+    return limitations
 
 
 def bind_structure(
@@ -1245,12 +1304,13 @@ def bind_structure(
             evidence["audit_source"] = item["audit_source"]
             evidence["audit_overlay_structured_output"] = overlay_index.get("structured_output")
             applied.add(identity)
-    if condition == "clean" and overlay_specs:
-        if len(current_matches) != 10 or len(applied) != 9:
-            raise PublicationError(
-                "clean current structure overlay应匹配10条，其中孤例隔离1条、实际应用9条: "
-                f"matched={len(current_matches)} applied={len(applied)}"
-            )
+    validate_structure_overlay_coverage(
+        output,
+        current_matches=current_matches,
+        applied=applied,
+        condition=condition,
+        has_overlays=bool(overlay_specs),
+    )
     return output, compact
 
 
@@ -2594,6 +2654,9 @@ def publish(config: PublicationConfig, *, config_path: Path) -> dict[str, Any]:
                 row.get("availability_status") == "unavailable"
                 for row in trajectories.values()
             ),
+            "structure_unresolved_task_count": sum(
+                row["unresolved_structure"] == "true" for row in task_rows
+            ),
         }
 
     source_manifest = {
@@ -2627,11 +2690,7 @@ def publish(config: PublicationConfig, *, config_path: Path) -> dict[str, Any]:
         "assembly_complete": all_complete,
         "formal_ready_algorithm_condition_count": total_formal_algorithms,
         "formal_ready": total_formal_algorithms == 45,
-        "limitations": [
-            "三个条件的EFF均由2250条可审计原生轨迹完整计算，无legacy fallback",
-            "clean的gplearn g0029 s520-s521结构裁决显式unresolved，因此该task的m_stab及gplearn STAB为空",
-            "本发布只含最终六轴值，不宣称逐分钟 SYM/MIN/STAB 已补齐",
-        ],
+        "limitations": build_publication_limitations(condition_reports),
         "api_calls": 0,
         "llm_calls": 0,
         "training_runs": 0,

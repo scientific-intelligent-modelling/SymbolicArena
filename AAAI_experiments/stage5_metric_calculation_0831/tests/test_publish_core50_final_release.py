@@ -12,6 +12,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.publish_core50_fin
     PublicationError,
     aggregate_six_axis,
     bind_raw_and_semantic,
+    build_publication_limitations,
     compact_llm_evidence,
     config_template,
     expression_fingerprint,
@@ -22,6 +23,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.publish_core50_fin
     validate_raw_record,
     validate_eff_curve_primary,
     validate_eff_status_row,
+    validate_structure_overlay_coverage,
 )
 
 
@@ -115,6 +117,37 @@ def test_dependencies_require_current_keys_and_expressions() -> None:
             plan,
             {"pred-key": "x1+1", "gt-key": "x0"},
             context="fixture",
+        )
+
+
+def test_dependencies_accept_audited_standalone_rejudge_bindings() -> None:
+    plan = {
+        "dependencies": [],
+        "request": {
+            "frozen_dependency_evaluation_keys": ["left-key", "right-key"],
+            "deterministic_evidence": {
+                "lhs_binding": {
+                    "frozen_evaluation_key": "left-key",
+                    "frozen_effective_expression": "x0 + 1",
+                },
+                "rhs_binding": {
+                    "frozen_evaluation_key": "right-key",
+                    "frozen_effective_expression": "x0 - 1",
+                },
+            },
+        },
+    }
+    require_dependencies(
+        plan,
+        {"left-key": "x0+1", "right-key": "x0-1"},
+        context="standalone rejudge",
+    )
+    plan["request"]["frozen_dependency_evaluation_keys"] = ["left-key"]
+    with pytest.raises(PublicationError, match="dependencies"):
+        require_dependencies(
+            plan,
+            {"left-key": "x0+1", "right-key": "x0-1"},
+            context="standalone rejudge",
         )
 
 
@@ -344,3 +377,37 @@ def test_unresolved_structure_preserves_attempts_without_decision(tmp_path):
     assert evidence["state"] == "unresolved"
     assert evidence["structured_output"] is None
     assert len(evidence["unresolved"]["attempts"]) == 6
+
+
+def test_structure_overlay_coverage_accepts_resolved_opus_rejudge() -> None:
+    identities = {(f"algorithm{i}", "dataset", 520, 521, "clean") for i in range(10)}
+    output = {identity: {"state": "frozen"} for identity in identities}
+    validate_structure_overlay_coverage(
+        output,
+        current_matches=identities,
+        applied=identities,
+        condition="clean",
+        has_overlays=True,
+    )
+
+    unresolved = next(iter(identities))
+    output[unresolved] = {"state": "unresolved"}
+    validate_structure_overlay_coverage(
+        output,
+        current_matches=identities,
+        applied=identities - {unresolved},
+        condition="clean",
+        has_overlays=True,
+    )
+
+
+def test_publication_limitations_drop_resolved_structure_exception() -> None:
+    resolved = build_publication_limitations(
+        {"clean": {"structure_unresolved_task_count": 0}}
+    )
+    assert not any("gplearn" in item or "unresolved" in item for item in resolved)
+
+    unresolved = build_publication_limitations(
+        {"clean": {"structure_unresolved_task_count": 1}}
+    )
+    assert any("gplearn" in item and "unresolved" in item for item in unresolved)

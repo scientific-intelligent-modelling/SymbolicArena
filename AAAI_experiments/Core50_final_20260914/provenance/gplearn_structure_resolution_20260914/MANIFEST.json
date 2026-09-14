@@ -1,0 +1,75 @@
+{
+  "schema_version": "gplearn_protected_structure_resolution_v1",
+  "status": "passed",
+  "condition": "clean",
+  "algorithm": "gplearn",
+  "dataset_id": "strogatz_barmag2",
+  "dataset_key": "g0029",
+  "seed_pair": "s520-s521",
+  "logical_id": "stab_structure::gplearn::g0029::s520-s521::v4",
+  "evaluation_key": "33af6129a9dcc53d96b915a0786f29d33a2595da7c43068b4b2eb2979d61c4ca",
+  "reason_for_rejudge": "普通显示表达式丢失了 gplearn protected log/sqrt 语义，导致旧裁决把空普通实数域误当成证据不足。",
+  "native_operator_contract": {
+    "protected_sqrt": "sqrt(abs(z))",
+    "protected_log": "log(abs(z)) if abs(z) > 0.001 else 0",
+    "protected_div": "a / b if abs(b) > 0.001 else 1"
+  },
+  "transport": {
+    "channel": "routify",
+    "model": "claude-opus-5",
+    "effort": "xhigh",
+    "stream": false,
+    "attempt_count": 1,
+    "estimated_cost_cny": 0.026505
+  },
+  "decision": {
+    "value": "different_structure",
+    "confidence": 0.96,
+    "schema_validation": "passed"
+  },
+  "metric_effect": {
+    "pair_520_521": "different_structure",
+    "task_structural_consistency": 0.0,
+    "task_stab": 0.0,
+    "gplearn_clean_stab": 23.577217230298906,
+    "clean_formal_ready_algorithms": 15
+  },
+  "artifacts": {
+    "prompt": {
+      "path": "config/structure_gplearn_protected.v1.txt",
+      "sha256": "19e4d6c53cd6be5bb275ad95e26eec2c5ce542a878fe7697428b22f99d8fd668"
+    },
+    "plan": {
+      "path": "plans/gplearn_g0029_s520_s521_v4.jsonl",
+      "sha256": "2ea236c085561d66f62af34971c974c06371c5efc9d2fca0d096f8bceafaee49"
+    },
+    "attempt": {
+      "path": "execution_v4/attempts/33af6129a9dcc53d96b915a0786f29d33a2595da7c43068b4b2eb2979d61c4ca.a01.json",
+      "sha256": "0c1696ca2d78046f97c3752aaeb24808d30c18923ddf1fe767ebf80bf05511da"
+    },
+    "frozen": {
+      "path": "execution_v4/frozen/33af6129a9dcc53d96b915a0786f29d33a2595da7c43068b4b2eb2979d61c4ca.json",
+      "sha256": "60a3e7e472d7d94cc025ca21b2287f9c9c8b172fb147b44803edb54d24456885"
+    },
+    "execution_report": {
+      "path": "execution_v4/reports/structure_v4.json",
+      "sha256": "1f1af2c68564789580a2ee829c515142c1d96128277fcc2ebf62c289f96569db"
+    },
+    "published_opus_structure": {
+      "path": "../../results/clean/opus5_structure.jsonl",
+      "sha256": "bf778d03f5f332e8238ccf035ada9ad31578c6dad34cf49019580d4a751bb04f"
+    },
+    "published_task_stability": {
+      "path": "../../results/clean/task_stability.csv",
+      "sha256": "d4af5a2c3c8df205f58f0cf9622dca171a77a5e9b5038588b55dbdc25bb87f09"
+    },
+    "published_six_axis": {
+      "path": "../../results/clean/six_axis.csv",
+      "sha256": "9bd3c3b3700e9cf1dee87b479024a8d2fece0b2579e93802136137d7338e0dc1"
+    },
+    "publication_report": {
+      "path": "../../PUBLICATION_REPORT.json",
+      "sha256": "5c1465a758844737a6cabbe57f0212eea73cb1546382772398e8b2e3cab62d79"
+    }
+  }
+}
