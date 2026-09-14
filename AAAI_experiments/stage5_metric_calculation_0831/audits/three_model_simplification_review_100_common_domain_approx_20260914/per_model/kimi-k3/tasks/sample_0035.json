@@ -1,0 +1,66 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "error": {
+        "class": "TimeoutError"
+      },
+      "physical_request_ordinal": 221,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "status": "failed"
+    },
+    {
+      "attempt_number": 2,
+      "http_status": 200,
+      "physical_request_ordinal": 321,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-840a437d-13c7-940f-b999-a29be0c56438",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1182,
+        "output_tokens": 8507,
+        "total_tokens": 10201
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0035",
+  "model": "kimi-k3",
+  "pair_sha256": "01c1cd95e8b21e3b2cd714a3ea190c974ca370e1c314f43d085d64323d07a9b8",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The rewrite reassociates/factors across gplearn protected division (e.g., 5*x2/x5 + 4*x4/x5 -> (5*x2+4*x4)/x5, and similarly inside the sin terms and the x1..x5 term). Under protected semantics div(a,b)=1 when |b|<=1e-3, so two separate protected divisions by x5 each return 1 (sum 2) while the merged single division returns 1; this changes values on the common real domain (protected div is total, so |x5|<=1e-3 is included). The same protected-region mismatch occurs in sin(x2+sin(...)), sin(5*(x2+x4)/x5) vs sin(5*x2/x5+5*x4/x5), and the consolidated /x5 term (original inner sums to 4 -> sin(4), proposed to 1 -> sin(1) at the test point). Net value gap far exceeds abs_tol/rel_tol.",
+    "confidence": 0.97,
+    "counterexample": "x1=1, x2=0, x3=0, x4=0, x5=0 (|x5|<=1e-3). Protected: 5*x2/x5+4*x4/x5 = div(0,0)+div(0,0) = 2 vs (5*x2+4*x4)/x5 = div(0,0) = 1. Also original big sin term = sin(4) ≈ -0.75680 while proposed = sin(1) ≈ 0.84147. Overall original - proposed ≈ -0.486, not within tolerance.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "fb0d2e45e53eb31026dcb352063ad395f6a83958e18aabba91b1e201de621079",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0035",
+  "schema_version": 1,
+  "status": "completed"
+}

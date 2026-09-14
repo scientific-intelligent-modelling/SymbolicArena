@@ -1,0 +1,68 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "error": {
+        "class": "http_error",
+        "http_status": 200,
+        "provider_error_type": null
+      },
+      "physical_request_ordinal": 135,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "status": "failed"
+    },
+    {
+      "attempt_number": 2,
+      "http_status": 200,
+      "physical_request_ordinal": 250,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_202609142331561ac7fa18781b4ba5",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 879,
+        "output_tokens": 135,
+        "total_tokens": 1014
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0054",
+  "model": "glm-5.2",
+  "pair_sha256": "28da9ff5927e76866486b75e429faaf0f1c70091af740e91df62822dea6c7203",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The simplification merges four multiplied sqrt() factors into a single sqrt() of their product. Since all four factors are of the form sqrt(a) with a>=1>0, sqrt(a*b*c*d)=sqrt(a)*sqrt(b)*sqrt(c)*sqrt(d) holds on the entire common domain. The variable mapping and operator semantics are preserved, and the expression is simpler (fewer sqrt calls).",
+    "confidence": 0.95,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "3acb49cbe2bbf9414a28725a3c3fa2fbce0057d0a427e7dc191b7dae841203f7",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0054",
+  "schema_version": 1,
+  "status": "completed"
+}

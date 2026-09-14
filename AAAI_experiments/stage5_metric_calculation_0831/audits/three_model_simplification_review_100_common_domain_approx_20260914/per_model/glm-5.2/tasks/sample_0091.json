@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 203,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_202609142331458f9277fe58c74375",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 699,
+        "output_tokens": 154,
+        "total_tokens": 853
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0091",
+  "model": "glm-5.2",
+  "pair_sha256": "a794a5fdf895b149c0de85e389a702005f29a1f3251e5071bda0b221ccf2569a",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The original uses np.where to guard against near-zero denominators, returning 1.0 when |denominator|<=0.001. The proposed simplification removes this guard. On the common domain where the denominator is not near zero, both expressions produce the same value (10/denominator). The domain is expanded (proposed is defined at points where original returns 1.0), but domain expansion alone is not a failure. Values agree on the common domain. The proposed expression is simpler.",
+    "confidence": 0.95,
+    "counterexample": null,
+    "domain_preserved": false,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "9d9c99ebce3f001c4bd8efd57b10d99dc985356ee7271947f4fa3ee0a41d5cc5",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0091",
+  "schema_version": 1,
+  "status": "completed"
+}

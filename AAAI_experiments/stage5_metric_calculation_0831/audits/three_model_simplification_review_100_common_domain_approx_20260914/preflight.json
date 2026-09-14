@@ -1,0 +1,37 @@
+{
+  "concurrency_per_model": 32,
+  "logical_tasks": 300,
+  "max_attempts_per_task": 2,
+  "models": [
+    "kimi-k3",
+    "glm-5.2",
+    "gpt-5.6-sol"
+  ],
+  "physical_request_cap": 450,
+  "profiles": {
+    "anthropic": {
+      "api_host": "routify-pub.alibaba-inc.com",
+      "api_path": "/protocol/anthropic",
+      "credential_loaded": true,
+      "protocol": "anthropic_messages"
+    },
+    "openai": {
+      "api_host": "routify-pub.alibaba-inc.com",
+      "api_path": "/protocol/openai/v1",
+      "credential_loaded": true,
+      "protocol": "openai_responses"
+    }
+  },
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review_policy": "common_domain_approx",
+  "sample_seed": 20260914,
+  "sample_size": 100,
+  "sample_source": "AAAI_experiments/stage5_metric_calculation_0831/audits/three_model_simplification_review_100_20260914/sample.jsonl",
+  "source_outcomes": {
+    "simplified": 2852,
+    "unable": 100,
+    "unchanged": 3848
+  },
+  "status": "preflight_passed_no_network",
+  "stream": false
+}

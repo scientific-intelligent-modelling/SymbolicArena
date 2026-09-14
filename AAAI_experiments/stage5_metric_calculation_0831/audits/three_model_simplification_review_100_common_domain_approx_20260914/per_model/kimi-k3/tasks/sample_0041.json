@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 257,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-667187d6-be6e-99ef-94cf-41aa36a11a2a",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 837,
+        "output_tokens": 2138,
+        "total_tokens": 3487
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0041",
+  "model": "kimi-k3",
+  "pair_sha256": "b4d4224aea609d6f8eb77fc435c5ed6486cd7756d4062208aba1e0b36fa2d404",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "Original is 9.65*exp(P)*exp(Q)+0.2922; proposed merges the factors into 9.65*exp(P+Q)+0.2922 via the exact identity exp(a)*exp(b)=exp(a+b) on reals. The x1, x2, x4, and x5 terms match exactly, and the x3 inner term is unchanged in value because (1 - c*x3)**2 = (c*x3 - 1)**2. Both are defined for all real inputs, and the merge removes one exp and one multiplication, so it is simpler.",
+    "confidence": 1.0,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "c33c4f0d32990cf6da0e1a7e2486e32a42218516402d5540b69b648edc4992ff",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0041",
+  "schema_version": 1,
+  "status": "completed"
+}

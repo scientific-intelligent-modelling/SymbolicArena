@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 9,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-5403fc81-937c-96f1-9bd1-68ab1be3d38e",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1456,
+        "output_tokens": 2243,
+        "total_tokens": 3699
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0009",
+  "model": "kimi-k3",
+  "pair_sha256": "8b28cc8dbb63a5223ab91457363a7659f2a9b0e3de00ac8d61eb5efc5372e602",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The rewrite merges the denominator's four square roots sqrt(A)*sqrt(B)*sqrt(C)*sqrt(D) into a single sqrt(A*B*C*D). Each radicand is strictly positive for all real inputs: A >= 1 (the inner fraction is nonnegative and its denominator >= 1, with cos(cos(.)) bounded in [cos(1),1] hence never zero), B >= 1, C >= 1, D >= 1. Thus sqrt(a)sqrt(b)=sqrt(ab) holds exactly on the entire real domain, the common domain is all of R^4 for both expressions (no domain change), variable-to-column mapping and operator semantics are unchanged, and replacing four sqrt nodes with one is strictly simpler. Any floating-point discrepancy is at ulp scale, far below rel_tol=1e-6.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "30b12e9bfc0c3bbb04de76ec32635142cca055c650e5dc486c1509530144cfb4",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0009",
+  "schema_version": 1,
+  "status": "completed"
+}

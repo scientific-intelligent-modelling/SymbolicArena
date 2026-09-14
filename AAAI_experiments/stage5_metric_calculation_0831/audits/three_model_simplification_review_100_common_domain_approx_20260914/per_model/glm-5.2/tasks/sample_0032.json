@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 62,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "0217893998918589a5685e33c81ebc7a325510351e9b158255770",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1052,
+        "output_tokens": 481,
+        "total_tokens": 1533
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0032",
+  "model": "glm-5.2",
+  "pair_sha256": "ff95c4cb98922a316fdb284c1f81d8a1dc93a8c22ea97f15a0b66a3da9e0108c",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "On the common real domain, cos(x0**2)>0, so log(1/cos(x0**2)) = -log(cos(x0**2)) exactly. Domains match and the simplification replaces division by a unary negation, reducing complexity.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "8ca8e3001a959e3b2e88677be3be1ddd5118a1656201601348bd34838c14b2d4",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0032",
+  "schema_version": 1,
+  "status": "completed"
+}

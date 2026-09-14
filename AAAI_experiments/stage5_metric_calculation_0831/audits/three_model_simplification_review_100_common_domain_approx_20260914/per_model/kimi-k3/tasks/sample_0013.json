@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 14,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-3fd15058-3151-95bc-bb5b-be3d7ad35e45",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1380,
+        "output_tokens": 1437,
+        "total_tokens": 2817
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0013",
+  "model": "kimi-k3",
+  "pair_sha256": "96fda7977d0d51fbdf4146501d733af2f4fab569ec240c81b5eb3efd294b5a7e",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The change only distributes the scalar 3.17918e-12 into the x0 linear factor: 3.17918e-12*275.98432095 = 8.7740383348e-10 and 3.17918e-12*2.7604396501598142 = 8.7759345270e-12, matching the proposed constants well within the given tolerances. All other factors (x1, x2/x3 linears, log, sin(sin(...))) are identical, so values agree on the entire real domain, which is unchanged. Variable mapping and operator semantics are preserved, and the simplification removes one multiplication, making it simpler.",
+    "confidence": 0.98,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "c857731f815d9accfa2aaf73df33ed9eccbc80b20361881e94a61e8889acafbc",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0013",
+  "schema_version": 1,
+  "status": "completed"
+}

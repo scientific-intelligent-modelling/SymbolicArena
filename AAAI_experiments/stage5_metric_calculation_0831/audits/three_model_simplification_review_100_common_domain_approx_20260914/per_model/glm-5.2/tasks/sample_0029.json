@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 64,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_202609142331319dee7e955eb24c84",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1518,
+        "output_tokens": 175,
+        "total_tokens": 1693
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0029",
+  "model": "glm-5.2",
+  "pair_sha256": "ddadf207adab37c559c714cc1d7b920297e7e7ddc9ba54202371c5a220702fed",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The original has (A*B)**2 where A=(0.0018856...*x4+0.6010...) and B=(54.2041...*x1**2+...+0.0990...). The proposed rewrites this as (A*B)**2, which is algebraically identical since (A*B)**2 = A**2 * B**2. All constants, variables, and operators are preserved. The simplification is marginally simpler (removes one squaring operation).",
+    "confidence": 0.95,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "66e2b439fe9b10467ac60459100f3ff9d94006904fdfb0837e62672f3066ebb9",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0029",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,66 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "error": {
+        "class": "TimeoutError"
+      },
+      "physical_request_ordinal": 5,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "status": "failed"
+    },
+    {
+      "attempt_number": 2,
+      "http_status": 200,
+      "physical_request_ordinal": 318,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-0942b3ce-413f-9f74-ba3d-aeae79593359",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 10315,
+        "total_tokens": 11610
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0005",
+  "model": "kimi-k3",
+  "pair_sha256": "c7048f5e2cf7c662a68137eb8202861c58d93df26c68261003dc9e144fcd009c",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The rewrite cancels x4 in the middle term using standard-division algebra, but under gplearn protected div the nested '/x4' operations fall back to 1 when |x4|<=0.001. At x2=1,x3=0,x4=0,x5=-0.5 the original middle denominator becomes 1+2*x5=0, so div(x4,0) returns the protected value 1, while the proposed polynomial form has no such fallback and contributes 0. The identical final term cancels, leaving a common-domain value gap of 1.0 (> tol).",
+    "confidence": 0.98,
+    "counterexample": "x2=1, x3=0, x4=0, x5=-0.5: original first three terms = 4.937/(-0.5) + [protected div(x4, 1+2*x5)=div(0,0)->1] + 0 = -9.874 + 1 + 0 = -8.874; proposed (4.937*x2 + 4*x4 + x4**3/(0.689632*x2*(x2+x4)+2*x4**2))/x5 = (4.937+0+0)/(-0.5) = -9.874; the shared last term (x4+x5)/(...) is identical and cancels; difference = 1.0.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "9a787c8dc918542d55d37ab39f724608baafdf271f7aaf50b238186e56fa57dd",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0005",
+  "schema_version": 1,
+  "status": "completed"
+}

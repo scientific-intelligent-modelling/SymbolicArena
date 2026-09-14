@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 114,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_07adec582fedc19a016aa81357dda487d08f696b8771976a0b",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1741,
+        "output_tokens": 1858,
+        "total_tokens": 3599
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::gpt-5.6-sol::sample_0035",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "01c1cd95e8b21e3b2cd714a3ea190c974ca370e1c314f43d085d64323d07a9b8",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "Regrouping separate protected divisions into a single protected division changes values when the denominator is near zero. The expressions use the same variables and are both real-valued for all real inputs under the protected semantics, but they are not equivalent on that common domain.",
+    "confidence": 0.999,
+    "counterexample": "At x1=x2=x3=x4=x5=0, protected div(0,0)=1. For example, 5*x2/x5 + 4*x4/x5 evaluates to 2, whereas (5*x2+4*x4)/x5 evaluates to 1. Accounting for all other changed terms, proposed minus original is approximately 0.486999, so the complete expressions differ.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "fb0d2e45e53eb31026dcb352063ad395f6a83958e18aabba91b1e201de621079",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0035",
+  "schema_version": 1,
+  "status": "completed"
+}

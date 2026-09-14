@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 76,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0df0a5a53cd71d57016aa81354374c87d09c9dd254c55f248a",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1874,
+        "output_tokens": 298,
+        "total_tokens": 2172
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::gpt-5.6-sol::sample_0012",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "1517cd0f6da8b2f15b4bedbf1553173e4c4832908b24b949955115ec6961e761",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The proposed expression correctly factors the x0*x1 and x2 terms. It removes Abs around one sine before sqrt, contracting the real domain to points where that sine is nonnegative; on this common domain, sqrt(Abs(sin(...))) equals sqrt(sin(...)), so values are unchanged. Variables and operator value semantics are otherwise preserved.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": false,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "a33d7872d7c88b2d222da50171fb61021ae2fb303f5b692628be698d28415c0b",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0012",
+  "schema_version": 1,
+  "status": "completed"
+}

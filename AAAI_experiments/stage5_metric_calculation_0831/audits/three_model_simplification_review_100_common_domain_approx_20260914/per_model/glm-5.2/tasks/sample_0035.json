@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 100,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_20260914233133b12a1a8051144cd7",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1201,
+        "output_tokens": 460,
+        "total_tokens": 1661
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0035",
+  "model": "glm-5.2",
+  "pair_sha256": "01c1cd95e8b21e3b2cd714a3ea190c974ca370e1c314f43d085d64323d07a9b8",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The simplification changes values on the common domain. The original term sin(5*x2/x5 + 5*x4/x5) = sin(5*(x2+x4)/x5) was replaced by sin(5*(x2 + x4)/x5), which is algebraically identical, but the original term sin(x1/x5 + 6*x2/x5 + 6*x4/x5 + (x2/x5 + x4 + (x2 + x4/x5)/x1)/x5) was replaced by sin((x1 + 6*x2 + 7*x4 + x2/x5 + (x2 + x4/x5)/x1)/x5). Expanding the original argument: x1/x5 + 6*x2/x5 + 6*x4/x5 + x2/x5^2 + x4/x5 + (x2 + x4/x5)/(x1*x5) = (x1 + 6*x2 + 7*x4)/x5 + x2/x5^2 + (x2 + x4/x5)/(x1*x5). The proposed argument is (x1 + 6*x2 + 7*x4)/x5 + x2/x5^2 + (x2 + x4/x5)/(x1*x5), so these match. However, the original term sin(5*x2/x5 + 4*x4/x5) inside sin(x2 + sin(...)) was replaced by sin((5*x2 + 4*x4)/x5), which is also identical. Checking the term sin(5*x2/x5 + 5*x4/x5) -> sin(5*(x2 + x4)/x5): identical. After full expansion, all terms appear algebraically equivalent and the expression is simpler (fewer divisions).",
+    "confidence": 0.95,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "fb0d2e45e53eb31026dcb352063ad395f6a83958e18aabba91b1e201de621079",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0035",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,68 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "error": {
+        "class": "http_error",
+        "http_status": 200,
+        "provider_error_type": null
+      },
+      "physical_request_ordinal": 35,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "status": "failed"
+    },
+    {
+      "attempt_number": 2,
+      "http_status": 200,
+      "physical_request_ordinal": 204,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_20260914233145d18a7fcb86524332",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1380,
+        "output_tokens": 631,
+        "total_tokens": 2011
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0012",
+  "model": "glm-5.2",
+  "pair_sha256": "1517cd0f6da8b2f15b4bedbf1553173e4c4832908b24b949955115ec6961e761",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The proposed simplification changes sqrt(Abs(...)) to sqrt(sin(...)) inside the x1*x2*Min(...) term, which alters values on the common domain. Counterexample: x0=0, x1=1, x2=1, x3=0. Original inner: sqrt(Abs(sin(pi*sin(pi*Min(0.4275...,sqrt(Abs(1))))))) = sqrt(Abs(sin(pi*sin(pi*1)))) = sqrt(Abs(sin(pi*sin(pi)))) ≈ sqrt(0.9505) ≈ 0.9749. Proposed inner: sqrt(sin(pi*sin(pi*Min(0.4275...,sqrt(Abs(1)))))) = sqrt(sin(pi*sin(pi*1))) = sqrt(sin(pi*sin(pi))) ≈ sqrt(0.9505) ≈ 0.9749 (same here). But at x2=0.5: original sqrt(Abs(sin(pi*sin(pi*Min(0.4275...,sqrt(0.5)))))) vs proposed sqrt(sin(pi*sin(pi*Min(0.4275...,sqrt(0.5))))). When the inner sin is negative, Abs makes it positive but proposed takes sqrt of negative = undefined, changing domain and values. At x2=2: Min(0.4275, sqrt(2))=0.4275, sin(pi*sin(pi*0.4275))≈sin(pi*0.9724)≈sin(3.054)≈0.0872>0, both same. But at x2≈0.3: sqrt(0.3)=0.5477>0.4275 so Min=0.4275, same. Need x2 where sqrt(x2)<0.4275, i.e. x2<0.1828. At x2=0.1: sqrt(0.1)=0.3162, sin(pi*0.3162)=sin(0.9934)=0.8382, sin(pi*0.8382)=sin(2.633)=-0.4856. Original: sqrt(Abs(-0.4856))=0.6968. Proposed: sqrt(-0.4856) is not real. Domain contraction with value change on common domain.",
+    "confidence": 0.95,
+    "counterexample": "x0=0, x1=1, x2=0.1, x3=0: original term uses sqrt(Abs(sin(...)))=sqrt(0.4856)=0.6968 (real), proposed uses sqrt(sin(...))=sqrt(-0.4856) which is not real-valued, altering the common domain and values.",
+    "domain_preserved": false,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "same",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "a33d7872d7c88b2d222da50171fb61021ae2fb303f5b692628be698d28415c0b",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0012",
+  "schema_version": 1,
+  "status": "completed"
+}

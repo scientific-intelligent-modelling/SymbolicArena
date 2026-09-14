@@ -1,0 +1,66 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "error": {
+        "class": "TimeoutError"
+      },
+      "physical_request_ordinal": 57,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "status": "failed"
+    },
+    {
+      "attempt_number": 2,
+      "http_status": 200,
+      "physical_request_ordinal": 319,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-6ec48153-3c18-93fc-9957-33b5d0e7f975",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2741,
+        "output_tokens": 1477,
+        "total_tokens": 4730
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0030",
+  "model": "kimi-k3",
+  "pair_sha256": "2f1644458850aa355e74995c4b400acb0e67a508068fbfd795764099409d8258",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The expressions are identical except for the log term: -1.0*log(x3 + 1.0 + (sqrt(A) + y3)/A) became -log(x3 + 1.0 + 1/sqrt(A) + y3/A). Since (sqrt(A) + y3)/A = sqrt(A)/A + y3/A = A**(-1/2) + y3/A = 1/sqrt(A) + y3/A holds exactly for all A > 0, the rewritten argument is mathematically equal on the entire common domain. Both expressions require A > 0 (sqrt(A) and division by A, or 1/sqrt(A) and y3/A), x2 != 0, and a positive log argument, so the real domains coincide. Dropping the 1.0* factor is value-preserving and marginally reduces complexity. Values agree within the required tolerances everywhere on the common domain.",
+    "confidence": 0.98,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "de0d628a801a8d32cd1c7ec9effce6507a9f98ee9de42884eecb39d5c2b85be7",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0030",
+  "schema_version": 1,
+  "status": "completed"
+}

@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 173,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_00de0e8554d12dad016aa8135e2aa087d0a99a5e3bacf888bf",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1466,
+        "output_tokens": 2115,
+        "total_tokens": 3581
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::gpt-5.6-sol::sample_0065",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "e5c73f5fa6631e82f4a9c30d301e5ad2e5d2f8caba101803d505388062c91c48",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The rewrite log(log(sqrt(q))) -> log(log(q)/2) is invalid under gplearn's protected log semantics. When 1e-6 < abs(q) <= 0.001, log(q) is protected to 0, while log(sqrt(q)) can remain nonzero. Thus the expressions differ on their common real-valued domain.",
+    "confidence": 0.99,
+    "counterexample": "mom=0, r=0, q=0.0001. Protected log(q)=0, so log(log(q)/2)=0. But sqrt(q)=0.01, log(sqrt(q))=ln(0.01)=-4.605170186, and log(log(sqrt(q)))=ln(4.605170186)≈1.527179626. The remaining rewritten terms agree at this input, so the proposed expression exceeds the original by approximately 1.527179626.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "9a074eeb198f53b0fb672d069439c051c6fed69941dc51c39c607974f1b4919e",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0065",
+  "schema_version": 1,
+  "status": "completed"
+}

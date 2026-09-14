@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 19,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_20260914233131c8b2b00067f44c86",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 903,
+        "output_tokens": 247,
+        "total_tokens": 1150
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0006",
+  "model": "glm-5.2",
+  "pair_sha256": "f9e752d3dbc6e9b93320e8bc11e6d4f92e361b32fba2ffb8a4e85983cb3d3b83",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The proposed simplification factors out (0.04196125592331039*cos(x3) + 0.04453083619474739*cos(x5) - 0.11096498381341059) from the cos(x1), cos(x2), and cos(x4) terms. Expanding this product reproduces exactly the original terms involving cos(x1), cos(x2), and cos(x4), while the remaining terms (-0.10499505030675962*cos(x3), -0.04453083619474739*cos(x5)**2, -0.10854609295295746*cos(x5), 0.54925850146378379) are unchanged. Both expressions are defined for all real inputs, so the domain is preserved. The factored form is simpler.",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "ffcd7d559902a8bb545d35732d0d945a642a7185365993b4cb7514c9fb8ce7bb",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0006",
+  "schema_version": 1,
+  "status": "completed"
+}

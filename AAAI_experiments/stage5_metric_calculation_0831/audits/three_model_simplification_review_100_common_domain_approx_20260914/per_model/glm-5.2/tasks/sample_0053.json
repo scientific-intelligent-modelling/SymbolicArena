@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 121,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_2026091423313544a60dde21c04e90",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 2101,
+        "output_tokens": 231,
+        "total_tokens": 2332
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0053",
+  "model": "glm-5.2",
+  "pair_sha256": "0f8144324dc06a657a546e2d324f5d960141293f66e9a49ed79ca94fefee7732",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The proposed simplification is a valid algebraic factoring of the original polynomial. All terms from the original are correctly redistributed: diagonal terms (x_i^2, x_i^3, x_i^4) are grouped into x_i^2*(c1 + c2*x_i + c3*x_i^2), adjacent pair terms (x_i*x_j, x_i^2*x_j, x_i*x_j^2, x_i^2*x_j^2) are grouped into x_i*x_j*(c4 + c5*x_i + c6*x_j + c7*x_i*x_j), and the triple/quad interaction terms are correctly reorganized. Both expressions are polynomials defined on all of R^5, so the domain is preserved. The factored form has comparable complexity (same number of multiplications/additions), so simplicity is 'same'.",
+    "confidence": 0.95,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "same",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "756216d8a522b7b63f5e22c67c2fecc74112650dc24df2c7e8fb2f78e113e185",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0053",
+  "schema_version": 1,
+  "status": "completed"
+}

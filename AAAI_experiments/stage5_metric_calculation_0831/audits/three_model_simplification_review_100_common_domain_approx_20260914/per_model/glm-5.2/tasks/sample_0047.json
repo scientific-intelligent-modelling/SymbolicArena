@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 113,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_202609142331344fec1d71b3284c9c",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 561,
+        "output_tokens": 161,
+        "total_tokens": 722
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0047",
+  "model": "glm-5.2",
+  "pair_sha256": "a103c1cb58822844a49f202f6ccf9d225d048ed0a6b8101bf1e8d23e6c1a2cd3",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "Original: x1*(-x1*sin(x1**2+x1-log(x1))+x1)+x1. Factor x1 from both terms: x1*(-x1*sin(...)+x1)+x1 = x1*(-x1*sin(...)+x1+1) = x1*(x1+1-x1*sin(...)). Proposed matches exactly. Domain identical (x1>0). Simpler (fewer nodes).",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "0994f23383171934e9efeee1fa38bcbfc17864bb997339523af9031c1d131b10",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0047",
+  "schema_version": 1,
+  "status": "completed"
+}

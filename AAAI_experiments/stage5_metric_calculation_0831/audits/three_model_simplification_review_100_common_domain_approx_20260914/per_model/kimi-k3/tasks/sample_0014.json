@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 13,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-b92f6ea4-0138-9664-bd7f-612a9327c487",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1481,
+        "output_tokens": 6302,
+        "total_tokens": 7783
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0014",
+  "model": "kimi-k3",
+  "pair_sha256": "33a914037225d3e2c2a0daf4a8a28ab9443ad0ae79ec33dac73777666d3e90f8",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The removed outer Abs encloses a sum of nonnegative terms (positive coefficients times squares) plus the positive constant 0.091000723827595274, so its argument is strictly >=0.091>0 and Abs is the identity on all reals; the denominator 0.09002665046763605*(.)+6.000002010632209 also never vanishes, so both expressions are defined on all of R^5. The x1 term is an exact algebraic refactor: 0.05001384567799342*(23.400000059160785*x1+0.020000010273474547)^2 = 0.05001384567799342*23.400000059160785^2*(x1+0.020000010273474547/23.400000059160785)^2, giving coefficient ~27.3855814779 and shift ~0.0008547012916, matching the proposed constants within tolerance. Likewise the x3 term: 40.000000013847526*(0.009121771181549599*u+0.003003953895567951)^2 = 40.000000013847526*0.009121771181549599^2*(u+0.003003953895567951/0.009121771181549599)^2 with u=Abs(89.50000001223903*x3-0.10000000547841462), giving ~0.0033282683807 and ~0.32931695345, matching within tolerance. The x2,x5 terms, the constant, and the entire second factor in x4 are unchanged. Values agree on the common domain, and the proposal removes one Abs and inner multiplications, so it is simpler.",
+    "confidence": 0.98,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "dd166bff844e3d0a14e86b8821d2e51157f57e5e612ddad0524f2c23102bd627",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0014",
+  "schema_version": 1,
+  "status": "completed"
+}

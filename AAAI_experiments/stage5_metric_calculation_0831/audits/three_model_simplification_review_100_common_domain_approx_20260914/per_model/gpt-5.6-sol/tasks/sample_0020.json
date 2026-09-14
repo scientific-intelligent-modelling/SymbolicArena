@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 93,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0b0ff191bb80d866016aa81353a56087d0bb809a2e0604fb33",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1479,
+        "output_tokens": 2040,
+        "total_tokens": 3519
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::gpt-5.6-sol::sample_0020",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "2a412a72d16e67f710c04f1d4e5fa1dfd4c16ef82a8791ac8ad0937e448da604",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "Under protected semantics, log(sqrt(x3)) is not always equal to log(x3)/2. For 1e-6 < abs(x3) <= 0.001, the former can be nonzero while protected log(x3) is zero, changing the full expression on the common domain.",
+    "confidence": 0.99,
+    "counterexample": "At x0=1 and x3=0.0001, log(sqrt(x3))=log(0.01)≈-4.60517, whereas log(x3)/2=0 because protected log returns 0 when abs(x3)<=0.001. The full expressions are approximately 0.7084 and 0.8736, respectively.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": false,
+    "simplicity": "same",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "32aac6d0ea2e35c277870d9fa5caca8cb55900998b5651487702fc5330d1e686",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0020",
+  "schema_version": 1,
+  "status": "completed"
+}

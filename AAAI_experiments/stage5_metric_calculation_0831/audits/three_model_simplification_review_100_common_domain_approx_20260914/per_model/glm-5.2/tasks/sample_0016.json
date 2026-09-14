@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 49,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "glm-5.2",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "msg_202609142331319cc6fbc95b914ed0",
+      "response_model": "glm-5.2",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 658,
+        "output_tokens": 286,
+        "total_tokens": 944
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::glm-5.2::sample_0016",
+  "model": "glm-5.2",
+  "pair_sha256": "3a09b235a1b3a49128ed9ad3defc267c07dbfae0a031cc405429a1bc8e3050bc",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The original has three terms: 7.58659353373696e-11*x1*Abs(x0), -1.8257431459468019e-07*sqrt(x1)*Abs(x0), and 1.463652573691677e-09*Abs(x0**2*x1). The proposed is 1.463652573691677e-09*x0**2*x1 + Abs(x0)*(7.58659353373696e-11*x1 - 1.8257431459468019e-07*sqrt(x1)). The first two terms match exactly after factoring Abs(x0). For the third term, on the common domain x0**2*x1 >= 0 (required for Abs to be real-valued in original), Abs(x0**2*x1) = x0**2*x1, so the proposed substitution is valid on the common domain. The proposed form factors common Abs(x0) from two terms, reducing complexity.",
+    "confidence": 0.97,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "79a433b28afe242f74e965c3965c89c875e89f9056194ac8c410ea11b90c97e1",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0016",
+  "schema_version": 1,
+  "status": "completed"
+}

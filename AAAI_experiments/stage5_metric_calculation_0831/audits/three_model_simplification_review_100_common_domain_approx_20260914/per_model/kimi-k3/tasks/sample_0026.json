@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 28,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-d098c4cc-0899-9b76-a4a5-db47803cb838",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1238,
+        "output_tokens": 650,
+        "total_tokens": 1888
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0026",
+  "model": "kimi-k3",
+  "pair_sha256": "57327b661b5c0a4a1e3ac54a6704e78b9014eb07f34d24e4868576d39eb53021",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "Proposed expression is the original with the common factor -0.4509 distributed over the sum exp(...)+tanh(...); expanding yields -0.4509*exp(...) - 0.4509*tanh(...) - 0.0786, which is algebraically identical to the original on the entire common domain (log argument constraint x1 < 1.753/1.465 is unchanged). The constant 2.0 vs 2 is numerically identical. Variables x1, x2 retain their column identity, operator semantics are unchanged, and the factored form is strictly simpler (one scalar multiplication instead of two).",
+    "confidence": 0.99,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "1a3bdfa45e7166d033914e3595b216ae1044eefa83a75f82a1f94dd8947e03f3",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0026",
+  "schema_version": 1,
+  "status": "completed"
+}

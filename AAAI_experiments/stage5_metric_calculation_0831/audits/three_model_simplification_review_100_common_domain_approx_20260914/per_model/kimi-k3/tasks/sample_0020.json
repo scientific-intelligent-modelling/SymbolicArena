@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 38,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/anthropic",
+        "credential_loaded": true,
+        "model": "kimi-k3",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "anthropic_messages",
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "chatcmpl-8273dda7-1ac5-97d4-9b33-2484556b24dd",
+      "response_model": "kimi-k3",
+      "response_store_echo": "not_returned",
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1431,
+        "output_tokens": 4307,
+        "total_tokens": 5738
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::kimi-k3::sample_0020",
+  "model": "kimi-k3",
+  "pair_sha256": "2a412a72d16e67f710c04f1d4e5fa1dfd4c16ef82a8791ac8ad0937e448da604",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "The only change is log(sqrt(x3)) -> log(x3)/2. Under gplearn protected semantics (log(a)=log(|a|) when |a|>0.001 else 0), the original evaluates to 0.5*log|x3| whenever sqrt(|x3|)>0.001, i.e. |x3|>1e-6, while the proposed yields 0.5*log|x3| only when |x3|>0.001 and 0 otherwise. They therefore disagree on 1e-6<|x3|<=0.001, which lies inside the common real-valued domain (both expressions are total under protected semantics and share the x3**(1/4) domain restriction). This is a value difference, not a domain-only difference, so it is a counterexample requiring fail.",
+    "confidence": 0.97,
+    "counterexample": "x3=1e-4, x0=1: original subterm log(sqrt(x3))=log(0.01)≈-4.6052, proposed subterm log(x3)/2=0 (protected fallback since |x3|=1e-4<=0.001); the inner sqrt argument in the denominator shifts by ≈4.605 (sqrt ≈2.146 vs ≈1e-4), changing the overall value far beyond tolerance.",
+    "domain_preserved": true,
+    "equivalence": "fail",
+    "operator_semantics_preserved": true,
+    "simplicity": "same",
+    "variable_mapping_preserved": true,
+    "verdict": "fail"
+  },
+  "review_key": "32aac6d0ea2e35c277870d9fa5caca8cb55900998b5651487702fc5330d1e686",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0020",
+  "schema_version": 1,
+  "status": "completed"
+}

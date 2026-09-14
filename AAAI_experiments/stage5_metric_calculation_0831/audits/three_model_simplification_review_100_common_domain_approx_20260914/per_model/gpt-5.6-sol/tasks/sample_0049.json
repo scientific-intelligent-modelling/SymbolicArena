@@ -1,0 +1,49 @@
+{
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "http_status": 200,
+      "physical_request_ordinal": 134,
+      "request": {
+        "api_host": "routify-pub.alibaba-inc.com",
+        "api_path": "/protocol/openai/v1",
+        "credential_loaded": true,
+        "model": "gpt-5.6-sol",
+        "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+        "protocol": "openai_responses",
+        "requested_store": false,
+        "review_policy": "common_domain_approx",
+        "stream": false
+      },
+      "response_id": "resp_0494654ab1591d9e016aa813592dc887d0b0d667abe34d3236",
+      "response_model": "gpt-5.6-sol",
+      "response_store_echo": false,
+      "status": "accepted",
+      "usage": {
+        "input_tokens": 1260,
+        "output_tokens": 372,
+        "total_tokens": 1632
+      }
+    }
+  ],
+  "logical_task_id": "common_domain_approx::gpt-5.6-sol::sample_0049",
+  "model": "gpt-5.6-sol",
+  "pair_sha256": "8368e4d337ac0fe8b883a53358b5bebb76e44387b32f924079c4b17bafaac640",
+  "prompt_version": "three_model_simplification_review.common_domain_approx.v2",
+  "review": {
+    "brief_reason": "Let S = sin(cos(cos(logP**4))). The original is (A + 13.617068*S)/S, which equals 13.617068 + A/S. Moreover, cos(cos(logP**4)) lies in [cos(1),1], so S is strictly positive for every real logP; the logarithm argument is also at least 2.3920753-1 > 0. Thus both expressions have the same real domain and values, while the proposal removes one repeated occurrence of S.",
+    "confidence": 0.999,
+    "counterexample": null,
+    "domain_preserved": true,
+    "equivalence": "pass",
+    "operator_semantics_preserved": true,
+    "simplicity": "simpler",
+    "variable_mapping_preserved": true,
+    "verdict": "pass"
+  },
+  "review_key": "a9dc8059aeb31977b755e947e8995b41536c04c628a38f536c610c8017f8f41d",
+  "review_policy": "common_domain_approx",
+  "sample_id": "sample_0049",
+  "schema_version": 1,
+  "status": "completed"
+}
