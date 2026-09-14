@@ -454,3 +454,42 @@ def test_recovery_prefers_source_logical_key_for_repeated_task_id(tmp_path: Path
     members = read_tar_zst(output)
     assert any("/first_dataset/" in name for name in members)
     assert any("/second_dataset/" in name for name in members)
+
+
+def test_stable_bundle_copy_can_match_authority_by_sha_and_task_id(tmp_path: Path) -> None:
+    stable_copy = tmp_path / "stable-copy.jsonl.gz"
+    record = task_freeze_record("copied_task", Path("/remote/copied"), ["one", "two"])
+    write_jsonl_gz(stable_copy, [record])
+    original_release_path = tmp_path / "older-release" / "original.jsonl.gz"
+    authority_record = authoritative_record(
+        task_id="copied_task",
+        algorithm="copied_alg",
+        bundle=str(original_release_path),
+        bundle_sha=digest(stable_copy.read_bytes()),
+        source_paths=[item["selected_path"] for item in record["snapshots"]],
+        source_shas=[item["selected_sha256"] for item in record["snapshots"]],
+        trajectory=["native_incumbent:1", "native_incumbent:2"],
+    )
+    authority = tmp_path / "authority.jsonl.gz"
+    write_jsonl_gz(authority, [authority_record])
+
+    output = tmp_path / "stable-copy.tar.zst"
+    report = build_archive(
+        repo_root=tmp_path,
+        release_root=tmp_path,
+        output=output,
+        authoritative_paths=[authority],
+        source_specs=[SourceSpec("task_freeze", stable_copy)],
+        horizon=2,
+        expected_runs=1,
+        expected_historical_missing=0,
+        compression_level=1,
+    )
+    assert report["runs"] == 1
+    members = read_tar_zst(output)
+    assert any(name.endswith("copied_task/progress/minute_0001.json") for name in members)
+    source_manifest = list(csv.DictReader(io.StringIO(
+        members["source_containers.csv"].decode()
+    )))
+    assert source_manifest[0]["path"] == str(stable_copy)
+    assert source_manifest[0]["selected_run_count"] == "1"

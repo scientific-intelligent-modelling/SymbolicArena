@@ -313,11 +313,13 @@ def _read_authoritative(
     paths: Sequence[Path], repo_root: Path, horizon: int, expected_runs: int | None
 ) -> tuple[
     dict[str, RunHeader], dict[str, tuple[str, str]], dict[tuple[str, str], str],
-    set[tuple[str, str, str]], dict[str, set[str]], dict[str, list[str]], dict[str, int]
+    dict[tuple[str, str], list[str]], set[tuple[str, str, str]], dict[str, set[str]],
+    dict[str, list[str]], dict[str, int]
 ]:
     runs: dict[str, RunHeader] = {}
     selected: dict[str, tuple[str, str]] = {}
     ordinary_locator: dict[tuple[str, str], str] = {}
+    ordinary_sha_locator: dict[tuple[str, str], list[str]] = {}
     required_pairs: set[tuple[str, str, str]] = set()
     required_sha_by_logical: dict[str, set[str]] = {}
     logical_keys_by_task: dict[str, list[str]] = {}
@@ -361,6 +363,7 @@ def _read_authoritative(
                     f"ordinary source identity is ambiguous: {normalized_bundle}/{task_id}"
                 )
             logical_keys_by_task.setdefault(task_id, []).append(logical_key)
+            ordinary_sha_locator.setdefault((bundle_sha, task_id), []).append(logical_key)
             container_counts[normalized_bundle] = container_counts.get(normalized_bundle, 0) + 1
             logical_shas = required_sha_by_logical.setdefault(logical_key, set())
             for source_path, source_sha in zip(source_paths, source_shas):
@@ -379,6 +382,7 @@ def _read_authoritative(
         runs,
         selected,
         ordinary_locator,
+        ordinary_sha_locator,
         required_pairs,
         required_sha_by_logical,
         logical_keys_by_task,
@@ -473,13 +477,16 @@ def build_archive(
         runs,
         selected,
         ordinary_locator,
+        ordinary_sha_locator,
         required_pairs,
         required_sha_by_logical,
         logical_keys_by_task,
         container_counts,
     ) = _read_authoritative(authoritative_paths, repo_root, horizon, expected_runs)
     selected_expected_sha: dict[str, str] = {}
+    selected_count_by_sha: dict[str, int] = {}
     for _, (container, declared_sha) in selected.items():
+        selected_count_by_sha[declared_sha] = selected_count_by_sha.get(declared_sha, 0) + 1
         if Path(container).is_file():
             previous = selected_expected_sha.setdefault(container, declared_sha)
             if previous != declared_sha:
@@ -558,7 +565,10 @@ def build_archive(
                                     "sha256": actual_container_sha,
                                     "size_bytes": path.stat().st_size,
                                     "historical": str(spec.historical).lower(),
-                                    "selected_run_count": container_counts.get(normalized_container, 0),
+                                    "selected_run_count": container_counts.get(
+                                        normalized_container,
+                                        selected_count_by_sha.get(actual_container_sha, 0),
+                                    ),
                                     "status": "verified",
                                 }
                             )
@@ -581,6 +591,16 @@ def build_archive(
                                     logical_key = ordinary_locator.get(
                                         (normalized_container, item.task_id)
                                     )
+                                    if logical_key is None:
+                                        matching = ordinary_sha_locator.get(
+                                            (actual_container_sha, item.task_id), []
+                                        )
+                                        if len(matching) > 1:
+                                            raise ArchiveBuildError(
+                                                f"ordinary SHA identity is ambiguous for "
+                                                f"{item.task_id}: {matching}"
+                                            )
+                                        logical_key = matching[0] if matching else None
                                     if logical_key is None:
                                         continue
                                     run = runs[logical_key]
