@@ -700,6 +700,7 @@ export JULIA_NUM_GC_THREADS=1
 export PYTHON_JULIACALL_THREADS=1
 export PYTHON_JULIACALL_PROCS=1
 export PYSR_PROCS=1
+export PYTHON_JULIAPKG_PROJECT="${{PYTHON_JULIAPKG_PROJECT:-/home/zhangziwen/pyjuliapkg_pysr}}"
 export SIM_QUEUE_TASK_ID="$TASK_ID"
 export SIM_QUEUE_SESSION="$SESSION_NAME"
 
@@ -2982,6 +2983,18 @@ def _preflight_local_files(
         "imcts_native_regressor": (
             "scientific_intelligent_modelling/algorithms/"
             "iMCTS_wrapper/MCTS-4-SR/iMCTS/regressor.py"
+        ),
+        "e2esr_native_model_wrapper": (
+            "scientific_intelligent_modelling/algorithms/e2esr_wrapper/"
+            "e2esr/symbolicregression/model/model_wrapper.py"
+        ),
+        "e2esr_native_sklearn_wrapper": (
+            "scientific_intelligent_modelling/algorithms/e2esr_wrapper/"
+            "e2esr/symbolicregression/model/sklearn_wrapper.py"
+        ),
+        "e2esr_native_transformer": (
+            "scientific_intelligent_modelling/algorithms/e2esr_wrapper/"
+            "e2esr/symbolicregression/model/transformer.py"
         ),
         "toolbox_config": "scientific_intelligent_modelling/config/toolbox_config.json",
     }

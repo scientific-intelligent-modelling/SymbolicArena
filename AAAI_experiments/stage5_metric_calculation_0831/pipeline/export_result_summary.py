@@ -134,7 +134,7 @@ def merge_clean_eff_rows(
     current_rows: Sequence[Mapping[str, str]],
     legacy_rows: Sequence[Mapping[str, str]],
 ) -> tuple[dict[str, dict[str, str]], set[str]]:
-    """优先使用当前 canonical EFF，缺失行显式回退至历史冻结表。"""
+    """仅保留当前严格 EFF；历史表只用于识别缺口，不得作为正式回退。"""
 
     legacy = {str(row["logical_key"]): dict(row) for row in legacy_rows}
     current = {str(row["logical_key"]): dict(row) for row in current_rows}
@@ -145,9 +145,8 @@ def merge_clean_eff_rows(
     extra = set(current) - set(legacy)
     if extra:
         raise ResultSummaryError(f"当前 clean EFF 含基底外 logical_key: {sorted(extra)[:5]}")
-    merged = {key: dict(current.get(key, row)) for key, row in legacy.items()}
-    fallback = set(legacy) - set(current)
-    return merged, fallback
+    unavailable = set(legacy) - set(current)
+    return current, unavailable
 
 
 def _trajectory_from_eff_row(row: Mapping[str, str]) -> list[float]:
@@ -674,15 +673,20 @@ def export_summary(stage_root: Path, repo_root: Path, output_dir: Path) -> dict[
     current_eff_path = stage_root / "work/result_summary_20260905/clean_eff_run_metrics.csv"
     current_eff = _read_csv(current_eff_path)
     legacy_eff = _read_csv(stage_root / "results/clean_eff_run_metrics.csv")
-    merged_eff, fallback_keys = merge_clean_eff_rows(current_eff, legacy_eff)
+    merged_eff, unavailable_keys = merge_clean_eff_rows(current_eff, legacy_eff)
+    if unavailable_keys:
+        raise ResultSummaryError(
+            "严格原生 clean EFF 尚缺 "
+            f"{len(unavailable_keys)} 条运行；禁止用 legacy proxy 回填"
+        )
     clean_trajectory, eff_scores = aggregate_eff_rows(
         merged_eff,
         condition="clean",
-        fallback_keys=fallback_keys,
-        trajectory_basis="internal_search_canonical_replay_with_explicit_legacy_fallback.v1",
+        fallback_keys=set(),
+        trajectory_basis="algorithm_native_internal_best_so_far.v1",
     )
     clean_six_axis = build_clean_six_axis(
-        stage_root, eff_scores=eff_scores, eff_fallback_keys=fallback_keys
+        stage_root, eff_scores=eff_scores, eff_fallback_keys=set()
     )
     clean_scores = {row["algorithm"]: row for row in clean_six_axis}
 
@@ -735,10 +739,9 @@ def export_summary(stage_root: Path, repo_root: Path, output_dir: Path) -> dict[
         "clean": {
             "formal_ready": False,
             "current_eff_run_count": len(current_eff),
-            "legacy_eff_fallback_run_count": len(fallback_keys),
+            "legacy_eff_fallback_run_count": 0,
             "final_replacement_run_count": 75,
             "formal_blockers": [
-                "canonical EFF replay 仍含显式历史 fallback",
                 "最新 targeted symbolic 采用增量重聚合，尚未通过正式 aggregate_clean_metrics 总契约",
             ],
         },
@@ -750,7 +753,7 @@ def export_summary(stage_root: Path, repo_root: Path, output_dir: Path) -> dict[
         },
         "inputs": {
             "current_clean_eff": _artifact_info(current_eff_path, len(current_eff)),
-            "legacy_clean_eff": _artifact_info(
+            "legacy_clean_eff_audit_only": _artifact_info(
                 stage_root / "results/clean_eff_run_metrics.csv", len(legacy_eff)
             ),
             "noise_base_bundles": [_artifact_info(path) for path in base_noise_paths],

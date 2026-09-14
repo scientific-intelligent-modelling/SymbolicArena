@@ -7,12 +7,15 @@ import requests
 import sympy as sp
 import torch
 import time
+import json
+import hashlib
 
 from ..base_wrapper import BaseWrapper 
 from scientific_intelligent_modelling.benchmarks.normalizers import normalize_e2esr_artifact
 
 class E2ESRRegressor(BaseWrapper):
     _PROGRESS_STATE_FILENAME = ".e2esr_current_best.json"
+    _PROGRESS_HISTORY_FILENAME = ".e2esr_native_candidates.jsonl"
 
     @staticmethod
     def _resolve_default_model_path(current_dir):
@@ -85,6 +88,7 @@ class E2ESRRegressor(BaseWrapper):
         self.best_tree = None
         self.n_features_ = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
+        self._fit_started_at = None
         
         # 获取e2esr模块的路径，添加到系统路径中
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -182,6 +186,92 @@ class E2ESRRegressor(BaseWrapper):
             return False
         return (time.time() - started_at) >= max(0.0, self._timeout_in_seconds - self._timeout_guard_seconds)
 
+    def _write_progress_state(
+        self,
+        *,
+        equation,
+        native_model_score,
+        bag_index,
+        candidate_rank,
+        generation_source="beam_search",
+    ):
+        """按模型原生对数似然（越大越好）持久化全局 incumbent。"""
+        if not self._progress_state_path or not isinstance(equation, str) or not equation.strip():
+            return
+        observed_at = time.time()
+        try:
+            score = float(native_model_score)
+        except (TypeError, ValueError, OverflowError):
+            score = None
+        if score is not None and not np.isfinite(score):
+            score = None
+        elapsed = (
+            max(0.0, observed_at - float(self._fit_started_at))
+            if isinstance(self._fit_started_at, (int, float))
+            else 0.0
+        )
+        try:
+            bag_value = int(bag_index)
+        except (TypeError, ValueError, OverflowError):
+            bag_value = None
+        try:
+            rank_value = int(candidate_rank)
+        except (TypeError, ValueError, OverflowError):
+            rank_value = None
+        evidence = {
+            "equation": equation.strip(),
+            "native_model_score": score,
+            "bag_index": bag_value,
+            "candidate_rank": rank_value,
+            "generation_source": str(generation_source),
+            "source_timestamp_unix": float(observed_at),
+        }
+        evidence["candidate_sha256"] = hashlib.sha256(
+            json.dumps(evidence, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        history_path = os.path.join(
+            os.path.dirname(self._progress_state_path), self._PROGRESS_HISTORY_FILENAME
+        )
+        try:
+            os.makedirs(os.path.dirname(self._progress_state_path), exist_ok=True)
+            with open(history_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps({**evidence, "objective_available": score is not None}, ensure_ascii=False))
+                handle.write("\n")
+        except Exception:
+            pass
+        if score is None:
+            return
+        existing = None
+        try:
+            with open(self._progress_state_path, "r", encoding="utf-8") as handle:
+                existing = json.load(handle)
+        except Exception:
+            existing = None
+        old_score = existing.get("native_model_score") if isinstance(existing, dict) else None
+        try:
+            old_score = float(old_score)
+        except (TypeError, ValueError, OverflowError):
+            old_score = None
+        if old_score is not None and np.isfinite(old_score) and score <= old_score:
+            return
+        payload = {
+            **evidence,
+            "score": score,
+            "internal_objective": "decoder_length_normalized_log_likelihood",
+            "objective_direction": "max",
+            "first_discovered_elapsed_seconds": round(elapsed, 6),
+            "first_discovered_minute": max(1, int(np.ceil(elapsed / 60.0))),
+            "source": "e2esr_native_model_likelihood",
+            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            temporary = f"{self._progress_state_path}.tmp"
+            with open(temporary, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
+            os.replace(temporary, self._progress_state_path)
+        except Exception:
+            pass
+
     @staticmethod
     def _tree_score(tree_info):
         if not isinstance(tree_info, dict):
@@ -237,6 +327,7 @@ class E2ESRRegressor(BaseWrapper):
                 pass
             
             started_at = time.time()
+            self._fit_started_at = started_at
             base_seed = self.params.get("seed")
             best_regressor = None
             best_tree = None
@@ -261,6 +352,7 @@ class E2ESRRegressor(BaseWrapper):
                 regressor = SymbolicTransformerRegressor(
                     model=self.model,
                     progress_state_path=self._progress_state_path,
+                    progress_callback=self._write_progress_state,
                     **regressor_kwargs
                 )
                 regressor._external_start_fit = started_at

@@ -7,12 +7,14 @@ import csv
 import gzip
 import hashlib
 import json
+import math
 from collections import Counter
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 from .freeze_binding import FreezeBindingContractError, validate_freeze_binding_summary
-from .metrics import MetricContractError, efficiency_from_qualities
+from .metrics import MetricContractError, phi_nmse
 from .performance_replay import (
     EVALUATION_PATH,
     FormulaRecoveryManifest,
@@ -21,7 +23,12 @@ from .performance_replay import (
     load_formula_recovery_manifest,
     replay_payload_performance,
 )
-from .trajectories import TrajectoryContractError, canonical_expression, reconstruct_trajectory
+from .trajectories import (
+    TrajectoryContractError,
+    TrajectoryPoint,
+    canonical_expression,
+    reconstruct_trajectory,
+)
 from .trajectory_repairs import (
     TrajectoryRepairContractError,
     apply_repair_manifest,
@@ -42,10 +49,312 @@ EXPECTED_CHECKPOINT_NORMALIZATION_POINTS = 19
 EXPECTED_OVERLAY_REPLACEMENTS = 225
 OVERLAY_SCHEMA_VERSION = "clean_rerun_eff_overlay_v1"
 OVERLAY_SCOPE = "mixed_clean_rerun_overlay"
+TRAJECTORY_EVIDENCE_SCHEMA_VERSION = "clean_selected_trajectory_evidence.v1"
+NATIVE_EFF_SCHEMA_VERSION = "algorithm_native_internal_best_so_far.v1"
 
 
 class EffPreparationContractError(ValueError):
     """冻结 bundle、修复清单或 EFF 准备过程不满足正式契约。"""
+
+
+@dataclass(frozen=True)
+class NativeObjectiveAdapter:
+    """一个算法的原生 incumbent 选择合同。"""
+
+    algorithm: str
+    objective_options: tuple[tuple[str, str], ...]
+    native_rule: str
+    tie_break: str = "keep_earliest_incumbent"
+
+
+@dataclass(frozen=True)
+class NativeTrajectoryResult:
+    """严格原生选择后的轨迹及其逐分钟选择证据。"""
+
+    points: tuple[TrajectoryPoint, ...]
+    objective_fields: tuple[str | None, ...]
+    objective_values: tuple[float | None, ...]
+    incumbent_source_minutes: tuple[int | None, ...]
+    q_star: float
+    m_eff: float
+
+
+def _adapter(
+    algorithm: str,
+    *objective_options: tuple[str, str],
+    native_rule: str,
+) -> NativeObjectiveAdapter:
+    return NativeObjectiveAdapter(
+        algorithm=algorithm,
+        objective_options=tuple(objective_options),
+        native_rule=native_rule,
+    )
+
+
+NATIVE_OBJECTIVE_ADAPTERS: dict[str, NativeObjectiveAdapter] = {
+    "drsr": _adapter("drsr", ("source_score", "max"), native_rule="maximum native program score"),
+    "dso": _adapter("dso", ("source_score", "max"), native_rule="maximum native reward"),
+    "e2esr": _adapter("e2esr", ("source_score", "max"), native_rule="maximum native tree score"),
+    "fepysr": _adapter("fepysr", ("source_score", "min"), native_rule="minimum training MSE"),
+    "gplearn": _adapter("gplearn", ("source_loss", "min"), native_rule="minimum native fitness loss"),
+    "imcts": _adapter("imcts", ("source_score", "max"), native_rule="maximum native MCTS reward"),
+    "jaxsr": _adapter(
+        "jaxsr",
+        ("source_internal_loss", "min"),
+        ("source_loss", "min"),
+        native_rule="minimum frozen native loss channel",
+    ),
+    "llmsr": _adapter(
+        "llmsr",
+        ("source_loss", "min"),
+        ("source_score", "max"),
+        native_rule="native top-sample rule: NMSE/MSE minimum, otherwise score maximum",
+    ),
+    "pyoperon": _adapter("pyoperon", ("source_loss", "min"), native_rule="minimum native model-selection loss"),
+    "pysr": _adapter("pysr", ("source_loss", "min"), native_rule="minimum native hall-of-fame loss"),
+    "qlattice": _adapter("qlattice", ("source_loss", "min"), native_rule="minimum BIC"),
+    "ragsr": _adapter("ragsr", ("source_score", "max"), native_rule="maximum native hall-of-fame fitness"),
+    "symbolfit": _adapter("symbolfit", ("source_internal_loss", "min"), native_rule="minimum active PySR internal loss"),
+    "tpsr": _adapter("tpsr", ("source_score", "max"), native_rule="maximum native planning reward"),
+    "udsr": _adapter("udsr", ("source_score", "max"), native_rule="maximum native reward"),
+}
+
+
+def _finite_number(value: object) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _payload_nmse(payload: Mapping[str, Any], split: str) -> float | None:
+    block = payload.get(split)
+    if not isinstance(block, Mapping):
+        return None
+    value = _finite_number(block.get("nmse"))
+    return value if value is not None and value >= 0.0 else None
+
+
+def _native_point(
+    payload: Mapping[str, Any],
+    *,
+    minute: int,
+    expression: str,
+    source: str,
+) -> TrajectoryPoint:
+    id_nmse = _payload_nmse(payload, "id_test")
+    ood_nmse = _payload_nmse(payload, "ood_test")
+    if id_nmse is None or ood_nmse is None:
+        return TrajectoryPoint(minute, 0.0, 0.0, 0.0, expression, source, False)
+    id_quality = phi_nmse(id_nmse)
+    ood_quality = phi_nmse(ood_nmse)
+    return TrajectoryPoint(
+        minute,
+        id_quality,
+        ood_quality,
+        (id_quality + ood_quality) / 2.0,
+        expression,
+        source,
+        True,
+    )
+
+
+def _native_empty_point(minute: int, source: str) -> TrajectoryPoint:
+    return TrajectoryPoint(minute, 0.0, 0.0, 0.0, "", source, False)
+
+
+def _required_evidence_action(algorithm: str, reason: str) -> str:
+    tool = str(algorithm).strip().lower().replace("-", "")
+    if "缺少可审计原生目标" in reason:
+        if tool in {"e2esr", "llmsr"}:
+            return "rerun_with_native_objective_telemetry"
+        return "recollect_native_objective_evidence_or_rerun"
+    if "统一评估" in reason:
+        return "recover_canonical_execution_evidence_or_rerun"
+    return "audit_source_evidence_before_rerun"
+
+
+def reconstruct_native_incumbent_trajectory(
+    snapshots: Mapping[int, Mapping[str, Any]],
+    *,
+    algorithm: str,
+    horizon: int = HORIZON,
+) -> NativeTrajectoryResult:
+    """仅按原生目标选择 incumbent；ID/OOD 只在选择后用于事后评分。"""
+
+    tool = str(algorithm).strip().lower().replace("-", "")
+    adapter = NATIVE_OBJECTIVE_ADAPTERS.get(tool)
+    if adapter is None:
+        raise EffPreparationContractError(f"{algorithm} 没有冻结的原生 EFF adapter")
+    if horizon <= 0:
+        raise EffPreparationContractError("horizon 必须为正整数")
+    unexpected = sorted(set(snapshots) - set(range(1, horizon + 1)))
+    if unexpected:
+        raise EffPreparationContractError(f"轨迹包含预算外分钟: {unexpected[:10]}")
+
+    incumbent_payload: Mapping[str, Any] | None = None
+    incumbent_expression = ""
+    incumbent_objective: float | None = None
+    incumbent_minute: int | None = None
+    selected_field: str | None = None
+    selected_direction: str | None = None
+    points: list[TrajectoryPoint] = []
+    objective_fields: list[str | None] = []
+    objective_values: list[float | None] = []
+    source_minutes: list[int | None] = []
+    endpoint_types = {"final_best", "recovered_final", "budget_end_internal_best"}
+
+    def append_current(minute: int, source: str) -> None:
+        if incumbent_payload is None or incumbent_minute is None:
+            points.append(_native_empty_point(minute, source))
+            objective_fields.append(None)
+            objective_values.append(None)
+            source_minutes.append(None)
+            return
+        points.append(
+            _native_point(
+                incumbent_payload,
+                minute=minute,
+                expression=incumbent_expression,
+                source=source,
+            )
+        )
+        objective_fields.append(selected_field)
+        objective_values.append(incumbent_objective)
+        source_minutes.append(incumbent_minute)
+
+    for minute in range(1, horizon + 1):
+        payload = snapshots.get(minute)
+        if not isinstance(payload, Mapping):
+            raise EffPreparationContractError(
+                f"minute_{minute:04d} 缺少可审计快照证据"
+            )
+        record_type = str(payload.get("record_type") or "")
+        if record_type == "periodic_backfill":
+            try:
+                source_minute = int(payload.get("backfilled_from_minute"))
+            except (TypeError, ValueError):
+                raise EffPreparationContractError(
+                    f"minute_{minute:04d} backfilled_from_minute 无效"
+                ) from None
+            if source_minute > minute:
+                append_current(
+                    minute,
+                    f"future_backfill_ignored:{source_minute};"
+                    + (
+                        f"native_carry_forward:{incumbent_minute}"
+                        if incumbent_minute is not None
+                        else "pre_discovery_zero"
+                    ),
+                )
+                continue
+
+        expression = canonical_expression(payload)
+        if record_type in endpoint_types and incumbent_payload is not None:
+            objective_at_endpoint = (
+                _finite_number(payload.get(selected_field)) if selected_field else None
+            )
+            if objective_at_endpoint is None:
+                append_current(minute, f"native_endpoint_carry_forward:{incumbent_minute}")
+                continue
+        if not expression:
+            if any(
+                _finite_number(payload.get(field)) is not None
+                for field, _ in adapter.objective_options
+            ):
+                raise EffPreparationContractError(
+                    f"minute_{minute:04d} 有原生目标但缺少可审计表达式"
+                )
+            append_current(
+                minute,
+                f"native_carry_forward:{incumbent_minute}"
+                if incumbent_minute is not None
+                else "pre_discovery_zero",
+            )
+            continue
+
+        objective_field = selected_field
+        objective_direction = selected_direction
+        objective_value = (
+            _finite_number(payload.get(selected_field)) if selected_field else None
+        )
+        if selected_field is None:
+            for candidate_field, candidate_direction in adapter.objective_options:
+                candidate_value = _finite_number(payload.get(candidate_field))
+                if candidate_value is not None:
+                    objective_field = candidate_field
+                    objective_direction = candidate_direction
+                    objective_value = candidate_value
+                    break
+        if objective_value is None:
+            if incumbent_payload is not None and expression == incumbent_expression:
+                append_current(minute, f"native_carry_forward:{incumbent_minute}")
+                continue
+            expected = "/".join(field for field, _ in adapter.objective_options)
+            raise EffPreparationContractError(
+                f"minute_{minute:04d} 新表达式缺少可审计原生目标 {expected}"
+            )
+
+        assert objective_field is not None and objective_direction is not None
+        improves = incumbent_objective is None
+        if incumbent_objective is not None:
+            improves = (
+                objective_value < incumbent_objective
+                if objective_direction == "min"
+                else objective_value > incumbent_objective
+            )
+        if improves:
+            replay_error = str(payload.get("canonical_replay_error") or "").strip()
+            if replay_error:
+                raise EffPreparationContractError(
+                    f"minute_{minute:04d} 原生 incumbent 缺少可审计统一评估: "
+                    f"{replay_error}"
+                )
+            incumbent_payload = payload
+            incumbent_expression = expression
+            incumbent_objective = objective_value
+            incumbent_minute = minute
+            selected_field = objective_field
+            selected_direction = objective_direction
+            points.append(
+                _native_point(
+                    payload,
+                    minute=minute,
+                    expression=expression,
+                    source=f"native_incumbent:{minute}:{objective_field}",
+                )
+            )
+        else:
+            points.append(
+                _native_point(
+                    incumbent_payload,
+                    minute=minute,
+                    expression=incumbent_expression,
+                    source=f"native_carry_forward:{incumbent_minute}",
+                )
+            )
+        objective_fields.append(selected_field)
+        objective_values.append(incumbent_objective)
+        source_minutes.append(incumbent_minute)
+
+    qualities = [point.quality for point in points]
+    q_star = max(qualities, default=0.0)
+    m_eff = (
+        sum(quality / q_star for quality in qualities) / horizon
+        if q_star > 0.0
+        else 0.0
+    )
+    return NativeTrajectoryResult(
+        points=tuple(points),
+        objective_fields=tuple(objective_fields),
+        objective_values=tuple(objective_values),
+        incumbent_source_minutes=tuple(source_minutes),
+        q_star=q_star,
+        m_eff=m_eff,
+    )
 
 
 def _repo_root() -> Path:
@@ -542,6 +851,98 @@ def _replay_trajectory_payloads(
     return replayed, counts
 
 
+def _trajectory_evidence(
+    trajectory: Sequence[TrajectoryPoint], *, logical_key: str
+) -> dict[str, list[Any]]:
+    """保留同一所选 canonical 候选的表达式、数值分量和有效性。"""
+
+    qualities: list[float] = []
+    id_qualities: list[float] = []
+    ood_qualities: list[float] = []
+    expressions: list[str | None] = []
+    valid_outputs: list[bool] = []
+    sources: list[str] = []
+    for point in trajectory:
+        quality = float(point.quality)
+        id_quality = float(point.id_quality)
+        ood_quality = float(point.ood_quality)
+        combined = (id_quality + ood_quality) / 2.0
+        if not math.isclose(
+            quality, combined, rel_tol=1.0e-15, abs_tol=1.0e-15
+        ):
+            raise EffPreparationContractError(
+                f"{logical_key} minute_{point.minute:04d} 的 canonical "
+                "ID/OOD 分量与 combined quality 不一致"
+            )
+        if not point.valid_output and not (
+            quality == 0.0 and id_quality == 0.0 and ood_quality == 0.0
+        ):
+            raise EffPreparationContractError(
+                f"{logical_key} minute_{point.minute:04d} 的无效候选没有显式零分"
+            )
+        qualities.append(quality)
+        id_qualities.append(id_quality)
+        ood_qualities.append(ood_quality)
+        expressions.append(point.expression if point.expression else None)
+        valid_outputs.append(bool(point.valid_output))
+        sources.append(str(point.source))
+    return {
+        "quality_trajectory": qualities,
+        "id_quality_trajectory": id_qualities,
+        "ood_quality_trajectory": ood_qualities,
+        "selected_expression_trajectory": expressions,
+        "valid_output_trajectory": valid_outputs,
+        "trajectory_sources": sources,
+    }
+
+
+def _minute_source_evidence(
+    raw_snapshots: Sequence[Mapping[str, Any]],
+    *,
+    incumbent_source_minutes: Sequence[int | None],
+    repair_audit: Mapping[str, Any],
+    logical_key: str,
+) -> tuple[list[str], list[str]]:
+    """把每分钟 incumbent 绑定到冻结快照路径与 SHA256。"""
+
+    frozen: dict[int, tuple[str, str]] = {}
+    for fallback_minute, snapshot in enumerate(raw_snapshots, start=1):
+        try:
+            minute = int(snapshot.get("minute", fallback_minute))
+        except (TypeError, ValueError):
+            minute = fallback_minute
+        path = str(snapshot.get("selected_path") or snapshot.get("outer_path") or "")
+        sha256 = str(snapshot.get("selected_sha256") or snapshot.get("outer_sha256") or "")
+        if path and len(sha256) == 64:
+            frozen[minute] = (path, sha256)
+
+    repair_source = None
+    applied = repair_audit.get("applied_minutes")
+    if isinstance(applied, list) and applied:
+        candidates = {
+            int(value)
+            for value in incumbent_source_minutes
+            if value is not None and int(value) not in set(int(item) for item in applied)
+        }
+        if candidates:
+            repair_source = max(candidates)
+
+    paths: list[str] = []
+    hashes: list[str] = []
+    for minute, incumbent_minute in enumerate(incumbent_source_minutes, start=1):
+        evidence_minute = incumbent_minute if incumbent_minute is not None else minute
+        evidence = frozen.get(int(evidence_minute))
+        if evidence is None and repair_source is not None:
+            evidence = frozen.get(repair_source)
+        if evidence is None:
+            raise EffPreparationContractError(
+                f"{logical_key} minute_{minute:04d} 缺少来源路径/SHA256"
+            )
+        paths.append(evidence[0])
+        hashes.append(evidence[1])
+    return paths, hashes
+
+
 def _csv_row_from_record(record: Mapping[str, Any]) -> dict[str, Any]:
     row = {
         "logical_key": record["logical_key"],
@@ -568,9 +969,43 @@ def _csv_row_from_record(record: Mapping[str, Any]) -> dict[str, Any]:
             "invalid_output"
         ],
         "internal_best_carry_points": record["internal_best_carry_points"],
+        "trajectory_evidence_schema_version": record[
+            "trajectory_evidence_schema_version"
+        ],
+        "native_eff_schema_version": record["native_eff_schema_version"],
+        "native_rule": record["native_adapter"]["native_rule"],
+        "native_tie_break": record["native_adapter"]["tie_break"],
     }
     for minute, value in enumerate(record["quality_trajectory"], start=1):
         row[f"q_{minute:04d}"] = f"{float(value):.17g}"
+    for minute, value in enumerate(record["id_quality_trajectory"], start=1):
+        row[f"id_q_{minute:04d}"] = f"{float(value):.17g}"
+    for minute, value in enumerate(record["ood_quality_trajectory"], start=1):
+        row[f"ood_q_{minute:04d}"] = f"{float(value):.17g}"
+    for minute, value in enumerate(
+        record["selected_expression_trajectory"], start=1
+    ):
+        row[f"expression_{minute:04d}"] = value if value is not None else ""
+    for minute, value in enumerate(record["valid_output_trajectory"], start=1):
+        row[f"valid_output_{minute:04d}"] = "true" if value else "false"
+    for minute, value in enumerate(record["trajectory_sources"], start=1):
+        row[f"trajectory_source_{minute:04d}"] = value
+    for minute, value in enumerate(record["objective_field_trajectory"], start=1):
+        row[f"objective_field_{minute:04d}"] = value or ""
+    for minute, value in enumerate(record["objective_value_trajectory"], start=1):
+        row[f"objective_value_{minute:04d}"] = (
+            f"{float(value):.17g}" if value is not None else ""
+        )
+    for minute, value in enumerate(
+        record["incumbent_source_minute_trajectory"], start=1
+    ):
+        row[f"incumbent_source_minute_{minute:04d}"] = (
+            str(int(value)) if value is not None else ""
+        )
+    for minute, value in enumerate(record["source_path_trajectory"], start=1):
+        row[f"source_path_{minute:04d}"] = value
+    for minute, value in enumerate(record["source_sha256_trajectory"], start=1):
+        row[f"source_sha256_{minute:04d}"] = value
     return row
 
 
@@ -600,6 +1035,334 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _write_plain_csv(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    if not rows:
+        _raise(f"不允许写空 CSV: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle, fieldnames=list(rows[0]), lineterminator="\n"
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_eff_revision_artifacts(
+    output_dir: Path,
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    """写出严格原生 EFF 的运行、曲线、覆盖率和 adapter 交付件。"""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    wide_path = output_dir / "run_trajectory_wide.csv"
+    _write_csv(wide_path, [dict(row) for row in rows])
+
+    unavailable_rows = [
+        dict(item)
+        for item in report.get("unresolved", [])
+        if isinstance(item, Mapping) and "::" in str(item.get("logical_key", ""))
+    ]
+    available_run_eff_rows = [
+        {
+            "logical_key": row["logical_key"],
+            "condition": row["noise_tag"],
+            "algorithm": row["algorithm"],
+            "dataset_id": row["dataset_id"],
+            "seed": row["seed"],
+            "q_star": f"{float(row['best_quality']):.17g}",
+            "m_eff": f"{float(row['m_eff']):.17g}",
+            "eff_score": f"{100.0 * float(row['m_eff']):.17g}",
+            "availability_status": "available",
+            "unavailable_reason": "",
+            "required_action": "",
+            "native_eff_schema_version": row["native_eff_schema_version"],
+            "evaluation_path": row["evaluation_path"],
+            "task_id": row["task_id"],
+            "host": row["host"],
+            "bundle_path": row["bundle_path"],
+            "bundle_sha256": row["bundle_sha256"],
+            "freeze_binding_report_path": row["freeze_binding_report_path"],
+            "freeze_binding_report_sha256": row[
+                "freeze_binding_report_sha256"
+            ],
+        }
+        for row in rows
+    ]
+    unavailable_run_eff_rows = []
+    for item in unavailable_rows:
+        parts = str(item["logical_key"]).split("::")
+        algorithm = str(item.get("algorithm") or parts[0])
+        unavailable_run_eff_rows.append(
+            {
+                "logical_key": item["logical_key"],
+                "condition": item.get("condition") or parts[-1],
+                "algorithm": algorithm,
+                "dataset_id": item.get("dataset_id") or parts[1],
+                "seed": item.get("seed") or parts[2].removeprefix("s"),
+                "q_star": "",
+                "m_eff": "",
+                "eff_score": "",
+                "availability_status": "unavailable",
+                "unavailable_reason": item["reason"],
+                "required_action": item.get("required_action")
+                or _required_evidence_action(algorithm, str(item["reason"])),
+                "native_eff_schema_version": NATIVE_EFF_SCHEMA_VERSION,
+                "evaluation_path": EVALUATION_PATH,
+                "task_id": item.get("task_id", ""),
+                "host": item.get("host", ""),
+                "bundle_path": item.get("bundle_path", ""),
+                "bundle_sha256": item.get("bundle_sha256", ""),
+                "freeze_binding_report_path": item.get(
+                    "freeze_binding_report_path", ""
+                ),
+                "freeze_binding_report_sha256": item.get(
+                    "freeze_binding_report_sha256", ""
+                ),
+            }
+        )
+    run_eff_rows = sorted(
+        [*available_run_eff_rows, *unavailable_run_eff_rows],
+        key=lambda row: (
+            str(row["algorithm"]).lower(),
+            str(row["dataset_id"]),
+            int(row["seed"]),
+        ),
+    )
+    if report.get("summary", {}).get("full_contract_checked") and len(run_eff_rows) != 2250:
+        _raise(f"完整 run_eff 网格应为 2250 行，实际 {len(run_eff_rows)}")
+    run_eff_path = output_dir / "run_eff.csv"
+    _write_plain_csv(run_eff_path, run_eff_rows)
+
+    grouped: dict[str, list[Mapping[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(str(row["algorithm"]), []).append(row)
+    coverage_by_algorithm = {
+        str(item["algorithm"]): item
+        for item in report.get("algorithm_coverage", [])
+        if isinstance(item, Mapping)
+    }
+    curve_rows: list[dict[str, Any]] = []
+    algorithm_summary_rows: list[dict[str, Any]] = []
+    for algorithm in sorted(coverage_by_algorithm):
+        algorithm_rows = grouped.get(algorithm, [])
+        formal_ready = bool(
+            coverage_by_algorithm.get(algorithm, {}).get("formal_ready", False)
+        )
+        diagnostic_eff = (
+            100.0
+            * sum(float(row["m_eff"]) for row in algorithm_rows)
+            / len(algorithm_rows)
+            if algorithm_rows
+            else None
+        )
+        algorithm_summary_rows.append(
+            {
+                "condition": NOISE_TAG,
+                "algorithm": algorithm,
+                "expected_run_count": 150,
+                "available_run_count": len(algorithm_rows),
+                "unavailable_run_count": 150 - len(algorithm_rows),
+                "coverage_rate": f"{len(algorithm_rows) / 150.0:.17g}",
+                "EFF": (
+                    f"{diagnostic_eff:.17g}"
+                    if formal_ready and diagnostic_eff is not None
+                    else ""
+                ),
+                "availability_status": "available" if formal_ready else "unavailable",
+                "diagnostic_available_run_eff": (
+                    f"{diagnostic_eff:.17g}" if diagnostic_eff is not None else ""
+                ),
+                "native_eff_schema_version": NATIVE_EFF_SCHEMA_VERSION,
+                "formal_ready": str(formal_ready).lower(),
+            }
+        )
+        if not algorithm_rows:
+            for minute in range(1, HORIZON + 1):
+                curve_rows.append(
+                    {
+                        "condition": NOISE_TAG,
+                        "algorithm": algorithm,
+                        "minute": minute,
+                        "expected_run_count": 150,
+                        "available_run_count": 0,
+                        "coverage_rate": "0",
+                        "mean_id_quality": "",
+                        "mean_ood_quality": "",
+                        "mean_quality": "",
+                        "mean_relative_progress": "",
+                        "cumulative_eff_score": "",
+                        "diagnostic_available_mean_id_quality": "",
+                        "diagnostic_available_mean_ood_quality": "",
+                        "diagnostic_available_mean_quality": "",
+                        "diagnostic_available_mean_relative_progress": "",
+                        "diagnostic_available_cumulative_eff_score": "",
+                        "native_eff_schema_version": NATIVE_EFF_SCHEMA_VERSION,
+                        "formal_ready": "false",
+                    }
+                )
+            continue
+        relative = []
+        for row in algorithm_rows:
+            q_star = float(row["best_quality"])
+            relative.append(
+                [
+                    float(value) / q_star if q_star > 0.0 else 0.0
+                    for value in row["quality_trajectory"]
+                ]
+            )
+        cumulative = 0.0
+        for minute in range(1, HORIZON + 1):
+            mean_id = sum(
+                float(row["id_quality_trajectory"][minute - 1])
+                for row in algorithm_rows
+            ) / len(algorithm_rows)
+            mean_ood = sum(
+                float(row["ood_quality_trajectory"][minute - 1])
+                for row in algorithm_rows
+            ) / len(algorithm_rows)
+            mean_quality = sum(
+                float(row["quality_trajectory"][minute - 1])
+                for row in algorithm_rows
+            ) / len(algorithm_rows)
+            mean_relative = sum(run[minute - 1] for run in relative) / len(relative)
+            cumulative += mean_relative
+            curve_rows.append(
+                {
+                    "condition": NOISE_TAG,
+                    "algorithm": algorithm,
+                    "minute": minute,
+                    "expected_run_count": 150,
+                    "available_run_count": len(algorithm_rows),
+                    "coverage_rate": f"{len(algorithm_rows) / 150.0:.17g}",
+                    "mean_id_quality": f"{mean_id:.17g}" if formal_ready else "",
+                    "mean_ood_quality": f"{mean_ood:.17g}" if formal_ready else "",
+                    "mean_quality": f"{mean_quality:.17g}" if formal_ready else "",
+                    "mean_relative_progress": (
+                        f"{mean_relative:.17g}" if formal_ready else ""
+                    ),
+                    "cumulative_eff_score": (
+                        f"{100.0 * cumulative / minute:.17g}"
+                        if formal_ready
+                        else ""
+                    ),
+                    "diagnostic_available_mean_id_quality": f"{mean_id:.17g}",
+                    "diagnostic_available_mean_ood_quality": f"{mean_ood:.17g}",
+                    "diagnostic_available_mean_quality": f"{mean_quality:.17g}",
+                    "diagnostic_available_mean_relative_progress": f"{mean_relative:.17g}",
+                    "diagnostic_available_cumulative_eff_score": f"{100.0 * cumulative / minute:.17g}",
+                    "native_eff_schema_version": NATIVE_EFF_SCHEMA_VERSION,
+                    "formal_ready": str(formal_ready).lower(),
+                }
+            )
+    curve_path = output_dir / "algorithm_180min.csv"
+    _write_plain_csv(curve_path, curve_rows)
+    algorithm_summary_path = output_dir / "algorithm_summary.csv"
+    _write_plain_csv(algorithm_summary_path, algorithm_summary_rows)
+
+    unavailable_path = output_dir / "unavailable.jsonl"
+    _write_jsonl(unavailable_path, unavailable_rows)
+    allowlist_rows = []
+    for item in unavailable_rows:
+        parts = str(item["logical_key"]).split("::")
+        algorithm = str(item.get("algorithm") or parts[0])
+        allowlist_rows.append(
+            {
+                "logical_key": item["logical_key"],
+                "condition": item.get("condition") or parts[-1],
+                "algorithm": algorithm,
+                "dataset_id": item.get("dataset_id") or parts[1],
+                "seed": item.get("seed") or parts[2].removeprefix("s"),
+                "task_id": item.get("task_id", ""),
+                "host": item.get("host", ""),
+                "reason": item["reason"],
+                "required_action": item.get("required_action")
+                or _required_evidence_action(algorithm, str(item["reason"])),
+            }
+        )
+    allowlist_path = output_dir / "rerun_or_recollect_allowlist.csv"
+    if allowlist_rows:
+        _write_plain_csv(allowlist_path, allowlist_rows)
+    else:
+        allowlist_path.write_text(
+            "logical_key,condition,algorithm,dataset_id,seed,task_id,host,reason,required_action\n",
+            encoding="utf-8",
+        )
+    coverage_path = output_dir / "coverage_manifest.json"
+    _write_json(
+        coverage_path,
+        {
+            "schema_version": NATIVE_EFF_SCHEMA_VERSION,
+            "condition": NOISE_TAG,
+            "horizon": HORIZON,
+            "legacy_fallback_allowed": False,
+            "formal_ready_rule": "exactly_150_auditable_runs_per_algorithm",
+            "algorithm_coverage": report.get("algorithm_coverage", []),
+            "unavailable_path": str(unavailable_path),
+            "unavailable_sha256": sha256_file(unavailable_path),
+            "rerun_or_recollect_allowlist": {
+                "path": str(allowlist_path),
+                "sha256": sha256_file(allowlist_path),
+                "rows": len(allowlist_rows),
+            },
+            "algorithm_summary": {
+                "path": str(algorithm_summary_path),
+                "sha256": sha256_file(algorithm_summary_path),
+                "rows": len(algorithm_summary_rows),
+            },
+        },
+    )
+    adapter_path = output_dir / "adapter_contract.json"
+    _write_json(
+        adapter_path,
+        {
+            "schema_version": NATIVE_EFF_SCHEMA_VERSION,
+            "candidate_selection_uses_id_ood": False,
+            "tie_break": "keep_earliest_incumbent",
+            "adapters": report.get("native_adapter_contract", {}),
+        },
+    )
+    artifact_paths = [
+        wide_path,
+        run_eff_path,
+        curve_path,
+        algorithm_summary_path,
+        unavailable_path,
+        allowlist_path,
+        coverage_path,
+        adapter_path,
+    ]
+    manifest = {
+        "schema_version": NATIVE_EFF_SCHEMA_VERSION,
+        "condition": NOISE_TAG,
+        "status": "passed" if not report.get("unresolved") else "partial",
+        "legacy_fallback_used": False,
+        "candidate_selection_uses_id_ood": False,
+        "auditable_trajectory_run_rows": len(rows),
+        "run_rows": len(run_eff_rows),
+        "curve_rows": len(curve_rows),
+        "algorithm_summary_rows": len(algorithm_summary_rows),
+        "unavailable_run_count": len(unavailable_rows),
+        "artifacts": {
+            path.name: {
+                "path": str(path),
+                "sha256": sha256_file(path),
+                "size_bytes": path.stat().st_size,
+            }
+            for path in artifact_paths
+        },
+    }
+    manifest_path = output_dir / "manifest.json"
+    _write_json(manifest_path, manifest)
+    checksum_paths = [*artifact_paths, manifest_path]
+    (output_dir / "SHA256SUMS").write_text(
+        "".join(f"{sha256_file(path)}  {path.name}\n" for path in checksum_paths),
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def build_eff_preparation(
@@ -781,25 +1544,77 @@ def build_eff_preparation(
                     }
                 for field, value in replay_counts.items():
                     replay_totals[field] += value
-                if replay_counts["failed"]:
-                    raise EffPreparationContractError(
-                        f"{logical_key} 有 {replay_counts['failed']} 个 canonical replay 证据错误"
-                    )
-                trajectory = reconstruct_trajectory(
+                native_trajectory = reconstruct_native_incumbent_trajectory(
                     repaired_snapshots,
                     horizon=HORIZON,
                     algorithm=algorithm,
                 )
-                quality_trajectory = [float(point.quality) for point in trajectory]
-                trajectory_sources = [str(point.source) for point in trajectory]
-                m_eff = float(efficiency_from_qualities(quality_trajectory, horizon=HORIZON))
+                trajectory = native_trajectory.points
+                trajectory_evidence = _trajectory_evidence(
+                    trajectory, logical_key=logical_key
+                )
+                quality_trajectory = trajectory_evidence["quality_trajectory"]
+                id_quality_trajectory = trajectory_evidence[
+                    "id_quality_trajectory"
+                ]
+                ood_quality_trajectory = trajectory_evidence[
+                    "ood_quality_trajectory"
+                ]
+                selected_expression_trajectory = trajectory_evidence[
+                    "selected_expression_trajectory"
+                ]
+                valid_output_trajectory = trajectory_evidence[
+                    "valid_output_trajectory"
+                ]
+                trajectory_sources = trajectory_evidence["trajectory_sources"]
+                objective_field_trajectory = list(native_trajectory.objective_fields)
+                objective_value_trajectory = list(native_trajectory.objective_values)
+                incumbent_source_minute_trajectory = list(
+                    native_trajectory.incumbent_source_minutes
+                )
+                source_path_trajectory, source_sha256_trajectory = (
+                    _minute_source_evidence(
+                        raw_snapshots,
+                        incumbent_source_minutes=incumbent_source_minute_trajectory,
+                        repair_audit=repair_audit,
+                        logical_key=logical_key,
+                    )
+                )
+                m_eff = float(native_trajectory.m_eff)
             except (
                 EffPreparationContractError,
                 MetricContractError,
                 TrajectoryContractError,
                 TrajectoryRepairContractError,
             ) as exc:
-                unresolved.append({"logical_key": logical_key, "reason": str(exc)})
+                reason = str(exc)
+                unresolved.append(
+                    {
+                        "logical_key": logical_key,
+                        "condition": str(source.get("noise_tag")),
+                        "algorithm": str(source.get("algorithm")),
+                        "dataset_id": str(source.get("dataset_id")),
+                        "seed": int(source["seed"]),
+                        "task_id": str(source.get("task_id")),
+                        "host": str(source.get("host") or host),
+                        "bundle_path": (
+                            str(overlay_manifest_info["bundle_path"])
+                            if overlay_entry is not None
+                            else str(bundle_path)
+                        ),
+                        "bundle_sha256": (
+                            overlay_manifest_info["bundle_sha256"]
+                            if overlay_entry is not None
+                            else bundle_info["sha256"]
+                        ),
+                        "freeze_binding_report_path": binding_report_info["path"],
+                        "freeze_binding_report_sha256": binding_report_info["sha256"],
+                        "reason": reason,
+                        "required_action": _required_evidence_action(
+                            algorithm, reason
+                        ),
+                    }
+                )
                 continue
 
             if not (0.0 <= m_eff <= 1.0):
@@ -810,11 +1625,11 @@ def build_eff_preparation(
             if missing_after != 0:
                 missing_points_after_repairs += missing_after
 
-            audited_count = _count_prefixed_sources(trajectory_sources, "audited_repair:")
+            audited_count = len(list(repair_audit.get("applied_minutes", [])))
             future_ignored_count = _count_prefixed_sources(trajectory_sources, "future_backfill_ignored:")
             internal_best_count = _count_prefixed_sources(
                 trajectory_sources,
-                "internal_best_carry_forward:",
+                "native_carry_forward:",
             )
             audited_repair_points += audited_count
             future_backfill_ignored_points += future_ignored_count
@@ -858,8 +1673,28 @@ def build_eff_preparation(
                 "repair_manifest_path": repair_manifest_info["path"],
                 "repair_manifest_sha256": repair_manifest_info["sha256"],
                 "quality_trajectory": quality_trajectory,
+                "id_quality_trajectory": id_quality_trajectory,
+                "ood_quality_trajectory": ood_quality_trajectory,
+                "selected_expression_trajectory": selected_expression_trajectory,
+                "valid_output_trajectory": valid_output_trajectory,
                 "trajectory_sources": trajectory_sources,
-                "best_quality": max(quality_trajectory, default=0.0),
+                "objective_field_trajectory": objective_field_trajectory,
+                "objective_value_trajectory": objective_value_trajectory,
+                "incumbent_source_minute_trajectory": (
+                    incumbent_source_minute_trajectory
+                ),
+                "source_path_trajectory": source_path_trajectory,
+                "source_sha256_trajectory": source_sha256_trajectory,
+                "native_adapter": asdict(
+                    NATIVE_OBJECTIVE_ADAPTERS[
+                        algorithm.strip().lower().replace("-", "")
+                    ]
+                ),
+                "native_eff_schema_version": NATIVE_EFF_SCHEMA_VERSION,
+                "trajectory_evidence_schema_version": (
+                    TRAJECTORY_EVIDENCE_SCHEMA_VERSION
+                ),
+                "best_quality": native_trajectory.q_star,
                 "m_eff": m_eff,
                 "audited_repair_points": audited_count,
                 "future_backfill_ignored_points": future_ignored_count,
@@ -945,6 +1780,36 @@ def build_eff_preparation(
         and missing_points_after_repairs == 0
         and not unresolved
     )
+    successful_by_algorithm = Counter(str(row["algorithm"]) for row in rows)
+    unresolved_by_algorithm: Counter[str] = Counter()
+    for item in unresolved:
+        logical_key = str(item.get("logical_key") or "")
+        if "::" in logical_key:
+            unresolved_by_algorithm[logical_key.split("::", 1)[0]] += 1
+    algorithm_coverage = []
+    for adapter_key, adapter in sorted(NATIVE_OBJECTIVE_ADAPTERS.items()):
+        display_name = next(
+            (
+                str(row["algorithm"])
+                for row in rows
+                if str(row["algorithm"]).strip().lower().replace("-", "")
+                == adapter_key
+            ),
+            adapter.algorithm,
+        )
+        available = int(successful_by_algorithm.get(display_name, 0))
+        unavailable = int(unresolved_by_algorithm.get(display_name, 0))
+        algorithm_coverage.append(
+            {
+                "algorithm": display_name,
+                "expected_run_count": 150,
+                "available_run_count": available,
+                "unavailable_run_count": unavailable,
+                "coverage_rate": available / 150.0,
+                "formal_ready": available == 150 and unavailable == 0,
+                "adapter": asdict(adapter),
+            }
+        )
     report = {
         "condition": NOISE_TAG,
         "horizon": HORIZON,
@@ -975,11 +1840,19 @@ def build_eff_preparation(
             "internal_best_carry_points": internal_best_carry_points,
             "overlay_replacement_count": len(applied_overlay_keys),
             "evaluation_path": EVALUATION_PATH if replay_performance else "frozen_metrics.v1",
+            "trajectory_evidence_schema_version": (
+                TRAJECTORY_EVIDENCE_SCHEMA_VERSION
+            ),
+            "native_eff_schema_version": NATIVE_EFF_SCHEMA_VERSION,
             "formal_eff_ready": formal_eff_ready,
             "m_eff_min": min((row["m_eff"] for row in rows), default=0.0),
             "m_eff_max": max((row["m_eff"] for row in rows), default=0.0),
         },
         "checkpoint_normalization_details": checkpoint_normalization_details,
+        "algorithm_coverage": algorithm_coverage,
+        "native_adapter_contract": {
+            key: asdict(value) for key, value in sorted(NATIVE_OBJECTIVE_ADAPTERS.items())
+        },
         "unresolved": unresolved,
     }
     return rows, report
@@ -1029,6 +1902,12 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         "--output-report",
         type=Path,
         default=stage5_root / "reports/eff_preparation.json",
+    )
+    parser.add_argument(
+        "--revision-output-dir",
+        type=Path,
+        default=None,
+        help="可选：额外写出严格原生 EFF 的正式审计交付件",
     )
     parser.add_argument("--expected-hosts", type=int, default=EXPECTED_HOSTS)
     parser.add_argument("--expected-tasks", type=int, default=EXPECTED_TASKS)
@@ -1098,6 +1977,11 @@ def main(argv: Iterable[str] | None = None) -> int:
                 "eff_csv_row_count": len(rows),
             },
         }
+        if args.revision_output_dir is not None:
+            revision_manifest = write_eff_revision_artifacts(
+                args.revision_output_dir.resolve(), rows=rows, report=report
+            )
+            report["outputs"]["eff_revision_manifest"] = revision_manifest
         _write_json(output_report, report)
     except (
         EffPreparationContractError,

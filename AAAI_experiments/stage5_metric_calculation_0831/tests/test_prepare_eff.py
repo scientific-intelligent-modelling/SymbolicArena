@@ -40,10 +40,202 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.metrics import (
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.prepare_eff import (
     EffPreparationContractError,
     build_eff_preparation,
+    reconstruct_native_incumbent_trajectory,
 )
 
 
 STAGE5_ROOT = REPO_ROOT / "AAAI_experiments/stage5_metric_calculation_0831"
+
+
+def _native_snapshot(
+    minute: int,
+    *,
+    expression: str | None,
+    id_nmse: float | None,
+    ood_nmse: float | None,
+    record_type: str = "periodic_best",
+    **objective: float,
+) -> dict[str, object]:
+    payload = _snapshot_payload(
+        minute,
+        record_type=record_type,
+        expression=expression,
+        id_nmse=id_nmse,
+        ood_nmse=ood_nmse,
+    )
+    payload.update(objective)
+    return payload
+
+
+def test_native_incumbent_can_improve_while_test_quality_declines() -> None:
+    trajectory = reconstruct_native_incumbent_trajectory(
+        {
+            1: _native_snapshot(
+                1,
+                expression="x0",
+                id_nmse=1.0e-8,
+                ood_nmse=1.0e-8,
+                source_loss=2.0,
+            ),
+            2: _native_snapshot(
+                2,
+                expression="x0 + 1",
+                id_nmse=1.0,
+                ood_nmse=1.0,
+                source_loss=1.0,
+            ),
+        },
+        algorithm="gplearn",
+        horizon=2,
+    )
+
+    assert [point.expression for point in trajectory.points] == ["x0", "x0 + 1"]
+    assert trajectory.points[1].quality < trajectory.points[0].quality
+    assert trajectory.objective_values == (2.0, 1.0)
+
+
+def test_native_incumbent_never_uses_future_backfill() -> None:
+    future = _native_snapshot(
+        1,
+        expression="future_formula",
+        id_nmse=1.0e-12,
+        ood_nmse=1.0e-12,
+        record_type="periodic_backfill",
+        source_loss=1.0,
+    )
+    future["backfilled_from_minute"] = 2
+    trajectory = reconstruct_native_incumbent_trajectory(
+        {
+            1: future,
+            2: _native_snapshot(
+                2,
+                expression="observed_formula",
+                id_nmse=1.0,
+                ood_nmse=1.0,
+                source_loss=1.0,
+            ),
+        },
+        algorithm="gplearn",
+        horizon=2,
+    )
+
+    assert trajectory.points[0].expression == ""
+    assert trajectory.points[0].quality == 0.0
+    assert trajectory.points[0].source.startswith("future_backfill_ignored:2")
+    assert trajectory.points[1].expression == "observed_formula"
+
+
+def test_native_incumbent_carries_between_updates_and_ignores_final_formula() -> None:
+    trajectory = reconstruct_native_incumbent_trajectory(
+        {
+            1: _native_snapshot(
+                1,
+                expression="incumbent",
+                id_nmse=0.1,
+                ood_nmse=0.2,
+                source_score=3.0,
+            ),
+            2: _native_snapshot(
+                2,
+                expression=None,
+                id_nmse=None,
+                ood_nmse=None,
+                record_type="periodic_heartbeat",
+            ),
+            3: _native_snapshot(
+                3,
+                expression="future_final",
+                id_nmse=1.0e-12,
+                ood_nmse=1.0e-12,
+                record_type="final_best",
+            ),
+        },
+        algorithm="dso",
+        horizon=3,
+    )
+
+    assert [point.expression for point in trajectory.points] == ["incumbent"] * 3
+    assert trajectory.incumbent_source_minutes == (1, 1, 1)
+    assert trajectory.points[1].source == "native_carry_forward:1"
+    assert trajectory.points[2].source == "native_endpoint_carry_forward:1"
+
+
+def test_native_incumbent_missing_auditable_objective_is_unavailable() -> None:
+    with pytest.raises(EffPreparationContractError, match="缺少可审计原生目标"):
+        reconstruct_native_incumbent_trajectory(
+            {
+                1: _native_snapshot(
+                    1,
+                    expression="x0",
+                    id_nmse=0.1,
+                    ood_nmse=0.1,
+                )
+            },
+            algorithm="e2esr",
+            horizon=1,
+        )
+
+
+@pytest.mark.parametrize(
+    ("algorithm", "field", "values", "expected"),
+    [
+        ("fepysr", "source_score", (2.0, 1.0, 1.0), ["a", "b", "b"]),
+        ("dso", "source_score", (1.0, 2.0, 2.0), ["a", "b", "b"]),
+    ],
+)
+def test_native_incumbent_respects_direction_and_keeps_earliest_tie(
+    algorithm: str,
+    field: str,
+    values: tuple[float, float, float],
+    expected: list[str],
+) -> None:
+    snapshots = {
+        minute: _native_snapshot(
+            minute,
+            expression=expression,
+            id_nmse=0.1 * minute,
+            ood_nmse=0.1 * minute,
+            **{field: values[minute - 1]},
+        )
+        for minute, expression in enumerate(("a", "b", "tie"), start=1)
+    }
+    trajectory = reconstruct_native_incumbent_trajectory(
+        snapshots,
+        algorithm=algorithm,
+        horizon=3,
+    )
+
+    assert [point.expression for point in trajectory.points] == expected
+    assert trajectory.incumbent_source_minutes == (1, 2, 2)
+
+
+def test_native_eff_q_star_is_only_posterior_normalization() -> None:
+    trajectory = reconstruct_native_incumbent_trajectory(
+        {
+            1: _native_snapshot(
+                1,
+                expression="high_test_quality",
+                id_nmse=1.0e-8,
+                ood_nmse=1.0e-8,
+                source_loss=2.0,
+            ),
+            2: _native_snapshot(
+                2,
+                expression="better_native_loss",
+                id_nmse=1.0,
+                ood_nmse=1.0,
+                source_loss=1.0,
+            ),
+        },
+        algorithm="gplearn",
+        horizon=2,
+    )
+    qualities = [point.quality for point in trajectory.points]
+
+    assert trajectory.q_star == max(qualities)
+    assert trajectory.m_eff == pytest.approx(
+        sum(value / trajectory.q_star for value in qualities) / 2
+    )
 
 
 def _sha256_file(path: Path) -> str:
@@ -192,6 +384,7 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 id_nmse=1.0e-3,
                 ood_nmse=2.0e-3,
             )
+            repair_payload["source_score"] = 1.0
             repair_record["snapshots"].append(
                 _frozen_snapshot_from_payload(minute, repair_payload, outer_path=outer_path)
             )
@@ -232,6 +425,7 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 id_nmse=1.0e-2,
                 ood_nmse=1.0e-2,
             )
+            payload["source_score"] = 1.0
             future_record["snapshots"].append(
                 _frozen_snapshot_from_payload(minute, payload, outer_path=outer_path)
             )
@@ -244,6 +438,7 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 ood_nmse=1.0e-9,
                 backfilled_from_minute=56,
             )
+            payload["source_score"] = 2.0
             future_record["snapshots"].append(
                 _frozen_snapshot_from_payload(minute, payload, outer_path=outer_path)
             )
@@ -255,6 +450,7 @@ def _build_fixture(tmp_path: Path) -> dict[str, Path]:
                 id_nmse=1.0e-4,
                 ood_nmse=1.0e-4,
             )
+            payload["source_score"] = 2.0
             payload["checkpoint_index"] = 54
             future_record["snapshots"].append(
                 _frozen_snapshot_from_payload(minute, payload, outer_path=outer_path)
@@ -466,6 +662,7 @@ def _write_rerun_overlay(
             ood_nmse=2.0e-6,
         )
         payload.update(tool="tpsr", dataset="CRK11", seed=520)
+        payload["source_score"] = 1.0
         snapshots.append(
             _frozen_snapshot_from_payload(
                 minute,
@@ -601,10 +798,24 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
     repaired = by_key["fepysr::Nguyen-12::s520::clean"]
     assert repaired["audited_repair_points"] == 15
     assert repaired["future_backfill_ignored_points"] == 0
-    assert repaired["trajectory_sources"][164] == "audited_repair:164"
-    assert repaired["trajectory_sources"][178] == "audited_repair:164"
-    assert repaired["trajectory_sources"][179] == "final:180"
+    assert repaired["trajectory_sources"][164] == "native_carry_forward:164"
+    assert repaired["trajectory_sources"][178] == "native_carry_forward:164"
+    assert repaired["trajectory_sources"][179] == "native_endpoint_carry_forward:164"
     assert repaired["quality_trajectory"][163] == pytest.approx((phi_nmse(1.0e-3) + phi_nmse(2.0e-3)) / 2.0)
+    assert repaired["selected_expression_trajectory"][163] == "repair_eq"
+    assert repaired["selected_expression_trajectory"][178] == "repair_eq"
+    assert repaired["selected_expression_trajectory"][179] == "repair_eq"
+    assert repaired["id_quality_trajectory"][163] == pytest.approx(phi_nmse(1.0e-3))
+    assert repaired["ood_quality_trajectory"][163] == pytest.approx(phi_nmse(2.0e-3))
+    assert repaired["valid_output_trajectory"][163] is True
+    assert all(
+        quality == pytest.approx((id_quality + ood_quality) / 2.0)
+        for quality, id_quality, ood_quality in zip(
+            repaired["quality_trajectory"],
+            repaired["id_quality_trajectory"],
+            repaired["ood_quality_trajectory"],
+        )
+    )
     assert repaired["m_eff"] == pytest.approx(
         efficiency_from_qualities(repaired["quality_trajectory"], horizon=180)
     )
@@ -619,13 +830,15 @@ def test_build_eff_preparation_applies_audited_repairs_and_future_backfill_count
             "future_backfill_minutes": [54, 55],
         }
     ]
-    assert future["trajectory_sources"][53] == "future_backfill_ignored:56;carry_forward:53"
-    assert future["trajectory_sources"][54] == "future_backfill_ignored:56;carry_forward:53"
+    assert future["trajectory_sources"][53] == "future_backfill_ignored:56;native_carry_forward:53"
+    assert future["trajectory_sources"][54] == "future_backfill_ignored:56;native_carry_forward:53"
     assert future["quality_trajectory"][55] == pytest.approx((phi_nmse(1.0e-4) + phi_nmse(1.0e-4)) / 2.0)
 
     plain = by_key["dso::plain::s521::clean"]
     assert plain["audited_repair_points"] == 0
     assert all(0.0 <= value <= 1.0 for value in plain["quality_trajectory"])
+    assert plain["selected_expression_trajectory"] == ["plain_eq"] * 180
+    assert plain["valid_output_trajectory"] == [True] * 180
 
 
 def test_eff_preparation_replaces_exact_overlay_trajectory(tmp_path: Path) -> None:
@@ -656,7 +869,7 @@ def test_eff_preparation_replaces_exact_overlay_trajectory(tmp_path: Path) -> No
     assert replaced["bundle_report_path"] == str(overlay_manifest.resolve())
     assert replaced["repair_applied"] is False
     assert len(replaced["quality_trajectory"]) == 180
-    assert replaced["trajectory_sources"][-1] == "budget_end_internal_best:180"
+    assert replaced["trajectory_sources"][-1] == "native_carry_forward:1"
     assert report["summary"]["overlay_replacement_count"] == 1
     assert report["summary"]["formal_eff_ready"] is True
     assert report["inputs"]["rerun_overlay_manifest"]["sha256"] == _sha256_file(
@@ -768,6 +981,15 @@ def test_replay_invalid_candidate_succeeds_with_zero_quality(
     assert replayed[1]["status"] == "invalid"
     assert replayed[1]["canonical_replay_invalid_reason"]
     assert "canonical_replay_error" not in replayed[1]
+    trajectory = module.reconstruct_trajectory(replayed, horizon=1)
+    evidence = module._trajectory_evidence(
+        trajectory, logical_key="demo::case::s520::clean"
+    )
+    assert evidence["quality_trajectory"] == [0.0]
+    assert evidence["id_quality_trajectory"] == [0.0]
+    assert evidence["ood_quality_trajectory"] == [0.0]
+    assert evidence["selected_expression_trajectory"] == [None]
+    assert evidence["valid_output_trajectory"] == [False]
 
 
 def test_eff_final_without_artifact_uses_logical_task_recovery_params(
@@ -908,11 +1130,20 @@ def test_cli_writes_jsonl_csv_and_report(tmp_path: Path) -> None:
         jsonl_rows = [json.loads(line) for line in handle if line.strip()]
     assert len(jsonl_rows) == 3
     assert all(len(row["quality_trajectory"]) == 180 for row in jsonl_rows)
+    assert all(len(row["selected_expression_trajectory"]) == 180 for row in jsonl_rows)
+    assert all(len(row["id_quality_trajectory"]) == 180 for row in jsonl_rows)
+    assert all(len(row["ood_quality_trajectory"]) == 180 for row in jsonl_rows)
+    assert all(len(row["valid_output_trajectory"]) == 180 for row in jsonl_rows)
 
     with output_csv.open("r", encoding="utf-8", newline="") as handle:
         csv_rows = list(csv.DictReader(handle))
     assert len(csv_rows) == 3
     assert "q_0180" in csv_rows[0]
+    assert "id_q_0180" in csv_rows[0]
+    assert "ood_q_0180" in csv_rows[0]
+    assert "expression_0180" in csv_rows[0]
+    assert "valid_output_0180" in csv_rows[0]
+    assert "trajectory_source_0180" in csv_rows[0]
     assert float(csv_rows[0]["m_eff"]) >= 0.0
 
 

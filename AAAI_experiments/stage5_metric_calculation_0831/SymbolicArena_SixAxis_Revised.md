@@ -282,7 +282,7 @@ where:
 - \(\hat f\): final expression returned by the SR algorithm;
 - \(\tilde f\): simplified predicted expression.
 
-Every non-empty final expression from all 6750 experiment runs is processed by an independent Opus5 API single-turn simplification. This requirement applies even when deterministic parsing or simplification already succeeds. Formal SYM uses the 2250 clean results, while noisy-run symbolic artifacts remain supplementary. Only final expressions are processed by the symbolic pipeline; minute-level search snapshots are not evaluated with SYM.
+Every non-empty final expression from all 6750 experiment runs is processed by an independent Opus5 API single-turn simplification. This requirement applies even when deterministic parsing or simplification already succeeds. Formal SYM uses the 2250 clean final results, while noisy-run symbolic artifacts remain supplementary. In addition, the mandatory dynamic telemetry extension in Section 11 applies the same frozen simplification contract to every distinct minute-level selected expression. Minute-level scoring is performed after the timed search and does not affect the algorithm wall-clock budget.
 
 ---
 
@@ -312,7 +312,7 @@ The equivalence procedure requires all of the following evidence:
 - independent numerical equivalence checking;
 - an independent single-turn Opus5 API equivalence judgment.
 
-Opus5 adjudicates every available final expression across `clean`, `noise001`, and `noise005` against the corresponding frozen Ground Truth reference, not only difficult cases. Formal SYM uses only clean adjudications. Symbolic and numerical checks are included in every adjudication record as evidence and do not eliminate the mandatory API call.
+Opus5 adjudicates every available final expression and every distinct minute-level selected expression across `clean`, `noise001`, and `noise005` against the corresponding frozen Ground Truth reference, not only difficult cases. Formal SYM uses only clean final-expression adjudications; minute-level adjudications form the dynamic telemetry artifact. Symbolic and numerical checks are included in every adjudication record as evidence and do not eliminate the mandatory API call.
 
 ---
 
@@ -441,9 +441,9 @@ The predicted expression is also simplified:
 \mathcal{S}\left(\hat f\right).
 \]
 
-The simplification procedure requires Opus5 to identify a concise mathematical form for every non-empty final expression across all 6750 runs. Formal MIN uses the 2250 clean results. MIN reuses exactly the frozen Opus5-simplified Ground Truth and prediction produced by the common symbolic pipeline; it does not run a competing simplification of the same expression.
+The simplification procedure requires Opus5 to identify a concise mathematical form for every non-empty final expression and every distinct minute-level selected expression across all three conditions. Formal MIN uses the 2250 clean final results. MIN and its dynamic telemetry reuse exactly the frozen Opus5-simplified Ground Truth and prediction produced by the common symbolic pipeline; they do not run a competing simplification of the same expression.
 
-Only final expressions are evaluated by MIN. Minute-level search snapshots are not passed to the LLM-assisted simplification procedure.
+The formal leaderboard MIN score is evaluated from final expressions. Minute-level selected expressions are evaluated separately under the dynamic telemetry contract in Section 11.
 
 ---
 
@@ -547,9 +547,9 @@ artifacts are retained only for supplementary diagnostics.
 
 EFF measures:
 
-> How quickly an algorithm approaches the best numerical solution it reaches within the fixed search budget.
+> How quickly an algorithm's native search or model-selection rule reaches the internally preferred solutions that it discovers within the fixed budget.
 
-EFF is the only formal axis that uses minute-level search trajectories.
+EFF is the only axis whose formal leaderboard definition aggregates the complete minute-level trajectory. The dynamic telemetry artifact nevertheless records all six axes at every minute.
 
 For the current experiment,
 
@@ -557,9 +557,28 @@ For the current experiment,
 T=180.
 \]
 
-Thus each clean run can contribute up to 180 minute-level best-so-far snapshots.
+The formal trajectory uses **algorithm-native internal best-so-far**. At minute
+\(t\), the incumbent is selected only from candidates discovered by that time,
+using the algorithm's own loss, reward, score, or native model-selection rule.
+A minimization objective keeps the lowest loss; a maximization objective keeps
+the highest reward or score. Exact ties retain the earliest incumbent unless
+the algorithm declares a different native tie-break.
 
-These snapshots are evaluated only numerically. LLM-assisted simplification, SYM, and MIN are not computed at minute level.
+The selected expression is then sent to the common evaluator for ID and OOD
+scoring. ID/OOD test results never select a candidate and never affect search,
+model selection, or parameter updates. Consequently \(q(t)\) is allowed to
+decrease even while the native internal objective improves. LLM-assisted
+simplification, SYM, MIN, and structural STAB adjudication are computed after
+the timed run so that evaluation overhead cannot change search behavior.
+
+Before the first auditable incumbent, quality is zero. Between updates and
+after an early algorithm termination, the latest native incumbent is carried
+forward through minute 180 with its discovery minute recorded. A future
+snapshot, final formula, or test quality must not be used to fill an earlier
+minute. A minute lacking auditable candidate-selection evidence is marked
+`unavailable`; it is not silently filled with zero and blocks formal EFF for
+that run. An algorithm is formal-ready only when all 150 clean runs are
+auditable under this rule.
 
 ---
 
@@ -594,13 +613,13 @@ q^{OOD}(t)
 where:
 
 - \(t\in\{1,\ldots,180\}\);
-- \(NMSE^{ID}(t)\): ID NMSE of the current best-so-far expression at minute \(t\);
+- \(NMSE^{ID}(t)\): ID NMSE of the native incumbent expression at minute \(t\);
 - \(NMSE^{OOD}(t)\): OOD NMSE of the same expression;
 - \(q^{ID}(t)\): ID quality at minute \(t\);
 - \(q^{OOD}(t)\): OOD quality at minute \(t\);
 - \(q(t)\in[0,1]\): combined numerical search quality.
 
-The best quality reached within the full budget is
+After the complete trajectory has been frozen and evaluated, define
 
 \[
 q^{*}
@@ -610,7 +629,9 @@ q^{*}
 
 where:
 
-- \(q^*\): best numerical quality reached by the current run during the 180-minute search horizon.
+- \(q^*\): largest post-hoc numerical quality of the native-incumbent
+  trajectory. It is a normalization constant only and never participates in
+  incumbent selection.
 
 ---
 
@@ -632,7 +653,7 @@ q^{*}
 }
 \]
 
-If the run never produces a valid expression,
+If the run has a complete auditable trajectory but \(q^*=0\),
 
 \[
 m^{EFF}=0.
@@ -655,7 +676,10 @@ where:
 - \(q(t)\): combined numerical quality at minute \(t\);
 - \(q^*\): best numerical quality reached within the complete budget.
 
-EFF measures search speed relative to each run's own best achieved solution. Absolute final prediction quality is separately measured by ID and OOD.
+EFF measures the evaluated progress of the algorithm-native incumbent relative
+to the best evaluated point on that same frozen trajectory. It does not turn
+the trajectory into numerical best-so-far: \(q(t)\) can decrease. Absolute
+final prediction quality is separately measured by ID and OOD.
 
 ---
 
@@ -787,7 +811,7 @@ I^{struct}_{ij}
 \end{cases}
 \]
 
-Structural consistency is assessed from the frozen Opus5-simplified final expressions shared with the SYM/MIN symbolic-processing pipeline. Every valid clean seed pair receives an independent single-turn Opus5 API structural-consistency adjudication.
+Formal structural consistency is assessed from the frozen Opus5-simplified final expressions shared with the SYM/MIN symbolic-processing pipeline. Dynamic structural consistency applies the same rule to the three same-minute selected expressions. Every distinct valid expression pair receives an independent single-turn Opus5 API structural-consistency adjudication; an identical repeated pair may reuse its frozen result.
 
 A pair is considered structurally consistent when Opus5 judges that the final expressions are mathematically equivalent or share the same canonical symbolic structure, using deterministic equivalence and canonical-tree evidence supplied with the request.
 
@@ -852,11 +876,11 @@ The geometric mean requires numerical, output-validity, and symbolic-structure c
 | Evaluation Artifact | ID | OOD | SYM | MIN | EFF | STAB |
 |---|---:|---:|---:|---:|---:|---:|
 | Clean final expression | ✓ | ✓ | ✓ | ✓ |  | ✓ |
-| Minute-level best-so-far trajectory | ✓ | ✓ |  |  | ✓ |  |
-| Mandatory Opus5 API single-turn processing |  |  | Every run; clean scored | Every run; clean scored |  | Every valid clean seed pair |
-| noise001 / noise005 runs | Supplementary only | Supplementary only | LLM artifacts only | LLM artifacts only |  |  |
+| Minute-level selected/best-so-far trajectory | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Mandatory Opus5 API single-turn processing |  |  | Every distinct expression | Reuses SYM simplification |  | Every distinct valid seed pair |
+| noise001 / noise005 runs | Supplementary | Supplementary | Supplementary | Supplementary | Supplementary | Supplementary |
 
-The key computational separation is:
+The formal leaderboard keeps the computational separation:
 
 \[
 \text{Minute-level trajectory}
@@ -874,7 +898,7 @@ and
 ID,\ OOD,\ SYM,\ MIN,\ STAB.
 \]
 
-Mandatory Opus5 API processing is applied to all 50 Ground Truth expressions, every available final expression across all 6750 runs, every corresponding final-expression equivalence adjudication, and every valid clean STAB seed pair. It is not applied to minute-level search snapshots.
+The dynamic telemetry extension additionally applies mandatory Opus5 API processing to each distinct minute-level selected expression, its Ground Truth equivalence decision, and each distinct valid same-minute seed pair. Exact duplicate expressions and identical adjudication inputs may reuse a content-addressed frozen result, but no distinct input may bypass the API call.
 
 ---
 
@@ -893,7 +917,7 @@ These correspond to:
 - 1% training-label noise;
 - 5% training-label noise.
 
-They are reported separately as supplementary robustness diagnostics and do not require minute-level SYM or MIN evaluation. Their final expressions still receive the same mandatory single-turn Opus5 API simplification and equivalence adjudication as clean runs, but those symbolic outputs do not enter the formal six-axis leaderboard.
+They are reported separately as supplementary robustness diagnostics. Their final and minute-level expressions receive the same mandatory single-turn Opus5 API simplification and equivalence adjudication as clean runs, but those symbolic outputs do not enter the formal clean six-axis leaderboard.
 
 The complete experiment therefore contains:
 
@@ -906,3 +930,73 @@ The complete experiment therefore contains:
 =
 6750\text{ runs}.
 \]
+
+---
+
+# 11. Mandatory Minute-Level Six-Axis Telemetry
+
+This telemetry contract applies to historical backfilling and to every future
+data-collection run. It extends observability without changing which artifacts
+define the formal clean leaderboard.
+
+For every algorithm-task-seed run and every minute
+
+\[
+t\in\{1,\ldots,180\},
+\]
+
+the retained run-minute record contains the selected or best-so-far expression,
+its source evidence, validity, \(q^{ID}(t)\), \(q^{OOD}(t)\),
+\(m^{SYM}(t)\), \(m^{MIN}(t)\), and cumulative efficiency
+
+\[
+m^{EFF}(t)
+=
+\frac{1}{t}
+\sum_{u=1}^{t}
+\frac{q(u)}{q^*},
+\qquad
+q^*=\max_{1\le u\le180}q(u).
+\]
+
+If no new candidate is emitted at minute \(t\), the record explicitly carries
+forward the preceding selected expression and identifies the source minute.
+Before the first valid expression, the minute is recorded as invalid with
+numerical and symbolic scores equal to zero. A missing expression must never be
+replaced by the final expression.
+
+For every algorithm-task-minute, dynamic stability aligns the three seeds at
+the same minute and computes
+
+\[
+m^{STAB}(t)
+=
+\left(N(t)V(t)C(t)\right)^{1/3},
+\]
+
+using the same numerical-consistency, validity, and structural-consistency
+definitions as the final STAB axis. Structural decisions operate on the frozen
+Opus5-simplified same-minute expressions.
+
+The complete dynamic artifact contains, per condition,
+
+\[
+15\times50\times3\times180=405000
+\]
+
+run-minute rows and
+
+\[
+15\times50\times180=135000
+\]
+
+task-minute STAB rows. Every row preserves the condition, algorithm, dataset,
+seed or seed pair, minute, logical identity, expression hash, source path and
+hash, evaluation basis, LLM contract version, and frozen adjudication
+identifiers.
+
+All LLM work is executed after the timed algorithm run through a resumable,
+content-addressed plan. Each distinct expression and each distinct adjudication
+input receives the mandatory single-turn Opus5 evaluation. Exact duplicates may
+reuse a frozen response. API failures are retried under the declared retry
+budget; unresolved inputs remain explicit and block a complete dynamic release.

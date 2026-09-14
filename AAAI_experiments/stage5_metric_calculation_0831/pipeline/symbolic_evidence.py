@@ -35,6 +35,25 @@ class SimplificationContractError(ValueError):
         self.evidence = evidence
 
 
+class real_cbrt(sp.Function):
+    """保留实立方根这一元算子，避免负数被改为复数主值分数幂。"""
+
+    nargs = 1
+
+    @classmethod
+    def eval(cls, value):
+        if value.is_number and value.is_real is True:
+            return sp.real_root(value, 3)
+
+    def _eval_evalf(self, prec):
+        value = self.args[0].evalf(prec)
+        if value.is_real is True:
+            return sp.real_root(value, 3).evalf(prec)
+
+    def _eval_is_real(self):
+        return self.args[0].is_real
+
+
 @dataclass
 class _BuildContext:
     allowed_variables: set[str] | None
@@ -56,6 +75,7 @@ NUMPY_ATTRIBUTE_WHITELIST = {
     "abs",
     "arccos",
     "arcsin",
+    "cbrt",
     "clip",
     "cos",
     "cosh",
@@ -115,6 +135,7 @@ def _normalize_name(name: str) -> str:
         "Piecewise": "where",
         "piecewise": "where",
         "atan": "arctan",
+        "cbrt": "real_cbrt",
     }
     return aliases.get(name, name)
 
@@ -359,6 +380,7 @@ def _call_handler(name: str, ctx: _BuildContext):
         "cosh": sp.cosh,
         "exp": sp.exp,
         "log": sp.log,
+        "real_cbrt": real_cbrt,
         "sin": sp.sin,
         "sinh": sp.sinh,
         "sqrt": sp.sqrt,

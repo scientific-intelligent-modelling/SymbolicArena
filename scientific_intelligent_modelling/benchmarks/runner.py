@@ -1108,6 +1108,15 @@ def _read_pysr_hall_of_fame_candidates(candidate_paths: list[Path]) -> list[dict
                 complexity = int(complexity)
             except (TypeError, ValueError, OverflowError):
                 complexity = None
+            iteration = None
+            for iteration_column in ("Iteration", "iteration", "DiscoveryIteration"):
+                if iteration_column not in df.columns:
+                    continue
+                try:
+                    iteration = int(row.get(iteration_column))
+                except (TypeError, ValueError, OverflowError):
+                    iteration = None
+                break
             candidates.append(
                 {
                     "equation": equation.strip(),
@@ -1115,8 +1124,9 @@ def _read_pysr_hall_of_fame_candidates(candidate_paths: list[Path]) -> list[dict
                     "loss": loss,
                     "internal_loss": loss,
                     "complexity": complexity,
+                    "iteration": iteration,
                     "source_path": str(path),
-                    "source": "symbolfit_active_pysr_hall_of_fame",
+                    "source": "pysr_native_hall_of_fame",
                 }
             )
     return candidates
@@ -1129,10 +1139,82 @@ def _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths: list[Path])
     return min(candidates, key=lambda item: item["internal_loss"])
 
 
-def _extract_pysr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
+def _extract_pysr_periodic_candidate(
+    experiment_dir: str | Path,
+    *,
+    snapshot_minute: int | None = None,
+    snapshot_elapsed_seconds: float | None = None,
+) -> dict[str, Any] | None:
     base_dir = Path(experiment_dir)
     candidate_paths = [base_dir / "hall_of_fame.csv", base_dir / "hall_of_fame.csv.bak"]
-    return _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths)
+    candidate = _extract_pysr_candidate_from_hall_of_fame_paths(candidate_paths)
+    state_path = base_dir / ".pysr_native_incumbent.json"
+    incumbent = _read_json_file(state_path)
+    if candidate is None:
+        return incumbent
+    loss = candidate.get("internal_loss")
+    try:
+        loss = float(loss)
+    except (TypeError, ValueError, OverflowError):
+        return incumbent
+    if not math.isfinite(loss):
+        return incumbent
+    old_loss = incumbent.get("internal_loss") if isinstance(incumbent, Mapping) else None
+    try:
+        old_loss = float(old_loss)
+    except (TypeError, ValueError, OverflowError):
+        old_loss = None
+    # PySR HOF loss 越小越好；相同 loss 保留第一次发现，禁止结束时覆盖时间。
+    if old_loss is not None and math.isfinite(old_loss) and loss >= old_loss:
+        return dict(incumbent)
+    observed_at = time.time()
+    elapsed = snapshot_elapsed_seconds
+    try:
+        elapsed = max(0.0, float(elapsed))
+    except (TypeError, ValueError, OverflowError):
+        elapsed = None
+    minute = snapshot_minute
+    try:
+        minute = max(1, int(minute))
+    except (TypeError, ValueError, OverflowError):
+        minute = max(1, int(math.ceil((elapsed or 0.0) / 60.0)))
+    equation = str(candidate["equation"]).strip()
+    evidence = {
+        **candidate,
+        "equation": equation,
+        "original_equation": equation,
+        "loss": loss,
+        "internal_loss": loss,
+        "internal_objective": "hof_loss",
+        "objective_direction": "min",
+        "first_discovered_minute": minute,
+        "first_discovered_elapsed_seconds": elapsed,
+        "source_timestamp_unix": float(observed_at),
+        "source": "pysr_native_hall_of_fame",
+    }
+    evidence["candidate_sha256"] = hashlib.sha256(
+        json.dumps(
+            {
+                "equation": equation,
+                "loss": loss,
+                "iteration": evidence.get("iteration"),
+                "source_path": evidence.get("source_path"),
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = state_path.with_name(f".{state_path.name}.tmp")
+        temporary.write_text(
+            json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        temporary.replace(state_path)
+    except Exception:
+        pass
+    return evidence
 
 
 def _extract_dso_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
@@ -1256,6 +1338,17 @@ def _imcts_candidate_evidence(candidate: Mapping[str, Any] | None) -> dict[str, 
             "first_discovered_elapsed_seconds",
         ),
         "candidate_source": ("candidate_source", "source"),
+        "expression_vector": ("expression_vector", "equation"),
+        "internal_objective": ("internal_objective",),
+        "internal_objective_direction": (
+            "internal_objective_direction",
+            "objective_direction",
+        ),
+        "candidate_source_timestamp_unix": (
+            "candidate_source_timestamp_unix",
+            "source_timestamp_unix",
+        ),
+        "candidate_sha256": ("candidate_sha256",),
     }
     evidence: dict[str, Any] = {}
     for target, sources in aliases.items():
@@ -1661,7 +1754,11 @@ def _extract_periodic_candidate(
     if tool == "drsr":
         return _extract_drsr_periodic_candidate(experiment_dir)
     if tool == "pysr":
-        return _extract_pysr_periodic_candidate(experiment_dir)
+        return _extract_pysr_periodic_candidate(
+            experiment_dir,
+            snapshot_minute=snapshot_minute,
+            snapshot_elapsed_seconds=snapshot_elapsed_seconds,
+        )
     if tool == "dso":
         return _extract_dso_periodic_candidate(experiment_dir)
     if tool == "udsr":
@@ -1864,6 +1961,17 @@ def _build_periodic_snapshot_payload(
         payload["elapsed_seconds"] = round(time.time() - started_at, 3)
         payload["elapsed_minutes"] = max(0, int(round(payload["elapsed_seconds"] / 60.0)))
         payload["candidate_available"] = False
+        native_contract = {
+            "e2esr": ("decoder_length_normalized_log_likelihood", "max"),
+            "imcts": ("native_reward", "max"),
+            "pysr": ("hof_loss", "min"),
+        }.get(str(tool_name).strip().lower())
+        if native_contract is not None:
+            payload["algorithm_native_incumbent"] = False
+            payload["internal_objective"] = native_contract[0]
+            payload["internal_objective_direction"] = native_contract[1]
+            payload["internal_objective_value"] = None
+            payload["native_objective_unavailable"] = True
         return _attach_progress_run_context(
             payload,
             train_label_noise=train_label_noise,
@@ -1953,6 +2061,31 @@ def _build_periodic_snapshot_payload(
     )
     payload["candidate_coordinate_transform"] = candidate.get("coordinate_transform")
     payload["candidate_source"] = candidate.get("source")
+    payload["algorithm_native_incumbent"] = candidate.get("internal_objective") is not None
+    payload["native_objective_unavailable"] = candidate.get("internal_objective") is None
+    payload["internal_objective"] = candidate.get("internal_objective")
+    payload["internal_objective_direction"] = candidate.get("objective_direction")
+    payload["internal_objective_value"] = (
+        candidate.get("internal_loss")
+        if candidate.get("objective_direction") == "min"
+        else candidate.get("native_model_score", candidate.get("score"))
+    )
+    payload["expression_vector"] = candidate.get("expression_vector")
+    payload["candidate_source_timestamp_unix"] = candidate.get("source_timestamp_unix")
+    payload["candidate_sha256"] = candidate.get("candidate_sha256")
+    payload["candidate_original_equation"] = candidate.get("original_equation")
+    payload["candidate_rank"] = candidate.get("candidate_rank")
+    payload["candidate_bag_index"] = candidate.get("bag_index")
+    payload["native_model_score"] = candidate.get("native_model_score")
+    payload["task_identity"] = {
+        "task_label": task_label,
+        "task_global_index": task_global_index,
+        "dataset_id": dataset.dataset_name,
+        "condition": _condition_from_train_label_noise(
+            _freeze_train_label_noise_evidence(train_label_noise)
+        ),
+        "seed": int(seed),
+    }
     payload["candidate_available"] = True
     if candidate_fidelity is not None:
         payload["candidate_fidelity"] = dict(candidate_fidelity)

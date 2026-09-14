@@ -19,6 +19,7 @@ import sys
 import json
 import math
 import time
+import hashlib
 from typing import Any, Dict, Optional, List
 
 import numpy as np
@@ -151,11 +152,30 @@ class iMCTSRegressor(BaseWrapper):
         )
         payload = {
             "equation": equation,
+            "expression_vector": equation,
             "score": current_score,
+            "reward": current_score,
+            "internal_objective": "native_reward",
+            "objective_direction": "max",
             "evaluations": int(evaluations) if isinstance(evaluations, (int, float)) else None,
             "first_discovered_elapsed_seconds": round(elapsed_seconds, 6),
             "first_discovered_minute": max(1, int(math.ceil(elapsed_seconds / 60.0))),
             "source": "imcts_native_reward",
+            "source_timestamp_unix": float(observed_at),
+            "candidate_sha256": hashlib.sha256(
+                json.dumps(
+                    {
+                        "expression_vector": equation,
+                        "reward": current_score,
+                        "evaluations": int(evaluations)
+                        if isinstance(evaluations, (int, float))
+                        else None,
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest(),
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
         try:
@@ -236,8 +256,14 @@ class iMCTSRegressor(BaseWrapper):
             except Exception:
                 seed = base_seed
             simplified_expr, vec_expr, eval_count, path = reg.fit(seed=seed)
-            score = self._score_vector_expression(reg, vec_expr, x_train, y_train)
-            if best_tuple is None or (score is not None and (best_score is None or score < best_score)):
+            score = getattr(reg, "last_best_reward", None)
+            try:
+                score = float(score)
+            except (TypeError, ValueError, OverflowError):
+                score = None
+            if score is not None and not np.isfinite(score):
+                score = None
+            if best_tuple is None or (score is not None and (best_score is None or score > best_score)):
                 best_tuple = (simplified_expr, vec_expr, eval_count, path, reg)
                 best_score = score
             natural_completions += 1
@@ -267,7 +293,7 @@ class iMCTSRegressor(BaseWrapper):
 
         self._write_progress_state(
             equation=self._best_expr_vector or self._best_expr_simplified or "",
-            score=None,
+            score=best_score,
             evaluations=self._eval_count,
         )
 

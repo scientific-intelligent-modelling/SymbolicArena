@@ -523,6 +523,84 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertAlmostEqual(payload["id_test"]["rmse"], 0.0, places=10)
             self.assertAlmostEqual(payload["ood_test"]["rmse"], 0.0, places=10)
 
+    def test_pysr_native_hof_incumbent_uses_finite_loss_and_keeps_tie_earliest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            exp_dir = Path(tmp)
+            hof = exp_dir / "hall_of_fame.csv"
+            hof.write_text(
+                "Complexity,Loss,Equation,Iteration\n"
+                "1,Inf,x0,1\n"
+                "3,0.5,x0 + 1,7\n",
+                encoding="utf-8",
+            )
+            first = runner._extract_pysr_periodic_candidate(
+                exp_dir, snapshot_minute=2, snapshot_elapsed_seconds=120.0
+            )
+            self.assertEqual(first["equation"], "x0 + 1")
+            self.assertEqual(first["internal_objective"], "hof_loss")
+            self.assertEqual(first["objective_direction"], "min")
+            self.assertEqual(first["iteration"], 7)
+            self.assertEqual(first["first_discovered_minute"], 2)
+
+            # loss 改善必须更新，即使独立 ID/OOD 质量可能下降。
+            hof.write_text(
+                "Complexity,Loss,Equation,Iteration\n3,0.4,x0 - 100,9\n",
+                encoding="utf-8",
+            )
+            improved = runner._extract_pysr_periodic_candidate(
+                exp_dir, snapshot_minute=3, snapshot_elapsed_seconds=180.0
+            )
+            self.assertEqual(improved["equation"], "x0 - 100")
+            self.assertEqual(improved["first_discovered_minute"], 3)
+
+            hof.write_text(
+                "Complexity,Loss,Equation,Iteration\n3,0.4,x0 + 999,10\n",
+                encoding="utf-8",
+            )
+            tied = runner._extract_pysr_periodic_candidate(
+                exp_dir, snapshot_minute=4, snapshot_elapsed_seconds=240.0
+            )
+            self.assertEqual(tied["equation"], "x0 - 100")
+            self.assertEqual(tied["first_discovered_minute"], 3)
+
+    def test_pysr_invalid_objective_cannot_create_future_final_backfill(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            exp_dir = Path(tmp)
+            (exp_dir / "hall_of_fame.csv").write_text(
+                "Complexity,Loss,Equation\n1,Inf,x0\n1,NaN,x1\n",
+                encoding="utf-8",
+            )
+            self.assertIsNone(
+                runner._extract_pysr_periodic_candidate(
+                    exp_dir, snapshot_minute=180, snapshot_elapsed_seconds=10800.0
+                )
+            )
+            self.assertFalse((exp_dir / ".pysr_native_incumbent.json").exists())
+
+    def test_native_heartbeat_marks_objective_unavailable_without_final_backfill(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            exp_dir = root / "exp"
+            exp_dir.mkdir(parents=True, exist_ok=True)
+            _write_dataset(dataset_dir)
+            payload = runner._build_periodic_snapshot_payload(
+                tool_name="pysr",
+                dataset=runner.load_canonical_dataset(dataset_dir),
+                params={"niterations": 100},
+                seed=520,
+                started_at=time.time() - 60,
+                experiment_dir=exp_dir,
+                checkpoint_index=1,
+                task_label="g0001_dataset2d",
+                task_global_index=1,
+            )
+            self.assertEqual(payload["record_type"], "periodic_heartbeat")
+            self.assertFalse(payload["algorithm_native_incumbent"])
+            self.assertTrue(payload["native_objective_unavailable"])
+            self.assertEqual(payload["internal_objective"], "hof_loss")
+            self.assertIsNone(payload["equation"])
+
     def test_build_periodic_snapshot_payload_for_dso_from_hof(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -711,6 +789,9 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                         "equation": "2.0*x_0 + 3.0*x_1 + 1.0",
                         "loss": 0.0,
                         "score": 1.0,
+                        "native_model_score": 1.0,
+                        "internal_objective": "decoder_length_normalized_log_likelihood",
+                        "objective_direction": "max",
                         "complexity": 7,
                         "refinement_type": "BFGS",
                     },
@@ -735,6 +816,12 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["status"], "ok")
             self.assertEqual(payload["source_loss"], 0.0)
             self.assertEqual(payload["source_score"], 1.0)
+            self.assertTrue(payload["algorithm_native_incumbent"])
+            self.assertEqual(
+                payload["internal_objective"],
+                "decoder_length_normalized_log_likelihood",
+            )
+            self.assertEqual(payload["internal_objective_direction"], "max")
             self.assertEqual(payload["source_complexity"], 7)
             self.assertEqual(payload["elapsed_minutes"], 60)
             self.assertEqual(
@@ -762,6 +849,9 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                         "first_discovered_minute": 3,
                         "first_discovered_elapsed_seconds": 125.0,
                         "source": "imcts_native_reward",
+                        "internal_objective": "native_reward",
+                        "objective_direction": "max",
+                        "expression_vector": "2*x[0] + 3*x[1] + 1",
                     },
                     ensure_ascii=False,
                 ),
@@ -785,6 +875,10 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["source_score"], 1.0)
             self.assertEqual(payload["candidate_first_discovered_minute"], 3)
             self.assertEqual(payload["candidate_source"], "imcts_native_reward")
+            self.assertTrue(payload["algorithm_native_incumbent"])
+            self.assertEqual(payload["internal_objective"], "native_reward")
+            self.assertEqual(payload["internal_objective_direction"], "max")
+            self.assertEqual(payload["expression_vector"], "2*x[0] + 3*x[1] + 1")
             self.assertEqual(payload["elapsed_minutes"], 70)
             self.assertEqual(
                 payload["canonical_artifact"]["instantiated_expression"],

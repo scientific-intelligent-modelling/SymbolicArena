@@ -107,7 +107,14 @@ def test_emit_progress_candidate_can_skip_metric_computation(tmp_path):
 
     reg._emit_progress_candidate(
         0,
-        {"predicted_tree": FakeTree(), "refinement_type": "ForwardRaw"},
+        {
+            "predicted_tree": FakeTree(),
+            "refinement_type": "ForwardRaw",
+            "native_model_score": -0.25,
+            "bag_index": 2,
+            "candidate_rank": 1,
+            "generation_source": "beam_search",
+        },
         None,
         None,
         stage="forward_partial",
@@ -115,6 +122,10 @@ def test_emit_progress_candidate_can_skip_metric_computation(tmp_path):
     )
 
     assert captured["equation"] == "x_0 + x_1"
-    assert captured["loss"] is None
-    assert captured["score"] is None
+    assert captured["native_model_score"] == -0.25
+    assert captured["score"] == -0.25
+    assert captured["internal_objective"] == "decoder_length_normalized_log_likelihood"
+    assert captured["objective_direction"] == "max"
+    assert captured["bag_index"] == 2
+    assert captured["candidate_rank"] == 1
     assert captured["stage"] == "forward_partial"

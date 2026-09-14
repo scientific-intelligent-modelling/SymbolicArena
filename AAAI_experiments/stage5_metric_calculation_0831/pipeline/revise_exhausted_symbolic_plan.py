@@ -27,7 +27,8 @@ _LOGICAL_ID_PATTERNS = {
     ),
     "stab_structure": re.compile(
         r"^(stab_structure::[a-z0-9_]+::g\d{4}::"
-        r"s(?:520|521|522)-s(?:520|521|522))(?:::(v[1-9]\d*))?$"
+        r"s(?:520|521|522)-s(?:520|521|522)"
+        r"(?:::(?:clean|noise001|noise005))?)(?:::(v[1-9]\d*))?$"
     ),
 }
 

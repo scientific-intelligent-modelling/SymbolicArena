@@ -413,6 +413,63 @@ class SymbolicNormalizersTest(unittest.TestCase):
                 (Path(tmp) / "imcts_unranked" / ".imcts_current_best.json").exists()
             )
 
+    def test_imcts_native_reward_controls_incumbent_and_ties_keep_earliest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model = iMCTSRegressor(exp_path=tmp, exp_name="imcts_native")
+            model._fit_started_at = 100.0
+            state_path = Path(tmp) / "imcts_native" / ".imcts_current_best.json"
+            with patch(
+                "scientific_intelligent_modelling.algorithms.iMCTS_wrapper.wrapper.time.time",
+                side_effect=[110.0, 120.0, 130.0],
+            ):
+                model._write_progress_state(equation="x[0]", score=0.4, evaluations=10)
+                # 即使外部预测质量下降，native reward 变大仍必须更新。
+                model._write_progress_state(equation="x[1]", score=0.8, evaluations=20)
+                model._write_progress_state(equation="x[2]", score=0.8, evaluations=30)
+            payload = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["equation"], "x[1]")
+            self.assertEqual(payload["expression_vector"], "x[1]")
+            self.assertEqual(payload["internal_objective"], "native_reward")
+            self.assertEqual(payload["objective_direction"], "max")
+            self.assertEqual(payload["evaluations"], 20)
+            self.assertEqual(payload["source_timestamp_unix"], 120.0)
+            self.assertEqual(len(payload["candidate_sha256"]), 64)
+
+    def test_e2esr_native_model_score_controls_incumbent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model = E2ESRRegressor.__new__(E2ESRRegressor)
+            model._progress_state_path = str(Path(tmp) / ".e2esr_current_best.json")
+            model._fit_started_at = 100.0
+            with patch(
+                "scientific_intelligent_modelling.algorithms.e2esr_wrapper.wrapper.time.time",
+                side_effect=[110.0, 120.0, 130.0],
+            ):
+                model._write_progress_state(
+                    equation="x_0", native_model_score=-2.0, bag_index=0, candidate_rank=0
+                )
+                model._write_progress_state(
+                    equation="x_1", native_model_score=-1.0, bag_index=1, candidate_rank=1
+                )
+                model._write_progress_state(
+                    equation="x_2", native_model_score=-1.0, bag_index=2, candidate_rank=0
+                )
+            payload = json.loads(Path(model._progress_state_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["equation"], "x_1")
+            self.assertEqual(payload["native_model_score"], -1.0)
+            self.assertEqual(payload["objective_direction"], "max")
+            self.assertEqual(payload["bag_index"], 1)
+            self.assertEqual(payload["candidate_rank"], 1)
+
+    def test_e2esr_invalid_native_objective_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model = E2ESRRegressor.__new__(E2ESRRegressor)
+            model._progress_state_path = str(Path(tmp) / ".e2esr_current_best.json")
+            model._fit_started_at = 100.0
+            model._write_progress_state(
+                equation="x_0", native_model_score=float("nan"), bag_index=0, candidate_rank=0
+            )
+            self.assertFalse(Path(model._progress_state_path).exists())
+
     def test_wrapper_export_e2esr(self):
         model = E2ESRRegressor.__new__(E2ESRRegressor)
         model.best_tree = object()

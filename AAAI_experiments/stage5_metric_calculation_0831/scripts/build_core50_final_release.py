@@ -266,6 +266,50 @@ def audit_source_bindings(stage: Path, output: Path) -> dict[str, Any]:
     return report
 
 
+def merge_release_numeric(stage: Path, inputs: Path, symbolfit_csv: Path, output: Path) -> dict[str, Any]:
+    """按原始结果及当前canonical双哈希合并数值，不用原生误差覆盖统一重放。"""
+    package = stage / "exports/Core50_raw_results_20260909/run_level"
+    semantics = unique_rows(read_jsonl(inputs / "semantic_runs.jsonl"), "最新表达式")
+    replacements = unique_rows(read_csv(symbolfit_csv), "最新SymbolFit数值")
+    if len(replacements) != 300 or any(k[0] != "symbolfit" or k[3] == "clean" for k in replacements):
+        raise ReleaseError("SymbolFit数值替换必须是两个噪声条件的300条")
+    reports = {}
+    for condition in CONDITIONS:
+        rows = unique_rows(read_csv(package / condition / "numeric_run_metrics.csv"), condition)
+        replaced = 0
+        for key, old in rows.items():
+            if key in replacements:
+                current = replacements[key]
+                old.update({name: current[name] for name in (
+                    "task_id", "host", "result_sha256", "evaluation_status", "valid_output",
+                    "invalid_reason", "evaluation_path", "artifact_rebuilt", "native_id_nmse",
+                    "native_ood_nmse", "id_nmse", "ood_nmse", "id_quality", "ood_quality",
+                )})
+                old["canonical_artifact_sha256"] = current["replay_canonical_artifact_sha256"]
+                old["formula_source"] = "canonical_artifact"
+                old["replay_error"] = ""
+                for axis in ("id", "ood"):
+                    old[f"{axis}_quality_delta_from_native"] = ""
+                replaced += 1
+            semantic = semantics[key]
+            if old["result_sha256"] != semantic["source_result_sha256"]:
+                raise ReleaseError(f"数值绑定非当前最终结果: {key}")
+            if old["canonical_artifact_sha256"] != semantic["canonical_artifact_sha256"]:
+                raise ReleaseError(f"数值与当前公式的canonical artifact不一致: {key}")
+            old["condition"] = condition
+            old["semantic_expression_sha256"] = semantic["effective_raw_semantic_expression_sha256"]
+        if len(rows) != 2250:
+            raise ReleaseError(f"{condition}数值网格不是2250条")
+        path = output / f"{condition}_numeric.csv"
+        write_csv(path, [rows[k] for k in sorted(rows)])
+        reports[condition] = {"path": str(path.resolve()), "sha256": sha256(path), "rows": len(rows),
+                              "replacements": replaced, "invalid_outputs": sum(str(r["valid_output"]).lower() != "true" for r in rows.values())}
+    report = {"status": "passed", "row_count": 6750, "replacement_count": 300, "conditions": reports,
+              "source_semantics_sha256": sha256(inputs / "semantic_runs.jsonl"), "source_symbolfit_numeric_sha256": sha256(symbolfit_csv)}
+    (output / "manifest.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return report
+
+
 def plan_bundles(plan_path: Path, index_path: Path) -> dict[Key, tuple[dict[str, Any], dict[str, Any]]]:
     indexes = {row["logical_id"]: row for row in read_jsonl(index_path)}
     output = {}
@@ -534,6 +578,9 @@ def main() -> None:
     parser.add_argument("--prepare-base", action="store_true")
     parser.add_argument("--audit-bindings", action="store_true")
     parser.add_argument("--verify-release-data", action="store_true")
+    parser.add_argument("--merge-release-numeric", action="store_true")
+    parser.add_argument("--inputs", type=Path)
+    parser.add_argument("--symbolfit-numeric", type=Path)
     parser.add_argument("--stage-root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
@@ -542,6 +589,8 @@ def main() -> None:
         for record in records:
             check_raw_record(record)
         print(json.dumps({"rows": len(records), "conditions": dict(Counter(identity(r)[3] for r in records))}))
+    elif args.merge_release_numeric and args.output and args.inputs and args.symbolfit_numeric:
+        print(json.dumps(merge_release_numeric(args.stage_root.resolve(), args.inputs.resolve(), args.symbolfit_numeric.resolve(), args.output.resolve()), ensure_ascii=False, indent=2))
     elif args.verify_release_data and args.output:
         print(json.dumps(verify_release_data(args.output.resolve()), ensure_ascii=False, indent=2))
     elif args.audit_bindings and args.output:
