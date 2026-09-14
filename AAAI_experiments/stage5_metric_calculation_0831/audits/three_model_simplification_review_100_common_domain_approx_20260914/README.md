@@ -65,14 +65,16 @@ The lower kappa alongside higher raw agreement is a prevalence effect: nearly al
 
 ## Remaining Negative Cases
 
-The four majority-rejected items are:
+The four raw majority-rejected items are:
 
 - `sample_0005`: protected-division fallback behavior changed.
 - `sample_0020`: `log(sqrt(x3)) -> log(x3)/2` crosses gplearn's protected-log threshold and changes values.
 - `sample_0035`: multiple protected divisions were merged, changing fallback behavior.
-- `sample_0075`: a nested subexpression was changed rather than merely simplified; Kimi and GLM detected it, while GPT missed it.
+- `sample_0075`: a known reviewer false negative. The original and proposed strings are byte-identical, but Kimi and GLM hallucinated two different edits in this very long expression. Deterministic identity checking therefore overrides the raw rejection to accepted.
 
 `sample_0065` remains unresolved because GPT found a protected-log counterexample, GLM passed it, and Kimi timed out twice. The counterexample is substantive, so this item should remain fail-closed pending another independent adjudication.
+
+After the deterministic identity override, the 100-item audit contains 96 accepted items, 3 substantive rejections, and 1 unresolved item. The changed-prediction result is unaffected: 66 accepted, 3 rejected, and 1 unresolved. Raw model votes and `consensus.csv` remain untouched; `posthoc_adjudication.csv` records the explicit correction.
 
 ## Usage
 
@@ -87,4 +89,4 @@ The cost column applies the previously supplied Opus5 tariff, CNY 3 per million 
 
 ## Artifacts
 
-Primary artifacts are `sample.jsonl`, `consensus.csv`, `disagreements.csv`, `cost_ledger.csv`, `summary.json`, the per-model task records, and `strict_v1_to_common_domain_approx_v2.csv`. `SHA256SUMS` binds the audit directory.
+Primary artifacts are `sample.jsonl`, `consensus.csv`, `disagreements.csv`, `cost_ledger.csv`, `summary.json`, the per-model task records, `strict_v1_to_common_domain_approx_v2.csv`, and `posthoc_adjudication.csv`. `SHA256SUMS` binds the audit directory.
