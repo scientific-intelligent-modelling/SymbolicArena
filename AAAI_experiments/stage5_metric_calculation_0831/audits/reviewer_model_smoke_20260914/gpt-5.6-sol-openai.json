@@ -1,0 +1,235 @@
+{
+  "schema_version": "reviewer_model_smoke.v1",
+  "created_at_utc": "2026-09-14T14:07:08.080900+00:00",
+  "request": {
+    "api_style": "openai_responses",
+    "endpoint_origin": "https://routify-pub.alibaba-inc.com",
+    "endpoint_path": "/protocol/openai/v1/responses",
+    "model": "gpt-5.6-sol",
+    "stream": false,
+    "max_output_tokens": 800,
+    "prompt_sha256": "b5025f7e8f1cfebf4f118529ee24574dc3b5fdc1d72cdc0856d3f6c53e8f448e",
+    "prompt_case_count": 3,
+    "auth_redacted": true,
+    "used_payload_mode": "strict_json_schema"
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "payload_mode": "strict_json_schema",
+      "http_status": 200,
+      "elapsed_seconds": 8.657,
+      "error": null
+    }
+  ],
+  "http_status": 200,
+  "response_model": "gpt-5.6-sol",
+  "usage": {
+    "input_tokens": 224,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 141,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 365
+  },
+  "assistant_output_text": "{\"cases\":[{\"id\":\"A\",\"verdict\":\"pass\",\"reason\":\"For every real x, x+x=2*x, and both expressions are defined on all reals.\"},{\"id\":\"B\",\"verdict\":\"fail\",\"reason\":\"sqrt(x**2)=abs(x), not x for negative x; although both are real-defined for all x, their values differ when x<0.\"},{\"id\":\"C\",\"verdict\":\"fail\",\"reason\":\"protected_sqrt(z)=sqrt(abs(z)) is real-defined for every real z, whereas ordinary sqrt(z) is real-defined only for z>=0, so the domain is not preserved.\"}]}",
+  "parsed_output": {
+    "cases": [
+      {
+        "id": "A",
+        "verdict": "pass",
+        "reason": "For every real x, x+x=2*x, and both expressions are defined on all reals."
+      },
+      {
+        "id": "B",
+        "verdict": "fail",
+        "reason": "sqrt(x**2)=abs(x), not x for negative x; although both are real-defined for all x, their values differ when x<0."
+      },
+      {
+        "id": "C",
+        "verdict": "fail",
+        "reason": "protected_sqrt(z)=sqrt(abs(z)) is real-defined for every real z, whereas ordinary sqrt(z) is real-defined only for z>=0, so the domain is not preserved."
+      }
+    ]
+  },
+  "parse_error": null,
+  "grading": {
+    "expected": {
+      "A": "pass",
+      "B": "fail",
+      "C": "fail"
+    },
+    "received": {
+      "A": "pass",
+      "B": "fail",
+      "C": "fail"
+    },
+    "correct_count": 3,
+    "total_count": 3,
+    "strict_json_shape": true,
+    "api_success": true,
+    "model_identity_match": true,
+    "usable_for_review": true
+  },
+  "raw_response": {
+    "id": "resp_0b450be4c3191dcc006aa7ff874f9c87d085b5e14cc6e7dccb",
+    "object": "response",
+    "created_at": 1789394823,
+    "status": "completed",
+    "background": false,
+    "billing": {
+      "payer": "developer"
+    },
+    "completed_at": 1789394826,
+    "error": null,
+    "frequency_penalty": 0.0,
+    "incomplete_details": null,
+    "instructions": "You are a strict mathematical review auditor. Judge whether each proposed simplification preserves the real-valued function, including its domain and explicitly declared protected operator semantics. Return only the requested JSON.",
+    "max_output_tokens": 800,
+    "max_tool_calls": null,
+    "model": "gpt-5.6-sol",
+    "moderation": null,
+    "output": [
+      {
+        "id": "msg_0b450be4c3191dcc006aa7ff888e3887d0b0d9b7ec497f3d52",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [],
+            "logprobs": [],
+            "text": "{\"cases\":[{\"id\":\"A\",\"verdict\":\"pass\",\"reason\":\"For every real x, x+x=2*x, and both expressions are defined on all reals.\"},{\"id\":\"B\",\"verdict\":\"fail\",\"reason\":\"sqrt(x**2)=abs(x), not x for negative x; although both are real-defined for all x, their values differ when x<0.\"},{\"id\":\"C\",\"verdict\":\"fail\",\"reason\":\"protected_sqrt(z)=sqrt(abs(z)) is real-defined for every real z, whereas ordinary sqrt(z) is real-defined only for z>=0, so the domain is not preserved.\"}]}"
+          }
+        ],
+        "phase": "final_answer",
+        "role": "assistant"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "presence_penalty": 0.0,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "prompt_cache_retention": "24h",
+    "reasoning": {
+      "context": "all_turns",
+      "effort": "medium",
+      "mode": "standard",
+      "summary": null
+    },
+    "safety_identifier": null,
+    "service_tier": "default",
+    "store": true,
+    "temperature": 1.0,
+    "text": {
+      "format": {
+        "type": "json_schema",
+        "description": null,
+        "name": "formula_review_smoke",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cases"
+          ],
+          "properties": {
+            "cases": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "verdict",
+                  "reason"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B",
+                      "C"
+                    ]
+                  },
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "pass",
+                      "fail"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "strict": true
+      },
+      "verbosity": "medium"
+    },
+    "tool_choice": "auto",
+    "tool_usage": {
+      "image_gen": {
+        "input_tokens": 0,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "output_tokens": 0,
+        "output_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "total_tokens": 0
+      },
+      "web_search": {
+        "num_requests": 0
+      }
+    },
+    "tools": [],
+    "top_logprobs": 0,
+    "top_p": 0.98,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 224,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 0
+      },
+      "output_tokens": 141,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 365
+    },
+    "user": null,
+    "metadata": {},
+    "routify_response": {
+      "trace_id": "212caba017893948197418554e0fb0",
+      "request_id": "65a9f39ee1c749c4903d30d6aa5e0720",
+      "success": true,
+      "status": 200,
+      "model_name": "gpt-5.6-sol",
+      "ak_quota": {
+        "api_key": "[REDACTED]",
+        "status": "NORMAL",
+        "rpm_limit": 600,
+        "current_rpm": 1
+      },
+      "provider_code_md5": "acaf1c",
+      "is_fall_back_triggered": false
+    }
+  }
+}

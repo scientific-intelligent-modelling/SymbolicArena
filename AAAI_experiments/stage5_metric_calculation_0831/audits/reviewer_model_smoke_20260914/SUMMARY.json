@@ -4,8 +4,8 @@
   "channel": "routify",
   "stream": false,
   "credential_persisted": false,
-  "physical_request_count": 6,
-  "successful_request_count": 2,
+  "physical_request_count": 7,
+  "successful_request_count": 3,
   "models": {
     "kimi-k3": {
       "available": true,
@@ -44,9 +44,21 @@
       "total_cases": 3,
       "input_tokens": 0,
       "output_tokens": 0
+    },
+    "gpt-5.6-sol_openai_responses": {
+      "available": true,
+      "http_status": 200,
+      "attempts": 1,
+      "endpoint": "/protocol/openai/v1/responses",
+      "strict_json_shape": true,
+      "model_identity_match": true,
+      "correct_cases": 3,
+      "total_cases": 3,
+      "input_tokens": 224,
+      "output_tokens": 141
     }
   },
-  "conservative_reference_cost_cny": 0.006681,
+  "conservative_reference_cost_cny": 0.009468,
   "cost_note": "Uses the previously supplied Opus5 tariff only as a conservative reference; actual model billing may differ.",
-  "recommendation": "Calibrate kimi-k3 and glm-5.2 on a larger frozen labeled set before bulk review; neither requested GPT model is deployed on the current Routify channel."
+  "recommendation": "Calibrate kimi-k3, glm-5.2, and gpt-5.6-sol on a larger frozen labeled set before bulk review; route gpt-5.6-sol through the OpenAI Responses endpoint."
 }
