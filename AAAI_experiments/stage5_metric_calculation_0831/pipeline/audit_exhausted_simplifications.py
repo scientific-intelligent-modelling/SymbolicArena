@@ -231,6 +231,7 @@ def run_isolated_simplify_semantic_validator(
     request: Mapping[str, object],
     structured_output: Mapping[str, object],
     timeout_seconds: float,
+    worker_command: Sequence[str] | None = None,
 ) -> JsonDict:
     payload = build_semantic_validation_payload(
         evaluation_key=evaluation_key,
@@ -238,8 +239,14 @@ def run_isolated_simplify_semantic_validator(
         structured_output=structured_output,
     )
     try:
+        command = (
+            [sys.executable, "-m", WORKER_MODULE]
+            if worker_command is None else list(worker_command)
+        )
+        if not command:
+            return {"status": "semantic_validator_error", "error": "worker command is empty"}
         process = subprocess.Popen(
-            [sys.executable, "-m", WORKER_MODULE],
+            command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

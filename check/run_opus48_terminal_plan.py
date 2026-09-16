@@ -16,6 +16,7 @@ import math
 from pathlib import Path
 import re
 import sqlite3
+import sys
 import time
 from typing import Any, Mapping
 
@@ -45,6 +46,20 @@ EFFORT = "xhigh"
 MAX_TOKENS = 16384
 TARIFF_CNY_PER_MILLION = {"input": 3.0, "output": 15.0, "cache_read": 0.3}
 ENDPOINT = "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages"
+_LIMITED_WORKER_BOOTSTRAP = (
+    "import resource,sys; "
+    "limit=int(sys.argv[1]); "
+    "resource.setrlimit(resource.RLIMIT_AS,(limit,limit)); "
+    "from AAAI_experiments.stage5_metric_calculation_0831.pipeline.semantic_validation_worker import main; "
+    "raise SystemExit(main())"
+)
+
+
+def limited_semantic_worker_command(memory_limit_bytes: int) -> list[str]:
+    if memory_limit_bytes <= 0:
+        raise ValueError("semantic worker memory limit must be positive")
+    # The child sets its own address-space limit before importing SymPy.
+    return [sys.executable, "-c", _LIMITED_WORKER_BOOTSTRAP, str(memory_limit_bytes)]
 
 
 def sha256_text(value: str) -> str:
@@ -262,7 +277,8 @@ class Ledger:
 
 async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
               concurrency: int, rpm: int, timeout: float,
-              max_new_tasks: int | None = None) -> dict[str, object]:
+              max_new_tasks: int | None = None,
+              semantic_memory_limit_bytes: int = 2 * 1024**3) -> dict[str, object]:
     limiter = SlidingWindowLimiter(rpm, ledger.recent())
     semantic_limit = asyncio.Semaphore(4)
     queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -340,7 +356,9 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                                     semantic = await asyncio.to_thread(
                                         run_isolated_simplify_semantic_validator,
                                         evaluation_key=key, request=request,
-                                        structured_output=output, timeout_seconds=120.0)
+                                        structured_output=output, timeout_seconds=120.0,
+                                        worker_command=limited_semantic_worker_command(
+                                            semantic_memory_limit_bytes))
                                 if semantic.get("status") != "promotable":
                                     error = f"semantic: {semantic.get('status')}: {semantic.get('error')}"
                         except (httpx.HTTPError, ContractViolation, ValueError) as exc:
@@ -373,6 +391,7 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                             "http_status": status_code, "structured_output": output,
                             "structured_output_recovery": recovery,
                             "semantic_validation": semantic, "usage": usage,
+                            "semantic_worker_rlimit_as_bytes": semantic_memory_limit_bytes,
                             "estimated_cost_cny_assumed_tariff": cost_cny(usage),
                             "error": error,
                         }
@@ -419,6 +438,7 @@ def main() -> int:
     parser.add_argument("--concurrency", type=int, default=32)
     parser.add_argument("--rpm", type=int, default=500)
     parser.add_argument("--timeout", type=float, default=600)
+    parser.add_argument("--semantic-memory-gib", type=float, default=2.0)
     parser.add_argument("--max-new-tasks", type=int,
                         help="schedule at most this many currently unfinished plan rows")
     parser.add_argument("--execute", action="store_true")
@@ -427,6 +447,8 @@ def main() -> int:
         parser.error("concurrency must be 1..512, rpm 1..500, timeout positive")
     if args.max_new_tasks is not None and args.max_new_tasks <= 0:
         parser.error("max-new-tasks must be positive")
+    if not 0.5 <= args.semantic_memory_gib <= 16:
+        parser.error("semantic-memory-gib must be between 0.5 and 16")
     rows, plan_sha = load_plan(args.plan)
     if not args.execute:
         print(json.dumps({"dry_run": True, "tasks": len(rows), "plan_sha256": plan_sha,
@@ -445,7 +467,9 @@ def main() -> int:
     ledger = Ledger(args.output, plan_sha, len(rows))
     print(json.dumps(asyncio.run(run(rows, ledger, token, concurrency=args.concurrency,
                                      rpm=args.rpm, timeout=args.timeout,
-                                     max_new_tasks=args.max_new_tasks)), ensure_ascii=False))
+                                     max_new_tasks=args.max_new_tasks,
+                                     semantic_memory_limit_bytes=int(args.semantic_memory_gib * 1024**3))),
+                     ensure_ascii=False))
     return 0
 
 

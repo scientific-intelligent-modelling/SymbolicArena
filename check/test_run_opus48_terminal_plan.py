@@ -5,10 +5,14 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
 from check import run_opus48_terminal_plan as runner
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications import (
+    run_isolated_simplify_semantic_validator,
+)
 
 
 PLAN = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
@@ -184,3 +188,35 @@ def test_unique_embedded_json_can_be_recovered(surround, recovery) -> None:
     output, _, actual_recovery = runner.validate_message(_Response(text).json(), row)
     assert output == good
     assert actual_recovery == recovery
+
+
+def test_isolated_helper_accepts_bounded_worker_command() -> None:
+    command = [sys.executable, "-c", "import json; print(json.dumps({"
+               "'status':'ok','semantic_evidence':{'decision':'equivalent'}}))"]
+    result = run_isolated_simplify_semantic_validator(
+        evaluation_key="test", request={}, structured_output={},
+        timeout_seconds=2, worker_command=command)
+    assert result["status"] == "promotable"
+
+
+def test_existing_frozen_response_replays_under_two_gib_limit() -> None:
+    frozen_path = Path(
+        "AAAI_experiments/stage5_metric_calculation_0831/work/"
+        "core50_terminal_collection_20260916_v3/opus48_prediction_run_20260916/frozen/"
+        "2a9c2b039aea1d054db74d917476bf5de31ca4cd92b408a22fb46489546f5e85.json"
+    )
+    if not frozen_path.exists():
+        pytest.skip("local frozen response not available")
+    frozen = json.loads(frozen_path.read_text())
+    result = run_isolated_simplify_semantic_validator(
+        evaluation_key=frozen["evaluation_key"], request=frozen["request"],
+        structured_output=frozen["structured_output"], timeout_seconds=15,
+        worker_command=runner.limited_semantic_worker_command(2 * 1024**3))
+    assert result["status"] == "promotable"
+
+
+def test_memory_limited_worker_failure_is_not_promotable() -> None:
+    result = run_isolated_simplify_semantic_validator(
+        evaluation_key="test", request={}, structured_output={}, timeout_seconds=5,
+        worker_command=runner.limited_semantic_worker_command(16 * 1024**2))
+    assert result["status"] != "promotable"
