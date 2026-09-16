@@ -17,6 +17,10 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_si
 
 PLAN = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
             "symbolfit_clean_terminal_refresh_20260916/pred_simplify_plan.jsonl")
+DOWNSTREAM = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
+                  "final_release_20260913/release_v2/downstream")
+EQUIVALENCE_PLAN = DOWNSTREAM / "clean_equivalence_refresh_plan.jsonl"
+STRUCTURE_PLAN = DOWNSTREAM / "clean_structure_refresh_plan.jsonl"
 
 
 def test_source_plan_uses_distinct_model_bound_keys() -> None:
@@ -57,6 +61,88 @@ def test_invalid_json_is_fail_closed() -> None:
                                  "usage": {"input_tokens": 1, "output_tokens": 2}}, row)
 
 
+@pytest.mark.parametrize("plan,kind", [
+    (EQUIVALENCE_PLAN, "equivalence"),
+    (STRUCTURE_PLAN, "stab_structure"),
+])
+def test_downstream_plan_has_independent_model_key_and_bound_pair(plan, kind) -> None:
+    rows, _ = runner.load_plan(plan)
+    assert rows
+    assert all(row["task_type"] == kind for row in rows)
+    assert all(row["opus48_evaluation_key"] != row["evaluation_key"] for row in rows)
+    assert len({row["opus48_evaluation_key"] for row in rows}) == len(rows)
+    first = rows[0]
+    assert first["request"]["evidence_hash"] == first["request"]["deterministic_evidence"]["evidence_sha256"]
+    assert first["dependencies"] == [
+        first["request"]["deterministic_evidence"]["lhs_binding"]["frozen_evaluation_key"],
+        first["request"]["deterministic_evidence"]["rhs_binding"]["frozen_evaluation_key"],
+    ]
+
+
+@pytest.mark.parametrize("plan,good", [
+    (EQUIVALENCE_PLAN, {"decision": "not_equivalent", "evidence_basis": "mixed",
+                        "assumptions": [], "confidence": 0.8, "brief_reason": "Different polynomial."}),
+    (STRUCTURE_PLAN, {"decision": "different_structure", "confidence": 0.8,
+                      "brief_reason": "Different operators."}),
+])
+def test_downstream_schema_and_contract_accept_valid_decision(plan, good) -> None:
+    row = runner.load_plan(plan)[0][0]
+    output, _, recovery = runner.validate_message(_Response(json.dumps(good)).json(), row)
+    assert output == good
+    assert recovery is None
+
+
+@pytest.mark.parametrize("plan,bad", [
+    (EQUIVALENCE_PLAN, {"decision": "equivalent", "evidence_basis": "insufficient",
+                        "assumptions": [], "confidence": 0.8, "brief_reason": "No proof."}),
+    (STRUCTURE_PLAN, {"decision": "equivalent", "confidence": 0.8,
+                      "brief_reason": "Unsupported label."}),
+])
+def test_downstream_invalid_decision_is_not_accepted(plan, bad) -> None:
+    row = runner.load_plan(plan)[0][0]
+    with pytest.raises(runner.StructuredOutputViolation):
+        runner.validate_message(_Response(json.dumps(bad)).json(), row)
+
+
+def test_nonbare_response_model_is_rejected() -> None:
+    row = runner.load_plan(EQUIVALENCE_PLAN)[0][0]
+    body = _Response('{"decision":"undetermined","evidence_basis":"insufficient",'
+                     '"assumptions":[],"confidence":0.5,"brief_reason":"Unclear."}').json()
+    body["model"] = runner.KEY_MODEL
+    with pytest.raises(runner.ContractViolation, match="response model drift"):
+        runner.validate_message(body, row)
+
+
+def test_invalid_structure_pair_is_rejected_before_any_http(tmp_path, monkeypatch) -> None:
+    row = json.loads(next(STRUCTURE_PLAN.open(encoding="utf-8")))
+    row["request"]["prediction_b_valid_output"] = False
+    plan = tmp_path / "invalid_pair.jsonl"
+    plan.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    monkeypatch.setattr(runner.httpx, "AsyncClient", _Client)
+    _Client.calls = 0
+    with pytest.raises(ValueError, match="invalid seed pair"):
+        runner.validate_pair_binding(row, line_number=1)
+    with pytest.raises(ValueError):
+        runner.load_plan(plan)
+    assert _Client.calls == 0
+
+
+def test_pair_dependency_drift_and_mixed_plan_fail_closed(tmp_path) -> None:
+    pair = json.loads(next(STRUCTURE_PLAN.open(encoding="utf-8")))
+    pair["dependencies"][0] = "0" * 64
+    bad = tmp_path / "bad.jsonl"
+    bad.write_text(json.dumps(pair) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="dependency keys"):
+        runner.load_plan(bad)
+
+    pred = json.loads(next(PLAN.open(encoding="utf-8")))
+    pair = json.loads(next(STRUCTURE_PLAN.open(encoding="utf-8")))
+    mixed = tmp_path / "mixed.jsonl"
+    mixed.write_text(json.dumps(pred) + "\n" + json.dumps(pair) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="task types cannot share"):
+        runner.load_plan(mixed)
+
+
 class _Response:
     def __init__(self, text: str) -> None:
         self.status_code = 200
@@ -86,6 +172,38 @@ class _Client:
     async def post(self, *args, **kwargs) -> _Response:
         type(self).calls += 1
         return type(self).responses.pop(0)
+
+
+@pytest.mark.parametrize("plan,good", [
+    (EQUIVALENCE_PLAN, {"decision": "equivalent", "evidence_basis": "symbolic_proof",
+                        "assumptions": [], "confidence": 0.9, "brief_reason": "Identity."}),
+    (STRUCTURE_PLAN, {"decision": "same_canonical_structure", "confidence": 0.9,
+                      "brief_reason": "Matching canonical trees."}),
+])
+def test_downstream_freeze_preserves_pair_evidence_and_resumes(tmp_path, monkeypatch, plan, good) -> None:
+    row = runner.load_plan(plan)[0][0]
+    monkeypatch.setattr(runner.httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(runner, "run_isolated_simplify_semantic_validator",
+                        lambda **kwargs: pytest.fail("pair judgment must not run simplify validation"))
+    _Client.responses = [_Response(json.dumps(good))]
+    _Client.calls = 0
+    first = asyncio.run(runner.run([row], runner.Ledger(tmp_path, "pair-plan", 1),
+                                   "dummy", concurrency=1, rpm=500, timeout=1))
+    assert first["frozen"] == 1
+    frozen = json.loads((tmp_path / "frozen" / f"{row['opus48_evaluation_key']}.json").read_text())
+    assert frozen["task_type"] == row["task_type"]
+    assert frozen["request"] == row["request"]
+    assert frozen["plan_dependencies"] == row["dependencies"]
+    assert frozen["requested_model"] == frozen["response_model"] == runner.MODEL
+    assert frozen["response"]["content"][0]["text"] == json.dumps(good)
+    assert frozen["semantic_validation"] is None
+    assert frozen["semantic_worker_rlimit_as_bytes"] is None
+    resumed = asyncio.run(runner.run([row], runner.Ledger(tmp_path, "pair-plan", 1),
+                                     "dummy", concurrency=1, rpm=500, timeout=1))
+    assert resumed["frozen"] == 1
+    assert _Client.calls == 1
+    with pytest.raises(ValueError, match="different task type"):
+        runner.Ledger(tmp_path, "pair-plan", 1).bind_task_type("pred_simplify")
 
 
 def test_two_attempt_cap_and_resume_without_repeating_success(tmp_path, monkeypatch) -> None:

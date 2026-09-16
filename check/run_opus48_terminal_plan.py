@@ -1,4 +1,4 @@
-"""Run a frozen Stage5 prediction-simplification plan through the Opus 4.8 API.
+"""Run a frozen Stage5 symbolic-judgment plan through the Opus 4.8 API.
 
 The source plan is never modified.  Every result uses a new model-bound key, and
 only schema- AND Stage5-semantic-valid outputs enter ``frozen``.  This command
@@ -46,6 +46,8 @@ EFFORT = "xhigh"
 MAX_TOKENS = 16384
 TARIFF_CNY_PER_MILLION = {"input": 3.0, "output": 15.0, "cache_read": 0.3}
 ENDPOINT = "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages"
+TASK_KINDS = {"pred_simplify": "simplify", "equivalence": "equivalence",
+              "stab_structure": "structure"}
 _LIMITED_WORKER_BOOTSTRAP = (
     "import resource,sys; "
     "limit=int(sys.argv[1]); "
@@ -73,16 +75,72 @@ def atomic_json(path: Path, value: Mapping[str, object]) -> None:
     temporary.replace(path)
 
 
+def validate_pair_binding(row: Mapping[str, Any], *, line_number: int) -> None:
+    """Reject a downstream task unless its two frozen inputs match the plan evidence."""
+
+    request = row["request"]
+    evidence = request.get("deterministic_evidence")
+    if not isinstance(evidence, Mapping):
+        raise ValueError(f"line {line_number}: missing deterministic pair evidence")
+    expected_hash = sha256_text(canonical_json(
+        {key: value for key, value in evidence.items() if key != "evidence_sha256"}))
+    if evidence.get("evidence_sha256") != expected_hash or request.get("evidence_hash") != expected_hash:
+        raise ValueError(f"line {line_number}: deterministic pair evidence hash drift")
+    lhs = evidence.get("lhs_binding")
+    rhs = evidence.get("rhs_binding")
+    if not isinstance(lhs, Mapping) or not isinstance(rhs, Mapping):
+        raise ValueError(f"line {line_number}: missing upstream expression bindings")
+    dependencies = row.get("dependencies")
+    bound_keys = [lhs.get("frozen_evaluation_key"), rhs.get("frozen_evaluation_key")]
+    if (not isinstance(dependencies, list) or dependencies != bound_keys
+            or any(not isinstance(key, str) or not key for key in bound_keys)):
+        raise ValueError(f"line {line_number}: upstream dependency keys differ from pair evidence")
+    for side, binding in (("lhs", lhs), ("rhs", rhs)):
+        if not isinstance(binding.get("plan_original_expression"), str) or not binding["plan_original_expression"].strip():
+            raise ValueError(f"line {line_number}: {side} source expression missing")
+        if not isinstance(binding.get("frozen_effective_expression"), str) or not binding["frozen_effective_expression"].strip():
+            raise ValueError(f"line {line_number}: {side} effective expression missing")
+
+    if row["task_type"] == "equivalence":
+        fields = (("effective_ground_truth_expression", lhs),
+                  ("effective_prediction_expression", rhs))
+        source_hashes = (rhs.get("source_result_sha256"),)
+        if request.get("prediction_result_sha256") != rhs.get("source_result_sha256"):
+            raise ValueError(f"line {line_number}: prediction source result drift")
+    else:
+        fields = (("effective_prediction_a_expression", lhs),
+                  ("effective_prediction_b_expression", rhs))
+        source_hashes = (lhs.get("source_result_sha256"), rhs.get("source_result_sha256"))
+        if request.get("prediction_a_valid_output") is not True or request.get("prediction_b_valid_output") is not True:
+            raise ValueError(f"line {line_number}: invalid seed pair must not request structure")
+        if (request.get("prediction_a_result_sha256") != lhs.get("source_result_sha256")
+                or request.get("prediction_b_result_sha256") != rhs.get("source_result_sha256")):
+            raise ValueError(f"line {line_number}: seed-pair source results drift")
+        if request.get("deterministic_pair_evidence") != evidence:
+            raise ValueError(f"line {line_number}: deterministic pair evidence copy drift")
+    if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
+           for value in source_hashes):
+        raise ValueError(f"line {line_number}: prediction source result SHA256 missing")
+    for field, binding in fields:
+        if request.get(field) != binding.get("frozen_effective_expression"):
+            raise ValueError(f"line {line_number}: {field} differs from frozen upstream")
+
+
 def load_plan(path: Path) -> tuple[list[dict[str, Any]], str]:
     raw = path.read_bytes()
     rows: list[dict[str, Any]] = []
     keys: set[str] = set()
+    plan_type: str | None = None
     for line_number, line in enumerate(raw.splitlines(), 1):
         if not line.strip():
             continue
         row = json.loads(line)
-        if row.get("task_type") != "pred_simplify":
-            raise ValueError(f"line {line_number}: only pred_simplify is supported")
+        if row.get("task_type") not in TASK_KINDS:
+            raise ValueError(f"line {line_number}: unsupported task_type")
+        if plan_type is None:
+            plan_type = row["task_type"]
+        elif row["task_type"] != plan_type:
+            raise ValueError(f"line {line_number}: task types cannot share a plan or output state")
         request = row["request"]
         schema = row["schema_content"]
         template = row["prompt_template"]
@@ -103,6 +161,8 @@ def load_plan(path: Path) -> tuple[list[dict[str, Any]], str]:
         )
         if evaluation_key(**common) != row["evaluation_key"]:
             raise ValueError(f"line {line_number}: source Opus5 key drift")
+        if row["task_type"] != "pred_simplify":
+            validate_pair_binding(row, line_number=line_number)
         key = evaluation_key(**common, model=KEY_MODEL, effort=EFFORT)
         if key in keys:
             raise ValueError(f"line {line_number}: duplicate Opus4.8 key")
@@ -184,7 +244,7 @@ def validate_message(body: object, row: Mapping[str, Any]) -> tuple[dict[str, ob
         except ValidationError as exc:
             raise StructuredOutputViolation(f"schema: {exc.message}") from exc
         try:
-            return validate_structured_output("simplify", parsed)
+            return validate_structured_output(TASK_KINDS[row["task_type"]], parsed)
         except ContractViolation as exc:
             raise StructuredOutputViolation(str(exc)) from exc
 
@@ -242,6 +302,15 @@ class Ledger:
         self.conn.commit()
         self.cap = math.ceil(1.5 * count)
 
+    def bind_task_type(self, task_type: str) -> None:
+        prior = self.conn.execute("SELECT value FROM meta WHERE name='task_type'").fetchone()
+        if prior is not None and prior[0] != task_type:
+            raise ValueError("output directory belongs to a different task type")
+        if prior is None:
+            # Older pred_simplify ledgers are still isolated by their frozen plan hash.
+            self.conn.execute("INSERT INTO meta VALUES ('task_type', ?)", (task_type,))
+            self.conn.commit()
+
     def recent(self) -> list[float]:
         now = time.time()
         return [float(x[0]) for x in self.conn.execute(
@@ -279,6 +348,10 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
               concurrency: int, rpm: int, timeout: float,
               max_new_tasks: int | None = None,
               semantic_memory_limit_bytes: int = 2 * 1024**3) -> dict[str, object]:
+    task_types = {row["task_type"] for row in rows}
+    if len(task_types) != 1 or not task_types <= TASK_KINDS.keys():
+        raise ValueError("one supported task type is required per plan and output state")
+    ledger.bind_task_type(next(iter(task_types)))
     limiter = SlidingWindowLimiter(rpm, ledger.recent())
     semantic_limit = asyncio.Semaphore(4)
     queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -296,6 +369,7 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
             queue.put_nowait(row)
             selected += 1
     completed = 0
+    reported_attempt_milestone = ledger.count() // 100
     stop = asyncio.Event()
     headers = {"Authorization": f"Bearer {token}", "anthropic-version": "2023-06-01",
                "Content-Type": "application/json"}
@@ -304,7 +378,7 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
     async with httpx.AsyncClient(headers=headers, limits=limits, timeout=timeout,
                                  trust_env=False) as client:
         async def worker() -> None:
-            nonlocal completed
+            nonlocal completed, reported_attempt_milestone
             while not queue.empty() and not stop.is_set():
                 try:
                     row = queue.get_nowait()
@@ -352,15 +426,16 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                                     stop.set()
                             else:
                                 output, usage, recovery = validate_message(body, row)
-                                async with semantic_limit:
-                                    semantic = await asyncio.to_thread(
-                                        run_isolated_simplify_semantic_validator,
-                                        evaluation_key=key, request=request,
-                                        structured_output=output, timeout_seconds=120.0,
-                                        worker_command=limited_semantic_worker_command(
-                                            semantic_memory_limit_bytes))
-                                if semantic.get("status") != "promotable":
-                                    error = f"semantic: {semantic.get('status')}: {semantic.get('error')}"
+                                if row["task_type"] == "pred_simplify":
+                                    async with semantic_limit:
+                                        semantic = await asyncio.to_thread(
+                                            run_isolated_simplify_semantic_validator,
+                                            evaluation_key=key, request=request,
+                                            structured_output=output, timeout_seconds=120.0,
+                                            worker_command=limited_semantic_worker_command(
+                                                semantic_memory_limit_bytes))
+                                    if semantic.get("status") != "promotable":
+                                        error = f"semantic: {semantic.get('status')}: {semantic.get('error')}"
                         except (httpx.HTTPError, ContractViolation, ValueError) as exc:
                             error = f"{type(exc).__name__}: {exc}"
                             if isinstance(exc, ContractViolation) and not isinstance(exc, StructuredOutputViolation):
@@ -372,12 +447,15 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                         attempt = {
                             "attempt_id": attempt_id, "evaluation_key": key,
                             "source_evaluation_key": row["evaluation_key"],
-                            "logical_id": row["logical_id"],
+                            "logical_id": row["logical_id"], "task_type": row["task_type"],
                             "model": MODEL, "key_model": KEY_MODEL, "effort": EFFORT,
+                            "requested_model": MODEL,
+                            "response_model": body.get("model") if isinstance(body, Mapping) else None,
                             "prompt_version": row["prompt_version"], "schema_version": row["schema_version"],
                             "prompt_sha256": row["prompt_sha256"], "schema_sha256": row["schema_sha256"],
                             "rendered_prompt_sha256": sha256_text(prompt),
                             "source_input_hash": row["input_hash"], "request": request,
+                            "plan_dependencies": row.get("dependencies", []),
                             "terminal_binding_evidence": request.get("terminal_binding_evidence"),
                             "terminal_expression": request.get("expression"),
                             "terminal_source_result_sha256": (
@@ -391,7 +469,8 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                             "http_status": status_code, "structured_output": output,
                             "structured_output_recovery": recovery,
                             "semantic_validation": semantic, "usage": usage,
-                            "semantic_worker_rlimit_as_bytes": semantic_memory_limit_bytes,
+                            "semantic_worker_rlimit_as_bytes": (
+                                semantic_memory_limit_bytes if row["task_type"] == "pred_simplify" else None),
                             "estimated_cost_cny_assumed_tariff": cost_cny(usage),
                             "error": error,
                         }
@@ -402,16 +481,18 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                             atomic_json(ledger.root / "frozen" / f"{key}.json", frozen)
                         ledger.finish(attempt_id, "success" if error is None else "failed",
                                       error, cost_cny(usage))
+                        milestone = ledger.count() // 100
+                        if milestone > reported_attempt_milestone:
+                            reported_attempt_milestone = milestone
+                            report = ledger.summary(rows)
+                            atomic_json(ledger.root / "progress.json", report)
+                            print(json.dumps(report, ensure_ascii=False), flush=True)
                         if error is None or not retryable:
                             break
                         if attempt_number < 2:
                             await asyncio.sleep(min(5.0, attempt_number * 2.0))
                 finally:
                     completed += 1
-                    if completed % 100 == 0:
-                        report = ledger.summary(rows)
-                        atomic_json(ledger.root / "progress.json", report)
-                        print(json.dumps(report, ensure_ascii=False), flush=True)
                     queue.task_done()
 
         await asyncio.gather(*(worker() for _ in range(concurrency)))
