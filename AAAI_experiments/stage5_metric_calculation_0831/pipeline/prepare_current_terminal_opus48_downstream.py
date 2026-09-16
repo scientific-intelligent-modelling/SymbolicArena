@@ -369,10 +369,11 @@ def _old_decisions(stage: Path, release: Path, phase: str) -> dict[Any, tuple[di
         indexes = _unique_index(_rows(release / condition / f"opus5_{suffix}.jsonl"),
                                 lambda row: row["logical_id"])
         fields = ("algorithm_slug", "dataset_id", "variables", "effective_prediction_expression",
-                  "effective_ground_truth_expression", "prediction_result_sha256",
+                  "effective_ground_truth_expression", "prediction_result_sha256", "prediction_frozen_plan_sha256",
                   "ground_truth_frozen_evaluation_key") if phase == "equivalence" else (
                   "algorithm_slug", "dataset_id", "effective_prediction_a_expression",
                   "effective_prediction_b_expression", "prediction_a_result_sha256", "prediction_b_result_sha256",
+                  "prediction_a_frozen_plan_sha256", "prediction_b_frozen_plan_sha256",
                   "prediction_a_valid_output", "prediction_b_valid_output")
         with plan_path.open(encoding="utf-8") as handle:
             for line in handle:
@@ -420,6 +421,10 @@ def _candidate(old: tuple[dict[str, Any], dict[str, Any]] | None, request: Mappi
         return None
     if (index.get("state") != "frozen" or index.get("evaluation_key") != plan.get("evaluation_key")
         or not verify_response_artifact(index, REPO_ROOT)):
+        return None
+    decided = ({"equivalent", "not_equivalent"} if phase == "equivalence" else
+               {"mathematically_equivalent", "same_canonical_structure", "different_structure"})
+    if index.get("effective_decision") not in decided:
         return None
     return {"old_evaluation_key": index["evaluation_key"], "old_response_path": index["response_path"],
             "old_response_sha256": index["response_sha256"], "old_decision": index.get("effective_decision"),
@@ -527,7 +532,7 @@ def _gt_reference_rows(stage: Path) -> list[dict[str, Any]]:
 
 def build(*, collection: Path, release: Path, stage: Path, output: Path,
           max_per_phase: int | None = None, pair_timeout_seconds: float = 120.0,
-          pair_memory_gib: float = 2.0) -> dict[str, Any]:
+          pair_memory_gib: float = 2.0, only_undetermined: bool = False) -> dict[str, Any]:
     report, predictions, current, unresolved = inventory(collection=collection, release=release, stage=stage)
     gt = _gt_records(stage)
     old_eq, old_struct = _old_decisions(stage, release, "equivalence"), _old_decisions(stage, release, "structure")
@@ -544,6 +549,10 @@ def build(*, collection: Path, release: Path, stage: Path, output: Path,
     for key, pred in sorted(predictions.items()):
         if max_per_phase is not None and len(plans["equivalence"]) >= max_per_phase:
             break
+        if only_undetermined and (
+            key not in old_eq or old_eq[key][1].get("effective_decision") != "undetermined"
+        ):
+            continue
         condition, algorithm, dataset, seed = key
         gtp, gtf = gt[dataset]
         base = {"algorithm": pred.plan.request["algorithm"], "algorithm_slug": pred.plan.request["algorithm_slug"],
@@ -608,6 +617,11 @@ def build(*, collection: Path, release: Path, stage: Path, output: Path,
                 unresolved.append({"key": (condition, algorithm, dataset, a, b), "phase": "structure",
                                    "reason": "waiting_for_prediction_simplification"})
                 continue
+            if only_undetermined and (
+                (condition, algorithm, dataset, a, b) not in old_struct or
+                old_struct[(condition, algorithm, dataset, a, b)][1].get("effective_decision") != "undetermined"
+            ):
+                continue
             pa, pb = predictions[ka], predictions[kb]
             logical_id = f"stab_structure::{pa.plan.request['algorithm_slug']}::{pa.plan.request['dataset_index']}::s{a}-s{b}"
             structure_attempts += 1
@@ -657,7 +671,9 @@ def build(*, collection: Path, release: Path, stage: Path, output: Path,
     _write(output / "active_prediction_unavailable.jsonl", (
         row for row in active_rows if row["processing_status"] != "ready"))
     _write(output / "unresolved.jsonl", unresolved)
-    report.update({"complete_plan": max_per_phase is None, "equivalence_planned": len(plans["equivalence"]),
+    report.update({"complete_plan": max_per_phase is None and not only_undetermined,
+                   "only_undetermined": only_undetermined,
+                   "equivalence_planned": len(plans["equivalence"]),
                    "structure_planned": len(plans["structure"]),
                    "equivalence_reuse_candidates": len(candidates["equivalence"]),
                    "structure_reuse_candidates": len(candidates["structure"]),
@@ -691,6 +707,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--inventory-only", action="store_true")
     parser.add_argument("--max-per-phase", type=int)
+    parser.add_argument("--only-undetermined", action="store_true")
     parser.add_argument("--pair-timeout-seconds", type=float, default=120.0)
     parser.add_argument("--pair-memory-gib", type=float, default=2.0)
     args = parser.parse_args()
@@ -702,7 +719,8 @@ def main() -> None:
         report = build(collection=args.collection, release=args.release, stage=args.stage,
                        output=args.output, max_per_phase=args.max_per_phase,
                        pair_timeout_seconds=args.pair_timeout_seconds,
-                       pair_memory_gib=args.pair_memory_gib)
+                       pair_memory_gib=args.pair_memory_gib,
+                       only_undetermined=args.only_undetermined)
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

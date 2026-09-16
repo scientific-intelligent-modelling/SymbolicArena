@@ -64,12 +64,37 @@ def test_structure_reuse_rejects_changed_seed_expression(monkeypatch) -> None:
                    "prediction_a_valid_output": True, "prediction_b_valid_output": True}
     old = ({"evaluation_key": "old-key", "request": old_request},
            {"state": "frozen", "evaluation_key": "old-key", "response_path": "artifact.json",
-            "response_sha256": "c" * 64})
+            "response_sha256": "c" * 64, "effective_decision": "different_structure"})
     current = {**old_request, "prediction_a_current_selected_result_sha256": "a" * 64,
                "prediction_b_current_selected_result_sha256": "b" * 64}
     assert downstream._candidate(old, current, "structure") is not None
     assert downstream._candidate(old, {**current, "effective_prediction_b_expression": "x0 + 2"},
                                  "structure") is None
+
+
+@pytest.mark.parametrize("phase", ["equivalence", "structure"])
+def test_undetermined_judgment_is_not_reused(monkeypatch, phase: str) -> None:
+    monkeypatch.setattr(downstream, "verify_response_artifact", lambda *_: True)
+    if phase == "equivalence":
+        request = {"algorithm_slug": "pysr", "dataset_id": "BPG3", "variables": ["x0"],
+                   "effective_prediction_expression": "x0 + 1",
+                   "effective_ground_truth_expression": "x0",
+                   "prediction_result_sha256": "a" * 64,
+                   "ground_truth_frozen_evaluation_key": "gt-key"}
+        current = {**request, "prediction_current_selected_result_sha256": "a" * 64}
+    else:
+        request = {"algorithm_slug": "pysr", "dataset_id": "BPG3",
+                   "effective_prediction_a_expression": "x0",
+                   "effective_prediction_b_expression": "x0 + 1",
+                   "prediction_a_result_sha256": "a" * 64,
+                   "prediction_b_result_sha256": "b" * 64,
+                   "prediction_a_valid_output": True, "prediction_b_valid_output": True}
+        current = {**request, "prediction_a_current_selected_result_sha256": "a" * 64,
+                   "prediction_b_current_selected_result_sha256": "b" * 64}
+    old = ({"evaluation_key": "old-key", "request": request},
+           {"state": "frozen", "evaluation_key": "old-key", "response_path": "artifact.json",
+            "response_sha256": "c" * 64, "effective_decision": "undetermined"})
+    assert downstream._candidate(old, current, phase) is None
 
 
 def test_pair_evidence_runs_in_bounded_child(monkeypatch) -> None:
