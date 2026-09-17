@@ -281,6 +281,8 @@ def build(source: Path, output: Path, zip_path: Path | None = None) -> dict:
     if output.exists() or (zip_path is not None and zip_path.exists()):
         raise ValueError("selected-only output or ZIP already exists")
     current = json.loads((source / "current_manifest.json").read_text(encoding="utf-8"))
+    source_bundle_status = json.loads((source / "manifest.json").read_text(encoding="utf-8"))[
+        "source_bundle_status"]
     require(current["all_15_current_terminal_formal_ready"] is True and current["run_count"] == 6750,
             "source is not the final current-terminal release")
     selection, terminals, archive_report = validate_selected_archive(source)
@@ -338,6 +340,9 @@ def build(source: Path, output: Path, zip_path: Path | None = None) -> dict:
         "task_metric_table":"metrics/task_stability.csv",
         "selected_raw_snapshots":"snapshots/selected_run_physical_snapshots.tar.zst",
         "snapshot_audit":archive_report,
+        "physical_source_gaps_carried_forward":17,
+        "selected_source_bundle_copies_omitted":source_bundle_status["copied_unique_blobs"],
+        "source_bundle_omission_reason":"Selected physical members and all logical minute bindings are retained in the verified archive; byte-for-byte original trajectory-container copies are not included.",
         "current_symbolic_response_count":response_count,
         "gplearn_symbolic_basis":current["gplearn_symbolic_basis"],
         "gplearn_tree_basis_note":current["gplearn_tree_basis_note"],
@@ -350,7 +355,11 @@ def build(source: Path, output: Path, zip_path: Path | None = None) -> dict:
     (output / "README.md").write_text(
         "# Core-50 selected-only release\n\nExactly one current run is kept for every "
         "condition/algorithm/dataset/seed key. The 624 superseded runs and all historical "
-        "leaderboards, caches, and unselected source bundles are omitted. The 6,750 selected "
+        "leaderboards and caches are omitted. Copies of 333 selected trajectory source "
+        "containers are also omitted as redundant: their selected physical members and "
+        "minute bindings remain in the verified snapshot archive, but byte-for-byte "
+        "reinspection of those original containers requires the larger provenance release. "
+        "The 6,750 selected "
         "result and terminal payloads, current 180-minute ID/OOD/EFF trajectories, final "
         "six-axis components, datasets, fixed Ground Truth, active model judgments, and "
         "physical selected-run snapshots remain. gplearn uses current native protected "
