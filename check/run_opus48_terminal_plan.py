@@ -12,6 +12,7 @@ import asyncio
 from collections import deque
 import hashlib
 import json
+import logging
 import math
 from pathlib import Path
 import re
@@ -519,6 +520,7 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
 
 
 def main() -> int:
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
