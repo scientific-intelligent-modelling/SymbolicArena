@@ -65,6 +65,8 @@ def set_f1(predicted: set[str], expected: set[str]) -> float:
     if not predicted or not expected:
         return 0.0
     overlap = len(predicted & expected)
+    if overlap == 0:
+        return 0.0
     precision = overlap / len(predicted)
     recall = overlap / len(expected)
     return 2.0 * precision * recall / (precision + recall)
@@ -197,4 +199,3 @@ def stability_score(
         structural_consistency=structural,
         score=score,
     )
-

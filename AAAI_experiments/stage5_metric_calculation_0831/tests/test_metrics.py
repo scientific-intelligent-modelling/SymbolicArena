@@ -77,6 +77,7 @@ def test_efficiency_rejects_missing_or_invalid_trajectory() -> None:
 def test_set_f1_empty_and_partial_sets() -> None:
     assert set_f1(set(), set()) == pytest.approx(1.0)
     assert set_f1({"x0"}, set()) == pytest.approx(0.0)
+    assert set_f1({"protected_div"}, {"pow"}) == pytest.approx(0.0)
     assert set_f1({"x0", "x1"}, {"x1", "x2"}) == pytest.approx(0.5)
 
 
@@ -110,4 +111,3 @@ def test_stability_requires_exactly_three_seeds_and_pairs() -> None:
     runs = [RunQuality(1.0, 1.0, True)] * 2
     with pytest.raises(MetricContractError):
         stability_score(runs, structural_pair_results=[True])
-
