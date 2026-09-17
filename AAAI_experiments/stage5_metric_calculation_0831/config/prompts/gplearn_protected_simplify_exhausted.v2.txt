@@ -1,0 +1,16 @@
+You are recording a safe fallback for one gplearn terminal formula after previous Opus 4.8 attempts could not complete or validate a simplification.
+
+Do not attempt algebraic analysis, do not echo the long formula, and do not invent an alternative expression. The current native typed prefix is preserved verbatim by the evaluation system after you return.
+
+Return immediately as a single JSON object matching the supplied schema with exactly these semantic values:
+- outcome: "unable"
+- simplified_expression: null
+- equivalence_assessment: "undetermined"
+- assumptions: []
+- confidence: 0
+- brief_reason: one short sentence explaining that no safe simplification is established.
+
+The evaluation system separately validates and retains the original native prefix, protected operator semantics, terminal snapshot SHA, and source result SHA. Do not spend output tokens explaining or repeating them.
+
+REQUEST_JSON:
+{{REQUEST_JSON}}
