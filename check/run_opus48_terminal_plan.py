@@ -38,6 +38,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract im
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_simplifications import (
     run_isolated_simplify_semantic_validator,
 )
+from check.validate_gplearn_opus48_response import validate_response as validate_gplearn_response
 
 
 MODEL = "claude-opus-4-8"
@@ -386,6 +387,7 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                     return
                 key = row["opus48_evaluation_key"]
                 request = row["request"]
+                gplearn_native = request.get("native_semantics_version") == "gplearn_native_protected_prefix.v1"
                 prompt = row["rendered_prompt"]
                 payload = {"model": MODEL, "max_tokens": MAX_TOKENS, "stream": False,
                            "thinking": {"type": "adaptive"}, "output_config": {"effort": EFFORT},
@@ -428,12 +430,16 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                                 output, usage, recovery = validate_message(body, row)
                                 if row["task_type"] == "pred_simplify":
                                     async with semantic_limit:
-                                        semantic = await asyncio.to_thread(
-                                            run_isolated_simplify_semantic_validator,
-                                            evaluation_key=key, request=request,
-                                            structured_output=output, timeout_seconds=120.0,
-                                            worker_command=limited_semantic_worker_command(
-                                                semantic_memory_limit_bytes))
+                                        if gplearn_native:
+                                            semantic = await asyncio.to_thread(
+                                                validate_gplearn_response, request, output)
+                                        else:
+                                            semantic = await asyncio.to_thread(
+                                                run_isolated_simplify_semantic_validator,
+                                                evaluation_key=key, request=request,
+                                                structured_output=output, timeout_seconds=120.0,
+                                                worker_command=limited_semantic_worker_command(
+                                                    semantic_memory_limit_bytes))
                                     if semantic.get("status") != "promotable":
                                         error = f"semantic: {semantic.get('status')}: {semantic.get('error')}"
                         except (httpx.HTTPError, ContractViolation, ValueError) as exc:
@@ -470,7 +476,8 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                             "structured_output_recovery": recovery,
                             "semantic_validation": semantic, "usage": usage,
                             "semantic_worker_rlimit_as_bytes": (
-                                semantic_memory_limit_bytes if row["task_type"] == "pred_simplify" else None),
+                                semantic_memory_limit_bytes if row["task_type"] == "pred_simplify"
+                                and not gplearn_native else None),
                             "estimated_cost_cny_assumed_tariff": cost_cny(usage),
                             "error": error,
                         }
