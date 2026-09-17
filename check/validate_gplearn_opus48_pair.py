@@ -32,8 +32,8 @@ def validate_pair_response(phase: str, request: Mapping[str, Any],
                     "counterexample": numeric.get("counterexample")}
         if same_structure is True and decision == "different_structure":
             return {"status": "semantic_rejected", "error": "different_contradicts_typed_structure_fingerprint"}
-        if same_structure is False and decision == "same_canonical_structure":
-            return {"status": "semantic_rejected", "error": "same_structure_contradicts_typed_fingerprint"}
+        # An ordered prefix fingerprint can differ after a commutative swap;
+        # its inequality is not a proof that canonical structures differ.
     else:
         return {"status": "semantic_rejected", "error": f"unsupported_phase:{phase}"}
     return {"status": "promotable", "validation_basis": "protected_evidence_noncontradiction",

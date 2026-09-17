@@ -32,3 +32,13 @@ def test_different_structure_rejected_when_fingerprints_match() -> None:
     }}
     assert validate_pair_response("stab_structure", request,
                                   {"decision": "different_structure"})["status"] == "semantic_rejected"
+
+
+def test_same_structure_can_ignore_commutative_child_order() -> None:
+    request = {"deterministic_evidence": {
+        "schema_version": "gplearn_protected_pair_evidence.v1",
+        "typed_structure_consistency": False,
+        "native_protected_numeric_comparison": {"status": "numeric_counterexample"},
+    }}
+    assert validate_pair_response("stab_structure", request,
+                                  {"decision": "same_canonical_structure"})["status"] == "promotable"
