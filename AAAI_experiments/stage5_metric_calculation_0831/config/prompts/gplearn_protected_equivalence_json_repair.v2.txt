@@ -1,0 +1,9 @@
+Judge one current gplearn protected typed-prefix prediction against its fixed ordinary Ground Truth expression. Respect the pdiv/plog/psqrt/pinv definitions and the frozen variable mapping in REQUEST_JSON. A finite counterexample means not_equivalent. Numeric agreement alone is not proof; use undetermined if needed.
+
+Return only one JSON object. Its keys must be EXACTLY these five keys, with no extra fields, no *_note fields, and no Markdown:
+decision, evidence_basis, assumptions, confidence, brief_reason.
+
+decision must be equivalent, not_equivalent, or undetermined. evidence_basis must be symbolic_proof, numerical_support, structural_analysis, mixed, or insufficient. assumptions is a short array of strings. confidence is a number from 0 to 1. brief_reason is one short sentence. If decision is undetermined, evidence_basis must be insufficient. Do not repeat the input expression.
+
+REQUEST_JSON:
+{{REQUEST_JSON}}
