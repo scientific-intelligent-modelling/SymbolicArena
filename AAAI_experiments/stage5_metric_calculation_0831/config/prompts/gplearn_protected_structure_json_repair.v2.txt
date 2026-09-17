@@ -1,0 +1,9 @@
+Judge one pair of current gplearn terminal typed-prefix formulas under exact protected pdiv/plog/psqrt/pinv semantics. Fixed input columns may not be permuted. Numeric counterexamples disprove mathematical equivalence. For same_canonical_structure, abstract fitted constants and respect commutativity: mul(a,b) and mul(b,a) can share canonical structure even if their ordered prefix fingerprints differ. Do not equate protected operators with ordinary functions.
+
+Return only one JSON object. Its keys must be EXACTLY these three keys, with no extra fields, no *_dup or *_end fields, and no Markdown:
+decision, confidence, brief_reason.
+
+decision must be mathematically_equivalent, same_canonical_structure, different_structure, or undetermined. confidence is a number from 0 to 1. brief_reason is one short sentence referring to the decisive evidence. Do not repeat either long input formula.
+
+REQUEST_JSON:
+{{REQUEST_JSON}}
