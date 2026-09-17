@@ -40,6 +40,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.audit_exhausted_si
     run_isolated_simplify_semantic_validator,
 )
 from check.validate_gplearn_opus48_response import validate_response as validate_gplearn_response
+from check.validate_gplearn_opus48_pair import validate_pair_response as validate_gplearn_pair_response
 
 
 MODEL = "claude-opus-4-8"
@@ -389,6 +390,9 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                 key = row["opus48_evaluation_key"]
                 request = row["request"]
                 gplearn_native = request.get("native_semantics_version") == "gplearn_native_protected_prefix.v1"
+                gplearn_pair = (row["task_type"] in {"equivalence", "stab_structure"}
+                                and request.get("deterministic_evidence", {}).get("schema_version")
+                                == "gplearn_protected_pair_evidence.v1")
                 prompt = row["rendered_prompt"]
                 payload = {"model": MODEL, "max_tokens": MAX_TOKENS, "stream": False,
                            "thinking": {"type": "adaptive"}, "output_config": {"effort": EFFORT},
@@ -441,6 +445,10 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                                                 structured_output=output, timeout_seconds=120.0,
                                                 worker_command=limited_semantic_worker_command(
                                                     semantic_memory_limit_bytes))
+                                    if semantic.get("status") != "promotable":
+                                        error = f"semantic: {semantic.get('status')}: {semantic.get('error')}"
+                                elif gplearn_pair:
+                                    semantic = validate_gplearn_pair_response(row["task_type"], request, output)
                                     if semantic.get("status") != "promotable":
                                         error = f"semantic: {semantic.get('status')}: {semantic.get('error')}"
                         except (httpx.HTTPError, ContractViolation, ValueError) as exc:

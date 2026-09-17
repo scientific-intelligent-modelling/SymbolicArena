@@ -24,6 +24,9 @@ STRUCTURE_PLAN = DOWNSTREAM / "clean_structure_refresh_plan.jsonl"
 GPLEARN_PLAN = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
                     "core50_terminal_collection_20260916_v3/gplearn_opus48_prediction_plan_v3/"
                     "pred_simplify_plan.jsonl")
+GPLEARN_EQ_PLAN = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
+                        "core50_terminal_collection_20260916_v3/gplearn_protected_downstream_full_v1/"
+                        "equivalence_plan.jsonl")
 
 
 def test_source_plan_uses_distinct_model_bound_keys() -> None:
@@ -296,6 +299,20 @@ def test_gplearn_uses_native_protected_semantic_validator(tmp_path, monkeypatch)
     assert report["frozen"] == 1
     frozen = json.loads((tmp_path / "frozen" / f"{row['opus48_evaluation_key']}.json").read_text())
     assert frozen["semantic_validation"]["resolution"] == "typed_identity"
+
+
+def test_gplearn_equivalence_counterexample_rejects_positive_label(tmp_path, monkeypatch) -> None:
+    row = runner.load_plan(GPLEARN_EQ_PLAN)[0][0]
+    assert row["request"]["deterministic_evidence"]["prediction_vs_gt"]["status"] == "numeric_counterexample"
+    monkeypatch.setattr(runner.httpx, "AsyncClient", _Client)
+    good_schema_bad_evidence = {"decision": "equivalent", "evidence_basis": "mixed",
+                                "assumptions": [], "confidence": 0.9,
+                                "brief_reason": "Claimed equivalence despite counterexample."}
+    _Client.responses = [_Response(json.dumps(good_schema_bad_evidence)) for _ in range(2)]
+    report = asyncio.run(runner.run([row], runner.Ledger(tmp_path, "gplearn-eq", 1),
+                                    "dummy", concurrency=1, rpm=500, timeout=1))
+    assert report["frozen"] == 0
+    assert report["physical_attempts"] == 2
 
 
 @pytest.mark.parametrize("status", ["semantic_rejected", "semantic_validator_timeout"])
