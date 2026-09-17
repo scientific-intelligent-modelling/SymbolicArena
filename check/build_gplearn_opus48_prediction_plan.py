@@ -38,6 +38,11 @@ def rows(path: Path):
                 yield json.loads(line)
 
 
+def logical_id_for(row: dict, dataset_index: str) -> str:
+    return (f"pred_simplify::gplearn::{dataset_index}::{row['dataset_id']}::"
+            f"s{row['seed']}::{row['condition']}::v4")
+
+
 def request_for(row: dict, probe: dict, typed: dict) -> dict:
     features = row["feature_names"]
     if probe["basename"] != row["dataset_id"] or probe["variables"] != features:
@@ -125,8 +130,7 @@ def build(inventory: Path, probes: Path, prompt: Path, schema: Path, output: Pat
             keys.add(key)
             typed = build_inventory_prefix_evidence(row)
             request = request_for(row, probe_rows[row["dataset_id"]], typed)
-            logical_id = (f"pred_simplify::gplearn::{request['dataset_index']}::s{row['seed']}::"
-                          f"{row['condition']}::v3")
+            logical_id = logical_id_for(row, request["dataset_index"])
             task = builder._task_from_request(
                 logical_id=logical_id, task_type="pred_simplify", priority=20,
                 request=request, evidence_hash=request["evidence_hash"], contract=contract,

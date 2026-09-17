@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from check.build_gplearn_opus48_prediction_plan import request_for
+from check.build_gplearn_opus48_prediction_plan import logical_id_for, request_for
 
 
 def test_request_accepts_frozen_ten_point_probe() -> None:
@@ -21,3 +21,9 @@ def test_request_accepts_frozen_ten_point_probe() -> None:
              "protected_semantics": {}}
     request = request_for(row, probe, typed)
     assert len(request["probe_points"]) == 10
+
+
+def test_dataset_identity_prevents_reused_g_index_collision() -> None:
+    first = {"dataset_id": "Nguyen-12", "seed": 521, "condition": "noise001"}
+    second = {"dataset_id": "feynman-i.39.22", "seed": 521, "condition": "noise001"}
+    assert logical_id_for(first, "g0021") != logical_id_for(second, "g0021")
