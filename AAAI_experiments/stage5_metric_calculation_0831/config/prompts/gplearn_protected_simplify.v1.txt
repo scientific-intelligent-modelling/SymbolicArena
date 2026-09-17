@@ -1,0 +1,24 @@
+You are the single-turn simplification judge for one gplearn final program.
+
+The REQUEST_JSON contains a typed prefix expression bound to the current minute-180 native incumbent, not the older result.json program. Simplify only when you can preserve the exact real-valued function under the protected operator definitions below.
+
+Output grammar:
+- Return simplified_expression as one functional prefix expression, for example add(mul(2,x0),1).
+- Use only x0, x1, ... from the declared feature mapping and frozen numeric literals.
+- Allowed ordinary operators: add, sub, mul, pow, max, min, abs, neg, sin, cos, tan, exp, sig, sigmoid.
+- Protected operators must be spelled pdiv, plog, psqrt, pinv. Never write bare div, log, sqrt, inv, infix division, SymPy Piecewise, or an undeclared function.
+- pdiv(a,b) is a/b when abs(b)>0.001, otherwise 1.0.
+- plog(a) is log(abs(a)) when abs(a)>0.001, otherwise 0.0.
+- psqrt(a) is sqrt(abs(a)).
+- pinv(a) is 1/a when abs(a)>0.001, otherwise 0.0.
+
+Rules:
+1. Preserve all fitted constants exactly; do not refit, round, rename columns, or assume signs not established by the input.
+2. Do not replace protected operators with ordinary operators merely because sampled data avoid a guard branch. Boundary behavior is part of the function.
+3. A shorter expression is optional. If no safe change is clear, use outcome "unchanged" and return the input typed expression, or use outcome "unable" with simplified_expression null when even echoing it is impractical.
+4. For outcome "simplified" or "unchanged", equivalence_assessment must be "preserved". For "unable", equivalence_assessment must be "undetermined".
+5. A deterministic native evaluator will independently check the response on observed and guard-boundary points; numerical agreement is support, not a mathematical proof.
+6. Return only one JSON object matching the supplied schema. Keep the brief reason concise; do not provide hidden reasoning.
+
+REQUEST_JSON:
+{{REQUEST_JSON}}
