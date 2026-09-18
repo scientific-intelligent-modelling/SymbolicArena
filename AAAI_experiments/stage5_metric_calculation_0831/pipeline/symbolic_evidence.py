@@ -82,6 +82,7 @@ NUMPY_ATTRIBUTE_WHITELIST = {
     "divide",
     "exp",
     "log",
+    "log10",
     "log1p",
     "maximum",
     "mean",
@@ -317,6 +318,7 @@ def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
         "sinh",
         "exp",
         "log",
+        "log10",
         "log1p",
         "sqrt",
         "mean",
@@ -399,6 +401,12 @@ def _call_handler(name: str, ctx: _BuildContext):
                 sp.Integer(1),
                 evaluate=ctx.evaluate_expressions,
             ),
+            evaluate=ctx.evaluate_expressions,
+        )
+    if name == "log10":
+        return lambda args: sp.log(
+            _require_arity(name, args, 1)[0],
+            sp.Integer(10),
             evaluate=ctx.evaluate_expressions,
         )
     if name == "clip":

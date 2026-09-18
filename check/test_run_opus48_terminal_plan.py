@@ -27,6 +27,15 @@ GPLEARN_PLAN = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
 GPLEARN_EQ_PLAN = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
                         "core50_terminal_collection_20260916_v3/gplearn_protected_downstream_full_v1/"
                         "equivalence_plan.jsonl")
+GT_PLAN = Path("AAAI_experiments/stage5_metric_calculation_0831/work/"
+               "final_release_20260913/release_v2/inputs/gt_plan.jsonl")
+
+
+def test_gt_simplification_plan_can_use_opus48_model_bound_keys() -> None:
+    rows, _ = runner.load_plan(GT_PLAN)
+    assert rows
+    assert all(row["task_type"] == "gt_simplify" for row in rows)
+    assert all(row["opus48_evaluation_key"] != row["evaluation_key"] for row in rows)
 
 
 def test_source_plan_uses_distinct_model_bound_keys() -> None:

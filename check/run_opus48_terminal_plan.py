@@ -49,7 +49,7 @@ EFFORT = "xhigh"
 MAX_TOKENS = 16384
 TARIFF_CNY_PER_MILLION = {"input": 3.0, "output": 15.0, "cache_read": 0.3}
 ENDPOINT = "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages"
-TASK_KINDS = {"pred_simplify": "simplify", "equivalence": "equivalence",
+TASK_KINDS = {"gt_simplify": "simplify", "pred_simplify": "simplify", "equivalence": "equivalence",
               "stab_structure": "structure"}
 _LIMITED_WORKER_BOOTSTRAP = (
     "import resource,sys; "
@@ -164,7 +164,7 @@ def load_plan(path: Path) -> tuple[list[dict[str, Any]], str]:
         )
         if evaluation_key(**common) != row["evaluation_key"]:
             raise ValueError(f"line {line_number}: source Opus5 key drift")
-        if row["task_type"] != "pred_simplify":
+        if row["task_type"] not in {"gt_simplify", "pred_simplify"}:
             validate_pair_binding(row, line_number=line_number)
         key = evaluation_key(**common, model=KEY_MODEL, effort=EFFORT)
         if key in keys:
@@ -433,7 +433,7 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                                     stop.set()
                             else:
                                 output, usage, recovery = validate_message(body, row)
-                                if row["task_type"] == "pred_simplify":
+                                if row["task_type"] in {"gt_simplify", "pred_simplify"}:
                                     async with semantic_limit:
                                         if gplearn_native:
                                             semantic = await asyncio.to_thread(
@@ -485,7 +485,7 @@ async def run(rows: list[dict[str, Any]], ledger: Ledger, token: str, *,
                             "structured_output_recovery": recovery,
                             "semantic_validation": semantic, "usage": usage,
                             "semantic_worker_rlimit_as_bytes": (
-                                semantic_memory_limit_bytes if row["task_type"] == "pred_simplify"
+                                semantic_memory_limit_bytes if row["task_type"] in {"gt_simplify", "pred_simplify"}
                                 and not gplearn_native else None),
                             "estimated_cost_cny_assumed_tariff": cost_cny(usage),
                             "error": error,
