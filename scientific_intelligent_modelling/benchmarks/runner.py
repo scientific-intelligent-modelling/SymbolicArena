@@ -972,6 +972,7 @@ def _extract_llmsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, A
     candidates = sorted(samples_dir.glob("top01_*.json")) or sorted(samples_dir.glob("top*.json"))
     best_key = None
     best_item = None
+    best_metric = None
     for path in candidates:
         item = _read_json_file(path)
         if not item:
@@ -980,20 +981,32 @@ def _extract_llmsr_periodic_candidate(experiment_dir: str | Path) -> dict[str, A
         if not _is_equation_function_text(func):
             continue
         key_val = None
-        nmse = item.get("nmse")
-        mse = item.get("mse")
-        score = item.get("score")
-        if isinstance(nmse, (int, float)):
-            key_val = float(nmse)
-        elif isinstance(mse, (int, float)):
-            key_val = float(mse)
-        elif isinstance(score, (int, float)):
-            key_val = -float(score)
+        metric = None
+        nmse = _safe_float(item.get("nmse"))
+        mse = _safe_float(item.get("mse"))
+        score = _safe_float(item.get("score"))
+        if nmse is not None and nmse >= 0:
+            key_val, metric = nmse, "nmse"
+        elif mse is not None and mse >= 0:
+            key_val, metric = mse, "mse"
+        elif score is not None:
+            key_val, metric = -score, "score"
         if key_val is None:
             continue
         if best_key is None or key_val < best_key:
             best_key = key_val
-            best_item = item
+            best_item = dict(item)
+            best_metric = metric
+    if best_item is not None:
+        best_item["source"] = "llmsr_native_top_sample"
+        if best_metric in {"nmse", "mse"}:
+            best_item["loss"] = best_key
+            best_item["internal_loss"] = best_key
+            best_item["internal_objective"] = f"native_{best_metric}"
+            best_item["objective_direction"] = "min"
+        else:
+            best_item["internal_objective"] = "native_score"
+            best_item["objective_direction"] = "max"
     return best_item
 
 
@@ -2356,6 +2369,11 @@ def _write_final_progress_payload_if_requested(
     )
     payload = None
     normalized_tool = str(tool_name or result.get("tool") or "").strip()
+    candidate_minute_index = snapshot_minute_index
+    if candidate_minute_index is None:
+        candidate_minute_index = _progress_minute_index_from_elapsed(
+            result.get("seconds"), interval_seconds=progress_snapshot_interval_seconds
+        )
     if (
         normalized_tool
         and dataset is not None
@@ -2363,6 +2381,7 @@ def _write_final_progress_payload_if_requested(
         and seed is not None
         and started_at is not None
         and experiment_dir is not None
+        and candidate_minute_index is not None
         and _is_snapshot_capable_tool(normalized_tool)
     ):
         try:
@@ -2373,7 +2392,7 @@ def _write_final_progress_payload_if_requested(
                 seed=seed,
                 started_at=started_at,
                 experiment_dir=experiment_dir,
-                checkpoint_index=snapshot_minute_index,
+                checkpoint_index=candidate_minute_index,
                 task_label=task_label,
                 task_global_index=task_global_index,
                 expected_dataset_rel=expected_dataset_rel,
@@ -2384,9 +2403,34 @@ def _write_final_progress_payload_if_requested(
             payload = None
         if payload is not None:
             payload["record_type"] = "budget_end_internal_best"
-            payload["checkpoint_index"] = int(snapshot_minute_index)
+            payload["checkpoint_index"] = int(candidate_minute_index)
             if normalized_tool.lower() in {"imcts", "imcts_wrapper"}:
                 result.update(_imcts_candidate_evidence(payload))
+
+    # FePySR may finish before the first periodic read; its persisted native best
+    # still establishes the incumbent and discovery time without test-based choice.
+    if payload is None and normalized_tool.lower() in {"fepysr", "fepysr_wrapper"} and experiment_dir:
+        candidate = _extract_fepysr_periodic_candidate(experiment_dir)
+        native_score = _safe_float(candidate.get("score")) if candidate else None
+        if (native_score is not None and candidate is not None
+                and str(candidate["equation"]).strip() == equation.strip()):
+            elapsed_seconds = round(float(result.get("seconds") or 0.0), 3)
+            payload = dict(result)
+            payload.update({
+                "record_type": "budget_end_internal_best",
+                "checkpoint_index": int(snapshot_minute_index) if snapshot_minute_index is not None else "final",
+                "elapsed_seconds": elapsed_seconds,
+                "elapsed_minutes": max(0, int(round(elapsed_seconds / 60.0))),
+                "candidate_available": True,
+                "candidate_source": candidate.get("source") or "fepysr_current_best",
+                "source_score": native_score,
+                "source_iteration": candidate.get("attempt"),
+                "algorithm_native_incumbent": True,
+                "native_objective_unavailable": False,
+                "internal_objective": "native_training_mse",
+                "internal_objective_direction": "min",
+                "internal_objective_value": native_score,
+            })
 
     if payload is None:
         payload = dict(result)
