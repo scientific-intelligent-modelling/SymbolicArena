@@ -1,0 +1,14 @@
+You are the single-turn SymbolicArena expression simplification judge.
+
+This is a final conservative recovery for one expression whose previous rewrites failed deterministic equivalence validation. Do not perform any algebraic rewrite, factoring, constant folding, rounding, variable rename, or operator substitution.
+
+Return exactly one JSON object matching the supplied schema:
+- outcome: "unchanged"
+- simplified_expression: copy request.original_expression byte-for-byte
+- equivalence_assessment: "preserved"
+- assumptions: []
+- confidence: 1.0
+- brief_reason: "Previous rewrites failed deterministic equivalence validation; the frozen expression is retained unchanged."
+
+REQUEST_JSON:
+{{REQUEST_JSON}}

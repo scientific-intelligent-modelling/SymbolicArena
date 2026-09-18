@@ -54,6 +54,21 @@ class real_cbrt(sp.Function):
         return self.args[0].is_real
 
 
+class nan_to_num(sp.Function):
+    """保留 NumPy 的有限化保护算子，并在有限标量探针上按恒等映射求值。"""
+
+    nargs = 1
+
+    @classmethod
+    def eval(cls, value):
+        # 数值探针只使用有限实数；此时 NumPy 默认 nan_to_num 行为等同于恒等映射。
+        if value.is_number and value.is_finite is True:
+            return value
+
+    def _eval_is_real(self):
+        return self.args[0].is_real
+
+
 @dataclass
 class _BuildContext:
     allowed_variables: set[str] | None
@@ -86,6 +101,7 @@ NUMPY_ATTRIBUTE_WHITELIST = {
     "log1p",
     "maximum",
     "mean",
+    "nan_to_num",
     "minimum",
     "pi",
     "sin",
@@ -323,6 +339,7 @@ def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
         "sqrt",
         "mean",
         "norm",
+        "nan_to_num",
         "where",
         "divide",
         "div",
@@ -383,6 +400,7 @@ def _call_handler(name: str, ctx: _BuildContext):
         "exp": sp.exp,
         "log": sp.log,
         "real_cbrt": real_cbrt,
+        "nan_to_num": nan_to_num,
         "sin": sp.sin,
         "sinh": sp.sinh,
         "sqrt": sp.sqrt,

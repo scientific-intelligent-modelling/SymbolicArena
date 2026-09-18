@@ -16,3 +16,17 @@ def test_numpy_log10_is_a_base_ten_logarithm() -> None:
     assert artifact["function_set"] == ("log10",)
     assert sp.simplify(artifact["sympy_expression"] - sp.log(x0, 10)) == 0
     assert float(artifact["sympy_expression"].subs(x0, 10)) == 1.0
+
+
+def test_numpy_nan_to_num_is_preserved_and_evaluates_on_finite_probe() -> None:
+    artifact = build_symbolic_artifact(
+        "np.nan_to_num(x0)",
+        allowed_variables={"x0"},
+        allowed_functions={"nan_to_num"},
+    )
+
+    x0 = sp.Symbol("x0")
+    expression = artifact["sympy_expression"]
+    assert artifact["function_set"] == ("nan_to_num",)
+    assert "nan_to_num" in artifact["operator_set"]
+    assert expression.subs(x0, 1.25).evalf() == sp.Float("1.25")
