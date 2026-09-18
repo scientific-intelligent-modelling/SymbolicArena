@@ -55,6 +55,19 @@ def test_load_queue_support_script_limits_julia_and_pysr_threads(tmp_path: Path)
     assert "export PYSR_PROCS=1" in script
 
 
+def test_load_queue_uses_symbolfit_julia_project_for_symbolfit_env(tmp_path: Path) -> None:
+    queue = _load_module(
+        "run_e1_candidate200_12alg_load_queue_symbolfit_julia_project",
+        "check/run_e1_candidate200_12alg_load_queue.py",
+    )
+
+    script = queue._write_remote_support_script(tmp_path / "queue").read_text(encoding="utf-8")
+
+    assert 'if [[ "$ENV_NAME" == "sim_symbolfit" || "$ENV_NAME" == "sim_fepysr" ]]' in script
+    assert "/home/zhangziwen/pyjuliapkg_symbolfit" in script
+    assert "/home/zhangziwen/pyjuliapkg_pysr" in script
+
+
 def test_load_queue_support_script_limits_jax_cpu_threads(tmp_path: Path) -> None:
     queue = _load_module(
         "run_e1_candidate200_12alg_load_queue_jax_limits",

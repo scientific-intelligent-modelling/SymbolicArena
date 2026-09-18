@@ -700,7 +700,11 @@ export JULIA_NUM_GC_THREADS=1
 export PYTHON_JULIACALL_THREADS=1
 export PYTHON_JULIACALL_PROCS=1
 export PYSR_PROCS=1
-export PYTHON_JULIAPKG_PROJECT="${{PYTHON_JULIAPKG_PROJECT:-/home/zhangziwen/pyjuliapkg_pysr}}"
+if [[ "$ENV_NAME" == "sim_symbolfit" || "$ENV_NAME" == "sim_fepysr" ]]; then
+  export PYTHON_JULIAPKG_PROJECT=/home/zhangziwen/pyjuliapkg_symbolfit
+else
+  export PYTHON_JULIAPKG_PROJECT="${{PYTHON_JULIAPKG_PROJECT:-/home/zhangziwen/pyjuliapkg_pysr}}"
+fi
 export SIM_QUEUE_TASK_ID="$TASK_ID"
 export SIM_QUEUE_SESSION="$SESSION_NAME"
 
