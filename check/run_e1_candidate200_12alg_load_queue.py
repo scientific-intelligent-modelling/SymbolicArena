@@ -2727,7 +2727,6 @@ import json
 import shlex
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 
@@ -2874,19 +2873,11 @@ def check_envs(envs: list[str]) -> dict:
     for env in envs:
         modules = ENV_IMPORTS.get(env, [])
         code = "import importlib\n" + "\n".join(f"importlib.import_module({m!r})" for m in modules) + "\nprint('import_ok')"
-        tmp_path = Path(tempfile.gettempdir()) / f"e1_candidate200_import_check_{env}.py"
-        tmp_path.write_text(code, encoding="utf-8")
         cmd = (
             f"cd {shlex.quote(str(REMOTE_ROOT))} && "
-            f"PYTHONPATH=. conda run -n {shlex.quote(env)} python {shlex.quote(str(tmp_path))}"
+            f"PYTHONPATH=. conda run -n {shlex.quote(env)} python -c {shlex.quote(code)}"
         )
-        try:
-            result = run(cmd, timeout=120)
-        finally:
-            try:
-                tmp_path.unlink()
-            except FileNotFoundError:
-                pass
+        result = run(cmd, timeout=120)
         out["envs"][env] = {
             "required_modules": modules,
             "returncode": result["returncode"],

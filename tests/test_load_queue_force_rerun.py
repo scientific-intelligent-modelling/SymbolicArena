@@ -68,6 +68,18 @@ def test_load_queue_uses_symbolfit_julia_project_for_symbolfit_env(tmp_path: Pat
     assert "/home/zhangziwen/pyjuliapkg_pysr" in script
 
 
+def test_remote_preflight_imports_do_not_run_from_tmp(tmp_path: Path) -> None:
+    queue = _load_module(
+        "run_e1_candidate200_12alg_load_queue_safe_import_check",
+        "check/run_e1_candidate200_12alg_load_queue.py",
+    )
+
+    script = queue._write_preflight_script(tmp_path / "queue").read_text(encoding="utf-8")
+
+    assert "python -c {shlex.quote(code)}" in script
+    assert "e1_candidate200_import_check_" not in script
+
+
 def test_load_queue_support_script_limits_jax_cpu_threads(tmp_path: Path) -> None:
     queue = _load_module(
         "run_e1_candidate200_12alg_load_queue_jax_limits",
