@@ -138,8 +138,30 @@ class SymbolicTransformerRegressor(BaseEstimator):
         except Exception:
             return tree
 
-    def _tree_to_expression(self, tree, dataset_idx):
-        relabeled = self._relabeled_tree(tree, dataset_idx)
+    def _tree_in_original_scale(self, tree, dataset_idx):
+        scalers = getattr(self, "scalers", None)
+        scale_params = getattr(self, "scale_params", None)
+        if scalers is None or scale_params is None:
+            return None
+        if dataset_idx >= len(scalers) or dataset_idx >= len(scale_params):
+            return None
+        scaler = scalers[dataset_idx]
+        params = scale_params[dataset_idx]
+        if scaler is None or params is None:
+            return None
+        try:
+            tree_copy = copy.deepcopy(tree)
+            return scaler.rescale_function(self.model.env, tree_copy, *params)
+        except Exception:
+            return None
+
+    def _tree_to_expression(self, tree, dataset_idx, *, tree_is_scaled=False):
+        output_tree = tree
+        if tree_is_scaled:
+            output_tree = self._tree_in_original_scale(tree, dataset_idx)
+            if output_tree is None:
+                return None
+        relabeled = self._relabeled_tree(output_tree, dataset_idx)
         if relabeled is None:
             return None
         try:
@@ -164,13 +186,23 @@ class SymbolicTransformerRegressor(BaseEstimator):
         except Exception:
             pass
 
-    def _emit_progress_candidate(self, dataset_idx, candidate, X, y, *, stage, compute_metrics=True):
+    def _emit_progress_candidate(
+        self,
+        dataset_idx,
+        candidate,
+        X,
+        y,
+        *,
+        stage,
+        compute_metrics=True,
+        tree_is_scaled=False,
+    ):
         if not self.progress_state_path or not isinstance(candidate, dict):
             return
         tree = candidate.get("predicted_tree")
         if tree is None:
             return
-        equation = self._tree_to_expression(tree, dataset_idx)
+        equation = self._tree_to_expression(tree, dataset_idx, tree_is_scaled=tree_is_scaled)
         if not isinstance(equation, str) or not equation.strip():
             return
         native_score = candidate.get("native_model_score")
@@ -223,13 +255,15 @@ class SymbolicTransformerRegressor(BaseEstimator):
             self.top_k_features[i] = get_top_k_features(X[i], Y[i], k=self.model.env.params.max_input_dimension)
             X[i] = X[i][:, self.top_k_features[i]]
     
-        scaler = utils_wrapper.StandardScaler() if self.rescale else None
-        scale_params = {}
-        if scaler is not None:
+        self.scalers = [None for _ in range(n_datasets)]
+        self.scale_params = [None for _ in range(n_datasets)]
+        if self.rescale:
             scaled_X = []
             for i, x in enumerate(X):
-                scaled_X.append(scaler.fit_transform(x))
-                scale_params[i]=scaler.get_params()
+                dataset_scaler = utils_wrapper.StandardScaler()
+                scaled_X.append(dataset_scaler.fit_transform(x))
+                self.scalers[i] = dataset_scaler
+                self.scale_params[i] = dataset_scaler.get_params()
         else:
             scaled_X = X
 
@@ -292,6 +326,7 @@ class SymbolicTransformerRegressor(BaseEstimator):
                         Y[input_id],
                         stage="forward_partial",
                         compute_metrics=False,
+                        tree_is_scaled=self.rescale,
                     )
                 bag_index += 1
             if verbose: print("Finished forward in {} secs".format(time.time()-forward_time))
@@ -315,13 +350,24 @@ class SymbolicTransformerRegressor(BaseEstimator):
         
             refined_candidates = self.refine(input_id, scaled_X[input_id], Y[input_id], candidates_id, verbose=verbose)
             for i,candidate in enumerate(refined_candidates):
-                if scaler is not None:
-                    refined_candidates[i]["predicted_tree"]=scaler.rescale_function(self.model.env, candidate["predicted_tree"], *scale_params[input_id])
+                if self.rescale:
+                    refined_candidates[i]["predicted_tree"] = self.scalers[input_id].rescale_function(
+                        self.model.env,
+                        copy.deepcopy(candidate["predicted_tree"]),
+                        *self.scale_params[input_id]
+                    )
                 else: 
                     refined_candidates[i]["predicted_tree"]=candidate["predicted_tree"]
             self.tree[input_id] = refined_candidates
             if refined_candidates:
-                self._emit_progress_candidate(input_id, refined_candidates[0], X[input_id], Y[input_id], stage="fit_final")
+                self._emit_progress_candidate(
+                    input_id,
+                    refined_candidates[0],
+                    X[input_id],
+                    Y[input_id],
+                    stage="fit_final",
+                    tree_is_scaled=False,
+                )
 
     @torch.no_grad()
     def evaluate_tree(self, tree, X, y, metric):
@@ -369,7 +415,14 @@ class SymbolicTransformerRegressor(BaseEstimator):
             best_r2 = self._safe_tree_metric(candidates[0]["predicted_tree"], X, y, "r2")
             if best_r2 is not None:
                 candidates[0]["r2"] = best_r2
-            self._emit_progress_candidate(dataset_idx, candidates[0], X, y, stage="noref_best")
+            self._emit_progress_candidate(
+                dataset_idx,
+                candidates[0],
+                X,
+                y,
+                stage="noref_best",
+                tree_is_scaled=self.rescale,
+            )
 
         ## REMOVE SKELETON DUPLICATAS
         skeleton_candidates, candidates_to_remove = {}, []
@@ -418,11 +471,25 @@ class SymbolicTransformerRegressor(BaseEstimator):
                 candidate_r2 = refined_entry.get("r2")
                 if candidate_r2 is not None and (best_r2 is None or candidate_r2 > best_r2):
                     best_r2 = candidate_r2
-                    self._emit_progress_candidate(dataset_idx, refined_entry, X, y, stage="bfgs_best")
+                    self._emit_progress_candidate(
+                        dataset_idx,
+                        refined_entry,
+                        X,
+                        y,
+                        stage="bfgs_best",
+                        tree_is_scaled=self.rescale,
+                    )
         candidates.extend(refined_candidates)  
         candidates = self.order_candidates(X, y, candidates, metric="r2")
         if candidates:
-            self._emit_progress_candidate(dataset_idx, candidates[0], X, y, stage="refine_final")
+            self._emit_progress_candidate(
+                dataset_idx,
+                candidates[0],
+                X,
+                y,
+                stage="refine_final",
+                tree_is_scaled=self.rescale,
+            )
 
         for candidate in candidates:
             if "time" not in candidate:

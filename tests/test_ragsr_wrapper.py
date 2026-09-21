@@ -33,6 +33,54 @@ class _FakeEvolutionaryForestRegressor:
         return "x0 + 2*x1"
 
 
+class _FakeMinMaxScaler:
+    def __init__(
+        self,
+        scale,
+        min_,
+        data_min=None,
+        data_max=None,
+        feature_range=(-1.0, 2.0),
+    ):
+        self.scale_ = np.asarray(scale, dtype=float)
+        self.min_ = np.asarray(min_, dtype=float)
+        self.data_min_ = np.asarray(
+            data_min if data_min is not None else [0.0] * len(scale), dtype=float
+        )
+        self.data_max_ = np.asarray(
+            data_max if data_max is not None else [1.0] * len(scale), dtype=float
+        )
+        self.feature_range = feature_range
+
+    def transform(self, X):
+        return np.asarray(X, dtype=float) * self.scale_ + self.min_
+
+
+class _FakeStandardScaler:
+    def __init__(self, mean, scale):
+        self.mean_ = np.asarray(mean, dtype=float)
+        self.scale_ = np.asarray(scale, dtype=float)
+        self.with_mean = True
+        self.with_std = True
+
+
+class _FakeScaledEvolutionaryForestRegressor(_FakeEvolutionaryForestRegressor):
+    def fit(self, X, y, **fit_kwargs):
+        super().fit(X, y, **fit_kwargs)
+        self.x_scaler = _FakeMinMaxScaler(
+            scale=[0.5, 3.0],
+            min_=[-1.0, -12.0],
+            data_min=[2.0, 4.0],
+            data_max=[8.0, 4.0],
+            feature_range=(0.0, 3.0),
+        )
+        return self
+
+    def predict(self, X):
+        transformed = self.x_scaler.transform(X)
+        return transformed[:, 0] + 2.0 * transformed[:, 1]
+
+
 class RAGSRWrapperTest(unittest.TestCase):
     def test_params_absorb_runner_contract_and_default_official_categorical_mode(self):
         reg = RAGSRRegressor(
@@ -105,6 +153,78 @@ class RAGSRWrapperTest(unittest.TestCase):
                     sys.modules.pop(name, None)
                 else:
                     sys.modules[name] = old_value
+
+    def test_minmax_scaler_embedding_uses_scale_and_min_for_all_aliases_once(self):
+        scale = np.ones(11)
+        offset = np.zeros(11)
+        scale[1], offset[1] = 2.0, 3.0
+        scale[10], offset[10] = 5.0, 7.0
+        reg = RAGSRRegressor(n_features=11)
+        reg.model = types.SimpleNamespace(
+            x_scaler=_FakeMinMaxScaler(scale=scale, min_=offset)
+        )
+
+        embedded = reg._embed_x_scaler_into_expression(
+            "x1 + x_1 + ARG1 + x10 + x_10 + ARG10"
+        )
+
+        self.assertEqual(
+            embedded,
+            "((x1 * 2.0) + 3.0) + ((x1 * 2.0) + 3.0) + "
+            "((x1 * 2.0) + 3.0) + ((x10 * 5.0) + 7.0) + "
+            "((x10 * 5.0) + 7.0) + ((x10 * 5.0) + 7.0)",
+        )
+
+    def test_minmax_constant_column_and_non_default_range_match_native_after_serialize(self):
+        fake_package = types.ModuleType("evolutionary_forest")
+        fake_forest = types.ModuleType("evolutionary_forest.forest")
+        fake_forest.EvolutionaryForestRegressor = _FakeScaledEvolutionaryForestRegressor
+        old_modules = {
+            name: sys.modules.get(name)
+            for name in ("evolutionary_forest", "evolutionary_forest.forest")
+        }
+        try:
+            sys.modules["evolutionary_forest"] = fake_package
+            sys.modules["evolutionary_forest.forest"] = fake_forest
+            reg = RAGSRRegressor(
+                seed=3,
+                n_features=2,
+                feature_names=["x0", "x1"],
+                target_name="y",
+                n_gen=1,
+                n_pop=10,
+            )
+            X = np.array([[2.0, 4.0], [8.0, 4.0], [5.0, 4.0]])
+            reg.fit(X, np.array([0.0, 1.0, 2.0]))
+
+            native = reg.predict(X)
+            restored = RAGSRRegressor.deserialize(reg.serialize())
+
+            self.assertIn("x0", reg.get_optimal_equation())
+            np.testing.assert_allclose(restored.predict(X), native)
+        finally:
+            for name, old_value in old_modules.items():
+                if old_value is None:
+                    sys.modules.pop(name, None)
+                else:
+                    sys.modules[name] = old_value
+
+    def test_standard_scaler_embedding_matches_transform(self):
+        reg = RAGSRRegressor(n_features=2)
+        reg.model = types.SimpleNamespace(
+            x_scaler=_FakeStandardScaler(mean=[10.0, -2.0], scale=[2.0, 4.0])
+        )
+
+        embedded = reg._embed_x_scaler_into_expression("x0 + ARG1")
+
+        self.assertEqual(embedded, "((x0 - 10.0) / 2.0) + ((x1 - -2.0) / 4.0)")
+
+    def test_unknown_x_scaler_fails_instead_of_silently_exporting_wrong_formula(self):
+        reg = RAGSRRegressor(n_features=1)
+        reg.model = types.SimpleNamespace(x_scaler=types.SimpleNamespace())
+
+        with self.assertRaisesRegex(RuntimeError, "不支持的 x_scaler"):
+            reg._embed_x_scaler_into_expression("x0")
 
     def test_fit_writes_ragsr_current_best_snapshot(self):
         fake_package = types.ModuleType("evolutionary_forest")

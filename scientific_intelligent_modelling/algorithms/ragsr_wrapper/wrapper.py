@@ -400,39 +400,72 @@ class RAGSRRegressor(BaseWrapper):
             value = self.model.model()
             if value is not None:
                 raw_expr = str(value)
-                # model() 只反变换了 y_scaler，公式中的变量仍期待 x_scaler 归一化后的输入。
-                # 需要将 x_scaler (MinMaxScaler) 变换嵌入公式，使其可直接接受原始 X。
+                # model() 只反变换了 y_scaler，公式中的变量仍期待 x_scaler 处理后的输入。
+                # 将 x_scaler 变换嵌入公式，使其可直接接受原始 X。
                 return self._embed_x_scaler_into_expression(raw_expr)
         raise RuntimeError("RAG-SR 未能导出模型表达式")
 
     def _embed_x_scaler_into_expression(self, expr: str) -> str:
-        """将 MinMaxScaler 的 x 变换嵌入公式，把 ARGi 替换为 (xi - min)/(max - min)。"""
+        """将 backend 的特征缩放嵌入公式，使导出表达式直接接受原始 X。"""
         x_scaler = getattr(self.model, "x_scaler", None)
         if x_scaler is None:
             return expr
-        try:
-            data_min = x_scaler.data_min_
-            data_max = x_scaler.data_max_
-        except AttributeError:
-            return expr
 
         import re as _re
-        result = expr
-        # 替换 ARG0, ARG1, ... 为 MinMax 变换后的表达式
-        # model_to_string 将变量写成 x_0, x_1, ... 或 ARG0, ARG1, ...
-        for i in range(len(data_min)):
-            lo = float(data_min[i])
-            hi = float(data_max[i])
-            span = hi - lo
-            if abs(span) < 1e-30:
-                # 常量特征，替换为 0.0
-                replacement = "0.0"
-            else:
-                replacement = f"((x_{i} - {lo}) / {span})"
-            # 替换 ARGi 和 x_i 两种命名格式
-            result = _re.sub(rf"\bARG{i}\b", replacement, result)
-            result = _re.sub(rf"\bx_{i}\b", replacement, result)
-        return result
+
+        if all(hasattr(x_scaler, name) for name in ("data_min_", "data_max_", "scale_", "min_")):
+            scales = np.asarray(x_scaler.scale_, dtype=float).reshape(-1)
+            offsets = np.asarray(x_scaler.min_, dtype=float).reshape(-1)
+            parameter_count = offsets.size
+
+            def _replacement(index: int) -> str:
+                return f"((x{index} * {float(scales[index])}) + {float(offsets[index])})"
+
+        elif hasattr(x_scaler, "mean_") and hasattr(x_scaler, "scale_"):
+            raw_scales = getattr(x_scaler, "scale_", None)
+            raw_means = getattr(x_scaler, "mean_", None)
+            if raw_scales is None and raw_means is None:
+                raise RuntimeError("RAG-SR 的 StandardScaler 缺少已拟合参数")
+            size_source = raw_scales if raw_scales is not None else raw_means
+            size = np.asarray(size_source).size
+            scales = (
+                np.ones(size, dtype=float)
+                if raw_scales is None or not getattr(x_scaler, "with_std", True)
+                else np.asarray(raw_scales, dtype=float).reshape(-1)
+            )
+            means = (
+                np.zeros(size, dtype=float)
+                if raw_means is None or not getattr(x_scaler, "with_mean", True)
+                else np.asarray(raw_means, dtype=float).reshape(-1)
+            )
+            parameter_count = means.size
+
+            def _replacement(index: int) -> str:
+                return f"((x{index} - {float(means[index])}) / {float(scales[index])})"
+
+        else:
+            scaler_name = type(x_scaler).__name__
+            raise RuntimeError(f"RAG-SR 不支持的 x_scaler: {scaler_name}")
+
+        if scales.size != parameter_count:
+            raise RuntimeError("RAG-SR 的 x_scaler 参数维度不一致")
+        if not np.all(np.isfinite(scales)) or np.any(scales == 0):
+            raise RuntimeError("RAG-SR 的 x_scaler 包含无效 scale_ 参数")
+
+        # 单次扫描三种 backend 变量别名，避免替换文本再次被后续规则命中。
+        token_pattern = _re.compile(
+            r"(?<![A-Za-z0-9_])(?:ARG(?P<arg_index>\d+)|x_?(?P<x_index>\d+))(?![A-Za-z0-9_])"
+        )
+
+        def _replace_token(match):
+            index = int(match.group("arg_index") or match.group("x_index"))
+            if index >= scales.size:
+                raise RuntimeError(
+                    f"RAG-SR 表达式变量索引 {index} 超出 x_scaler 维度 {scales.size}"
+                )
+            return _replacement(index)
+
+        return token_pattern.sub(_replace_token, expr)
 
     def get_optimal_equation(self):
         if self._equation is None:

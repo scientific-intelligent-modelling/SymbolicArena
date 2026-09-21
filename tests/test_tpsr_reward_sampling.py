@@ -1,7 +1,7 @@
 import importlib.util
-import importlib
 import sys
 import types
+from pathlib import Path
 
 import numpy as np
 
@@ -36,10 +36,20 @@ def _load_tpsr_wrapper_module():
         sys.modules[name] = module
 
     try:
-        sys.modules.pop("scientific_intelligent_modelling.algorithms.tpsr_wrapper.wrapper", None)
-        return importlib.import_module(
-            "scientific_intelligent_modelling.algorithms.tpsr_wrapper.wrapper"
+        module_name = "scientific_intelligent_modelling.algorithms.tpsr_wrapper.wrapper"
+        module_path = str(
+            Path(__file__).resolve().parents[1]
+            / "scientific_intelligent_modelling"
+            / "algorithms"
+            / "tpsr_wrapper"
+            / "wrapper.py"
         )
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        source = spec.loader.get_source(module_name)
+        exec(compile(source, module_path, "exec"), module.__dict__)
+        return module
     finally:
         for name, previous in previous_modules.items():
             if previous is None:
@@ -140,3 +150,213 @@ def test_tpsr_projects_out_of_range_one_based_tokens_to_zero():
     module = _load_tpsr_wrapper_module()
 
     assert module.TPSRRegressor._project_equation_to_feature_budget("x_1 + x_5", 4) == "x_1 + 0"
+
+
+class _FakeTree:
+    def __init__(self, expression):
+        self.expression = expression
+        self.rescale_count = 0
+
+    def infix(self):
+        return self.expression
+
+
+class _MutatingScaler:
+    def __init__(self, *, fail=False):
+        self.fail = fail
+
+    def rescale_function(self, equation_env, tree, a, b):
+        tree.rescale_count += 1
+        if self.fail:
+            raise ValueError("cannot rescale tree")
+        tree.expression = f"({a[0]}) * x_0 + ({b[0]})"
+        return tree
+
+
+def _install_e2e_model_stub(
+    monkeypatch,
+    *,
+    refined_expr,
+    refined_trees,
+    raw_expr,
+    raw_trees,
+):
+    package = types.ModuleType("symbolicregression")
+    package.__path__ = []
+    module = types.ModuleType("symbolicregression.e2e_model")
+    module.refine_for_sample = lambda *args, **kwargs: (None, refined_expr, refined_trees)
+    module.pred_for_sample_no_refine = lambda *args, **kwargs: (None, raw_expr, raw_trees)
+    monkeypatch.setitem(sys.modules, "symbolicregression", package)
+    monkeypatch.setitem(sys.modules, "symbolicregression.e2e_model", module)
+
+
+def test_sequence_expression_is_inverse_scaled_and_does_not_mutate_candidate(monkeypatch):
+    module = _load_tpsr_wrapper_module()
+    refined_tree = _FakeTree("x_0")
+    _install_e2e_model_stub(
+        monkeypatch,
+        refined_expr="x_0",
+        refined_trees=[refined_tree],
+        raw_expr=None,
+        raw_trees=[],
+    )
+    reg = module.TPSRRegressor(rescale=True)
+    reg._tpsr_scaler = _MutatingScaler()
+    reg._tpsr_scale_params = (np.array([0.5]), np.array([-5.0]))
+
+    expression = reg._sequence_to_e2e_expression(
+        types.SimpleNamespace(),
+        object(),
+        object(),
+        [0, 1],
+        {"x_to_fit": [None], "y_to_fit": [None]},
+    )
+
+    assert expression == "(0.5) * x_0 + (-5.0)"
+    assert refined_tree.expression == "x_0"
+    assert refined_tree.rescale_count == 0
+
+
+def test_scaled_string_fallback_is_structurally_inverse_scaled(monkeypatch):
+    module = _load_tpsr_wrapper_module()
+    _install_e2e_model_stub(
+        monkeypatch,
+        refined_expr="x_0 + x_1",
+        refined_trees=[_FakeTree("x_0 + x_1")],
+        raw_expr=None,
+        raw_trees=[],
+    )
+    reg = module.TPSRRegressor(rescale=True)
+    reg._tpsr_scaler = _MutatingScaler(fail=True)
+    reg._tpsr_scale_params = (np.array([2.0, 3.0]), np.array([5.0, 7.0]))
+
+    expression = reg._sequence_to_e2e_expression(
+        types.SimpleNamespace(),
+        object(),
+        object(),
+        [0, 1],
+        {"x_to_fit": [None], "y_to_fit": [None]},
+    )
+
+    import sympy as sp
+
+    expected = 2 * sp.Symbol("x_0") + 3 * sp.Symbol("x_1") + 12
+    assert sp.simplify(sp.sympify(expression) - expected) == 0
+    assert expression != "x_0 + x_1"
+
+
+def test_inverse_scale_failure_never_returns_scaled_expression(monkeypatch):
+    module = _load_tpsr_wrapper_module()
+    _install_e2e_model_stub(
+        monkeypatch,
+        refined_expr="x_0 +",
+        refined_trees=[_FakeTree("x_0")],
+        raw_expr=None,
+        raw_trees=[],
+    )
+    reg = module.TPSRRegressor(rescale=True)
+    reg._tpsr_scaler = _MutatingScaler(fail=True)
+    reg._tpsr_scale_params = (np.array([0.5]), np.array([-5.0]))
+
+    expression = reg._sequence_to_e2e_expression(
+        types.SimpleNamespace(),
+        object(),
+        object(),
+        [0, 1],
+        {"x_to_fit": [None], "y_to_fit": [None]},
+    )
+
+    assert expression is None
+
+
+def test_missing_inverse_scale_state_fails_closed(monkeypatch):
+    module = _load_tpsr_wrapper_module()
+    _install_e2e_model_stub(
+        monkeypatch,
+        refined_expr="x_0",
+        refined_trees=[_FakeTree("x_0")],
+        raw_expr=None,
+        raw_trees=[],
+    )
+    reg = module.TPSRRegressor(rescale=True)
+
+    expression = reg._sequence_to_e2e_expression(
+        types.SimpleNamespace(),
+        object(),
+        object(),
+        [0, 1],
+        {"x_to_fit": [None], "y_to_fit": [None]},
+    )
+
+    assert expression is None
+
+
+def test_e2e_final_and_progress_candidates_share_original_coordinates(monkeypatch):
+    module = _load_tpsr_wrapper_module()
+    refined_tree = _FakeTree("x_0")
+    _install_e2e_model_stub(
+        monkeypatch,
+        refined_expr="x_0",
+        refined_trees=[refined_tree],
+        raw_expr="2 * x_0",
+        raw_trees=[_FakeTree("2 * x_0")],
+    )
+    reg = module.TPSRRegressor(rescale=True)
+    reg._tpsr_scaler = _MutatingScaler()
+    reg._tpsr_scale_params = (np.array([0.5]), np.array([-5.0]))
+
+    progress_expression = reg._sequence_to_e2e_expression(
+        types.SimpleNamespace(),
+        object(),
+        object(),
+        [0, 1],
+        {"x_to_fit": [None], "y_to_fit": [None]},
+    )
+    final_candidates = reg._e2e_expression_candidates(
+        object(),
+        (("x_0", [refined_tree]), ("2 * x_0", [_FakeTree("2 * x_0")])),
+    )
+    emitted = []
+    reg._write_progress_state = emitted.append
+    for source, expression in (
+        ("e2e_candidate", progress_expression),
+        ("e2e_terminal", progress_expression),
+        ("e2e_final", final_candidates[0]),
+    ):
+        reg._emit_progress_equation(equation=expression, source=source)
+
+    assert final_candidates[0] == progress_expression
+    assert final_candidates == ["(0.5) * x_0 + (-5.0)", "(0.5) * x_0 + (-5.0)"]
+    assert [item["source"] for item in emitted] == [
+        "e2e_candidate",
+        "e2e_terminal",
+        "e2e_final",
+    ]
+    assert [item["equation"] for item in emitted] == [progress_expression] * 3
+    assert refined_tree.expression == "x_0"
+    assert refined_tree.rescale_count == 0
+
+
+def test_e2e_expression_is_unchanged_when_rescale_is_disabled(monkeypatch):
+    module = _load_tpsr_wrapper_module()
+    tree = _FakeTree("x_0 + 1")
+    _install_e2e_model_stub(
+        monkeypatch,
+        refined_expr="x_0 + 1",
+        refined_trees=[tree],
+        raw_expr=None,
+        raw_trees=[],
+    )
+    reg = module.TPSRRegressor(rescale=False)
+
+    expression = reg._sequence_to_e2e_expression(
+        types.SimpleNamespace(),
+        object(),
+        object(),
+        [0, 1],
+        {"x_to_fit": [None], "y_to_fit": [None]},
+    )
+
+    assert expression == "x_0 + 1"
+    assert tree.expression == "x_0 + 1"
+    assert tree.rescale_count == 0

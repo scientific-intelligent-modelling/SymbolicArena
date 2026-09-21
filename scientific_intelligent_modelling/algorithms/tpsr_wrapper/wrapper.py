@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import os
 import pickle
 import random
@@ -447,9 +448,11 @@ class TPSRRegressor(BaseWrapper):
         from symbolicregression.e2e_model import pred_for_sample_no_refine, refine_for_sample
 
         refined_expr = None
+        refined_trees = []
         raw_expr = None
+        raw_trees = []
         try:
-            _, refined_expr, _ = refine_for_sample(
+            _, refined_expr, refined_trees = refine_for_sample(
                 args,
                 model,
                 equation_env,
@@ -458,21 +461,99 @@ class TPSRRegressor(BaseWrapper):
                 samples["y_to_fit"],
             )
         except Exception:
-            refined_expr = None
+            refined_expr, refined_trees = None, []
         try:
-            _, raw_expr, _ = pred_for_sample_no_refine(
+            _, raw_expr, raw_trees = pred_for_sample_no_refine(
                 model,
                 equation_env,
                 sequence,
                 samples["x_to_fit"],
             )
         except Exception:
-            raw_expr = None
+            raw_expr, raw_trees = None, []
 
-        for expr in (refined_expr, raw_expr):
-            if isinstance(expr, str) and expr.strip():
-                return self._normalize_equation(expr)
-        return None
+        candidates = self._e2e_expression_candidates(
+            equation_env,
+            ((refined_expr, refined_trees), (raw_expr, raw_trees)),
+        )
+        return candidates[0] if candidates else None
+
+    def _e2e_expression_candidates(self, equation_env, candidate_groups):
+        """按 refined/raw 顺序返回原始输入坐标中的 E2E 表达式。"""
+        rescale = bool(self.params.get("rescale", True))
+        scaler = getattr(self, "_tpsr_scaler", None)
+        scale_params = getattr(self, "_tpsr_scale_params", None)
+
+        if rescale:
+            if (
+                scaler is None
+                or not isinstance(scale_params, (tuple, list))
+                or len(scale_params) != 2
+            ):
+                return []
+            try:
+                scales = np.asarray(scale_params[0]).reshape(-1)
+                offsets = np.asarray(scale_params[1]).reshape(-1)
+            except Exception:
+                return []
+            if scales.size != offsets.size:
+                return []
+
+        def _from_tree(tree):
+            try:
+                candidate = copy.deepcopy(tree)
+                if rescale:
+                    candidate = scaler.rescale_function(
+                        equation_env,
+                        candidate,
+                        scales,
+                        offsets,
+                    )
+                text = candidate.infix() if hasattr(candidate, "infix") else candidate
+                text = str(text).strip()
+                return self._normalize_equation(text) if text else None
+            except Exception:
+                return None
+
+        def _from_string(expression):
+            if not isinstance(expression, str) or not expression.strip():
+                return None
+            normalized = self._normalize_equation(expression.strip())
+            if not rescale:
+                return normalized
+            try:
+                import sympy as sp
+
+                parsed = sp.sympify(normalized)
+                substitutions = {}
+                for idx, (scale, offset) in enumerate(zip(scales, offsets)):
+                    for symbol_name in (f"x_{idx}", f"x{idx}"):
+                        symbol = sp.Symbol(symbol_name)
+                        substitutions[symbol] = (
+                            sp.sympify(str(scale)) * symbol + sp.sympify(str(offset))
+                        )
+                restored = parsed.subs(substitutions, simultaneous=True)
+                return self._normalize_equation(str(restored))
+            except Exception:
+                return None
+
+        expressions = []
+        for fallback_expression, trees in candidate_groups:
+            tree_expressions = []
+            if isinstance(trees, (list, tuple)):
+                for tree in trees:
+                    if tree is None:
+                        continue
+                    restored = _from_tree(tree)
+                    if restored:
+                        tree_expressions.append(restored)
+            if tree_expressions:
+                expressions.extend(tree_expressions)
+                continue
+            restored = _from_string(fallback_expression)
+            if restored:
+                expressions.append(restored)
+        return expressions
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -713,37 +794,10 @@ class TPSRRegressor(BaseWrapper):
         except Exception:
             raw_expr, raw_trees = None, []
 
-        # rescale: 将标准化空间的树反变换回原始变量空间
-        scaler = getattr(self, "_tpsr_scaler", None)
-        scale_params = getattr(self, "_tpsr_scale_params", None)
-        if scaler is not None and scale_params is not None:
-            def _rescale_tree(tree):
-                try:
-                    return scaler.rescale_function(equation_env, tree, *scale_params)
-                except Exception:
-                    return tree
-
-            if isinstance(refined_trees, list):
-                refined_trees = [_rescale_tree(t) if t is not None else t for t in refined_trees]
-            if isinstance(raw_trees, list):
-                raw_trees = [_rescale_tree(t) if t is not None else t for t in raw_trees]
-
-        candidate_exprs = []
-        # 优先从 rescaled tree 提取 infix（比字符串更可靠）
-        for tree_group in (refined_trees, raw_trees):
-            if not isinstance(tree_group, list):
-                continue
-            for tree in tree_group:
-                if tree is None:
-                    continue
-                text = str(tree.infix() if hasattr(tree, "infix") else tree).strip()
-                if text:
-                    candidate_exprs.append(text)
-
-        # 字符串表达式作为 fallback（未 rescaled，只在 tree rescale 全失败时有用）
-        for expr in (refined_expr, raw_expr):
-            if isinstance(expr, str) and expr.strip():
-                candidate_exprs.append(expr)
+        candidate_exprs = self._e2e_expression_candidates(
+            equation_env,
+            ((refined_expr, refined_trees), (raw_expr, raw_trees)),
+        )
 
         # 去重并保留顺序
         seen = set()

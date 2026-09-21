@@ -3,6 +3,8 @@ import sys
 import types
 from pathlib import Path
 
+import numpy as np
+
 
 def _load_sklearn_wrapper_module():
     module_name = "test_e2esr_sklearn_wrapper"
@@ -129,3 +131,257 @@ def test_emit_progress_candidate_can_skip_metric_computation(tmp_path):
     assert captured["bag_index"] == 2
     assert captured["candidate_rank"] == 1
     assert captured["stage"] == "forward_partial"
+
+
+class _FakeTree:
+    def __init__(self, expression):
+        self.expression = expression
+
+    def infix(self):
+        return self.expression
+
+    def prefix(self):
+        return self.expression
+
+    def replace_node_value(self, old, new):
+        self.expression = self.expression.replace(old, new)
+
+
+class _RecordingScaler:
+    def __init__(self, expression=None, error=None):
+        self.expression = expression
+        self.error = error
+        self.calls = []
+
+    def rescale_function(self, env, tree, a, b):
+        self.calls.append((tree, list(a), list(b)))
+        tree.expression = self.expression or tree.expression
+        if self.error is not None:
+            raise self.error
+        return tree
+
+
+def _configured_regressor(module, tmp_path, scaler, *, rescale=True, top_k_features=None):
+    env = types.SimpleNamespace()
+    model = types.SimpleNamespace(env=env)
+    reg = module.SymbolicTransformerRegressor(
+        model=model,
+        rescale=rescale,
+        progress_state_path=str(tmp_path / "state.json"),
+    )
+    reg.scalers = [scaler if rescale else None]
+    reg.scale_params = [([0.5, 0.25], [-5.0, 1.5]) if rescale else None]
+    reg.top_k_features = [top_k_features or [0, 1]]
+    return reg
+
+
+def test_emit_scaled_candidate_inverse_transforms_before_feature_relabel(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    scaler = _RecordingScaler("0.5*x_0 - 5.0 + 0.25*x_1 + 1.5")
+    reg = _configured_regressor(module, tmp_path, scaler, top_k_features=[2, 0])
+    captured = {}
+    reg._write_progress_state = lambda payload: captured.update(payload)  # type: ignore[method-assign]
+
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": _FakeTree("x_0 + x_1")},
+        None,
+        None,
+        stage="refine_final",
+        compute_metrics=False,
+        tree_is_scaled=True,
+    )
+
+    assert scaler.calls[0][1:] == ([0.5, 0.25], [-5.0, 1.5])
+    assert captured["equation"] == "0.25*x_0 + 0.5*x_2 - 3.5"
+
+
+def test_emit_candidate_with_rescale_disabled_only_relabels_features(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    scaler = _RecordingScaler("wrong")
+    reg = _configured_regressor(
+        module,
+        tmp_path,
+        scaler,
+        rescale=False,
+        top_k_features=[3, 1],
+    )
+    captured = {}
+    reg._write_progress_state = lambda payload: captured.update(payload)  # type: ignore[method-assign]
+
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": _FakeTree("x_0 - x_1")},
+        None,
+        None,
+        stage="noref_best",
+        compute_metrics=False,
+        tree_is_scaled=False,
+    )
+
+    assert captured["equation"] == "-x_1 + x_3"
+    assert scaler.calls == []
+
+
+def test_emit_final_candidate_does_not_inverse_transform_twice(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    scaler = _RecordingScaler("wrong")
+    reg = _configured_regressor(module, tmp_path, scaler, top_k_features=[2, 0])
+    captured = {}
+    reg._write_progress_state = lambda payload: captured.update(payload)  # type: ignore[method-assign]
+
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": _FakeTree("0.5*x_0 - 5.0")},
+        None,
+        None,
+        stage="fit_final",
+        compute_metrics=False,
+        tree_is_scaled=False,
+    )
+
+    assert captured["equation"] == "0.5*x_2 - 5.0"
+    assert scaler.calls == []
+
+
+def test_emit_scaled_candidate_does_not_mutate_candidate_tree(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    scaler = _RecordingScaler("0.5*x_0 - 5.0")
+    reg = _configured_regressor(module, tmp_path, scaler, top_k_features=[2, 0])
+    reg._write_progress_state = lambda payload: None  # type: ignore[method-assign]
+    tree = _FakeTree("x_0")
+
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": tree},
+        None,
+        None,
+        stage="forward_partial",
+        compute_metrics=False,
+        tree_is_scaled=True,
+    )
+
+    assert tree.expression == "x_0"
+    assert scaler.calls[0][0] is not tree
+
+
+def test_emit_scaled_candidate_fails_closed_when_inverse_transform_fails(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    scaler = _RecordingScaler(error=ValueError("cannot inverse transform"))
+    reg = _configured_regressor(module, tmp_path, scaler)
+    emitted = []
+    reg.progress_callback = lambda **payload: emitted.append(payload)
+
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": _FakeTree("x_0"), "native_model_score": -0.1},
+        None,
+        None,
+        stage="forward_partial",
+        compute_metrics=False,
+        tree_is_scaled=True,
+    )
+
+    assert emitted == []
+
+
+def test_fit_tracks_scaler_and_params_per_dataset_and_marks_final_unscaled(tmp_path):
+    module = _load_sklearn_wrapper_module()
+
+    class FitScaler:
+        instances = []
+
+        def __init__(self):
+            self.index = len(self.instances)
+            self.rescale_calls = []
+            self.instances.append(self)
+
+        def fit_transform(self, X):
+            return X
+
+        def get_params(self):
+            return [self.index + 1.0], [-(self.index + 1.0)]
+
+        def rescale_function(self, env, tree, a, b):
+            self.rescale_calls.append((list(a), list(b)))
+            result = _FakeTree(tree.expression)
+            result.expression = f"{result.expression} + {self.index}"
+            return result
+
+    class FakeModel:
+        def __init__(self):
+            self.env = types.SimpleNamespace(
+                params=types.SimpleNamespace(max_input_dimension=10)
+            )
+            self.last_generation_metadata = [[]]
+
+        def __call__(self, inputs):
+            return [[_FakeTree("x_0")]]
+
+    module.utils_wrapper.StandardScaler = FitScaler
+    module.get_top_k_features = lambda X, y, k: list(range(X.shape[1]))
+    reg = module.SymbolicTransformerRegressor(
+        model=FakeModel(),
+        progress_state_path=str(tmp_path / "state.json"),
+    )
+    reg.refine = lambda dataset_idx, X, y, candidates, verbose: [  # type: ignore[method-assign]
+        {"predicted_tree": candidates[0], "refinement_type": "NoRef"}
+    ]
+    emissions = []
+    reg._emit_progress_candidate = (  # type: ignore[method-assign]
+        lambda dataset_idx, candidate, X, y, *, stage, compute_metrics=True, tree_is_scaled: emissions.append(
+            (dataset_idx, stage, tree_is_scaled, candidate["predicted_tree"].expression)
+        )
+    )
+
+    reg.fit(
+        [np.array([[10.0, 1.0], [12.0, 3.0]]), np.array([[20.0, 2.0], [24.0, 6.0]])],
+        [np.array([1.0, 2.0]), np.array([3.0, 4.0])],
+    )
+
+    assert reg.scalers == FitScaler.instances
+    assert reg.scale_params == [([1.0], [-1.0]), ([2.0], [-2.0])]
+    assert FitScaler.instances[0].rescale_calls == [([1.0], [-1.0])]
+    assert FitScaler.instances[1].rescale_calls == [([2.0], [-2.0])]
+    assert [entry[2] for entry in emissions if entry[1] == "forward_partial"] == [True, True]
+    assert [entry[2] for entry in emissions if entry[1] == "fit_final"] == [False, False]
+
+
+def test_refine_marks_every_progress_candidate_as_scaled(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    original_tree = _FakeTree("x_0")
+    refined_tree = _FakeTree("2*x_0")
+
+    class Refinement:
+        def go(self, **kwargs):
+            return refined_tree
+
+    generator = types.SimpleNamespace(
+        function_to_skeleton=lambda tree, constants_with_idx: (tree, [])
+    )
+    model = types.SimpleNamespace(env=types.SimpleNamespace(generator=generator))
+    module.utils_wrapper.BFGSRefinement = Refinement
+    reg = module.SymbolicTransformerRegressor(
+        model=model,
+        progress_state_path=str(tmp_path / "state.json"),
+        rescale=True,
+    )
+    reg.start_fit = 0.0
+    reg.order_candidates = lambda X, y, candidates, metric, verbose=False: candidates  # type: ignore[method-assign]
+    reg._safe_tree_metric = (  # type: ignore[method-assign]
+        lambda tree, X, y, metric: 1.0 if tree is refined_tree else 0.0
+    )
+    emissions = []
+    reg._emit_progress_candidate = (  # type: ignore[method-assign]
+        lambda dataset_idx, candidate, X, y, *, stage, compute_metrics=True, tree_is_scaled: emissions.append(
+            (stage, tree_is_scaled)
+        )
+    )
+
+    reg.refine(0, np.array([[0.0], [1.0]]), np.array([0.0, 1.0]), [original_tree], verbose=False)
+
+    assert emissions == [
+        ("noref_best", True),
+        ("bfgs_best", True),
+        ("refine_final", True),
+    ]

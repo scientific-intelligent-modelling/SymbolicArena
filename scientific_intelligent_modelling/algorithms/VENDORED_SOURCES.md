@@ -15,3 +15,10 @@
 
 除 DrSR 上游快照未提供许可证文件外，其余内置源码均保留了上游仓库中的
 `LICENSE`，DSO 还保留了 `NOTICE`。在确认 DrSR 的授权条款前，不应对外再分发其源码。
+
+## 本地修复
+
+- 2026-09-21：E2ESR 的 `symbolicregression/model/sklearn_wrapper.py` 在发布进度公式前
+  逆标准化并恢复特征索引，避免 runner 在原始输入上回放标准化坐标公式。
+  上表提交号表示导入基线，当前源码包含此本地修复；诊断证据见
+  `diagnostics/three_algorithm_quality_20260921.md`（主仓库根目录下）。

@@ -1,0 +1,143 @@
+{
+  "algorithm": "tpsr",
+  "case": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+  "params": {
+    "seed": 520,
+    "n_features": 2,
+    "feature_names": [
+      "t",
+      "A"
+    ],
+    "target_name": "dA_dt",
+    "exp_path": "/tmp/sim_quality_debug/tpsr_after_crk0",
+    "exp_name": "native",
+    "timeout_in_seconds": 45.0,
+    "max_number_bags": 1,
+    "n_trees_to_refine": 4,
+    "cpu_num_threads": 1,
+    "horizon": 40,
+    "rollout": 1,
+    "width": 2
+  },
+  "diagnostic_only": true,
+  "source_sha256": {
+    "scientific_intelligent_modelling/algorithms/tpsr_wrapper/wrapper.py": "6c4ee3de3ad6d75ebe9aa817cc91f83b0605e2020ab1db3e390b739f30c4c8dd",
+    "scientific_intelligent_modelling/benchmarks/normalizers.py": "88b57870a070c6d7c5b99b66ac2a9c14d0c37b3a62be8725ada79c6c92d7d499"
+  },
+  "execution": {
+    "returncode": 0,
+    "hard_timeout": false,
+    "hard_limit_seconds": 180.0,
+    "wall_seconds": 59.95066151302308
+  },
+  "metrics": {
+    "train": {
+      "native": {
+        "finite": true,
+        "mse": 4.0326831910307745e-05,
+        "nmse_mean_y_squared": 0.32574213101605026,
+        "r2": 0.6460824728611652
+      },
+      "exported": {
+        "finite": true,
+        "mse": 4.0326831910307745e-05,
+        "nmse_mean_y_squared": 0.32574213101605026,
+        "r2": 0.6460824728611652
+      },
+      "export_max_abs_delta": 0.0
+    },
+    "id": {
+      "native": {
+        "finite": true,
+        "mse": 5.341824551427781e-05,
+        "nmse_mean_y_squared": 0.32849170084875173,
+        "r2": 0.636831998286076
+      },
+      "exported": {
+        "finite": true,
+        "mse": 5.341824551427781e-05,
+        "nmse_mean_y_squared": 0.32849170084875173,
+        "r2": 0.636831998286076
+      },
+      "export_max_abs_delta": 0.0
+    },
+    "ood": {
+      "native": {
+        "finite": true,
+        "mse": 1.3067497057850135e-08,
+        "nmse_mean_y_squared": 0.11234376531712333,
+        "r2": 0.5734478797155862
+      },
+      "exported": {
+        "finite": true,
+        "mse": 1.3067497057850135e-08,
+        "nmse_mean_y_squared": 0.11234376531712333,
+        "r2": 0.5734478797155862
+      },
+      "export_max_abs_delta": 0.0
+    }
+  },
+  "worker": {
+    "status": "ok",
+    "python": "3.9.23 | packaged by conda-forge | (main, Jun  4 2025, 17:57:12) \n[GCC 13.3.0]",
+    "equation": "((0.002 + (-0.006999999999999999 * (-48.755482830134646 + (41.79836617611447 * x_1)))) * (0.6 + (-0.7000000000000001 * sin((0.3 + (2.0 * (-1.7393685467328703 + (0.06457430336288468 * x_0))))))))",
+    "artifact": {
+      "version": "csp_v1",
+      "tool_name": "tpsr",
+      "raw_equation": "((0.002 + (-0.006999999999999999 * (-48.755482830134646 + (41.79836617611447 * x_1)))) * (0.6 + (-0.7000000000000001 * sin((0.3 + (2.0 * (-1.7393685467328703 + (0.06457430336288468 * x_0))))))))",
+      "raw_equation_kind": "prefix_expression",
+      "python_function_source": "def equation(x0, x1, params):\n    return (0.34328837981094247 - 0.2925885632328012*x1)*(0.6 - 0.7000000000000001*sin(0.1291486067257694*x0 - 3.1787370934657406))\n",
+      "return_expression_source": "(0.34328837981094247 - 0.2925885632328012*x1)*(0.6 - 0.7000000000000001*sin(0.1291486067257694*x0 - 3.1787370934657406))",
+      "normalized_expression": "(0.34328837981094247 - 0.2925885632328012*x1)*(0.6 - 0.7000000000000001*sin(0.1291486067257694*x0 - 3.1787370934657406))",
+      "instantiated_expression": "(0.34328837981094247 - 0.2925885632328012*x1)*(0.6 - 0.7000000000000001*sin(0.1291486067257694*x0 - 3.1787370934657406))",
+      "variables": [
+        "x0",
+        "x1"
+      ],
+      "parameter_symbols": [],
+      "parameter_values": null,
+      "expected_n_features": 2,
+      "operator_set": [
+        "add",
+        "mul",
+        "sin"
+      ],
+      "ast_node_count": 16,
+      "tree_depth": 7,
+      "normalization_mode": "tpsr_infix",
+      "normalization_notes": [],
+      "artifact_valid": true,
+      "validation_errors": [],
+      "fidelity_check": {},
+      "sympy_parse_ok": true,
+      "sympy_expression": "(0.34328837981094247 - 0.2925885632328012*x1)*(0.6 - 0.7000000000000001*sin(0.1291486067257694*x0 - 3.1787370934657406))"
+    },
+    "elapsed_seconds": 58.16305014898535
+  },
+  "snapshots": [
+    {
+      "source": "e2e_candidate",
+      "native_model_score": null,
+      "probe_elapsed_seconds": 21.49829579197103,
+      "equation": "((0.002 + (-0.006999999999999999 * (-48.755482830134646 + (41.79836617611447 * x_1)))) * (0.6 + (-0.7000000000000001 * sin((0.3 + (2.0 * (-1.7393685467328703 + (0.06457430336288468 * x_0))))))))",
+      "id": {
+        "finite": true,
+        "mse": 5.341824551427781e-05,
+        "nmse_mean_y_squared": 0.32849170084875173,
+        "r2": 0.636831998286076
+      }
+    },
+    {
+      "source": "e2e_final",
+      "native_model_score": null,
+      "probe_elapsed_seconds": 58.15506253700005,
+      "equation": "((0.002 + (-0.006999999999999999 * (-48.755482830134646 + (41.79836617611447 * x_1)))) * (0.6 + (-0.7000000000000001 * sin((0.3 + (2.0 * (-1.7393685467328703 + (0.06457430336288468 * x_0))))))))",
+      "id": {
+        "finite": true,
+        "mse": 5.341824551427781e-05,
+        "nmse_mean_y_squared": 0.32849170084875173,
+        "r2": 0.636831998286076
+      }
+    }
+  ]
+}
