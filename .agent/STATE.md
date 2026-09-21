@@ -2,10 +2,20 @@
 
 ## 当前任务
 
+- 编号：FIX-001；任务：修复 PySR/PyOperon 变量索引并核验旧结果复用；状态：代码修复与数值更正已完成。
+- 当前采用方案：PySR 保持零基变量，PyOperon 只转换一次；PyOperon 数值回放使用原生 X 变量公式。历史回放从原始公式重建，保留训练目标选择与来源。
+- 已确认：51个数据集的输入与历史冻结数据相符。726次旧训练记录可复用（PySR/PyOperon各363；合计clean306、noise001210、noise005210），无需因索引错误重新训练。708次有有效终态，18次按无有效输出保留。
+- 更正范围：291份终态表达式、52747条分钟表达式；全部130680条分钟数值、ID/OOD/EFF及STAB数值部分已核验。300份符号评估和142组三种子结构评估待更新，其他旧裁决仍需绑定核验；未调用付费API，未标记六维正式就绪。
+- 有效入口：[current_evaluations.csv](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/current_evaluations.csv)。更正数据在每个seed的 `corrected/`，`current.json` 指定有效文件；原始文件保留。正式脚本、输入核验、复用报告为同目录 `correct_history.py`、`input_audit.json`、`reuse_report.json`。
+- 验证：3个针对性测试通过；15台可连接机器同步并全部通过相同测试，54仍不可达。远端记录：[remote_sync.json](work/FIX-001/remote_sync.json)；数据核验：[verification.json](work/FIX-001/verification.json)。
+- 下一步：依据当前有效索引更新受影响的 Opus 后处理，再汇总正式六维指标；其余9个已导入算法未在本次做数值复用审核。
+
+## 已有实验
+
 - 编号：IMPORT-001；任务：按新 Core80 交集整理已有实验数据；状态：已完成。
 - 当前采用方案：[2、experiments](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/) 使用 `{algorithm}/{dataset}/{condition}/{seed}`；排除 E2ESR、TPSR、RAG-SR、SymbolFit。
 - 已确认：11算法、51数据集、3993次运行。旧 Core50 的35个交集任务贡献3465次，stage6新增30中的16个交集任务贡献528次。clean=1683，noise001=1155，noise005=1155。
-- 有效索引：[manifest.csv](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.csv)、[manifest.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.json)；文件说明见同目录 README.md。整理脚本保留在 `.agent/work/IMPORT-001/import_experiments.py`。
+- 原始导入索引：[manifest.csv](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.csv)、[manifest.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.json)；当前评估使用上方 `current_evaluations.csv`。整理脚本保留在 `.agent/work/IMPORT-001/import_experiments.py`。
 - 验证：3993份结果原文与最新汇总的选定冻结哈希一致，718740条逐分钟指标齐全，快照来源哈希已核验。stage6终态与分钟快照的元信息版本分别按各自绑定保留；源文件未移动或改写。
 - 下一步：该目录作为已有结果输入；尚未启动新 Core80 实验。
 
@@ -25,8 +35,8 @@
 - 有效结果：[逐机器结果](work/ENV-002/results_by_machine.csv)、[逐测试明细](work/ENV-002/results.csv)；脚本、配置、输入及 SHA256 见 [ENV-002](work/ENV-002/) 内 `run_checks.py`、`params.json`、`inputs_manifest.json`。远端原始输出位于 `<根目录>/sim-runtime/checks/ENV-002/results/`。
 - 已确认：450/450 测试结束，无遗留测试会话；449 条产生有限 ID R2，25 上 E2ESR/g0275 预算内无有效公式。产生指标不代表预测效果或评估逻辑通过。
 - 网络修复：49、51、52、53、55 的 `sim_llm` 通过 `.pth` 加载 `<根目录>/sim-runtime/network/sitecustomize.py`，仅将 `api.deepinfra.com` 连接地址设为 `38.101.151.13`，保留 URL、SNI 与 TLS 证书校验。5 台真实 Llama-3.1-8B-Instruct-Turbo 请求均回复 OK，证据 `dns_api_*.json`；原始 DNS/IP 连通检查为 `dns_49.json` 等。安装与复核脚本为 `install_dns.py`、`verify_deepinfra.py`。
-- 未解决问题：历史 20 项 LLM 训练尚未重跑，原结果保留；系统 DNS 未修改。IP 变化时通过 `SIM_DEEPINFRA_CONNECT_IP` 更新，空字符串可停用覆盖。PySR/PyOperon 的变量索引错误尚未修复；复算证据 `metric_mapping_check.json` 中原公式 ID R2=0.9999999999999963、原报告=-8.822646727794563e37。54 仍有30项测试未执行。
-- 下一步：重测历史20项 LLM、处理变量索引；54 恢复后补充部署和同口径测试。
+- 未解决问题：历史20项 LLM 训练尚未重跑，原结果保留；系统DNS未修改。IP变化时通过 `SIM_DEEPINFRA_CONNECT_IP` 更新，空字符串可停用覆盖。变量索引问题已由 FIX-001 修复，历史3分钟测试输出未覆盖。54仍有30项测试未执行。
+- 下一步：按后续任务重测历史20项 LLM；54恢复后补充部署和同口径测试。
 
 ## 环境入口：已确认
 
@@ -59,3 +69,4 @@
 - DIR-001 已完成；未产生过程记录。
 - CORE-001 已完成；`.agent/work/CORE-001/` 原位归档，默认不读取。
 - IMPORT-001 已完成；过程目录原位归档，整理脚本持续保留供复现。
+- FIX-001 数值更正完成；过程目录原位归档，正式更正脚本和核验输入已保存在实验目录。

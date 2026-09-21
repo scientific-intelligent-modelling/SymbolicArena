@@ -39,6 +39,9 @@ class _CanonicalOutputInvalid(ValueError):
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
 _PARAMETER_REFERENCE_RE = re.compile(r"\bparams\s*\[|\bc\d+\b")
 _FORCED_RAW_REBUILD_TOOLS = {
+    "pysr",
+    "pyoperon",
+    "operon",
     "qlattice",
     "qlattice_wrapper",
     "drsr",
@@ -273,7 +276,7 @@ def _corrected_artifact(
     artifact = dict(artifact_raw) if isinstance(artifact_raw, Mapping) else None
     tool = str(algorithm).strip().lower()
 
-    # 这四类历史工件存在变量平移、参数丢失或导出路径差异，统一从冻结原始公式
+    # 历史工件可能存在变量平移、参数丢失或导出路径差异，统一从冻结原始公式
     # 重新走当前 normalizer，绝不复用旧 normalized/instantiated 表达式。
     if tool in _FORCED_RAW_REBUILD_TOOLS:
         raw_equation = payload.get("equation")

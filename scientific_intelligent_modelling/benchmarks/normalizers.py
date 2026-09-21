@@ -308,7 +308,8 @@ def _build_function_source(normalized_expression: str, variables: list[str]) -> 
 
 
 def normalize_pysr_artifact(raw_equation: str, *, expected_n_features: int | None = None) -> dict[str, Any]:
-    normalized_expression, parsed = _normalize_common_expression(raw_equation)
+    # PySR 的原生变量从 x0 开始，未使用首列也不能改变索引。
+    normalized_expression, parsed = _normalize_common_expression(raw_equation, shift_one_based=False)
     variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []
     artifact = build_canonical_symbolic_program(
         tool_name="pysr",
@@ -569,7 +570,8 @@ def normalize_tpsr_artifact(raw_equation: str, *, expected_n_features: int | Non
 
 def normalize_operon_artifact(raw_equation: str, *, expected_n_features: int | None = None) -> dict[str, Any]:
     expr = _replace_operon_tokens(str(raw_equation))
-    normalized_expression, parsed = _normalize_common_expression(expr)
+    # X1 到 x0 的转换已在上一步完成。
+    normalized_expression, parsed = _normalize_common_expression(expr, shift_one_based=False)
     variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []
     artifact = build_canonical_symbolic_program(
         tool_name="pyoperon",

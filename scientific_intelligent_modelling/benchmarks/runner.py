@@ -826,6 +826,22 @@ def _predict_from_canonical_artifact(artifact: dict[str, Any], X: np.ndarray) ->
 
     这里只服务 runner 的中间最优快照，不依赖具体算法 wrapper 或子进程环境。
     """
+    if str(artifact.get("tool_name") or "").strip().lower() in {"pyoperon", "operon"}:
+        raw_equation = artifact.get("raw_equation")
+        if isinstance(raw_equation, str) and raw_equation.strip():
+            # 与 OperonRegressor 的反序列化预测一致，保留原生变量名参与数值计算。
+            X_arr = np.asarray(X, dtype=float)
+            if X_arr.ndim != 2:
+                raise ValueError("PyOperon 预测要求二维输入")
+            symbols = [sp.Symbol(f"X{i + 1}") for i in range(X_arr.shape[1])]
+            expr = sp.sympify(raw_equation)
+            if not expr.free_symbols.issubset(set(symbols)):
+                raise ValueError(f"PyOperon 原生变量非法: {expr.free_symbols - set(symbols)}")
+            fn = sp.lambdify(symbols, expr, modules=["numpy"])
+            with np.errstate(all="ignore"):
+                prediction = np.asarray(fn(*X_arr.T), dtype=float)
+            return np.broadcast_to(prediction, (X_arr.shape[0],)).astype(float).copy()
+
     executable_expression = artifact.get("executable_expression")
     if isinstance(executable_expression, str) and executable_expression.strip():
         return _predict_executable_expression(executable_expression, X)
