@@ -2,6 +2,15 @@
 
 ## 当前任务
 
+- 编号：FIX-002；任务：检查 QLattice、DSO、FePySR、gplearn、iMCTS、JAXSR、uDSR；状态：本轮检查、修复和同步已完成，排除 LLMSR/DRSR。
+- 当前采用方案：7算法预算恢复保留原生选中公式，不按测试集有限性改选；gplearn 完整精度导出并保留跨代最佳 program；QLattice 数值导出使用17位有效数字；iMCTS 常数预测按样本数广播；JAXSR 从已验证 model_state 恢复。DSO/uDSR 明确拒绝尚无可靠导出的 protected=True，默认 False 不受影响。
+- 已确认：FePySR、DSO、uDSR、iMCTS 稀疏变量回放一致；gplearn/QLattice/JAXSR 用真实依赖复现并验证修复。15台完成6个源码文件同步，138处目标文件哈希一致；每台13个针对性测试通过，共195个。54仍不可达。
+- 有效文件：`scientific_intelligent_modelling/benchmarks/runner.py`、对应5个 wrapper；测试为 `tests/test_native_budget_selection.py`、`test_remaining_native_predictions.py`、`test_dso_protected_contract.py`、`test_gplearn_native_export.py`、`test_qlattice_native_export.py`、`test_jaxsr_native_restore.py`，另回归 `test_native_variable_indices.py`。同步与验证证据：[remote_sync.json](work/FIX-002/remote_sync.json)；执行脚本为同目录 `run_sync.py`、`sync_remote.py`，真实复现脚本为 `reproduce_*.py`。
+- 未解决问题：未重跑正式实验，未改写旧结果。gplearn/QLattice 旧结果仅含舍入公式时，需原生模型才能无损恢复；不能直接据此声称全部旧记录可复用。已导入的 DSO/uDSR 各363条参数均为 protected=False。
+- 下一步：正式实验采用当前代码；旧结果按原生模型是否完整单独判定复用，54恢复后补同步与验证。
+
+## 已完成修复
+
 - 编号：FIX-001；任务：修复 PySR/PyOperon 变量索引并核验旧结果复用；状态：代码修复与数值更正已完成。
 - 当前采用方案：PySR 保持零基变量，PyOperon 只转换一次；PyOperon 数值回放使用原生 X 变量公式。历史回放从原始公式重建，保留训练目标选择与来源。
 - 已确认：51个数据集的输入与历史冻结数据相符。726次旧训练记录可复用（PySR/PyOperon各363；合计clean306、noise001210、noise005210），无需因索引错误重新训练。708次有有效终态，18次按无有效输出保留。
@@ -70,3 +79,4 @@
 - CORE-001 已完成；`.agent/work/CORE-001/` 原位归档，默认不读取。
 - IMPORT-001 已完成；过程目录原位归档，整理脚本持续保留供复现。
 - FIX-001 数值更正完成；过程目录原位归档，正式更正脚本和核验输入已保存在实验目录。
+- FIX-002 已完成；过程目录原位归档，保留真实复现脚本与远端同步、验证记录。

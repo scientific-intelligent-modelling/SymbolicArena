@@ -311,13 +311,14 @@ class iMCTSRegressor(BaseWrapper):
 
         # 若同进程存在底层回归器，直接复用其 predict（包含更多上下文）
         if self._runtime_regressor is not None:
-            return self._runtime_regressor.predict(XT, self._best_expr_vector)
+            y_pred = self._runtime_regressor.predict(XT, self._best_expr_vector)
+            return np.broadcast_to(np.asarray(y_pred), (X.shape[0],)).copy()
 
         # 否则根据持久化的表达式与上下文重建可调用函数
         try:
             func = eval(f'lambda x: {self._best_expr_vector}', self._eval_context)
             y_pred = func(XT)
-            return np.asarray(y_pred)
+            return np.broadcast_to(np.asarray(y_pred), (X.shape[0],)).copy()
         except Exception as e:
             raise RuntimeError(f"iMCTS 预测失败: {e}")
 

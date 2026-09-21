@@ -145,6 +145,12 @@ class DSORegressor(BaseWrapper):
             # 避免最终路径变成 exp_path/exp_name/exp_name 的双层结构。
             experiment["logdir"] = os.path.abspath(str(exp_path))
 
+        if task.get("protected"):
+            raise ValueError(
+                "DSO/uDSR protected=True 尚无保留受保护算子语义的公式导出，"
+                "无法保证预测与回放一致；当前评测支持 protected=False。"
+            )
+
         config = dict(params)
         config["experiment"] = experiment
         config["task"] = task

@@ -26,10 +26,11 @@ class QLatticeRegressor(BaseWrapper):
     参数（常用）：
     - n_epochs: int = 100，自动搜索轮数
     - kind: str = 'regression'，任务类型
-    - signif: int = 4，表达式输出的有效数字（用于 sympify 展示）
+    - signif: int = 4，表达式展示时的有效数字；机器导出固定使用完整精度
     - 其他 QLattice.auto_run 支持的参数可透传
     """
     _PROGRESS_STATE_FILENAME = ".qlattice_current_best.json"
+    _NUMERIC_EXPORT_SIGNIF = 17
 
     def __init__(self, **kwargs) -> None:
         self.params = dict(kwargs)
@@ -99,18 +100,12 @@ class QLatticeRegressor(BaseWrapper):
             cls._PROGRESS_STATE_FILENAME,
         )
 
-    @staticmethod
-    def _raw_model_equation(model, signif: int) -> Optional[str]:
-        try:
-            return str(model.sympify(signif=signif))
-        except Exception:
-            try:
-                return str(model)
-            except Exception:
-                return None
+    @classmethod
+    def _raw_model_equation(cls, model) -> Optional[str]:
+        return str(model.sympify(signif=cls._NUMERIC_EXPORT_SIGNIF))
 
-    def _model_equation(self, model, signif: int) -> Optional[str]:
-        raw_equation = self._raw_model_equation(model, signif)
+    def _model_equation(self, model) -> Optional[str]:
+        raw_equation = self._raw_model_equation(model)
         return self._equation_on_original_target_scale(raw_equation)
 
     @staticmethod
@@ -293,7 +288,6 @@ class QLatticeRegressor(BaseWrapper):
         total_epochs = int(auto_args.get('n_epochs', 100))
         if total_epochs < 1:
             raise ValueError('n_epochs 必须 >= 1')
-        signif = int(self.params.get('signif', 4))
         criterion_name = self._criterion_name()
 
         if self._progress_state_path:
@@ -331,7 +325,7 @@ class QLatticeRegressor(BaseWrapper):
                     global_best_loss = epoch_best_loss
                     global_best_epoch = epoch
                 self._write_progress_state_from_equation(
-                    self._model_equation(global_best_model, signif),
+                    self._model_equation(global_best_model),
                     epoch=global_best_epoch,
                     loss=global_best_loss,
                     criterion_name=criterion_name,
@@ -350,11 +344,11 @@ class QLatticeRegressor(BaseWrapper):
         self.model = True
 
         # 提取最优与候选表达式
-        self._expr_str = self._model_equation(self._best_model, signif)
+        self._expr_str = self._model_equation(self._best_model)
 
         equations: List[str] = []
         for m in self._models:
-            eq = self._model_equation(m, signif)
+            eq = self._model_equation(m)
             if eq is not None:
                 equations.append(eq)
         self._equations = equations
@@ -423,11 +417,8 @@ class QLatticeRegressor(BaseWrapper):
             raise ValueError('模型尚未训练，请先调用 fit 方法。')
         if self._expr_str:
             return self._expr_str
-        try:
-            signif = int(self.params.get('signif', 4))
-            return str(self._best_model.sympify(signif=signif))
-        except Exception:
-            return '未找到可用的方程'
+        equation = self._model_equation(self._best_model)
+        return equation or '未找到可用的方程'
 
     def get_total_equations(self, n: int | None = None):
         """返回候选模型的表达式列表（字符串）。
@@ -438,13 +429,11 @@ class QLatticeRegressor(BaseWrapper):
         if self.model is None:
             raise ValueError('模型尚未训练，请先调用 fit 方法。')
         results: List[str] = []
-        signif = int(self.params.get('signif', 4))
         if self._models:
             for m in self._models:
-                try:
-                    results.append(str(m.sympify(signif=signif)))
-                except Exception:
-                    results.append(str(m))
+                equation = self._model_equation(m)
+                if equation is not None:
+                    results.append(equation)
         elif self._equations:
             results = list(self._equations)
         elif self._expr_str:

@@ -99,9 +99,11 @@ class GPLearnRegressor(BaseWrapper):
         self.params = self._validate_and_normalize_params(kwargs)
         self.model = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
-        # gplearn 的 warm_start 会把新一代的局部 best 写进同一个 model；保存
-        # 在线快照时必须单调保留内部 loss 最低的历史候选。
+        # gplearn 最终只把末代 best 放在 ``_program``；这里保留全程按原生
+        # metric 选出的 best，供最终预测、导出和在线快照共同使用。
         self._progress_best_loss = None
+        self._progress_best_program = None
+        self._progress_best_generation = None
         self._progress_best_payload = None
 
     @classmethod
@@ -332,51 +334,105 @@ class GPLearnRegressor(BaseWrapper):
             return False
         return (time.time() - started_at) >= self._timeout_in_seconds
 
+    @staticmethod
+    def _serialize_native_program(program) -> str:
+        """按 gplearn 扁平前序树及节点 arity 导出无损 prefix。"""
+        nodes = getattr(program, "program", None)
+        if not isinstance(nodes, list) or not nodes:
+            raise ValueError("gplearn 原生 program 为空或结构无效")
+
+        terminals = [0]
+        output = []
+        for index, node in enumerate(nodes):
+            arity = getattr(node, "arity", None)
+            name = getattr(node, "name", None)
+            if isinstance(arity, numbers.Integral) and isinstance(name, str):
+                if int(arity) <= 0:
+                    raise ValueError(f"gplearn 函数节点 arity 无效: {arity}")
+                terminals.append(int(arity))
+                output.append(f"{name}(")
+                continue
+
+            if isinstance(node, numbers.Integral) and not isinstance(node, bool):
+                output.append(f"X{int(node)}")
+            elif isinstance(node, numbers.Real) and not isinstance(node, bool):
+                output.append(repr(float(node)))
+            else:
+                raise TypeError(f"不支持的 gplearn 原生节点: {type(node).__name__}")
+
+            terminals[-1] -= 1
+            while terminals[-1] == 0:
+                terminals.pop()
+                terminals[-1] -= 1
+                output.append(")")
+            if index != len(nodes) - 1:
+                output.append(", ")
+
+        if terminals != [-1]:
+            raise ValueError("gplearn 原生 program 不是完整树")
+        return "".join(output)
+
+    def _capture_current_best_program(self) -> bool:
+        if self.model is None:
+            return False
+        program = getattr(self.model, "_program", None)
+        if program is None:
+            return False
+        try:
+            fitness = float(program.raw_fitness_)
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            return False
+        if not np.isfinite(fitness):
+            return False
+
+        greater_is_better = bool(
+            getattr(getattr(self.model, "_metric", None), "greater_is_better", False)
+        )
+        if self._progress_best_loss is not None:
+            improved = (
+                fitness > self._progress_best_loss
+                if greater_is_better
+                else fitness < self._progress_best_loss
+            )
+            if not improved:
+                return False
+
+        run_details = getattr(self.model, "run_details_", {}) or {}
+        generations = run_details.get("generation") or []
+        generation = int(generations[-1]) + 1 if generations else None
+        best_program = deepcopy(program)
+        self._progress_best_loss = fitness
+        self._progress_best_program = best_program
+        self._progress_best_generation = generation
+        self._progress_best_payload = {
+            "equation": self._serialize_native_program(best_program),
+            "loss": fitness,
+            "complexity": int(best_program.length_),
+            "generation": generation,
+            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        return True
+
     def _write_progress_state_from_model(self):
-        if not self._progress_state_path or self.model is None:
+        if not self._capture_current_best_program() or not self._progress_state_path:
             return
         try:
-            run_details = getattr(self.model, "run_details_", {}) or {}
-            if not run_details or not run_details.get("generation"):
-                return
-            last_idx = len(run_details["generation"]) - 1
-            losses = run_details.get("best_fitness") or []
-            lengths = run_details.get("best_length") or []
-            if last_idx >= len(losses) or last_idx >= len(lengths):
-                return
-            try:
-                loss = float(losses[last_idx])
-            except (TypeError, ValueError, OverflowError):
-                loss = None
-            if loss is not None and not np.isfinite(loss):
-                loss = None
-
-            # gplearn 的 ``best_fitness`` 是当前 generation 的内部 loss，
-            # 不是跨 generation 的累计 best；新一代变差时不能覆盖旧快照。
-            if self._progress_best_payload is not None:
-                if loss is None:
-                    return
-                if self._progress_best_loss is not None and loss >= self._progress_best_loss:
-                    return
-
-            try:
-                complexity = int(lengths[last_idx])
-            except (TypeError, ValueError, OverflowError):
-                complexity = None
-            payload = {
-                "equation": str(self.model),
-                "loss": loss,
-                "complexity": complexity,
-                "generation": int(run_details["generation"][last_idx]) + 1,
-                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-            self._progress_best_loss = loss
-            self._progress_best_payload = payload
             os.makedirs(os.path.dirname(self._progress_state_path), exist_ok=True)
             with open(self._progress_state_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
+                json.dump(self._progress_best_payload, f, ensure_ascii=False, indent=2)
         except Exception:
             pass
+
+    def _native_stopping_criteria_reached(self) -> bool:
+        program = getattr(self.model, "_program", None)
+        metric = getattr(self.model, "_metric", None)
+        if program is None or metric is None:
+            return False
+        fitness = float(program.raw_fitness_)
+        stopping_criteria = float(self.model.stopping_criteria)
+        if metric.greater_is_better:
+            return fitness >= stopping_criteria
+        return fitness <= stopping_criteria
 
     def fit(self, X, y):
         self._validate_explicit_dataset_contract(
@@ -402,22 +458,36 @@ class GPLearnRegressor(BaseWrapper):
         total_generations = max(1, total_generations)
         started_at = time.time()
 
-        if self._progress_state_path:
-            params["warm_start"] = False
-            params["generations"] = 1
+        # 普通调用继续交给 gplearn 原生 fit，保留其 stopping_criteria 等行为。
+        # 只有需要逐代快照或外层时间预算时才使用 warm-start 单代训练。
+        if not self._progress_state_path and self._timeout_in_seconds is None:
             self.model = GPLearnSR(**params)
+            self.model.fit(X, y)
+            return self
+
+        self._progress_best_loss = None
+        self._progress_best_program = None
+        self._progress_best_generation = None
+        self._progress_best_payload = None
+
+        params["warm_start"] = False
+        params["generations"] = 1
+        self.model = GPLearnSR(**params)
+        self.model.fit(X, y)
+        self._write_progress_state_from_model()
+        for generation in range(2, total_generations + 1):
+            if (
+                self._native_stopping_criteria_reached()
+                or self._time_budget_exhausted(started_at)
+            ):
+                break
+            self.model.warm_start = True
+            self.model.generations = generation
             self.model.fit(X, y)
             self._write_progress_state_from_model()
-            for generation in range(2, total_generations + 1):
-                if self._time_budget_exhausted(started_at):
-                    break
-                self.model.warm_start = True
-                self.model.generations = generation
-                self.model.fit(X, y)
-                self._write_progress_state_from_model()
-        else:
-            self.model = GPLearnSR(**params)
-            self.model.fit(X, y)
+
+        if self._progress_best_program is not None:
+            self.model._program = self._progress_best_program
         return self
 
     def predict(self, X):
@@ -429,7 +499,10 @@ class GPLearnRegressor(BaseWrapper):
         """返回模型拟合的数学方程"""
         if self.model is None:
             raise ValueError("模型尚未训练，请先调用fit方法")
-        return str(self.model)
+        program = getattr(self.model, "_program", None)
+        if program is None:
+            raise ValueError("gplearn 模型缺少原生 _program，无法无损导出")
+        return self._serialize_native_program(program)
 
     def get_total_equations(self):
         """
@@ -437,7 +510,7 @@ class GPLearnRegressor(BaseWrapper):
         """
         if self.model is None:
             raise ValueError("模型尚未训练，请先调用fit方法")
-        return [str(self.model)]
+        return [self.get_optimal_equation()]
 
     def export_canonical_symbolic_program(self):
         if self.model is None:

@@ -53,6 +53,8 @@ class JAXSRRegressor(BaseWrapper):
         "progress_snapshot_interval_seconds",
         "timeout_guard_seconds",
         "timeout_in_seconds",
+        "existing_exp_dir",
+        "exp_dir",
     }
     _ALLOWED_PARAMS = set(_DEFAULT_PARAMS) | {
         "random_state",
@@ -62,6 +64,7 @@ class JAXSRRegressor(BaseWrapper):
 
     def __init__(self, **kwargs):
         raw_kwargs = dict(kwargs)
+        existing_exp_dir = self._resolve_existing_exp_dir(raw_kwargs)
         self._contract_n_features = raw_kwargs.get("n_features")
         self._contract_feature_names = raw_kwargs.get("feature_names")
         self._contract_target_name = raw_kwargs.get("target_name")
@@ -75,6 +78,8 @@ class JAXSRRegressor(BaseWrapper):
         self.model = None
         self._export_equation: str | None = None
         self._fidelity_evidence: dict[str, Any] | None = None
+        if existing_exp_dir is not None:
+            self._load_verified_progress_state(existing_exp_dir)
 
     @staticmethod
     def _as_positive_float(value) -> float | None:
@@ -95,6 +100,15 @@ class JAXSRRegressor(BaseWrapper):
             exp_name.strip(),
             cls._PROGRESS_STATE_FILENAME,
         )
+
+    @classmethod
+    def _resolve_existing_exp_dir(cls, raw_params: dict[str, Any]) -> str | None:
+        raw = raw_params.get("existing_exp_dir") or raw_params.get("exp_dir")
+        if raw is None:
+            return None
+        if not isinstance(raw, (str, os.PathLike)) or not str(raw).strip():
+            raise ValueError("JAXSR existing_exp_dir/exp_dir 必须是非空目录路径")
+        return os.path.abspath(os.path.expanduser(str(raw).strip()))
 
     @classmethod
     def _validate_and_normalize_params(cls, raw_params: dict[str, Any]) -> dict[str, Any]:
@@ -370,6 +384,185 @@ class JAXSRRegressor(BaseWrapper):
             attempt["reason"] = f"{err.__class__.__name__}: {err}"
         return attempt
 
+    @classmethod
+    def _restore_verified_native_model(
+        cls,
+        *,
+        model_state: Any,
+        equation: Any,
+        fidelity: Any,
+        context: str,
+    ):
+        if not isinstance(model_state, dict) or not model_state:
+            raise RuntimeError(f"{context}: 快照缺少原生 model_state")
+        if not isinstance(equation, str) or not equation.strip():
+            raise RuntimeError(f"{context}: 快照缺少已验证 equation")
+        if not isinstance(fidelity, dict):
+            raise RuntimeError(f"{context}: 快照缺少 export fidelity 证据")
+        if fidelity.get("status") != "verified":
+            raise RuntimeError(
+                f"{context}: export fidelity 状态不是 verified: "
+                f"{fidelity.get('status')!r}"
+            )
+        if fidelity.get("version") != cls._FIDELITY_PROBE_VERSION:
+            raise RuntimeError(f"{context}: export fidelity 版本不受支持")
+
+        definition = fidelity.get("probe_definition")
+        values = definition.get("values") if isinstance(definition, dict) else None
+        if (
+            not isinstance(definition, dict)
+            or definition.get("version") != cls._FIDELITY_PROBE_VERSION
+            or not isinstance(values, list)
+            or not values
+        ):
+            raise RuntimeError(f"{context}: export fidelity 缺少可重放探针")
+        try:
+            probe = np.asarray(values, dtype=float)
+        except Exception as err:
+            raise RuntimeError(f"{context}: export fidelity 探针非法: {err}") from err
+        if probe.ndim != 2 or probe.shape[0] == 0 or probe.shape[1] == 0:
+            raise RuntimeError(f"{context}: export fidelity 探针必须是非空二维数组")
+        if not np.all(np.isfinite(probe)):
+            raise RuntimeError(f"{context}: export fidelity 探针含非有限值")
+
+        expected_hashes = {
+            "model_state_sha256": cls._hash_json(model_state),
+            "equation_sha256": hashlib.sha256(equation.encode("utf-8")).hexdigest(),
+            "probe_input_sha256": cls._hash_float_array(probe),
+        }
+        if fidelity.get("equation") != equation or any(
+            fidelity.get(key) != expected for key, expected in expected_hashes.items()
+        ):
+            raise RuntimeError(f"{context}: export fidelity 证据哈希不一致")
+
+        from jaxsr import SymbolicRegressor
+
+        try:
+            model = SymbolicRegressor._from_dict(model_state)
+        except Exception as err:
+            raise RuntimeError(f"{context}: 原生 model_state 恢复失败: {err}") from err
+        restored_attempt = cls._compare_equation_to_native(
+            model,
+            equation,
+            probe,
+            source="restore_replay",
+        )
+        replay_hashes = {
+            "native_prediction_sha256": restored_attempt.get("native_prediction_sha256"),
+            "replay_prediction_sha256": restored_attempt.get("replay_prediction_sha256"),
+        }
+        if restored_attempt.get("status") != "verified" or any(
+            fidelity.get(key) != expected for key, expected in replay_hashes.items()
+        ):
+            raise RuntimeError(
+                f"{context}: 反序列化后的预测或证据哈希不一致"
+            )
+        return model
+
+    @staticmethod
+    def _native_feature_metadata(model_state: dict[str, Any]) -> tuple[int, list[str]]:
+        basis_state = model_state.get("basis_library")
+        if not isinstance(basis_state, dict):
+            raise RuntimeError("JAXSR 恢复快照缺少 basis_library metadata")
+        try:
+            n_features = int(basis_state["n_features"])
+        except Exception as err:
+            raise RuntimeError("JAXSR 恢复快照的 n_features 非法") from err
+        feature_names = basis_state.get("feature_names")
+        if (
+            n_features <= 0
+            or not isinstance(feature_names, list)
+            or len(feature_names) != n_features
+            or any(not isinstance(name, str) or not name.strip() for name in feature_names)
+        ):
+            raise RuntimeError("JAXSR 恢复快照的 feature metadata 非法")
+        return n_features, list(feature_names)
+
+    def _restore_contract_metadata(
+        self,
+        snapshot: dict[str, Any],
+        model_state: dict[str, Any],
+    ) -> None:
+        native_n_features, native_feature_names = self._native_feature_metadata(model_state)
+        contract = snapshot.get("contract")
+        if contract is not None and not isinstance(contract, dict):
+            raise RuntimeError("JAXSR 恢复快照的 contract metadata 非法")
+        contract = dict(contract or {})
+
+        snapshot_n_features = contract.get("n_features")
+        if snapshot_n_features is not None:
+            try:
+                snapshot_n_features = int(snapshot_n_features)
+            except Exception as err:
+                raise RuntimeError("JAXSR 恢复快照的 contract n_features 非法") from err
+            if snapshot_n_features != native_n_features:
+                raise RuntimeError("JAXSR 恢复快照的 contract 与原生特征维度不一致")
+        explicit_n_features = self._contract_n_features
+        if explicit_n_features is not None and int(explicit_n_features) != native_n_features:
+            raise RuntimeError("JAXSR 恢复参数与原生特征维度不一致")
+
+        snapshot_feature_names = contract.get("feature_names")
+        if snapshot_feature_names is not None:
+            if (
+                not isinstance(snapshot_feature_names, list)
+                or len(snapshot_feature_names) != native_n_features
+                or any(
+                    not isinstance(name, str) or not name.strip()
+                    for name in snapshot_feature_names
+                )
+            ):
+                raise RuntimeError("JAXSR 恢复快照的 contract feature_names 非法")
+            if self._contract_feature_names is not None and list(
+                self._contract_feature_names
+            ) != snapshot_feature_names:
+                raise RuntimeError("JAXSR 恢复参数与快照 feature_names 不一致")
+        elif self._contract_feature_names is not None:
+            snapshot_feature_names = list(self._contract_feature_names)
+            if len(snapshot_feature_names) != native_n_features:
+                raise RuntimeError("JAXSR 恢复参数的 feature_names 长度不一致")
+        else:
+            snapshot_feature_names = native_feature_names
+
+        snapshot_target_name = contract.get("target_name")
+        if snapshot_target_name is not None and (
+            not isinstance(snapshot_target_name, str) or not snapshot_target_name.strip()
+        ):
+            raise RuntimeError("JAXSR 恢复快照的 contract target_name 非法")
+        if (
+            snapshot_target_name is not None
+            and self._contract_target_name is not None
+            and self._contract_target_name != snapshot_target_name
+        ):
+            raise RuntimeError("JAXSR 恢复参数与快照 target_name 不一致")
+
+        self._contract_n_features = native_n_features
+        self._contract_feature_names = snapshot_feature_names
+        self._contract_target_name = snapshot_target_name or self._contract_target_name
+
+    def _load_verified_progress_state(self, experiment_dir: str) -> None:
+        state_path = os.path.join(experiment_dir, self._PROGRESS_STATE_FILENAME)
+        try:
+            with open(state_path, "r", encoding="utf-8") as handle:
+                snapshot = json.load(handle)
+        except Exception as err:
+            raise RuntimeError(f"JAXSR 恢复快照读取失败: {state_path}: {err}") from err
+        if not isinstance(snapshot, dict):
+            raise RuntimeError("JAXSR 恢复快照必须是 JSON object")
+        if snapshot.get("source") != self._CANDIDATE_SOURCE:
+            raise RuntimeError("JAXSR 恢复快照的 source 非法")
+        model_state = snapshot.get("model_state")
+        model = self._restore_verified_native_model(
+            model_state=model_state,
+            equation=snapshot.get("equation"),
+            fidelity=snapshot.get("fidelity"),
+            context="JAXSR 超时恢复",
+        )
+        self._restore_contract_metadata(snapshot, model_state)
+        self.model = model
+        self._export_equation = snapshot["equation"]
+        self._fidelity_evidence = deepcopy(snapshot["fidelity"])
+        self._progress_state_path = state_path
+
     def _equation_from_model_state(self, model, n_features: int) -> str:
         import sympy as sp
 
@@ -543,6 +736,15 @@ class JAXSRRegressor(BaseWrapper):
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "fidelity": fidelity,
             "model_state": model_state,
+            "contract": {
+                "n_features": self._contract_n_features,
+                "feature_names": (
+                    list(self._contract_feature_names)
+                    if self._contract_feature_names is not None
+                    else None
+                ),
+                "target_name": self._contract_target_name,
+            },
         }
         try:
             os.makedirs(os.path.dirname(self._progress_state_path), exist_ok=True)
@@ -690,38 +892,14 @@ class JAXSRRegressor(BaseWrapper):
             target_name=contract.get("target_name"),
             **dict(obj.get("params") or {}),
         )
-        from jaxsr import SymbolicRegressor
-
-        inst.model = SymbolicRegressor._from_dict(obj["state"])
         inst._export_equation = obj.get("equation")
         inst._fidelity_evidence = obj.get("fidelity")
-        if inst._export_equation is not None:
-            evidence = inst._fidelity_evidence
-            definition = evidence.get("probe_definition") if isinstance(evidence, dict) else None
-            values = definition.get("values") if isinstance(definition, dict) else None
-            if not isinstance(values, list) or not values:
-                raise RuntimeError(
-                    "JAXSR export fidelity fail-closed: 序列化模型缺少可重放探针"
-                )
-            probe = np.asarray(values, dtype=float)
-            restored_attempt = cls._compare_equation_to_native(
-                inst.model,
-                inst._export_equation,
-                probe,
-                source="deserialize_replay",
-            )
-            evidence_integrity_ok = all(
-                (
-                    evidence.get("probe_input_sha256") == cls._hash_float_array(probe),
-                    evidence.get("equation_sha256")
-                    == hashlib.sha256(inst._export_equation.encode("utf-8")).hexdigest(),
-                    evidence.get("model_state_sha256") == cls._hash_json(obj["state"]),
-                )
-            )
-            if restored_attempt.get("status") != "verified" or not evidence_integrity_ok:
-                raise RuntimeError(
-                    "JAXSR export fidelity fail-closed: 反序列化后的预测或证据哈希不一致"
-                )
+        inst.model = cls._restore_verified_native_model(
+            model_state=obj.get("state"),
+            equation=inst._export_equation,
+            fidelity=inst._fidelity_evidence,
+            context="JAXSR export fidelity fail-closed",
+        )
         return inst
 
     def get_optimal_equation(self):
