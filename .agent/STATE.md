@@ -2,6 +2,15 @@
 
 ## 当前任务
 
+- 编号：CORE-001；任务：整理并阅读 Core30~Core80 压缩包；状态：目录创建、复制、解压及阅读已完成，选集仍为候选。
+- 文件位置：[1、build_core30_80](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、build_core30_80/)；压缩包复制到该目录，原始文件保留在 stage4 根目录。
+- 阅读入口：[README.md](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、build_core30_80/core30_core80_all_sensitivity_package/core_nested_all_sensitivity/README.md)。程序入口为 `select_nested_cores.py`，名单位于包内 `results/core30.csv` 至 `core80.csv`。
+- 已确认：包含664任务及2656条四探针聚合输入；六份默认名单按30、40、50、60、70、80严格嵌套；每个规模有5000条敏感性结果。敏感性固定各自父集合，不表示整链联合扰动；包不含实际训练和测试数据。
+- 验证：249个文件哈希、压缩包复制一致性、名单数量及前缀嵌套、敏感性CSV行数均通过；未重新求解。证据：[inspection.json](work/CORE-001/inspection.json)。
+- 下一步：按后续任务决定采用哪些规模的名单；本次未替换已有实验输入。
+
+## 集群任务：待处理
+
 - 编号：ENV-002；任务：逐机器训练测试及 DeepInfra 网络修复；状态：15 台完成测试，5 台 API 连接已修复，54 不可达。
 - 当前采用方案：22~29、48~53、55，每台 15 算法，使用 g0275（feynman-i.14.4，含干扰变量）和 g0596（strogatz_glider1），clean、seed=520。训练预算 180 秒，保留预算内最佳候选；结果恢复和评估另计时间。LLMSR/DRSR 使用 DeepInfra Meta-Llama-3.1-8B-Instruct-Turbo，3 轮各 4 个样本。
 - 有效结果：[逐机器结果](work/ENV-002/results_by_machine.csv)、[逐测试明细](work/ENV-002/results.csv)；脚本、配置、输入及 SHA256 见 [ENV-002](work/ENV-002/) 内 `run_checks.py`、`params.json`、`inputs_manifest.json`。远端原始输出位于 `<根目录>/sim-runtime/checks/ENV-002/results/`。
@@ -39,3 +48,4 @@
 - SR-CLOUD-30 已关闭；本地诊断文件和关联测试已按用户确认删除。
 - CL-001 已完成；`.agent/work/CL-001/` 已归档，默认不读取。
 - DIR-001 已完成；未产生过程记录。
+- CORE-001 已完成；`.agent/work/CORE-001/` 原位归档，默认不读取。
