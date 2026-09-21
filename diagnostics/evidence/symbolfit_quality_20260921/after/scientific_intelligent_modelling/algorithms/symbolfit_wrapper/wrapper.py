@@ -545,8 +545,7 @@ class SymbolFitRegressor(BaseWrapper):
                 }.get(scale_mode)
                 if denominator is not None:
                     value = denominator()
-                    roundoff_floor = np.finfo(float).eps * float(np.max(np.abs(y_arr)))
-                    if not np.isfinite(value) or value <= roundoff_floor:
+                    if not np.isfinite(value) or value == 0:
                         fit_params["scale_y_by"] = None
                         scaling_notes.append("singular_target_scale_disabled")
         self._coordinate_transform = self._build_coordinate_transform(

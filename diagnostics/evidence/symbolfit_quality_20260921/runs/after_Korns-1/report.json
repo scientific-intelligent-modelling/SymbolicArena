@@ -1,0 +1,236 @@
+{
+  "algorithm": "symbolfit",
+  "case": "/home/zhangziwen/sim-datasets-data/korns/Korns-1",
+  "params": {
+    "seed": 520,
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target",
+    "exp_path": "/tmp/symbolfit_debug_20260921/runs/after_Korns-1",
+    "exp_name": "native",
+    "timeout_in_seconds": 45,
+    "fill_timeout_budget": false,
+    "niterations": 3,
+    "maxsize": 8,
+    "max_complexity": 8,
+    "unary_operators": [
+      "sin",
+      "cos"
+    ],
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ]
+  },
+  "diagnostic_only": true,
+  "data_sha256": {
+    "ood_test.csv": "9cec87419e86c595ae2b8a0963156fcfbd0169d3277483df2e8675c7c61842d2",
+    "train.csv": "b6d5f49dd14adc71e98cf0cd147e865b86675d4d38a8e16cec0b956c8e49b824",
+    "id_test.csv": "03118b69a523df60cf618940e5bac42265f08f8f6a0c9c63db64ba87cb4ad954",
+    "metadata.yaml": "56a7757b6fe857a0811dd964a1d9937f613338936b24054e241c6b1518fedef7",
+    "valid.csv": "904bfd062d43bc6e5986e8275a424bfa8893daf9e2097b7d5417902338867805"
+  },
+  "source_sha256": {
+    "scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py": "c62f51b5c64e9e62a3e6dc77643846610cb659d568f23214c265ccea3b2d4bf7",
+    "scientific_intelligent_modelling/benchmarks/normalizers.py": "f9fb9865f82a1b72bd1c2dc42ca0306d6f4c071b36970696e156170a497e4dcd"
+  },
+  "execution": {
+    "returncode": 0,
+    "hard_timeout": false,
+    "hard_limit_seconds": 180.0,
+    "wall_seconds": 65.62791856005788
+  },
+  "worker": {
+    "status": "ok",
+    "versions": {
+      "symbolfit": "0.2.5",
+      "pysr": "1.5.9",
+      "lmfit": "1.3.4",
+      "numpy": "2.2.6",
+      "sympy": "1.14.0"
+    },
+    "equation": "24.2999411864314*x3 + 1.5666553058463126",
+    "artifact": {
+      "version": "csp_v1",
+      "tool_name": "symbolfit",
+      "raw_equation": "24.2999411864314*x3 + 1.5666553058463126",
+      "raw_equation_kind": "plain_expression",
+      "python_function_source": "def equation(x3, params):\n    return 24.2999411864314*x3 + 1.5666553058463126\n",
+      "return_expression_source": "24.2999411864314*x3 + 1.5666553058463126",
+      "normalized_expression": "24.2999411864314*x3 + 1.5666553058463126",
+      "instantiated_expression": "24.2999411864314*x3 + 1.5666553058463126",
+      "variables": [
+        "x3"
+      ],
+      "parameter_symbols": [],
+      "parameter_values": null,
+      "expected_n_features": 5,
+      "operator_set": [
+        "add",
+        "mul"
+      ],
+      "ast_node_count": 5,
+      "tree_depth": 3,
+      "normalization_mode": "symbolfit_external_infix",
+      "normalization_notes": [],
+      "artifact_valid": true,
+      "validation_errors": [],
+      "fidelity_check": {},
+      "sympy_parse_ok": true,
+      "sympy_expression": "24.2999411864314*x3 + 1.5666553058463126"
+    },
+    "coordinate_transform": {
+      "version": "symbolfit_affine_v1",
+      "input_rescale": true,
+      "x_min": [
+        -49.12654134124191,
+        -48.85026419231341,
+        -49.35796593936114,
+        -48.843826893235054,
+        -49.21741291662717
+      ],
+      "x_max": [
+        48.74400599448961,
+        49.61143912793581,
+        49.46998265640063,
+        49.61773991580702,
+        46.8106483890824
+      ],
+      "x_range": [
+        97.87054733573152,
+        98.46170332024923,
+        98.82794859576177,
+        98.46156680904207,
+        96.02806130570957
+      ],
+      "y_scale": 0.060290408475313056,
+      "y_unscale_factor": 16.586386214475013,
+      "scale_y_by": "mean",
+      "scaled_x_min": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scaled_x_max": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "equation_space": "scaled_input_scaled_target",
+      "scaling_notes": []
+    },
+    "reported_refit_rmse": 0.003702,
+    "parameterized_equation": "16.5864*(a1 + a2*((x3 - -48.843826893235054) * 0.0101562))",
+    "best_fit_parameters": {
+      "a1": -71.4643,
+      "a2": 144.252
+    },
+    "serialized_bytes": 768,
+    "metrics": {
+      "train": {
+        "native": {
+          "finite": true,
+          "mse": 1.3707837676964268e-05,
+          "nmse_mean_y_squared": 2.8530571143657408e-11,
+          "r2": 0.9999999999714531
+        },
+        "restored": {
+          "finite": true,
+          "mse": 1.3707837676964268e-05,
+          "nmse_mean_y_squared": 2.8530571143657408e-11,
+          "r2": 0.9999999999714531
+        },
+        "exported": {
+          "finite": true,
+          "mse": 1.3707837676964268e-05,
+          "nmse_mean_y_squared": 2.8530571143657408e-11,
+          "r2": 0.9999999999714531
+        },
+        "refit_reference": {
+          "finite": true,
+          "mse": 1.3707837680232211e-05,
+          "nmse_mean_y_squared": 2.8530571150459084e-11,
+          "r2": 0.9999999999714531
+        },
+        "restored_matches_native": true,
+        "exported_matches_native": true,
+        "refit_reference_matches_native": true
+      },
+      "id": {
+        "native": {
+          "finite": true,
+          "mse": 1.2999435541164544e-05,
+          "nmse_mean_y_squared": 2.6698653576501408e-11,
+          "r2": 0.9999999999730839
+        },
+        "restored": {
+          "finite": true,
+          "mse": 1.2999435541164544e-05,
+          "nmse_mean_y_squared": 2.6698653576501408e-11,
+          "r2": 0.9999999999730839
+        },
+        "exported": {
+          "finite": true,
+          "mse": 1.2999435541164544e-05,
+          "nmse_mean_y_squared": 2.6698653576501408e-11,
+          "r2": 0.9999999999730839
+        },
+        "refit_reference": {
+          "finite": true,
+          "mse": 1.2999435544103943e-05,
+          "nmse_mean_y_squared": 2.669865358253844e-11,
+          "r2": 0.9999999999730839
+        },
+        "restored_matches_native": true,
+        "exported_matches_native": true,
+        "refit_reference_matches_native": true
+      },
+      "ood": {
+        "native": {
+          "finite": true,
+          "mse": 1.5395252452775536e-05,
+          "nmse_mean_y_squared": 2.1180647121352146e-11,
+          "r2": 0.9999999999788193
+        },
+        "restored": {
+          "finite": true,
+          "mse": 1.5395252452775536e-05,
+          "nmse_mean_y_squared": 2.1180647121352146e-11,
+          "r2": 0.9999999999788193
+        },
+        "exported": {
+          "finite": true,
+          "mse": 1.5395252452775536e-05,
+          "nmse_mean_y_squared": 2.1180647121352146e-11,
+          "r2": 0.9999999999788193
+        },
+        "refit_reference": {
+          "finite": true,
+          "mse": 1.5395252458075838e-05,
+          "nmse_mean_y_squared": 2.1180647128644253e-11,
+          "r2": 0.9999999999788193
+        },
+        "restored_matches_native": true,
+        "exported_matches_native": true,
+        "refit_reference_matches_native": true
+      }
+    },
+    "elapsed_seconds": 65.16141148004681
+  },
+  "validation": {
+    "ok": true,
+    "issues": []
+  }
+}

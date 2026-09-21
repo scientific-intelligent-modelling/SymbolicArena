@@ -2450,11 +2450,18 @@ def _write_final_progress_payload_if_requested(
             )
         except Exception:
             payload = None
-        if payload is not None:
+        if (
+            payload is not None
+            and payload.get("candidate_available") is True
+            and isinstance(payload.get("equation"), str)
+            and payload["equation"].strip()
+        ):
             payload["record_type"] = "budget_end_internal_best"
             payload["checkpoint_index"] = int(candidate_minute_index)
             if normalized_tool.lower() in {"imcts", "imcts_wrapper"}:
                 result.update(_imcts_candidate_evidence(payload))
+        else:
+            payload = None
 
     # FePySR may finish before the first periodic read; its persisted native best
     # still establishes the incumbent and discovery time without test-based choice.

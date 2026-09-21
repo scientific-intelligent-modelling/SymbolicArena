@@ -70,6 +70,51 @@ def _jaxsr_fidelity(status: str = "verified") -> dict:
     }
 
 
+def _complete_metrics(rmse: float = 0.0) -> dict:
+    return {"rmse": rmse, "r2": 1.0, "nmse": rmse**2, "acc_0_1": 1.0}
+
+
+def _complete_final_result(
+    equation: str = "1 + 2*x0 + 3*x1",
+    *,
+    seconds: float = 181.0,
+    **extra,
+) -> dict:
+    metrics = _complete_metrics()
+    result = {
+        "status": "ok",
+        "equation": equation,
+        "canonical_artifact": {"normalized_expression": equation},
+        "seconds": seconds,
+        "params": {"timeout_in_seconds": 180},
+        "train": dict(metrics),
+        "valid": dict(metrics),
+        "id_test": dict(metrics),
+        "ood_test": dict(metrics),
+    }
+    result.update(extra)
+    return result
+
+
+def _write_symbolfit_active_hof(
+    exp_dir: Path,
+    *,
+    equation: str,
+    loss: float,
+) -> None:
+    work_dir = exp_dir / "symbolfit_work" / "attempt_0001"
+    hof_dir = work_dir / "outputs_tmp" / "run"
+    hof_dir.mkdir(parents=True, exist_ok=True)
+    (hof_dir / "hall_of_fame.csv").write_text(
+        f"Complexity,Loss,Equation\n5,{loss},{equation}\n",
+        encoding="utf-8",
+    )
+    (exp_dir / ".symbolfit_active_run.json").write_text(
+        json.dumps({"tool": "symbolfit", "attempt": 1, "work_dir": str(work_dir)}),
+        encoding="utf-8",
+    )
+
+
 class BenchmarkProgressSnapshotsTest(unittest.TestCase):
     def test_snapshot_capable_tools_default_to_one_minute_interval(self):
         self.assertIn("symbolfit", runner._SNAPSHOT_CAPABLE_TOOL_KEYS)
@@ -145,54 +190,137 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             exp_dir = root / "exp"
-            result = {
-                "status": "ok",
-                "equation": "x0 + 99",
-                "canonical_artifact": {"normalized_expression": "x0 + 99"},
-                "seconds": 10801.0,
-                "params": {"timeout_in_seconds": 10800},
-            }
-            internal = {
-                "record_type": "periodic_best",
-                "checkpoint_index": 180,
-                "status": "ok",
-                "equation": "x0 + 1",
-                "canonical_artifact": {"normalized_expression": "x0 + 1"},
-                "source_internal_loss": 0.125,
-            }
-            calls = []
+            dataset_dir = root / "dataset"
+            _write_dataset(dataset_dir)
+            _write_symbolfit_active_hof(
+                exp_dir,
+                equation="1 + 2*x0 + 3*x1",
+                loss=0.125,
+            )
+            dataset = runner.load_canonical_dataset(dataset_dir)
+            result = _complete_final_result("x0 + 99")
 
-            def fake_build(**kwargs):
-                calls.append(kwargs)
-                return dict(internal)
+            runner._write_final_progress_payload_if_requested(
+                result=result,
+                progress_snapshot_interval_seconds=60,
+                output_dir=root / "out",
+                experiment_dir=exp_dir,
+                tool_name="symbolfit",
+                dataset=dataset,
+                params={"timeout_in_seconds": 180},
+                seed=520,
+                started_at=time.time() - 119,
+            )
 
-            old_build = runner._build_periodic_snapshot_payload
+            payload = json.loads(
+                (root / "out" / "progress" / "minute_0003.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(payload["record_type"], "budget_end_internal_best")
+            self.assertEqual(payload["checkpoint_index"], 3)
+            self.assertEqual(payload["equation"], "1 + 2*x0 + 3*x1")
+            self.assertEqual(payload["source_internal_loss"], 0.125)
+            self.assertAlmostEqual(payload["valid"]["rmse"], 0.0, places=10)
+
+    def test_symbolfit_budget_end_keeps_internal_candidate_when_ood_evaluation_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_dir = root / "dataset"
+            exp_dir = root / "exp"
+            _write_dataset(dataset_dir)
+            _write_symbolfit_active_hof(
+                exp_dir,
+                equation="x0 + 1",
+                loss=0.25,
+            )
+            dataset = runner.load_canonical_dataset(dataset_dir)
+            result = _complete_final_result()
+
+            original_evaluate = runner._evaluate_prediction
+
+            def fail_ood_evaluation(split, prediction):
+                if split is not None and split.name == "ood_test":
+                    raise ValueError("OOD replay failed")
+                return original_evaluate(split, prediction)
+
             try:
-                runner._build_periodic_snapshot_payload = fake_build
+                runner._evaluate_prediction = fail_ood_evaluation
                 runner._write_final_progress_payload_if_requested(
                     result=result,
                     progress_snapshot_interval_seconds=60,
                     output_dir=root / "out",
                     experiment_dir=exp_dir,
                     tool_name="symbolfit",
-                    dataset=object(),
-                    params={"timeout_in_seconds": 10800},
+                    dataset=dataset,
+                    params={"timeout_in_seconds": 180},
                     seed=520,
-                    started_at=1.0,
+                    started_at=time.time() - 119,
                 )
             finally:
-                runner._build_periodic_snapshot_payload = old_build
+                runner._evaluate_prediction = original_evaluate
 
             payload = json.loads(
-                (root / "out" / "progress" / "minute_0180.json").read_text(
+                (root / "out" / "progress" / "minute_0003.json").read_text(
                     encoding="utf-8"
                 )
             )
             self.assertEqual(payload["record_type"], "budget_end_internal_best")
-            self.assertEqual(payload["checkpoint_index"], 180)
             self.assertEqual(payload["equation"], "x0 + 1")
-            self.assertEqual(payload["source_internal_loss"], 0.125)
-            self.assertEqual(len(calls), 1)
+            self.assertEqual(payload["source_internal_loss"], 0.25)
+            self.assertEqual(payload["status"], "error")
+            self.assertIsNone(payload["ood_test"])
+            self.assertIn("OOD replay failed", payload["error"])
+
+    def test_symbolfit_final_progress_without_internal_candidate_keeps_final_result(self):
+        fallback_cases = {
+            "completed": {},
+            "timeout_recovery": {
+                "budget_exhausted": True,
+                "timeout_type": "budget_exhausted_with_output",
+                "raw_timeout_error": "TimeoutError('budget exhausted')",
+                "recovered_from_timeout": True,
+            },
+            "error_recovery": {
+                "raw_execution_error": "RuntimeError('fit failed')",
+                "recovered_from_error": True,
+                "termination_reason": "recovered_after_error",
+            },
+        }
+        for case_name, evidence in fallback_cases.items():
+            with self.subTest(case=case_name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                dataset_dir = root / "dataset"
+                exp_dir = root / "exp"
+                exp_dir.mkdir(parents=True, exist_ok=True)
+                _write_dataset(dataset_dir)
+                dataset = runner.load_canonical_dataset(dataset_dir)
+                result = _complete_final_result(**evidence)
+
+                runner._write_final_progress_payload_if_requested(
+                    result=result,
+                    progress_snapshot_interval_seconds=60,
+                    output_dir=root / "out",
+                    experiment_dir=exp_dir,
+                    tool_name="symbolfit",
+                    dataset=dataset,
+                    params={"timeout_in_seconds": 180},
+                    seed=520,
+                    started_at=time.time() - 180,
+                )
+
+                payload = json.loads(
+                    (root / "out" / "progress" / "minute_0003.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(payload["record_type"], "final_best")
+                self.assertEqual(payload["equation"], "1 + 2*x0 + 3*x1")
+                self.assertIsInstance(payload["canonical_artifact"], dict)
+                for split in ("train", "valid", "id_test", "ood_test"):
+                    self.assertEqual(payload[split], _complete_metrics())
+                for key, value in evidence.items():
+                    self.assertEqual(payload[key], value)
 
     def test_periodic_snapshot_loop_schedules_against_absolute_targets(self):
         class FakeStopEvent:
@@ -386,13 +514,10 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             with self.subTest(snapshot_tool=snapshot_tool), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 exp_dir = root / "exp"
-                result = {
-                    "status": "ok",
-                    "equation": "x0 + 1",
-                    "canonical_artifact": {"normalized_expression": "x0 + 1"},
-                    "seconds": 180.0,
-                    "params": {"timeout_in_seconds": 180},
-                }
+                dataset_dir = root / "dataset"
+                _write_dataset(dataset_dir)
+                dataset = runner.load_canonical_dataset(dataset_dir)
+                result = _complete_final_result("x0 + 1", seconds=180.0)
                 old_build = runner._build_periodic_snapshot_payload
                 try:
                     if snapshot_tool:
@@ -403,6 +528,11 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                             "equation": "x0 + 1",
                             "canonical_artifact": {"normalized_expression": "x0 + 1"},
                             "source_internal_loss": 0.1,
+                            "candidate_available": True,
+                            "train": _complete_metrics(),
+                            "valid": _complete_metrics(),
+                            "id_test": _complete_metrics(),
+                            "ood_test": _complete_metrics(),
                         }
                     runner._write_final_progress_payload_if_requested(
                         result=result,
@@ -410,7 +540,7 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                         output_dir=root / "out",
                         experiment_dir=exp_dir,
                         tool_name="symbolfit" if snapshot_tool else None,
-                        dataset=object() if snapshot_tool else None,
+                        dataset=dataset if snapshot_tool else None,
                         params={"timeout_in_seconds": 180} if snapshot_tool else None,
                         seed=520 if snapshot_tool else None,
                         started_at=time.time() - 180 if snapshot_tool else None,
@@ -1470,7 +1600,7 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             try:
                 runner.SymbolicRegressor = FakeSymbolicRegressor
                 result_path = runner.run_benchmark_task(
-                    tool_name="symbolfit",
+                    tool_name="not_snapshot_capable",
                     dataset_dir=dataset_dir,
                     output_root=output_root,
                     seed=520,
@@ -1487,7 +1617,7 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(len(progress_files), 1)
             payload = json.loads(progress_files[0].read_text(encoding="utf-8"))
             self.assertEqual(payload["record_type"], "final_best")
-            self.assertEqual(payload["tool"], "symbolfit")
+            self.assertEqual(payload["tool"], "not_snapshot_capable")
             self.assertEqual(payload["status"], "ok")
             self.assertEqual(payload["condition"], "noise001")
             self.assertTrue(payload["train_label_noise"]["requested"])

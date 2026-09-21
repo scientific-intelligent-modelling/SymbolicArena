@@ -1,0 +1,60 @@
+{
+  "algorithm": "symbolfit",
+  "case": "constant_column",
+  "params": {
+    "seed": 520,
+    "n_features": 2,
+    "feature_names": [
+      "x0",
+      "x1"
+    ],
+    "target_name": "y",
+    "exp_path": "/tmp/symbolfit_debug_20260921/runs/before_constant_column",
+    "exp_name": "native",
+    "timeout_in_seconds": 45,
+    "fill_timeout_budget": false,
+    "niterations": 3,
+    "maxsize": 8,
+    "max_complexity": 8,
+    "unary_operators": [
+      "sin",
+      "cos"
+    ],
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ]
+  },
+  "diagnostic_only": true,
+  "data_sha256": {},
+  "source_sha256": {
+    "scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py": "a831741decbe05bbbc46c814c041b49d2b6f3681fd1c358081ba61747b3c0176",
+    "scientific_intelligent_modelling/benchmarks/normalizers.py": "f9fb9865f82a1b72bd1c2dc42ca0306d6f4c071b36970696e156170a497e4dcd"
+  },
+  "execution": {
+    "returncode": 1,
+    "hard_timeout": false,
+    "hard_limit_seconds": 180.0,
+    "wall_seconds": 43.36355243436992
+  },
+  "worker": {
+    "status": "error",
+    "versions": {
+      "symbolfit": "0.2.5",
+      "pysr": "1.5.9",
+      "lmfit": "1.3.4",
+      "numpy": "2.2.6",
+      "sympy": "1.14.0"
+    },
+    "traceback": "Traceback (most recent call last):\n  File \"/tmp/symbolfit_debug_20260921/before/diagnostics/symbolfit_quality_probe.py\", line 37, in worker\n    reg.fit(arrays['train_X'], arrays['train_y'])\n  File \"/tmp/symbolfit_debug_20260921/before/scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py\", line 577, in fit\n    model.fit()\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/symbolfit/symbolfit.py\", line 197, in fit\n    pysr_model.fit(X, Y, weights=pysr_weights.flatten())\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/pysr/sr.py\", line 2253, in fit\n    ) = self._validate_and_set_fit_params(\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/pysr/sr.py\", line 1625, in _validate_and_set_fit_params\n    X, y = self._validate_data_X_y(X, y)\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/pysr/sr.py\", line 1667, in _validate_data_X_y\n    raw_out = validate_data(self, X=X, y=y, reset=True, multi_output=True)  # type: ignore\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sklearn/utils/validation.py\", line 2971, in validate_data\n    X, y = check_X_y(X, y, **check_params)\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sklearn/utils/validation.py\", line 1368, in check_X_y\n    X = check_array(\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sklearn/utils/validation.py\", line 1105, in check_array\n    _assert_all_finite(\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sklearn/utils/validation.py\", line 120, in _assert_all_finite\n    _assert_all_finite_element_wise(\n  File \"/home/zhangziwen/anaconda3/envs/sim_symbolfit/lib/python3.10/site-packages/sklearn/utils/validation.py\", line 169, in _assert_all_finite_element_wise\n    raise ValueError(msg_err)\nValueError: Input X contains NaN.\nPySRRegressor does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values\n",
+    "elapsed_seconds": 42.777576378546655
+  },
+  "validation": {
+    "ok": false,
+    "issues": [
+      "worker_did_not_complete"
+    ]
+  }
+}

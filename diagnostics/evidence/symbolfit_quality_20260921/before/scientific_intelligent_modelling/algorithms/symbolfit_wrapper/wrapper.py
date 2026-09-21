@@ -205,13 +205,9 @@ class SymbolFitRegressor(BaseWrapper):
             rmse_value = float(rmse)
         except Exception:
             rmse_value = np.inf
-        if not np.isfinite(rmse_value) or rmse_value < 0:
-            rmse_value = np.inf
         try:
             r2_value = float(r2)
         except Exception:
-            r2_value = -np.inf
-        if not np.isfinite(r2_value):
             r2_value = -np.inf
         return rmse_value, -r2_value
 
@@ -292,9 +288,7 @@ class SymbolFitRegressor(BaseWrapper):
         table = getattr(self.model, "func_candidates", None)
         if table is None or len(table) == 0:
             raise ValueError("SymbolFit 未产生候选方程")
-        rows = [row for _, row in table.iterrows() if np.isfinite(self._candidate_score(row)[0])]
-        if not rows:
-            raise ValueError("SymbolFit 没有 RMSE 有限且非负的有效候选")
+        rows = [row for _, row in table.iterrows()]
         return min(rows, key=self._candidate_score)
 
     @staticmethod
@@ -311,20 +305,13 @@ class SymbolFitRegressor(BaseWrapper):
             if isinstance(value, str) and value.strip():
                 expr = value.strip()
                 params = candidate.get("Parameters: (best-fit, +1, -1)", {})
-                if isinstance(params, dict) and params:
-                    import sympy as sp
-
-                    substitutions = {}
-                    for name, values in params.items():
+                if isinstance(params, dict):
+                    for name, values in sorted(params.items(), key=lambda item: len(str(item[0])), reverse=True):
                         try:
-                            best = float(values[0])
-                        except (TypeError, ValueError, IndexError, KeyError) as exc:
-                            raise ValueError(f"SymbolFit 参数 {name} 缺少有效 best-fit 值") from exc
-                        if not np.isfinite(best):
-                            raise ValueError(f"SymbolFit 参数 {name} 不是有限数值")
-                        substitutions[sp.Symbol(str(name))] = sp.Float(best)
-                    # 结构化替换保留负参数的幂运算优先级，避免把 (-2)**2 变成 -2**2。
-                    expr = str(sp.sympify(expr.replace("^", "**")).xreplace(substitutions))
+                            best = values[0]
+                        except Exception:
+                            continue
+                        expr = re.sub(rf"\b{re.escape(str(name))}\b", str(best), expr)
                 return expr
         raise ValueError("SymbolFit 候选中没有可用表达式字段")
 
@@ -529,33 +516,12 @@ class SymbolFitRegressor(BaseWrapper):
         X_arr = np.asarray(X, dtype=float)
         y_arr = np.asarray(y, dtype=float).reshape(-1)
         self._fit_started_at = time.monotonic()
-        fit_params = dict(self.params)
-        scaling_notes = []
-        if fit_params.get("input_rescale", True):
-            if np.any(np.ptp(X_arr, axis=0) == 0):
-                # 上游 histogram_scale 不处理常量列，关闭本次缩放但不修改用户配置。
-                fit_params["input_rescale"] = False
-                scaling_notes.append("constant_feature_disables_input_rescale")
-            else:
-                scale_mode = fit_params.get("scale_y_by")
-                denominator = {
-                    "max": lambda: abs(float(np.max(y_arr))),
-                    "mean": lambda: abs(float(np.mean(y_arr))),
-                    "l2": lambda: float(np.linalg.norm(y_arr)),
-                }.get(scale_mode)
-                if denominator is not None:
-                    value = denominator()
-                    roundoff_floor = np.finfo(float).eps * float(np.max(np.abs(y_arr)))
-                    if not np.isfinite(value) or value <= roundoff_floor:
-                        fit_params["scale_y_by"] = None
-                        scaling_notes.append("singular_target_scale_disabled")
         self._coordinate_transform = self._build_coordinate_transform(
             X_arr,
             y_arr,
-            input_rescale=bool(fit_params.get("input_rescale", True)),
-            scale_y_by=fit_params.get("scale_y_by"),
+            input_rescale=bool(self.params.get("input_rescale", True)),
+            scale_y_by=self.params.get("scale_y_by"),
         )
-        self._coordinate_transform["scaling_notes"] = scaling_notes
         self._search_best_loss = None
         self._search_best_payload = None
         y_up = self.params.get("y_up")
@@ -578,7 +544,7 @@ class SymbolFitRegressor(BaseWrapper):
                 break
             attempt += 1
             attempt_started_at = time.monotonic()
-            iteration_params = dict(fit_params)
+            iteration_params = dict(self.params)
             if remaining is not None:
                 iteration_params["timeout_in_seconds"] = self._iteration_timeout_seconds(
                     base_timeout=base_timeout,
