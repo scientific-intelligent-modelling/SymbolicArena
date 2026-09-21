@@ -1100,7 +1100,11 @@ def analyze(args: argparse.Namespace) -> None:
             "Primary estimates use five runs for original methods and three runs for rebuttal-added methods.",
             "Matched-three-run sensitivity covers ID-Q, OOD-G, SYM-F, EFF, and ROBU.",
             "Matched-three-run ROBU uses the two common noise levels; STAB is excluded.",
-            "EFF and STAB retain the archived proxy-component definitions in the primary analysis.",
+            "EFF retains the archived proxy-component definition in the primary analysis.",
+            "STAB uses the formal SYM-F in its performance correction (paper F.5) for the 12 "
+            "original methods. The 3 rebuttal-added methods keep their archived STAB because "
+            "their per-seed structural inputs were not preserved, so STAB is mixed-provenance "
+            "across cohorts and cross-cohort STAB gaps should not be over-interpreted.",
         ],
     }
     (OUT_DIR / "analysis_summary.json").write_text(

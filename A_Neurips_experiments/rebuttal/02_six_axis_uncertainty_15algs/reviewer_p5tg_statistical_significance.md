@@ -20,18 +20,18 @@ intervals with two-sided task-level sign-flip tests (20,000
 resamples) and apply Holm correction to all 105 method pairs within each
 axis. We call a pair statistically distinguishable only when the paired 95%
 interval excludes zero and the Holm-adjusted p-value is below 0.05.
-Accordingly, only 51--65 of 105 pairs
+Accordingly, only 48--65 of 105 pairs
 are distinguishable on any axis (ID-Q: 65, OOD-G:
 51, SYM-F: 57, EFF: 56, ROBU:
-51, STAB: 56). We therefore avoid interpreting
+51, STAB: 48). We therefore avoid interpreting
 the remaining small score gaps as definitive orderings.
 
 This conclusion is even clearer for neighboring ranks: only
-5 of the 84 adjacent-ranking comparisons are
+4 of the 84 adjacent-ranking comparisons are
 distinguishable after correction (ID-Q: 1, OOD-G:
 1, SYM-F: 0, EFF:
 1, ROBU: 1, STAB:
-1), and none of the adjacent comparisons within the
+0), and none of the adjacent comparisons within the
 Top-5 are distinguishable. This directly confirms that small neighboring
 score gaps should not be interpreted as statistically resolved rankings.
 

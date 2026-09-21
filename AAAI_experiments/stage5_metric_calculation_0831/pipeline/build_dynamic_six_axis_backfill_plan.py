@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence, TextIO
 
 from .metrics import phi_nmse
+from .performance_replay import EVALUATION_PATH
+from .prepare_eff import TRAJECTORY_EVIDENCE_SCHEMA_VERSION
 
 
 CONDITIONS = ("clean", "noise001", "noise005")
@@ -260,14 +262,46 @@ def _load_clean_evidence(specs: Iterable[CleanEvidence], horizon: int) -> tuple[
             key = str(row.get("logical_key") or "")
             qualities = row.get("quality_trajectory")
             sources = row.get("trajectory_sources")
-            if not key or not isinstance(qualities, list) or not isinstance(sources, list):
-                raise DynamicBackfillPlanError(f"{path} clean evidence 字段不完整")
-            if len(qualities) != horizon or len(sources) != horizon:
-                raise DynamicBackfillPlanError(f"{key} clean evidence 不是 {horizon} 点")
+            expressions = row.get("selected_expression_trajectory")
+            id_qualities = row.get("id_quality_trajectory")
+            ood_qualities = row.get("ood_quality_trajectory")
+            valid_outputs = row.get("valid_output_trajectory")
+            if not key:
+                raise DynamicBackfillPlanError(f"{path} clean evidence 缺少 logical_key")
+            arrays = {
+                "quality_trajectory": qualities,
+                "trajectory_sources": sources,
+                "selected_expression_trajectory": expressions,
+                "id_quality_trajectory": id_qualities,
+                "ood_quality_trajectory": ood_qualities,
+                "valid_output_trajectory": valid_outputs,
+            }
+            contract_errors = [
+                f"{name} 缺失或不是数组"
+                for name, value in arrays.items()
+                if not isinstance(value, list)
+            ]
+            contract_errors.extend(
+                f"{name} 不是 {horizon} 点"
+                for name, value in arrays.items()
+                if isinstance(value, list) and len(value) != horizon
+            )
+            if row.get("evaluation_path") != EVALUATION_PATH:
+                contract_errors.append("evaluation_path 不是 canonical replay")
+            if (
+                row.get("trajectory_evidence_schema_version")
+                != TRAJECTORY_EVIDENCE_SCHEMA_VERSION
+            ):
+                contract_errors.append("trajectory evidence schema 版本不匹配")
             evidence_key = (spec.tier, key)
             if evidence_key in evidence:
                 raise DynamicBackfillPlanError(f"clean evidence 重复: {evidence_key}")
-            evidence[evidence_key] = row
+            evidence[evidence_key] = {
+                **row,
+                "_contract_errors": contract_errors,
+                "_evidence_path": str(path),
+                "_evidence_sha256": file_sha,
+            }
         artifacts.append({"path": str(path), "sha256": file_sha, "record_count": count, "tier": spec.tier})
     return evidence, artifacts
 
@@ -393,8 +427,26 @@ def _source_minute(source_label: str) -> int | None:
 def _resolve_clean_points(run: CompactRun, numeric: Mapping[str, str], evidence: Mapping[str, Any] | None, horizon: int) -> list[dict[str, Any]]:
     if evidence is None:
         return [_unresolved_point(run, minute, float(numeric[f"q_{minute:04d}"]), "缺少对应 source_tier 的 clean canonical EFF 证据") for minute in range(1, horizon + 1)]
+    contract_errors = evidence.get("_contract_errors")
+    if isinstance(contract_errors, list) and contract_errors:
+        reason = "clean canonical EFF 证据契约失败: " + "; ".join(
+            str(item) for item in contract_errors
+        )
+        return [
+            _unresolved_point(
+                run,
+                minute,
+                float(numeric[f"q_{minute:04d}"]),
+                reason,
+            )
+            for minute in range(1, horizon + 1)
+        ]
     evidence_q = evidence["quality_trajectory"]
     evidence_sources = evidence["trajectory_sources"]
+    expressions = evidence["selected_expression_trajectory"]
+    id_qualities = evidence["id_quality_trajectory"]
+    ood_qualities = evidence["ood_quality_trajectory"]
+    valid_outputs = evidence["valid_output_trajectory"]
     points: list[dict[str, Any]] = []
     for minute in range(1, horizon + 1):
         q = float(numeric[f"q_{minute:04d}"])
@@ -402,28 +454,68 @@ def _resolve_clean_points(run: CompactRun, numeric: Mapping[str, str], evidence:
         if not _close(q, _finite_quality(evidence_q[minute - 1])):
             points.append(_unresolved_point(run, minute, q, "clean numeric 与 canonical EFF 证据不一致", source_label=source_label))
             continue
-        if "explicit_no_valid_output" in source_label or "evaluator_error" in source_label:
-            points.append(_invalid_point(run, q, reason=source_label, source_label=source_label))
+        id_quality = _finite_quality(id_qualities[minute - 1])
+        ood_quality = _finite_quality(ood_qualities[minute - 1])
+        if id_quality is None or ood_quality is None or not _close(
+            q, (id_quality + ood_quality) / 2.0
+        ):
+            points.append(_unresolved_point(run, minute, q, "clean canonical ID/OOD 分量与 combined q 不一致", source_label=source_label))
+            continue
+        valid_output = valid_outputs[minute - 1]
+        if not isinstance(valid_output, bool):
+            points.append(_unresolved_point(run, minute, q, "clean canonical valid_output 不是布尔值", source_label=source_label))
             continue
         source_minute = _source_minute(source_label)
         snapshot = run.snapshots.get(source_minute) if source_minute is not None else None
-        if snapshot is None or snapshot.expression is None:
-            points.append(_unresolved_point(run, minute, q, "clean 来源分钟无法绑定到冻结表达式", source_label=source_label))
+        expression_value = expressions[minute - 1]
+        expression = (
+            expression_value.strip()
+            if isinstance(expression_value, str) and expression_value.strip()
+            else None
+        )
+        canonical_evidence = {
+            "path": evidence.get("_evidence_path"),
+            "sha256": evidence.get("_evidence_sha256"),
+            "schema_version": evidence.get("trajectory_evidence_schema_version"),
+            "evaluation_path": evidence.get("evaluation_path"),
+            "point_index": minute - 1,
+        }
+        if not valid_output:
+            if not (_close(q, 0.0) and _close(id_quality, 0.0) and _close(ood_quality, 0.0)):
+                points.append(_unresolved_point(run, minute, q, "clean 无效 canonical 候选没有显式零分", source_label=source_label))
+                continue
+            point = _invalid_point(
+                run,
+                q,
+                reason=source_label or "canonical_invalid_output",
+                source_label=source_label,
+            )
+            point["source_evidence"]["canonical_evidence"] = canonical_evidence
+            points.append(point)
             continue
-        # clean 的正式质量经过 canonical replay；只有 split 质量也一致时才安全绑定。
-        if not _close(q, snapshot.quality):
-            points.append(_unresolved_point(run, minute, q, "clean canonical 质量与原始快照质量不同，拒绝猜测表达式绑定", source_label=source_label))
+        if expression is None:
+            points.append(_unresolved_point(run, minute, q, "clean 有效 canonical 候选缺少所选表达式", source_label=source_label))
             continue
+        if source_minute is None:
+            points.append(_unresolved_point(run, minute, q, "clean trajectory_source 缺少实际候选来源分钟", source_label=source_label))
+            continue
+        source_evidence = _source_evidence(
+            run,
+            snapshot,
+            source_minute=source_minute,
+            source_label=source_label,
+        )
+        source_evidence["canonical_evidence"] = canonical_evidence
         points.append({
-            "expression": snapshot.expression,
+            "expression": expression,
             "expression_status": "resolved",
             "valid_output": True,
             "invalid_reason": None,
             "unresolved_reason": None,
-            "id_quality": snapshot.id_quality,
-            "ood_quality": snapshot.ood_quality,
+            "id_quality": id_quality,
+            "ood_quality": ood_quality,
             "q": q,
-            "source_evidence": _source_evidence(run, snapshot, source_minute=source_minute, source_label=source_label),
+            "source_evidence": source_evidence,
         })
     return points
 

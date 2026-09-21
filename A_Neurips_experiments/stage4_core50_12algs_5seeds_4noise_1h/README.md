@@ -70,6 +70,36 @@ seeds = 0, 1, 2, 3, 4
 - `formal_analysis/`、`hexagon/`、`paper_tables/`
   - NeurIPS 下游分析和论文产物
 
+### STAB 口径修正（2026-07-31）
+
+`hexagon/` 三个 CSV 与 `paper_tables/table11_hexagon_scores_formal.csv` 的 `STAB`
+已按论文附录 F.5 重算：性能修正项代入 formal SYM-F，而不是早先的 proxy 符号分。
+
+```text
+q_perf   = 0.4*q_id + 0.3*q_oodG + 0.3*q_sym_formal
+PureStab = 0.4*N + 0.3*V + 0.3*C
+STAB     = PureStab * sqrt(q_perf)
+```
+
+修正原因：`check/plot_core50_formal_figures.py` 早先只把 SYM-F 一列换成 formal，
+STAB 整列从 v1 继承，而 v1 的 STAB 用的是 `q_sym_proxy`（旧的数值代入式等价判定
+＋算子/变量 Jaccard 树相似度）。这与附录 F.5 引用 F.2 formal 定义的表述不符。
+
+影响：STAB 轴首位由 iMCTS 变为 PySR（66 对比较中 9 对翻转，Spearman 0.874）；
+iMCTS 48.26→42.79、QLattice 39.24→33.81，其余 10 个算法上升 0.9–5.3。
+`HexaScore_formal_*` 前四名不变，QLattice 在含 ROB 口径下由第 5 降至第 7。
+ID-Q / OOD-G / SYM-F / EFF / ROBU 逐位未变。
+
+旧口径数值保留在 `STAB_proxy`、`STAB_proxy_component` 与
+`HexaScore_formal_*_stabproxy` 列中，可直接对照。
+
+仍未 formal 化的两项（论文附录需相应说明）：
+
+- `EFF` 仍是 proxy（`final_quality × 时间折扣`）。附录 F.3 描述的分钟级
+  best-so-far 质量-时间 AUC 需要逐分钟快照，该数据未落盘，无法从归档产物重算。
+- `STAB` 的结构一致性 `C` 仍是 proxy（只比较 `pred_skeleton` 字符串相等），
+  未实现 F.5 的四条判定规则。
+
 - `noise_robustness/`
   - NeurIPS 冻结包中的 noisy-training / clean-test run 表和汇总
 

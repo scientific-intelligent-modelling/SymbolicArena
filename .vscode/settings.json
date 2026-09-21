@@ -1,4 +1,69 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda"
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+
+    // ── Pylance 内存优化 ──────────────────────────────
+    // 你几乎不用 VS Code 跑 Python，所以大幅缩减分析范围
+    "python.analysis.exclude": [
+        "**/acceptance_runs",
+        "**/benchmark-runs",
+        "**/bench_results",
+        "**/experiment-results",
+        "**/experiments",
+        "**/frozen-results",
+        "**/sim-datasets-data",
+        "**/AAAI_experiments",
+        "**/A_Neurips_experiments",
+        "**/眼不见为净",
+        "**/exp-planning",
+        "**/images",
+        "**/paper",
+        "**/outputs",
+        "**/acceptance",
+        "**/analysis",
+        "**/docs",
+        "**/site-packages",
+        "**/wandb",
+        "**/artifacts",
+        "**/.worktrees"
+    ],
+    // 关闭可能不需要的类型检查以降低内存
+    "python.analysis.typeCheckingMode": "off",
+    "python.analysis.autoImportCompletions": false,
+    "python.analysis.autoSearchPaths": false,
+
+    // ── 文件监视器优化 ──────────────────────────────
+    // 排除不关心的目录，减少 FileWatcher 内存占用
+    "files.watcherExclude": {
+        "**/acceptance_runs/**": true,
+        "**/benchmark-runs/**": true,
+        "**/bench_results/**": true,
+        "**/experiment-results/**": true,
+        "**/experiments/**": true,
+        "**/frozen-results/**": true,
+        "**/sim-datasets-data/**": true,
+        "**/AAAI_experiments/**": true,
+        "**/A_Neurips_experiments/**": true,
+        "**/眼不见为净/**": true,
+        "**/outputs/**": true,
+        "**/artifacts/**": true,
+        "**/wandb/**": true,
+        "**/__pycache__/**": true,
+        "**/.git/**": true,
+        "**/site-packages/**": true
+    },
+    "search.exclude": {
+        "**/acceptance_runs": true,
+        "**/benchmark-runs": true,
+        "**/bench_results": true,
+        "**/experiment-results": true,
+        "**/frozen-results": true,
+        "**/sim-datasets-data": true,
+        "**/AAAI_experiments": true,
+        "**/A_Neurips_experiments": true,
+        "**/眼不见为净": true,
+        "**/outputs": true,
+        "**/artifacts": true,
+        "**/wandb": true
+    }
 }

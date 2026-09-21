@@ -1,1 +1,0 @@
-https://ai.damtp.cam.ac.uk/pysr/api/#pysrregressor-parameters

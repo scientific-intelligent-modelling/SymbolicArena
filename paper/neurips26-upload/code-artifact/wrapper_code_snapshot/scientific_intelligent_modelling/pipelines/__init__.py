@@ -1,2 +1,0 @@
-# scientific_intelligent_modelling/pipelines/__init__.py
-from .iterative_experiment import IterativeExperimentPipeline, DatasetLoader

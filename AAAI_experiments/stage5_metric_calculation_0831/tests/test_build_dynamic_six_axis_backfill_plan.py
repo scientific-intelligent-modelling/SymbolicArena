@@ -158,20 +158,34 @@ def test_noise_plan_reconstructs_and_deduplicates(tmp_path: Path) -> None:
     assert not list(output.glob(".*.tmp"))
 
 
-def test_clean_mismatch_is_fail_closed_and_reported(tmp_path: Path) -> None:
+def test_clean_uses_persisted_canonical_components_instead_of_raw_metrics(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "clean.jsonl"
     seeds = (520, 521, 522)
     _jsonl(source, [_source_row(condition="clean", seed=seed) for seed in seeds])
     numeric = tmp_path / "clean.csv"
     _numeric_csv(numeric, condition="clean", seeds=seeds, clean=True)
     evidence_path = tmp_path / "evidence.jsonl"
+    first = phi_nmse(10.0)
+    second = phi_nmse(0.1)
     _jsonl(
         evidence_path,
         [
             {
                 "logical_key": f"algo::d1::s{seed}::clean",
-                "quality_trajectory": [phi_nmse(10.0), phi_nmse(0.1), phi_nmse(0.1)],
-                # 第二、三点故意指向数值不一致的 minute 3。
+                "evaluation_path": "canonical_replay.v1",
+                "trajectory_evidence_schema_version": "clean_selected_trajectory_evidence.v1",
+                "quality_trajectory": [first, second, second],
+                "id_quality_trajectory": [first, second, second],
+                "ood_quality_trajectory": [first, second, second],
+                "selected_expression_trajectory": [
+                    "x0",
+                    "canonical(x0 + 1)",
+                    "canonical(x0 + 1)",
+                ],
+                "valid_output_trajectory": [True, True, True],
+                # minute 3 的 raw NMSE 是 0.2，故意不同于 canonical replay 的 0.1。
                 "trajectory_sources": ["snapshot:1", "snapshot:3", "carry_forward:3"],
             }
             for seed in seeds
@@ -188,21 +202,67 @@ def test_clean_mismatch_is_fail_closed_and_reported(tmp_path: Path) -> None:
         expected_runs_by_condition={"clean": 3},
     )
 
-    assert manifest["status"] == "complete_with_unresolved"
+    assert manifest["status"] == "ready"
     assert manifest["conditions"]["clean"] == {
         "run_count": 3,
         "run_minute_count": 9,
-        "resolved": 3,
-        "unresolved": 6,
+        "resolved": 9,
     }
     points = _read_jsonl(output / "run_minute_plan.jsonl")
-    mismatched = [point for point in points if point["minute"] > 1]
-    assert all(point["expression"] is None for point in mismatched)
-    assert all(point["valid_output"] is None for point in mismatched)
-    assert all(point["expression_status"] == "unresolved" for point in mismatched)
-    assert manifest["unresolved"]["record_count"] == 6
-    pairs = _read_jsonl(output / "task_minute_stab_pair_plan.jsonl")
-    assert sum(pair["state"] == "blocked" for pair in pairs) == 6
+    canonical = [point for point in points if point["minute"] > 1]
+    assert all(point["expression"] == "canonical(x0 + 1)" for point in canonical)
+    assert all(point["id_quality"] == pytest.approx(second) for point in canonical)
+    assert all(
+        point["source_evidence"]["canonical_evidence"]["evaluation_path"]
+        == "canonical_replay.v1"
+        for point in canonical
+    )
+    assert manifest["unresolved"]["record_count"] == 0
+
+
+def test_clean_component_mismatch_remains_unresolved(tmp_path: Path) -> None:
+    source = tmp_path / "clean.jsonl"
+    seeds = (520, 521, 522)
+    _jsonl(source, [_source_row(condition="clean", seed=seed) for seed in seeds])
+    numeric = tmp_path / "clean.csv"
+    _numeric_csv(numeric, condition="clean", seeds=seeds, clean=True)
+    first = phi_nmse(10.0)
+    second = phi_nmse(0.1)
+    evidence_path = tmp_path / "evidence.jsonl"
+    _jsonl(
+        evidence_path,
+        [
+            {
+                "logical_key": f"algo::d1::s{seed}::clean",
+                "evaluation_path": "canonical_replay.v1",
+                "trajectory_evidence_schema_version": "clean_selected_trajectory_evidence.v1",
+                "quality_trajectory": [first, second, second],
+                "id_quality_trajectory": [first, second, second],
+                "ood_quality_trajectory": [first, 0.0, second],
+                "selected_expression_trajectory": ["x0", "x0 + 1", "x0 + 1"],
+                "valid_output_trajectory": [True, True, True],
+                "trajectory_sources": ["snapshot:1", "snapshot:2", "carry_forward:2"],
+            }
+            for seed in seeds
+        ],
+    )
+
+    output = tmp_path / "output"
+    manifest = build_dynamic_six_axis_backfill_plan(
+        numeric_paths={"clean": numeric},
+        source_bundles=[SourceBundle("clean", "base", 0, source)],
+        clean_evidence=[CleanEvidence("canonical", evidence_path)],
+        output_dir=output,
+        horizon=3,
+        expected_runs_by_condition={"clean": 3},
+    )
+
+    assert manifest["status"] == "complete_with_unresolved"
+    assert manifest["unresolved"]["record_count"] == 3
+    points = _read_jsonl(output / "run_minute_plan.jsonl")
+    minute_two = [point for point in points if point["minute"] == 2]
+    assert all(point["expression_status"] == "unresolved" for point in minute_two)
+    assert all("ID/OOD" in point["unresolved_reason"] for point in minute_two)
 
 
 def test_rejects_forbidden_fullcpu_source(tmp_path: Path) -> None:

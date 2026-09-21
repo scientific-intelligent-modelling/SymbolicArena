@@ -592,6 +592,33 @@ max_input_dimension = 4
   - 必须先显式吸收这些元参数
   - 不要让它们作为未知参数透传给第三方库
 
+### 24. 修改匿名审稿仓库文档时，必须区分本地文件与匿名站点快照
+
+- 修改 README 后，先分别核验：
+  1. 本地工作树中的 README 内容
+  2. Git 跟踪状态以及改动是否已提交、推送
+  3. Anonymous GitHub 镜像的最后更新时间与实际下载内容
+- 本地修改尚未提交、推送并刷新匿名镜像时，不得声称匿名站点已经完成更新。
+- `/anonymize/<repo-id>` 是作者管理入口，不应写入审稿文档；审稿人只使用 `/r/<repo-id>/`。
+- Anonymous GitHub 页面不是 Git remote；README 应提供匿名浏览地址和 ZIP 下载方式，不得暴露真实 GitHub 地址。
+
+### 25. 收集符号回归实验数据时，必须保留逐分钟六维指标所需的完整证据
+
+- 从本规则加入后，任何新实验或补采任务都必须按每个 algorithm-task-seed-minute 记录：
+  - 当前选中或 best-so-far 表达式
+  - ID 与 OOD 的原始误差和质量分数
+  - SYM 与 MIN 的逐分钟评分及其化简、等价性、复杂度证据
+  - EFF 的相对进度与截至当前分钟的累计值
+  - 计算同分钟 STAB 所需的有效性、数值质量和跨 seed 结构裁决绑定
+- 逐分钟记录必须保留 `condition`、`algorithm`、`dataset_id`、`seed`、`minute`、
+  `logical_key`、来源路径、SHA256、评估口径和模型裁决版本，不能只保存算法级均值。
+- LLM 任务应按表达式和裁决语义安全去重，并支持断点续跑；不得因为成本或并发压力省略
+  逐分钟证据。真正调用付费 API 前仍须报告请求量、预计成本和重试上限。
+- 若某分钟没有新候选，必须显式记录 carry-forward 来源；若无法恢复表达式或裁决，必须
+  fail-closed 并写入 unresolved 清单，不能静默填零或借用最终公式。
+- 聚合交付前必须验证：逐 run-minute 表能够复现所交付的 ID/OOD/EFF 曲线，逐 task-minute
+  表能够复现 STAB，且原始逐分钟 SYM/MIN 证据可追溯。
+
 
 ## commit 规则
 在commit的时候加上 Co-Authored-By: lilmortyj <781113402@qq.com>

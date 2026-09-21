@@ -12,7 +12,7 @@
     "SYM_F": 57,
     "EFF": 56,
     "ROB": 51,
-    "STAB": 56
+    "STAB": 48
   },
   "matched3_rank_correlation": {
     "ID_Q": 0.9928571428571428,
@@ -22,16 +22,16 @@
     "ROB": 0.9749999999999999
   },
   "input_sha256": {
-    "primary_task_components": "1ccdfc964b401b4d462def6d3e24cf015feff949ef2c5a00c0a93bb5d296762c",
+    "primary_task_components": "ebccca5fc7b376af5ce0d7a8b8b66ff7c750996f85ea2c384fce077467703d18",
     "matched3_task_components": "1e8f265353620528a64de2e6a7903806d83f38ef75ec66c3abf4283e8c94d584"
   },
   "output_sha256": {
-    "means_ci": "cd35c831b4863478f6a60dac61ddec6ea31a6f68c142f87123b0dfefdc44cf4a",
-    "pairwise_inference": "0ca8adcbd7419aff0f51221deec954fc131aae8f8f436315bde7127da3f8e8c4",
-    "top5_pairwise": "cc210069ea4197976376834124e11b5de1e66d38c11b58c1c560fe3e6492e762",
-    "adjacent_pairwise": "ea8c8de38abc108cdd75c57f237406e81fec57b73fb094363c9fede1e0647a36",
-    "main_figure_png": "ac002c20f6335955cf9e9436031b2acf53ee8a0300b2a817ca0a94b19258ac63",
-    "matrix_figure_png": "a6f8e895042b0de06e11512bb14ad0931d4ca8e6ebb31ad9bf0332179ddf667c",
+    "means_ci": "8f8fa4516829051893c265c4563d1218a44743c020d67bc675d92c14770ff894",
+    "pairwise_inference": "482209a45ba6e922f483bb613e889dead6e2cac9d8446d6f2b022fcb33560f48",
+    "top5_pairwise": "b35a0d480c3bb331d705d0619cba56fa08084f0b4641b9b2972357b8727b28a4",
+    "adjacent_pairwise": "af749f16334f5c871f4c08150bc42e17343ac3a8be99a016c7fe07df8ba00fcf",
+    "main_figure_png": "59bf9fd4bae3cd88270282e3b27d8fa1896e72de6719585199a063f9cf3159e1",
+    "matrix_figure_png": "407665a1a49468aae64a83e6bf26e46351828bac2bdccaaee87b190bdca671ad",
     "sensitivity_figure_png": "2e0679940dfb70658e0e7b710e62622113f3e946497ea0a4d38eaa8f1fc941ea"
   },
   "scope_notes": [
@@ -39,6 +39,7 @@
     "Primary estimates use five runs for original methods and three runs for rebuttal-added methods.",
     "Matched-three-run sensitivity covers ID-Q, OOD-G, SYM-F, EFF, and ROBU.",
     "Matched-three-run ROBU uses the two common noise levels; STAB is excluded.",
-    "EFF and STAB retain the archived proxy-component definitions in the primary analysis."
+    "EFF retains the archived proxy-component definition in the primary analysis.",
+    "STAB uses the formal SYM-F in its performance correction (paper F.5) for the 12 original methods. The 3 rebuttal-added methods keep their archived STAB because their per-seed structural inputs were not preserved, so STAB is mixed-provenance across cohorts and cross-cohort STAB gaps should not be over-interpreted."
   ]
 }

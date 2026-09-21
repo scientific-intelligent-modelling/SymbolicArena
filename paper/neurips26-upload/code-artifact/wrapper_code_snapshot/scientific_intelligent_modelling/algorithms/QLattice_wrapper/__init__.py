@@ -1,2 +1,0 @@
-"""QLattice note"""
-
