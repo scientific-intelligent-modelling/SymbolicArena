@@ -133,6 +133,31 @@ class SymbolicNormalizersTest(unittest.TestCase):
         self.assertFalse(artifact["artifact_valid"])
         self.assertTrue(artifact["validation_errors"])
 
+    def test_pretrained_normalizers_keep_indices_without_first_feature(self):
+        for normalizer in (normalize_e2esr_artifact, normalize_tpsr_artifact):
+            for raw in ("x_1 + 2*x_10", "x[1] + 2*x[10]"):
+                with self.subTest(tool=normalizer.__name__, expression=raw):
+                    artifact = normalizer(raw, expected_n_features=11)
+                    self.assertEqual(artifact["variables"], ["x1", "x10"])
+                    self.assertEqual(artifact["normalized_expression"], "x1 + 2*x10")
+                    self.assertTrue(artifact["artifact_valid"])
+
+    def test_pretrained_normalizers_reject_out_of_range_without_first_feature(self):
+        for normalizer in (normalize_e2esr_artifact, normalize_tpsr_artifact):
+            with self.subTest(tool=normalizer.__name__):
+                artifact = normalizer("x_2", expected_n_features=2)
+                self.assertEqual(artifact["variables"], ["x2"])
+                self.assertFalse(artifact["artifact_valid"])
+
+    def test_e2esr_bare_indices_remain_zero_based(self):
+        artifact = normalize_e2esr_artifact("x1 + 2*x10", expected_n_features=11)
+        self.assertEqual(artifact["normalized_expression"], "x1 + 2*x10")
+
+    def test_tpsr_canonical_bare_indices_remain_zero_based(self):
+        artifact = normalize_tpsr_artifact("x1 + 2*x10", expected_n_features=11)
+        self.assertEqual(artifact["normalized_expression"], "x1 + 2*x10")
+        self.assertTrue(artifact["artifact_valid"])
+
     def test_normalize_operon_artifact(self):
         artifact = normalize_operon_artifact("X1 + X2^2")
         self.assertEqual(artifact["tool_name"], "pyoperon")
@@ -477,6 +502,29 @@ class SymbolicNormalizersTest(unittest.TestCase):
         model.get_optimal_equation = lambda: "x_0 + x_1**2"
         artifact = model.export_canonical_symbolic_program()
         self.assertEqual(artifact["normalized_expression"], "x0 + x1**2")
+
+    def test_pretrained_wrapper_exports_keep_sparse_native_feature(self):
+        for cls in (E2ESRRegressor, TPSRRegressor):
+            with self.subTest(wrapper=cls.__name__):
+                model = cls.__new__(cls)
+                model.best_tree = object()
+                model.n_features_ = model._n_features = 4
+                model.get_optimal_equation = lambda: "24.3*x_3 + 1.57"
+                artifact = model.export_canonical_symbolic_program()
+                self.assertEqual(artifact["normalized_expression"], "24.3*x3 + 1.57")
+                self.assertEqual(artifact["variables"], ["x3"])
+
+    def test_tpsr_nesymres_export_matches_native_one_based_underscore_variables(self):
+        model = TPSRRegressor(backbone_model="nesymres")
+        model._n_features = 3
+        model.best_tree = "2*x_2 + 3*x_3"
+        predictor = model._build_predictor_from_expression(
+            model.best_tree, ["x_1", "x_2", "x_3"]
+        )
+        self.assertEqual(predictor([[3, 5, 7], [2, 4, 6]]).tolist(), [31, 26])
+        artifact = model.export_canonical_symbolic_program()
+        self.assertEqual(artifact["normalized_expression"], "2*x1 + 3*x2")
+        self.assertTrue(artifact["artifact_valid"])
 
     def test_wrapper_export_tpsr(self):
         model = TPSRRegressor()

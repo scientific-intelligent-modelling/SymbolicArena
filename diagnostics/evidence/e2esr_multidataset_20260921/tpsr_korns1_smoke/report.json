@@ -1,0 +1,165 @@
+{
+  "algorithm": "tpsr",
+  "case": "sim-datasets-data/korns/Korns-1",
+  "params": {
+    "seed": 520,
+    "n_features": 5,
+    "feature_names": [
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "target_name": "target",
+    "exp_path": "/tmp/tpsr_backend_fix_korns1_20260921",
+    "exp_name": "native",
+    "timeout_in_seconds": 45.0,
+    "max_number_bags": 1,
+    "n_trees_to_refine": 4,
+    "cpu_num_threads": 1,
+    "horizon": 40,
+    "rollout": 1,
+    "width": 2
+  },
+  "diagnostic_only": true,
+  "source_sha256": {
+    "scientific_intelligent_modelling/algorithms/tpsr_wrapper/wrapper.py": "cab007b1c3f12b96f107f7563e21a40220fb9ce7e3a55883190a7f05033eef13",
+    "scientific_intelligent_modelling/benchmarks/normalizers.py": "f9fb9865f82a1b72bd1c2dc42ca0306d6f4c071b36970696e156170a497e4dcd"
+  },
+  "execution": {
+    "returncode": 0,
+    "hard_timeout": false,
+    "hard_limit_seconds": 150.0,
+    "wall_seconds": 64.54920427600155
+  },
+  "metrics": {
+    "train": {
+      "native": {
+        "finite": true,
+        "mse": 0.4327582051880241,
+        "nmse_mean_y_squared": 9.007138143944478e-07,
+        "r2": 0.9999990987701488
+      },
+      "exported": {
+        "finite": true,
+        "mse": 0.4327582051880241,
+        "nmse_mean_y_squared": 9.007138143944478e-07,
+        "r2": 0.9999990987701488
+      },
+      "export_max_abs_delta": 0.0,
+      "export_matches_native": true
+    },
+    "id": {
+      "native": {
+        "finite": true,
+        "mse": 0.4572037483067885,
+        "nmse_mean_y_squared": 9.390195790629967e-07,
+        "r2": 0.999999053331717
+      },
+      "exported": {
+        "finite": true,
+        "mse": 0.4572037483067885,
+        "nmse_mean_y_squared": 9.390195790629967e-07,
+        "r2": 0.999999053331717
+      },
+      "export_max_abs_delta": 0.0,
+      "export_matches_native": true
+    },
+    "ood": {
+      "native": {
+        "finite": true,
+        "mse": 0.8107637518642407,
+        "nmse_mean_y_squared": 1.1154413335991802e-06,
+        "r2": 0.9999988845552387
+      },
+      "exported": {
+        "finite": true,
+        "mse": 0.8107637518642407,
+        "nmse_mean_y_squared": 1.1154413335991802e-06,
+        "r2": 0.9999988845552387
+      },
+      "export_max_abs_delta": 0.0,
+      "export_matches_native": true
+    }
+  },
+  "worker": {
+    "status": "ok",
+    "python": "3.9.23 | packaged by conda-forge | (main, Jun  4 2025, 17:57:12) \n[GCC 13.3.0]",
+    "equation": "((0.19 + (-7.9 * (0.02620140263536239 + (0.035067225191084926 * x_3)))) * (-87.8 + (0.001 * 1/(((0.01 + (0.01 * (0.002798843488794695 + (0.03478390768510123 * x_4)))) + ((0.01 + (0.1 * (-0.011056500166261538 + (0.03485381096242199 * x_1)))) + ((0.01 + (0.01 * (-0.13955283986886216 + (0.03587618348897739 * x_0)))) + (0.9 + (-0.6 * (-0.1439430736271655 + (0.03577476461575688 * x_2)))))))))))",
+    "artifact": {
+      "version": "csp_v1",
+      "tool_name": "tpsr",
+      "raw_equation": "((0.19 + (-7.9 * (0.02620140263536239 + (0.035067225191084926 * x_3)))) * (-87.8 + (0.001 * 1/(((0.01 + (0.01 * (0.002798843488794695 + (0.03478390768510123 * x_4)))) + ((0.01 + (0.1 * (-0.011056500166261538 + (0.03485381096242199 * x_1)))) + ((0.01 + (0.01 * (-0.13955283986886216 + (0.03587618348897739 * x_0)))) + (0.9 + (-0.6 * (-0.1439430736271655 + (0.03577476461575688 * x_2)))))))))))",
+      "raw_equation_kind": "plain_expression",
+      "python_function_source": "def equation(x0, x1, x2, x3, x4, params):\n    return (-87.8 + 0.001/(0.0003587618348897739*x0 + 0.003485381096242199*x1 - 0.02146485876945413*x2 + 0.0003478390768510123*x4 + 1.0138926541958725))*(-0.27703107900957093*x3 - 0.01699108081936289)\n",
+      "return_expression_source": "(-87.8 + 0.001/(0.0003587618348897739*x0 + 0.003485381096242199*x1 - 0.02146485876945413*x2 + 0.0003478390768510123*x4 + 1.0138926541958725))*(-0.27703107900957093*x3 - 0.01699108081936289)",
+      "normalized_expression": "(-87.8 + 0.001/(0.0003587618348897739*x0 + 0.003485381096242199*x1 - 0.02146485876945413*x2 + 0.0003478390768510123*x4 + 1.0138926541958725))*(-0.27703107900957093*x3 - 0.01699108081936289)",
+      "instantiated_expression": "(-87.8 + 0.001/(0.0003587618348897739*x0 + 0.003485381096242199*x1 - 0.02146485876945413*x2 + 0.0003478390768510123*x4 + 1.0138926541958725))*(-0.27703107900957093*x3 - 0.01699108081936289)",
+      "variables": [
+        "x0",
+        "x1",
+        "x2",
+        "x3",
+        "x4"
+      ],
+      "parameter_symbols": [],
+      "parameter_values": null,
+      "expected_n_features": 5,
+      "operator_set": [
+        "add",
+        "mul",
+        "pow"
+      ],
+      "ast_node_count": 26,
+      "tree_depth": 7,
+      "normalization_mode": "tpsr_infix",
+      "normalization_notes": [],
+      "artifact_valid": true,
+      "validation_errors": [],
+      "fidelity_check": {},
+      "sympy_parse_ok": true,
+      "sympy_expression": "(-87.8 + 0.001/(0.0003587618348897739*x0 + 0.003485381096242199*x1 - 0.02146485876945413*x2 + 0.0003478390768510123*x4 + 1.0138926541958725))*(-0.27703107900957093*x3 - 0.01699108081936289)"
+    },
+    "elapsed_seconds": 61.48593730299035
+  },
+  "snapshots": [
+    {
+      "source": "e2e_candidate",
+      "score": 1.0834183220827296,
+      "training_mse": null,
+      "stage": null,
+      "refinement_type": null,
+      "native_model_score": null,
+      "probe_elapsed_seconds": 23.21007167798234,
+      "equation": "((0.19 + (-7.9 * (0.02620140263536239 + (0.035067225191084926 * x_3)))) * (-87.8 + (0.001 * 1/(((0.01 + (0.01 * (0.002798843488794695 + (0.03478390768510123 * x_4)))) + ((0.01 + (0.1 * (-0.011056500166261538 + (0.03485381096242199 * x_1)))) + ((0.01 + (0.01 * (-0.13955283986886216 + (0.03587618348897739 * x_0)))) + (0.9 + (-0.6 * (-0.1439430736271655 + (0.03577476461575688 * x_2)))))))))))",
+      "id": {
+        "finite": true,
+        "mse": 0.4572037483067885,
+        "nmse_mean_y_squared": 9.390195790629967e-07,
+        "r2": 0.999999053331717
+      }
+    },
+    {
+      "source": "e2e_final",
+      "score": 1.0834183220827296,
+      "training_mse": null,
+      "stage": null,
+      "refinement_type": null,
+      "native_model_score": null,
+      "probe_elapsed_seconds": 61.47614948300179,
+      "equation": "((0.19 + (-7.9 * (0.02620140263536239 + (0.035067225191084926 * x_3)))) * (-87.8 + (0.001 * 1/(((0.01 + (0.01 * (0.002798843488794695 + (0.03478390768510123 * x_4)))) + ((0.01 + (0.1 * (-0.011056500166261538 + (0.03485381096242199 * x_1)))) + ((0.01 + (0.01 * (-0.13955283986886216 + (0.03587618348897739 * x_0)))) + (0.9 + (-0.6 * (-0.1439430736271655 + (0.03577476461575688 * x_2)))))))))))",
+      "id": {
+        "finite": true,
+        "mse": 0.4572037483067885,
+        "nmse_mean_y_squared": 9.390195790629967e-07,
+        "r2": 0.999999053331717
+      }
+    }
+  ],
+  "validation": {
+    "ok": true,
+    "issues": [],
+    "exit_code": 0
+  }
+}

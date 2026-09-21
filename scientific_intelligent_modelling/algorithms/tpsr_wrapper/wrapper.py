@@ -23,6 +23,9 @@ from scientific_intelligent_modelling.benchmarks.normalizers import normalize_tp
 
 class TPSRRegressor(BaseWrapper):
     _PROGRESS_STATE_FILENAME = ".tpsr_current_best.json"
+    _VARIABLE_TOKEN_PATTERN = re.compile(
+        r"\bx_(\d+)\b|\bx\[(\d+)\]|\bx(\d+)\b"
+    )
 
     def __init__(self, **kwargs):
         # 延迟导入，避免环境问题
@@ -334,34 +337,37 @@ class TPSRRegressor(BaseWrapper):
             return 1
         return int(X_arr.shape[1])
 
-    @staticmethod
-    def _extract_variable_indices(equation: str) -> set[int]:
+    def _variable_index_base(self) -> int:
+        backend = str(
+            (getattr(self, "params", {}) or {}).get("backbone_model", "e2e")
+        ).lower()
+        if backend == "e2e":
+            return 0
+        if backend == "nesymres":
+            return 1
+        raise ValueError(f"不支持的 backbone_model: {backend}")
+
+    def _extract_variable_indices(self, equation: str) -> set[int]:
         text = "" if equation is None else str(equation)
         matches = set()
-        for match in re.finditer(r"\bx_(\d+)\b|\bx(\d+)\b", text):
-            idx_text = match.group(1) or match.group(2)
+        index_base = self._variable_index_base()
+        for match in self._VARIABLE_TOKEN_PATTERN.finditer(text):
+            idx_text = next(group for group in match.groups() if group is not None)
             try:
-                matches.add(int(idx_text))
+                matches.add(int(idx_text) - index_base)
             except Exception:
                 continue
-        # 兼容 one-based 变量表示：若表达式中完全没有 x0/x_0，
-        # 但存在 x1/x_1, x2/x_2 ...，则统一平移为零基索引再做合法性检查。
-        has_zero_based = bool(re.search(r"\bx_?0\b", text))
-        if matches and not has_zero_based and min(matches) >= 1:
-            matches = {idx - 1 for idx in matches}
         return matches
 
-    @classmethod
-    def _equation_within_feature_budget(cls, equation: str, n_features: Optional[int]) -> bool:
+    def _equation_within_feature_budget(self, equation: str, n_features: Optional[int]) -> bool:
         if n_features is None:
             return True
         if n_features <= 0:
             return False
-        indices = cls._extract_variable_indices(equation)
-        return all(idx < int(n_features) for idx in indices)
+        indices = self._extract_variable_indices(equation)
+        return all(0 <= idx < int(n_features) for idx in indices)
 
-    @classmethod
-    def _project_equation_to_feature_budget(cls, equation: str, n_features: Optional[int]) -> str:
+    def _project_equation_to_feature_budget(self, equation: str, n_features: Optional[int]) -> str:
         """将超出当前任务维度的变量投影为 0。
 
         TPSR 预训练模型工作在固定的大词表上，候选里可能出现 `x_9` 这类
@@ -378,21 +384,35 @@ class TPSRRegressor(BaseWrapper):
         if budget <= 0:
             return text
 
-        has_zero_based = bool(re.search(r"\bx_?0\b", text))
+        index_base = self._variable_index_base()
 
         def _replace(match):
             original = match.group(0)
-            idx_text = match.group(1) or match.group(2)
+            idx_text = next(group for group in match.groups() if group is not None)
             try:
                 idx = int(idx_text)
             except Exception:
                 return original
 
-            if has_zero_based:
-                return original if idx < budget else "0"
-            return original if idx <= budget else "0"
+            logical_idx = idx - index_base
+            return original if 0 <= logical_idx < budget else "0"
 
-        return re.sub(r"\bx_(\d+)\b|\bx(\d+)\b", _replace, text)
+        return self._VARIABLE_TOKEN_PATTERN.sub(_replace, text)
+
+    def _to_canonical_equation(self, equation: str) -> str:
+        """按后端变量契约一次性转换为零基 `x_N` 表示。"""
+        text = "" if equation is None else str(equation)
+        index_base = self._variable_index_base()
+
+        def _replace(match):
+            idx_text = next(group for group in match.groups() if group is not None)
+            try:
+                logical_idx = int(idx_text) - index_base
+            except Exception:
+                return match.group(0)
+            return f"x_{logical_idx}" if logical_idx >= 0 else "0"
+
+        return self._VARIABLE_TOKEN_PATTERN.sub(_replace, text)
 
     def _capture_runtime_feature_context(self, X) -> int:
         """记录当前任务的真实输入维度。
@@ -413,11 +433,11 @@ class TPSRRegressor(BaseWrapper):
         if not isinstance(equation, str) or not equation.strip():
             return
         projected = self._project_equation_to_feature_budget(equation, self._n_features)
-        normalized = self._normalize_equation(projected)
-        if not self._is_current_task_equation_valid(normalized):
+        native_equation = self._normalize_equation(projected)
+        if not self._is_current_task_equation_valid(native_equation):
             return
         payload = {
-            "equation": normalized,
+            "equation": self._to_canonical_equation(native_equation),
             "score": float(score) if isinstance(score, (int, float, np.floating)) else None,
             "complexity": int(complexity) if isinstance(complexity, (int, float, np.integer, np.floating)) else None,
             "source": source,
@@ -1234,13 +1254,16 @@ class TPSRRegressor(BaseWrapper):
         """获取模型学习到的最优符号方程"""
         if self.best_tree is None:
             raise ValueError("未找到可用方程")
-        return self._normalize_equation(self.best_tree)
+        return self._to_canonical_equation(self._normalize_equation(self.best_tree))
 
     def get_total_equations(self):
         """获取模型学习到的所有候选符号方程"""
         if self.best_tree is None and not self.all_trees:
             raise ValueError("模型尚未训练，请先调用fit方法")
-        return list(self.all_trees or [])
+        return [
+            self._to_canonical_equation(self._normalize_equation(equation))
+            for equation in (self.all_trees or [])
+        ]
 
     def export_canonical_symbolic_program(self):
         if self.best_tree is None:

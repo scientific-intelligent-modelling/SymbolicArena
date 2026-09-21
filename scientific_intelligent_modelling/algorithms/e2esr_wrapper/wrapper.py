@@ -251,15 +251,9 @@ class E2ESRRegressor(BaseWrapper):
         if expected_n_features is not None:
             if any(index >= expected_n_features for index in raw_indices):
                 return None
-        normalization_equation = equation
-        preserve_zero_based_indices = raw_indices and 0 not in raw_indices
-        if preserve_zero_based_indices:
-            # E2ESR 原生变量是零基索引；给 normalizer 一个零系数 x_0 锚点，
-            # 防止仅含 x_1/x_2 的原生公式被误判成一基索引后左移。
-            normalization_equation = "0*x_0 + ({})".format(equation)
         try:
             artifact = normalize_e2esr_artifact(
-                normalization_equation,
+                equation,
                 expected_n_features=expected_n_features,
             )
         except Exception:
@@ -267,9 +261,6 @@ class E2ESRRegressor(BaseWrapper):
         if not artifact.get("sympy_parse_ok") or not artifact.get("artifact_valid"):
             return None
         artifact["raw_equation"] = equation
-        if preserve_zero_based_indices:
-            artifact["normalization_notes"] = list(artifact.get("normalization_notes") or [])
-            artifact["normalization_notes"].append("preserve_e2esr_zero_based_indices")
         normalized_expression = artifact.get("normalized_expression")
         try:
             parsed_expression = sp.sympify(normalized_expression)

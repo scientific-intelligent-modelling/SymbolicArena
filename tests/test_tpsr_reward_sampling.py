@@ -139,17 +139,97 @@ def test_tpsr_progress_state_projects_out_of_range_variables_to_zero():
     assert written[0]["equation"] == "x_0 + x_3"
 
 
-def test_tpsr_variable_budget_accepts_one_based_tokens():
+def test_nesymres_variable_budget_uses_explicit_one_based_contract():
     module = _load_tpsr_wrapper_module()
+    reg = module.TPSRRegressor(backbone_model="nesymres")
 
-    assert module.TPSRRegressor._equation_within_feature_budget("x_1 + x_4", 4) is True
-    assert module.TPSRRegressor._equation_within_feature_budget("x_1 + x_5", 4) is False
+    assert reg._extract_variable_indices("x_1 + x_3 + x4") == {0, 2, 3}
+    assert reg._equation_within_feature_budget("x_1 + x_3", 3) is True
+    assert reg._equation_within_feature_budget("x_1 + x_4", 3) is False
+    assert reg._equation_within_feature_budget("x1 + x3", 3) is True
+    assert reg._equation_within_feature_budget("x1 + x4", 3) is False
 
 
-def test_tpsr_projects_out_of_range_one_based_tokens_to_zero():
+def test_nesymres_projects_out_of_range_variables_using_explicit_backend():
     module = _load_tpsr_wrapper_module()
+    reg = module.TPSRRegressor(backbone_model="nesymres")
 
-    assert module.TPSRRegressor._project_equation_to_feature_budget("x_1 + x_5", 4) == "x_1 + 0"
+    assert reg._project_equation_to_feature_budget("x_1 + x_3 + x_4", 3) == "x_1 + x_3 + 0"
+    assert reg._project_equation_to_feature_budget("x1 + x3 + x4", 3) == "x1 + x3 + 0"
+    assert reg._project_equation_to_feature_budget("x[1] + x[3] + x[4]", 3) == "x[1] + x[3] + 0"
+
+
+def test_e2e_variable_budget_does_not_shift_when_x_zero_is_absent():
+    module = _load_tpsr_wrapper_module()
+    reg = module.TPSRRegressor(backbone_model="e2e")
+
+    assert reg._extract_variable_indices("x_2") == {2}
+    assert reg._extract_variable_indices("x2") == {2}
+    assert reg._equation_within_feature_budget("x_2", 2) is False
+    assert reg._equation_within_feature_budget("x2", 2) is False
+    assert reg._to_canonical_equation("x_2 + x2") == "x_2 + x_2"
+
+
+def test_nesymres_predictor_keeps_native_one_based_symbols_and_values():
+    module = _load_tpsr_wrapper_module()
+    reg = module.TPSRRegressor(backbone_model="nesymres")
+    predictor = reg._build_predictor_from_expression(
+        "x_1 + 2 * x_2 + 3 * x_3", ["x_1", "x_2", "x_3"]
+    )
+    X = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+    assert predictor is not None
+    assert [str(symbol) for symbol in reg._backend_params["predict_symbols"]] == [
+        "x_1",
+        "x_2",
+        "x_3",
+    ]
+    np.testing.assert_allclose(predictor(X), np.array([14.0, 32.0]))
+
+
+def test_nesymres_exports_canonical_equations_without_cascading_replacements():
+    module = _load_tpsr_wrapper_module()
+    reg = module.TPSRRegressor(backbone_model="nesymres")
+    reg.best_tree = "x_1 + 2 * x_2 + 3 * x_3"
+    reg.all_trees = [reg.best_tree, "x_2"]
+
+    assert reg.get_optimal_equation() == "x_0 + 2 * x_1 + 3 * x_2"
+    assert reg.get_total_equations() == ["x_0 + 2 * x_1 + 3 * x_2", "x_1"]
+
+
+def test_nesymres_progress_state_validates_native_then_emits_canonical():
+    module = _load_tpsr_wrapper_module()
+    reg = module.TPSRRegressor(backbone_model="nesymres")
+    reg._n_features = 3
+    written = []
+    reg._write_progress_state = written.append
+
+    reg._emit_progress_equation(
+        equation="x_1 + x_3 + x_4",
+        score=1.0,
+        source="unit_test",
+    )
+
+    assert len(written) == 1
+    assert written[0]["equation"] == "x_0 + x_2 + 0"
+
+
+def test_nesymres_deserialize_rebuilds_predictor_from_native_equation():
+    module = _load_tpsr_wrapper_module()
+    reg = module.TPSRRegressor(backbone_model="nesymres")
+    reg.best_tree = "x_1 + 2 * x_2 + 3 * x_3"
+    reg.all_trees = [reg.best_tree]
+    reg._n_features = 3
+    reg._predict_variable_names = ["x_1", "x_2", "x_3"]
+    reg._backend_params["backend"] = "nesymres"
+
+    restored = module.TPSRRegressor.__new__(module.TPSRRegressor)
+    restored.__setstate__(reg.__getstate__())
+    X = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+    assert restored.best_tree == "x_1 + 2 * x_2 + 3 * x_3"
+    assert restored.get_optimal_equation() == "x_0 + 2 * x_1 + 3 * x_2"
+    np.testing.assert_allclose(restored.predict(X), np.array([14.0, 32.0]))
 
 
 class _FakeTree:

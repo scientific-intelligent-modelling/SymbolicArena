@@ -523,7 +523,8 @@ def normalize_gplearn_artifact(raw_equation: str, *, expected_n_features: int | 
 
 def normalize_e2esr_artifact(raw_equation: str, *, expected_n_features: int | None = None) -> dict[str, Any]:
     expr = _replace_symbolic_tokens(str(raw_equation))
-    normalized_expression, parsed = _normalize_common_expression(expr)
+    # E2ESR 固定使用零基变量，缺少 x_0 不代表其余变量需要左移。
+    normalized_expression, parsed = _normalize_common_expression(expr, shift_one_based=False)
     variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []
     artifact = build_canonical_symbolic_program(
         tool_name="e2esr",
@@ -545,7 +546,8 @@ def normalize_e2esr_artifact(raw_equation: str, *, expected_n_features: int | No
 
 def normalize_tpsr_artifact(raw_equation: str, *, expected_n_features: int | None = None) -> dict[str, Any]:
     expr = _replace_symbolic_tokens(str(raw_equation))
-    normalized_expression, parsed = _normalize_common_expression(expr)
+    # wrapper 已按后端转换为零基；不能再次凭缺少 x0 猜测一基编号。
+    normalized_expression, parsed = _normalize_common_expression(expr, shift_one_based=False)
     variables = sorted({str(sym) for sym in getattr(parsed, "free_symbols", set())}) if parsed is not None else []
     artifact = build_canonical_symbolic_program(
         tool_name="tpsr",
