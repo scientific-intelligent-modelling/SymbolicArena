@@ -2,11 +2,13 @@
 
 ## 当前任务
 
-- 编号：DIR-001；任务：创建 ICLR stage4 实验目录；状态：已确认。
-- 当前采用方案：使用 `A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/`。
-- 验证情况：目录创建成功，路径已核对。
-- 未解决问题：规则中的远程项目路径记录仍待对应任务核验。
-- 下一步：根据用户指定的新任务更新索引。
+- 编号：ENV-001；任务：更新 iaaccn22~29 算法代码，再同步 iaaccn48~55 实验环境；状态：部分完成，54 待恢复连接。
+- 当前采用方案：当前代码已同步到 CPU 节点的 `~/workplace/scientific-intelligent-modelling` 和 `~/projects/scientific-intelligent-modelling`。依赖取自已有 CPU 环境；GPU 复用已有 8 个环境，补充 FePySR、JAXSR、SymbolFit 和缺失依赖。
+- GPU 路径：48、50~53、55 使用 `/data1/zhangziwen`，49 经用户确认使用 `/data3/zhangziwen`；代码为 `<根目录>/sim-runtime/code`，环境为 `<根目录>/anaconda3/envs`，使用前加载 `<根目录>/sim-runtime/runtime.env`。
+- 有效证据：[ENV-001](work/ENV-001/)；CPU 文件校验 `cpu_sync_*.json`，CPU 导入检查 `cpu_prepare_*.json`，GPU 检查 `gpu_verify_*.json`。源机器同目录保留部署脚本、环境包和 `code_manifest.json`。
+- 已确认：22~29 两处代码目录文件校验一致，TPSR、E2ESR、RAG-SR、SymbolFit、FePySR 导入通过。48~53、55 共 7 台机器的 1596 个同步文件与本地 SHA256 一致，77/77 环境导入检查通过，77/77 环境在不设置 PYTHONPATH 时均指向新代码目录。55 最后核验剩余 106.15 GiB。
+- 未解决问题：54 无法通过 SSH 连接。复用环境存在部分第三方包版本差异；本次未执行正式数据集实验或 LLM API 调用。
+- 下一步：54 恢复连接后复用同一任务目录补充部署。
 
 ## 有效入口：已确认
 
@@ -20,12 +22,12 @@
 
 ## 候选文件与问题：待验证
 
-- 根目录 AGENTS.md 与 `.codex/AGENTS.md` 中的远程项目路径存在不同记录；远程执行前按当前任务核验。根目录规则中的临时路径示例使用当前全局过程目录约定。
+- CPU 节点的 `workplace` 与 `projects` 两处项目路径均被已有环境引用，本次已同步两处代码。GPU 使用上方独立目录。
 - `.codex/AGENTS.md`、`.gitignore` 的已有未提交修改保持原样。
 
 ## 替代与归档
 
-- 已替代：本次未指定文件替代关系。
+- ENV-001 当前采用最终 `gpu_verify_*.json`；初次安装和 Julia 初始化记录保留在源机器的同任务目录，不代表当前验证状态。
 - WS-001 已完成；未产生独立过程记录，无需移动文件。
 - WS-002 已完成；未产生独立过程记录，无需移动文件。
 - SR-CLOUD-30 已关闭；本地诊断文件和关联测试已按用户确认删除。
