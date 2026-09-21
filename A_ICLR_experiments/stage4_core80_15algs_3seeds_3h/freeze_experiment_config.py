@@ -131,7 +131,9 @@ def build(code_commit):
             'verify_config_and_code_hashes': True, 'freeze_input_file_hashes_before_dispatch': True,
             'bind_seed_condition_and_machine_paths_explicitly': True,
             'preserve_algorithm_thread_parameters': True,
-            'paid_llm_cost_and_retry_limits_require_separate_confirmation': True,
+            'paid_llm_cost_and_retry_limits_require_separate_confirmation': False,
+            'paid_llm_budget': 'unlimited_by_explicit_user_instruction',
+            'technical_retry_limit': 'unlimited_by_explicit_user_instruction',
             'experiments_started': False,
         },
     }
