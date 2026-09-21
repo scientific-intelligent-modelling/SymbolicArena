@@ -2,6 +2,14 @@
 
 ## 当前任务
 
+- 编号：ENV-003；任务：每台机器3数据集、15算法、每实验180秒快速测试；状态：15台各45项全部结束，共675项，54不可达。
+- 当前方案：feynman-i.14.4（g0275，含干扰变量）、strogatz_glider1（g0596）、BPG3（g0005）；clean、seed520，每台并发45。LLMSR/DRSR 使用 DeepInfra Llama-3.1-8B-Instruct-Turbo，3轮每轮4候选、max_tokens1024，不额外重试。
+- 有效文件：[逐实验结果](work/ENV-003/results.csv)、[算法汇总](work/ENV-003/summary.csv)；同目录保留 `run_checks.py`、`run.sh`、`control.py`、`node.py`、`prepare_inputs.py`、`export_results.py`、`params.json`、`inputs_manifest.json` 和 `results_*.json`。远端原始结果为各节点数据根目录的 `sim-runtime/checks/ENV-003/results/`。结果采用预算内原生最佳快照或终态，不按测试分数改选。
+- 验证：675个组合完整，无剩余测试会话；673个有有限ID R²，420个ID R²>0.99；90个LLM实验均记录API成功响应，合计677次。单任务训练180秒，包含恢复和评估的最大总耗时219.3秒。
+- 未解决问题：25上的E2ESR、SymbolFit在g0275未取得预算内可用指标；FePySR等算法部分数据集效果仍差。未启动额外修复或重跑；54恢复后尚需补45项。
+
+## 共享恢复修复
+
 - 编号：FIX-003；任务：只修复 LLMSR/DRSR 及最初4算法的共享恢复问题；状态：已完成。
 - 已确认：LLMSR、DRSR、TPSR、RAG-SR、SymbolFit 存在根据不可用测试指标改选旧公式的问题，E2ESR 原有保护有效。共享恢复现对全部15算法统一保留原生候选，PySR/PyOperon 同一分支同时覆盖；不改变各算法搜索、公式导出或指标定义。
 - 有效文件：`scientific_intelligent_modelling/benchmarks/runner.py`、`tests/test_native_budget_selection.py`。本地15算法的候选恢复和分钟快照恢复检查通过，另3个变量索引测试通过；15台同步后各4项测试通过，共60项，23处源码哈希一致，54不可达。证据：[remote_sync.json](work/FIX-003/remote_sync.json)；执行脚本为同目录 `run_sync.py`、`sync_remote.py`。
@@ -88,3 +96,4 @@
 - FIX-001 数值更正完成；过程目录原位归档，正式更正脚本和核验输入已保存在实验目录。
 - FIX-002 已完成；过程目录原位归档，保留真实复现脚本与远端同步、验证记录。
 - FIX-003 已完成；过程目录原位归档，保留同步脚本与验证记录。
+- ENV-003 已完成；过程目录原位归档，保留运行脚本、输入、配置和结果。
