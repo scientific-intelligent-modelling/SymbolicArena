@@ -788,10 +788,13 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
                     {
                         "equation": "2.0*x_0 + 3.0*x_1 + 1.0",
                         "loss": 0.0,
-                        "score": 1.0,
+                        "score": 0.0,
                         "native_model_score": 1.0,
-                        "internal_objective": "decoder_length_normalized_log_likelihood",
-                        "objective_direction": "max",
+                        "training_mse": 0.0,
+                        "internal_loss": 0.0,
+                        "selection_policy": "e2esr_training_mse_v1",
+                        "internal_objective": "native_training_mse",
+                        "objective_direction": "min",
                         "complexity": 7,
                         "refinement_type": "BFGS",
                     },
@@ -815,13 +818,13 @@ class BenchmarkProgressSnapshotsTest(unittest.TestCase):
             self.assertEqual(payload["tool"], "e2esr")
             self.assertEqual(payload["status"], "ok")
             self.assertEqual(payload["source_loss"], 0.0)
-            self.assertEqual(payload["source_score"], 1.0)
+            self.assertEqual(payload["source_score"], 0.0)
             self.assertTrue(payload["algorithm_native_incumbent"])
             self.assertEqual(
                 payload["internal_objective"],
-                "decoder_length_normalized_log_likelihood",
+                "native_training_mse",
             )
-            self.assertEqual(payload["internal_objective_direction"], "max")
+            self.assertEqual(payload["internal_objective_direction"], "min")
             self.assertEqual(payload["source_complexity"], 7)
             self.assertEqual(payload["elapsed_minutes"], 60)
             self.assertEqual(

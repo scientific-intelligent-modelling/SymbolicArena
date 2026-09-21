@@ -42,8 +42,13 @@ def get_top_k_features(X, y, k=10):
 
 def exchange_node_values(tree, dico):
     new_tree = copy.deepcopy(tree)
-    for (old, new) in dico.items():
-        new_tree.replace_node_value(old, new)
+    # 通过临时节点名同时重标，避免 x_0 -> x_1 -> x_0 导致特征合并。
+    replacements = [(old, "__e2esr_relabel_{}__".format(i), new)
+                    for i, (old, new) in enumerate(dico.items())]
+    for old, temporary, new in replacements:
+        new_tree.replace_node_value(old, temporary)
+    for old, temporary, new in replacements:
+        new_tree.replace_node_value(temporary, new)
     return new_tree
 
 class SymbolicTransformerRegressor(BaseEstimator):
@@ -121,6 +126,22 @@ class SymbolicTransformerRegressor(BaseEstimator):
         except Exception:
             return None
 
+    @staticmethod
+    def _finite_mse(value):
+        try:
+            value = float(value)
+        except Exception:
+            return None
+        return value if math.isfinite(value) and value >= 0 else None
+
+    def _candidate_training_mse(self, candidate, X, y):
+        loss = self._finite_mse(candidate.get("_mse"))
+        if loss is None:
+            loss = self._safe_tree_metric(candidate.get("predicted_tree"), X, y, "_mse")
+            loss = self._finite_mse(loss)
+        candidate["_mse"] = loss
+        return loss
+
     def _relabeled_tree(self, tree, dataset_idx):
         if tree is None:
             return None
@@ -197,27 +218,36 @@ class SymbolicTransformerRegressor(BaseEstimator):
         compute_metrics=True,
         tree_is_scaled=False,
     ):
-        if not self.progress_state_path or not isinstance(candidate, dict):
+        del compute_metrics  # 训练 MSE 是候选选择契约的一部分，不能被关闭。
+        if not (self.progress_state_path or callable(self.progress_callback)) or not isinstance(candidate, dict):
             return
         tree = candidate.get("predicted_tree")
         if tree is None:
+            return
+        loss = self._candidate_training_mse(candidate, X, y)
+        if loss is None:
             return
         equation = self._tree_to_expression(tree, dataset_idx, tree_is_scaled=tree_is_scaled)
         if not isinstance(equation, str) or not equation.strip():
             return
         native_score = candidate.get("native_model_score")
-        try:
-            native_score = float(native_score)
-        except (TypeError, ValueError, OverflowError):
-            native_score = None
-        if native_score is not None and not np.isfinite(native_score):
-            native_score = None
+        best_losses = getattr(self, "_progress_best_mse", None)
+        if best_losses is None:
+            best_losses = {}
+            self._progress_best_mse = best_losses
+        previous_best = best_losses.get(dataset_idx)
+        if previous_best is not None and loss > previous_best:
+            return
+        best_losses[dataset_idx] = loss
         payload = {
             "equation": equation,
             "native_model_score": native_score,
-            "score": native_score,
-            "internal_objective": "decoder_length_normalized_log_likelihood",
-            "objective_direction": "max",
+            "score": loss,
+            "internal_loss": loss,
+            "training_mse": loss,
+            "internal_objective": "native_training_mse",
+            "objective_direction": "min",
+            "selection_policy": "e2esr_training_mse_v1",
             "complexity": self._candidate_complexity(tree),
             "refinement_type": candidate.get("refinement_type"),
             "bag_index": candidate.get("bag_index"),
@@ -230,6 +260,9 @@ class SymbolicTransformerRegressor(BaseEstimator):
             self.progress_callback(
                 equation=equation,
                 native_model_score=native_score,
+                training_mse=loss,
+                refinement_type=candidate.get("refinement_type"),
+                stage=stage,
                 bag_index=candidate.get("bag_index", 0),
                 candidate_rank=candidate.get("candidate_rank", 0),
                 generation_source=candidate.get("generation_source", "unknown"),
@@ -244,6 +277,7 @@ class SymbolicTransformerRegressor(BaseEstimator):
         verbose=False
     ):
         self.start_fit = getattr(self, "_external_start_fit", None) or time.time()
+        self._progress_best_mse = {}
 
         if not isinstance(X, list):
             X = [X]
@@ -283,14 +317,20 @@ class SymbolicTransformerRegressor(BaseEstimator):
             inputs_ids = inputs_ids[:self.max_number_bags]
 
         candidates = defaultdict(list)
-        progressive_forward = bool(self.progress_state_path)
+        progressive_forward = bool(
+            self.progress_state_path
+            or callable(self.progress_callback)
+            or self.timeout_in_seconds is not None
+        )
         if progressive_forward:
             forward_time = time.time()
             max_bags = int(self.max_number_bags) if self.max_number_bags and self.max_number_bags > 0 else None
-            if self.timeout_in_seconds is not None:
-                max_bags = None
             bag_index = 0
             while True:
+                if max_bags is not None and bag_index >= max_bags:
+                    break
+                if self._time_budget_exhausted():
+                    break
                 if bag_index < len(inputs):
                     bag = inputs[bag_index]
                     input_id = inputs_ids[bag_index]
@@ -301,33 +341,49 @@ class SymbolicTransformerRegressor(BaseEstimator):
                         break
                 else:
                     break
-                if self._time_budget_exhausted() and candidates:
-                    break
                 bag_outputs = self.model([bag])  ## 按 bag 增量前向，确保长任务能尽早产出中间态
                 assert len(bag_outputs) == 1, "Problem with incremental inputs and outputs"
-                candidate = bag_outputs[0]
-                candidates[input_id].extend(candidate)
+                bag_trees = bag_outputs[0]
                 metadata_groups = getattr(self.model, "last_generation_metadata", [])
                 metadata = metadata_groups[0] if metadata_groups else []
-                for candidate_rank, tree in enumerate(candidate):
+                bag_candidates = []
+                for candidate_rank, tree in enumerate(bag_trees):
                     native = metadata[candidate_rank] if candidate_rank < len(metadata) else {}
+                    entry = {
+                        "refinement_type": "ForwardRaw",
+                        "predicted_tree": tree,
+                        "time": time.time() - self.start_fit,
+                        "native_model_score": native.get("native_model_score"),
+                        "candidate_rank": native.get("candidate_rank", candidate_rank),
+                        "generation_source": native.get("generation_source", "unknown"),
+                        "bag_index": bag_index,
+                    }
+                    bag_candidates.append(entry)
                     self._emit_progress_candidate(
                         input_id,
-                        {
-                            "refinement_type": "ForwardRaw",
-                            "predicted_tree": tree,
-                            "time": time.time() - self.start_fit,
-                            "native_model_score": native.get("native_model_score"),
-                            "candidate_rank": native.get("candidate_rank", candidate_rank),
-                            "generation_source": native.get("generation_source", "unknown"),
-                            "bag_index": bag_index,
-                        },
+                        entry,
                         scaled_X[input_id],
                         Y[input_id],
                         stage="forward_partial",
                         compute_metrics=False,
                         tree_is_scaled=self.rescale,
                     )
+                refined_bag = self.refine(
+                    input_id,
+                    scaled_X[input_id],
+                    Y[input_id],
+                    bag_candidates,
+                    verbose=verbose,
+                )
+                merged = candidates[input_id] + refined_bag
+                merged = self.order_candidates(
+                    scaled_X[input_id], Y[input_id], merged, metric="_mse", verbose=verbose
+                )
+                candidates[input_id] = [
+                    candidate
+                    for candidate in merged
+                    if self._finite_mse(candidate.get("_mse")) is not None
+                ]
                 bag_index += 1
             if verbose: print("Finished forward in {} secs".format(time.time()-forward_time))
         else:
@@ -338,31 +394,55 @@ class SymbolicTransformerRegressor(BaseEstimator):
             assert len(inputs) == len(outputs), "Problem with inputs and outputs"
             for i in range(len(inputs)):
                 input_id = inputs_ids[i]
-                candidate = outputs[i]
-                candidates[input_id].extend(candidate)
-        assert len(candidates.keys())==n_datasets
+                metadata_groups = getattr(self.model, "last_generation_metadata", [])
+                metadata = metadata_groups[i] if i < len(metadata_groups) else []
+                for candidate_rank, tree in enumerate(outputs[i]):
+                    native = metadata[candidate_rank] if candidate_rank < len(metadata) else {}
+                    candidates[input_id].append({
+                        "refinement_type": "ForwardRaw",
+                        "predicted_tree": tree,
+                        "time": time.time() - self.start_fit,
+                        "native_model_score": native.get("native_model_score"),
+                        "candidate_rank": native.get("candidate_rank", candidate_rank),
+                        "generation_source": native.get("generation_source", "unknown"),
+                        "bag_index": i,
+                    })
             
         self.tree = {}
-        for input_id, candidates_id in candidates.items():
+        for input_id in range(n_datasets):
+            candidates_id = candidates[input_id]
             if len(candidates_id)==0: 
                 self.tree[input_id]=None
                 continue
-        
-            refined_candidates = self.refine(input_id, scaled_X[input_id], Y[input_id], candidates_id, verbose=verbose)
-            for i,candidate in enumerate(refined_candidates):
+
+            if progressive_forward:
+                refined_candidates = self.order_candidates(
+                    scaled_X[input_id], Y[input_id], candidates_id, metric="_mse", verbose=verbose
+                )
+            else:
+                refined_candidates = self.refine(
+                    input_id, scaled_X[input_id], Y[input_id], candidates_id, verbose=verbose
+                )
+            refined_candidates = [
+                candidate
+                for candidate in refined_candidates
+                if self._finite_mse(candidate.get("_mse")) is not None
+            ]
+            final_candidates = []
+            for candidate in refined_candidates:
+                final_candidate = dict(candidate)
                 if self.rescale:
-                    refined_candidates[i]["predicted_tree"] = self.scalers[input_id].rescale_function(
+                    final_candidate["predicted_tree"] = self.scalers[input_id].rescale_function(
                         self.model.env,
                         copy.deepcopy(candidate["predicted_tree"]),
                         *self.scale_params[input_id]
                     )
-                else: 
-                    refined_candidates[i]["predicted_tree"]=candidate["predicted_tree"]
-            self.tree[input_id] = refined_candidates
-            if refined_candidates:
+                final_candidates.append(final_candidate)
+            self.tree[input_id] = final_candidates or None
+            if final_candidates:
                 self._emit_progress_candidate(
                     input_id,
-                    refined_candidates[0],
+                    final_candidates[0],
                     X[input_id],
                     Y[input_id],
                     stage="fit_final",
@@ -399,102 +479,130 @@ class SymbolicTransformerRegressor(BaseEstimator):
         return candidates
 
     def refine(self, dataset_idx, X, y, candidates, verbose):
-        refined_candidates = []
-        
-        ## For skeleton model
-        for i, candidate in enumerate(candidates):
-            candidate_skeleton, candidate_constants =  self.model.env.generator.function_to_skeleton(candidate, constants_with_idx=True)
-            if "CONSTANT" in candidate_constants:
-                candidates[i] = self.model.env.wrap_equation_floats(candidate_skeleton, np.random.randn(len(candidate_constants)))
+        raw_candidates = []
 
-        candidates = [{"refinement_type": "NoRef", "predicted_tree": candidate, "time": time.time()-self.start_fit} for candidate in candidates]
-        candidates = self.order_candidates(X, y, candidates, metric="_mse", verbose=verbose)
-        best_r2 = None
-        if candidates:
-            candidates[0]["_mse"] = self._safe_tree_metric(candidates[0]["predicted_tree"], X, y, "_mse")
-            best_r2 = self._safe_tree_metric(candidates[0]["predicted_tree"], X, y, "r2")
-            if best_r2 is not None:
-                candidates[0]["r2"] = best_r2
-            self._emit_progress_candidate(
-                dataset_idx,
-                candidates[0],
-                X,
-                y,
-                stage="noref_best",
-                tree_is_scaled=self.rescale,
+        # 统一保留 forward 元数据；BFGS 只新增候选，不覆盖原始候选。
+        for source_candidate in candidates:
+            if isinstance(source_candidate, dict):
+                candidate = dict(source_candidate)
+                tree = candidate.get("predicted_tree")
+            else:
+                candidate = {}
+                tree = source_candidate
+            if tree is None:
+                continue
+            candidate_skeleton, candidate_constants = self.model.env.generator.function_to_skeleton(
+                tree, constants_with_idx=True
+            )
+            if "CONSTANT" in candidate_constants:
+                tree = self.model.env.wrap_equation_floats(
+                    candidate_skeleton, np.random.randn(len(candidate_constants))
+                )
+                candidate.pop("_mse", None)
+            candidate["predicted_tree"] = tree
+            candidate["refinement_type"] = "NoRef"
+            candidate.setdefault("time", time.time() - self.start_fit)
+            if self._candidate_training_mse(candidate, X, y) is not None:
+                raw_candidates.append(candidate)
+
+        raw_candidates = self.order_candidates(
+            X, y, raw_candidates, metric="_mse", verbose=verbose
+        )
+        if not raw_candidates:
+            return []
+
+        best_mse = raw_candidates[0]["_mse"]
+        self._emit_progress_candidate(
+            dataset_idx,
+            raw_candidates[0],
+            X,
+            y,
+            stage="noref_best",
+            tree_is_scaled=self.rescale,
+        )
+
+        # 去重只限制昂贵的 BFGS 次数，不删除已评分的原始候选。
+        skeleton_candidates = set()
+        candidates_to_refine = []
+        for candidate in raw_candidates:
+            skeleton_candidate, _ = self.model.env.generator.function_to_skeleton(
+                candidate["predicted_tree"], constants_with_idx=False
+            )
+            skeleton_key = skeleton_candidate.infix()
+            if skeleton_key in skeleton_candidates:
+                continue
+            skeleton_candidates.add(skeleton_key)
+            candidates_to_refine.append(candidate)
+        if verbose:
+            print(
+                "Removed {}/{} skeleton duplicata".format(
+                    len(raw_candidates) - len(candidates_to_refine), len(raw_candidates)
+                )
             )
 
-        ## REMOVE SKELETON DUPLICATAS
-        skeleton_candidates, candidates_to_remove = {}, []
-        for i, candidate in enumerate(candidates):
-            skeleton_candidate, _ = self.model.env.generator.function_to_skeleton(candidate["predicted_tree"], constants_with_idx=False)
-            if skeleton_candidate.infix() in skeleton_candidates:
-                candidates_to_remove.append(i)
-            else:
-                skeleton_candidates[skeleton_candidate.infix()]=1
-        if verbose: print("Removed {}/{} skeleton duplicata".format(len(candidates_to_remove), len(candidates)))
+        if self.n_trees_to_refine > 0:
+            candidates_to_refine = candidates_to_refine[:self.n_trees_to_refine]
 
-        candidates = [candidates[i] for i in range(len(candidates)) if i not in candidates_to_remove]
-        if self.n_trees_to_refine>0:
-            candidates_to_refine = candidates[:self.n_trees_to_refine]
-        else:
-            candidates_to_refine = copy.deepcopy(candidates)
-
+        refined_candidates = []
         for candidate in candidates_to_refine:
-            if self._time_budget_exhausted() and refined_candidates:
+            if self._time_budget_exhausted():
                 break
             refinement_strategy = utils_wrapper.BFGSRefinement()
-            candidate_skeleton, candidate_constants = self.model.env.generator.function_to_skeleton(candidate["predicted_tree"], constants_with_idx=True)
-            try:
-                refined_candidate = refinement_strategy.go(env=self.model.env, 
-                                                        tree=candidate_skeleton, 
-                                                        coeffs0=candidate_constants,
-                                                        X=X,
-                                                        y=y,
-                                                        downsample=1024,
-                                                        stop_after=self.stop_refinement_after)
-
-            except Exception as e:
-                if verbose: 
-                    print(e)
-                    #traceback.format_exc()
-                continue
-            
-            if refined_candidate is not None:
-                refined_entry = { 
-                        "refinement_type": "BFGS",
-                        "predicted_tree": refined_candidate,
-                        }
-                refined_entry["_mse"] = self._safe_tree_metric(refined_candidate, X, y, "_mse")
-                refined_entry["r2"] = self._safe_tree_metric(refined_candidate, X, y, "r2")
-                refined_candidates.append(refined_entry)
-                candidate_r2 = refined_entry.get("r2")
-                if candidate_r2 is not None and (best_r2 is None or candidate_r2 > best_r2):
-                    best_r2 = candidate_r2
-                    self._emit_progress_candidate(
-                        dataset_idx,
-                        refined_entry,
-                        X,
-                        y,
-                        stage="bfgs_best",
-                        tree_is_scaled=self.rescale,
-                    )
-        candidates.extend(refined_candidates)  
-        candidates = self.order_candidates(X, y, candidates, metric="r2")
-        if candidates:
-            self._emit_progress_candidate(
-                dataset_idx,
-                candidates[0],
-                X,
-                y,
-                stage="refine_final",
-                tree_is_scaled=self.rescale,
+            candidate_skeleton, candidate_constants = self.model.env.generator.function_to_skeleton(
+                candidate["predicted_tree"], constants_with_idx=True
             )
+            try:
+                refined_candidate = refinement_strategy.go(
+                    env=self.model.env,
+                    tree=candidate_skeleton,
+                    coeffs0=candidate_constants,
+                    X=X,
+                    y=y,
+                    downsample=1024,
+                    stop_after=self.stop_refinement_after,
+                )
+            except Exception as e:
+                if verbose:
+                    print(e)
+                continue
 
-        for candidate in candidates:
-            if "time" not in candidate:
-                candidate["time"]=time.time()-self.start_fit
-        return candidates
+            if refined_candidate is None:
+                continue
+            refined_entry = {
+                "refinement_type": "BFGS",
+                "predicted_tree": refined_candidate,
+                "bag_index": candidate.get("bag_index"),
+                "candidate_rank": candidate.get("candidate_rank"),
+                "generation_source": candidate.get("generation_source"),
+                "time": time.time() - self.start_fit,
+            }
+            refined_mse = self._candidate_training_mse(refined_entry, X, y)
+            if refined_mse is None:
+                continue
+            refined_candidates.append(refined_entry)
+            if refined_mse < best_mse:
+                best_mse = refined_mse
+                self._emit_progress_candidate(
+                    dataset_idx,
+                    refined_entry,
+                    X,
+                    y,
+                    stage="bfgs_best",
+                    tree_is_scaled=self.rescale,
+                )
+
+        all_candidates = self.order_candidates(
+            X, y, raw_candidates + refined_candidates, metric="_mse", verbose=verbose
+        )
+        self._emit_progress_candidate(
+            dataset_idx,
+            all_candidates[0],
+            X,
+            y,
+            stage="refine_final",
+            tree_is_scaled=self.rescale,
+        )
+        return all_candidates
 
     def __str__(self):
         if hasattr(self, "tree"):

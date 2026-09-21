@@ -2,6 +2,7 @@
 import argparse
 import json
 import importlib
+import inspect
 import sys
 import traceback
 import os
@@ -102,17 +103,25 @@ def execute_command(module, command):
     else:
         raise ValueError(f"未知操作: {action}")
 
+def _restore_regressor(regressor_class, serialized_model):
+    # 类方法可以直接恢复；避免 E2ESR 为一个随即丢弃的实例加载预训练权重。
+    descriptor = inspect.getattr_static(regressor_class, 'deserialize', None)
+    if (getattr(regressor_class, '_DESERIALIZE_WITHOUT_INIT', False)
+            and isinstance(descriptor, (classmethod, staticmethod))):
+        return regressor_class.deserialize(serialized_model)
+    regressor = regressor_class()
+    if hasattr(regressor, 'deserialize'):
+        return regressor.deserialize(serialized_model)
+    return regressor
+
+
 def handle_get_optimal_equation(regressor_class, command):
     """处理get_optimal_equation操作，获取最优方程"""
     # 提取模型状态
     serialized_model = command['serialized_model']
     
     # 重建回归器
-    regressor = regressor_class()
-    
-    # 如果有deserialize方法，用它加载状态
-    if hasattr(regressor, 'deserialize'):
-        regressor = regressor.deserialize(serialized_model)
+    regressor = _restore_regressor(regressor_class, serialized_model)
     
     # 获取方程
     equation = None
@@ -144,11 +153,7 @@ def handle_get_total_equations(regressor_class, command):
     serialized_model = command['serialized_model']
     
     # 重建回归器
-    regressor = regressor_class()
-    
-    # 如果有deserialize方法，用它加载状态
-    if hasattr(regressor, 'deserialize'):
-        regressor = regressor.deserialize(serialized_model)
+    regressor = _restore_regressor(regressor_class, serialized_model)
     
     # 获取所有方程
     equations = None
@@ -179,9 +184,7 @@ def handle_get_total_equations(regressor_class, command):
 def handle_get_fitted_params(regressor_class, command):
     """获取最佳方程的训练期拟合参数（若包装器实现）。"""
     serialized_model = command['serialized_model']
-    regressor = regressor_class()
-    if hasattr(regressor, 'deserialize'):
-        regressor = regressor.deserialize(serialized_model)
+    regressor = _restore_regressor(regressor_class, serialized_model)
     params = None
     if hasattr(regressor, 'get_fitted_params'):
         params = regressor.get_fitted_params()
@@ -203,9 +206,7 @@ def handle_get_total_equations_with_params(regressor_class, command):
     """获取（或Top-N）候选方程与参数（若包装器实现）。"""
     serialized_model = command['serialized_model']
     n = command.get('n')
-    regressor = regressor_class()
-    if hasattr(regressor, 'deserialize'):
-        regressor = regressor.deserialize(serialized_model)
+    regressor = _restore_regressor(regressor_class, serialized_model)
     if hasattr(regressor, 'get_total_equations_with_params'):
         try:
             items = regressor.get_total_equations_with_params(n) if n is not None else regressor.get_total_equations_with_params()
@@ -226,9 +227,7 @@ def handle_export_canonical_symbolic_program(regressor_class, command):
     )
 
     serialized_model = command['serialized_model']
-    regressor = regressor_class()
-    if hasattr(regressor, 'deserialize'):
-        regressor = regressor.deserialize(serialized_model)
+    regressor = _restore_regressor(regressor_class, serialized_model)
 
     if not hasattr(regressor, 'export_canonical_symbolic_program'):
         raise ValueError("包装器未实现 export_canonical_symbolic_program")
@@ -385,11 +384,7 @@ def handle_predict(regressor_class, command):
     X = np.array(data['X'])
     
     # 重建回归器并预测
-    regressor = regressor_class()  # 使用动态获取的类
-    
-    # 如果有deserialize方法，用它加载状态
-    if hasattr(regressor, 'deserialize'):
-        regressor = regressor.deserialize(serialized_model)
+    regressor = _restore_regressor(regressor_class, serialized_model)
     
     # 执行预测
     predictions = regressor.predict(X)

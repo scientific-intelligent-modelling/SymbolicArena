@@ -6,6 +6,7 @@
 #
 from abc import ABC, abstractmethod
 import sklearn
+import sklearn.preprocessing
 from scipy.optimize import minimize
 import numpy as np
 import time
@@ -39,7 +40,7 @@ class TimedFun:
         self.fun_in = fun
         self.started = False
         self.stop_after = stop_after
-        self.best_fun_value = np.infty
+        self.best_fun_value = np.inf
         self.best_x = None
         self.loss_history=[]
         self.verbose = verbose
@@ -52,11 +53,9 @@ class TimedFun:
             raise ValueError("Time is over.")
         self.fun_value = self.fun_in(x, *args)
         self.loss_history.append(self.fun_value)
-        if self.best_x is None:
-            self.best_x=x
-        elif self.fun_value < self.best_fun_value:
+        if np.isfinite(self.fun_value) and self.fun_value < self.best_fun_value:
             self.best_fun_value=self.fun_value
-            self.best_x=x
+            self.best_x=np.asarray(x).copy()
         self.x = x
         return self.fun_value
 
@@ -89,8 +88,11 @@ class Scaler(ABC):
         idx = 0
         while idx < len(prefix):
             if prefix[idx].startswith("x_"):
-                k = int(prefix[idx][-1])
-                if k>=len(a): 
+                k = int(prefix[idx][2:])
+                if k >= len(a):
+                    # 与原生预测一致：词表中超出任务维度的变量按 0 处理。
+                    prefix[idx] = "0"
+                    idx += 1
                     continue
                 a_k, b_k = str(a[k]), str(b[k])
                 prefix_to_add = ["add", b_k, "mul", a_k, prefix[idx]]
@@ -118,11 +120,10 @@ class StandardScaler(Scaler):
         return scaled_X
     
     def transform(self, X):
-        m, s = self.scaler.mean_, np.sqrt(self.scaler.var_)
-        return (X-m)/s
+        return self.scaler.transform(X)
 
     def get_params(self):
-        m, s = self.scaler.mean_, np.sqrt(self.scaler.var_)
+        m, s = self.scaler.mean_, self.scaler.scale_
         a, b = 1/s, -m/s
         return (a, b)
     
@@ -176,7 +177,7 @@ class BFGSRefinement():
             self.X = self.X[:downsample]
             self.y = self.y[:downsample]
         self.X=torch.tensor(self.X, dtype=torch.float64, requires_grad=False)
-        self.y=torch.tensor(self.y, dtype=torch.float64, requires_grad=False)
+        self.y=torch.tensor(self.y, dtype=torch.float64, requires_grad=False).reshape(-1)
         self.func = partial(func, self.X)
 
         def objective_torch(coeffs):
@@ -189,6 +190,12 @@ class BFGSRefinement():
                 coeffs = torch.tensor(coeffs, dtype=torch.float64, requires_grad=True)
             y_tilde = self.func(coeffs)
             if y_tilde is None: return None
+            # SymPyModule 返回 (N, 1)，必须逐样本相减，不能广播成 (N, N)。
+            y_tilde = y_tilde.reshape(-1)
+            if y_tilde.numel() == 1:
+                y_tilde = y_tilde.expand_as(self.y)
+            if y_tilde.shape != self.y.shape:
+                raise ValueError("BFGS prediction and target shapes differ")
             mse = (self.y -y_tilde).pow(2).mean().div(2)
             return mse
 
@@ -221,4 +228,6 @@ class BFGSRefinement():
         except ValueError as e:
             traceback.format_exc()
         best_constants = objective_numpy_timed.best_x
+        if best_constants is None:
+            return None
         return env.wrap_equation_floats(tree, best_constants)

@@ -95,17 +95,22 @@ def test_order_candidates_puts_invalid_r2_scores_at_end():
     assert [item["predicted_tree"] for item in ordered] == ["c", "b", "a", "d"]
 
 
-def test_emit_progress_candidate_can_skip_metric_computation(tmp_path):
+def test_emit_progress_candidate_always_uses_training_mse(tmp_path):
     module = _load_sklearn_wrapper_module()
     reg = module.SymbolicTransformerRegressor(progress_state_path=str(tmp_path / "state.json"))
     captured = {}
+    metric_calls = []
 
     class FakeTree:
         def infix(self):
             return "x_0 + x_1"
 
     reg._write_progress_state = lambda payload: captured.update(payload)  # type: ignore[method-assign]
-    reg._safe_tree_metric = lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("不应计算指标"))  # type: ignore[method-assign]
+    reg._safe_tree_metric = (  # type: ignore[method-assign]
+        lambda tree, X, y, metric: metric_calls.append((X, y, metric)) or 0.125
+    )
+    X = np.array([[0.0, 1.0], [1.0, 2.0]])
+    y = np.array([1.0, 3.0])
 
     reg._emit_progress_candidate(
         0,
@@ -117,20 +122,43 @@ def test_emit_progress_candidate_can_skip_metric_computation(tmp_path):
             "candidate_rank": 1,
             "generation_source": "beam_search",
         },
-        None,
-        None,
+        X,
+        y,
         stage="forward_partial",
         compute_metrics=False,
     )
 
+    assert metric_calls == [(X, y, "_mse")]
     assert captured["equation"] == "x_0 + x_1"
     assert captured["native_model_score"] == -0.25
-    assert captured["score"] == -0.25
-    assert captured["internal_objective"] == "decoder_length_normalized_log_likelihood"
-    assert captured["objective_direction"] == "max"
+    assert captured["score"] == 0.125
+    assert captured["internal_loss"] == 0.125
+    assert captured["training_mse"] == 0.125
+    assert captured["internal_objective"] == "native_training_mse"
+    assert captured["objective_direction"] == "min"
+    assert captured["selection_policy"] == "e2esr_training_mse_v1"
     assert captured["bag_index"] == 2
     assert captured["candidate_rank"] == 1
     assert captured["stage"] == "forward_partial"
+
+
+def test_emit_progress_candidate_rejects_non_finite_training_mse(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    reg = module.SymbolicTransformerRegressor(progress_state_path=str(tmp_path / "state.json"))
+    captured = {}
+    reg._write_progress_state = lambda payload: captured.update(payload)  # type: ignore[method-assign]
+    reg._safe_tree_metric = lambda tree, X, y, metric: float("nan")  # type: ignore[method-assign]
+
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": _FakeTree("x_0")},
+        np.array([[0.0], [1.0]]),
+        np.array([0.0, 1.0]),
+        stage="forward_partial",
+        compute_metrics=False,
+    )
+
+    assert captured == {}
 
 
 class _FakeTree:
@@ -145,6 +173,19 @@ class _FakeTree:
 
     def replace_node_value(self, old, new):
         self.expression = self.expression.replace(old, new)
+
+
+def test_feature_relabel_is_simultaneous_for_swapped_columns():
+    module = _load_sklearn_wrapper_module()
+    tree = _FakeTree('x_0 + 2*x_1')
+    converted = module.exchange_node_values(tree, {'x_0': 'x_1', 'x_1': 'x_0'})
+    assert converted.infix() == 'x_1 + 2*x_0'
+    assert tree.infix() == 'x_0 + 2*x_1'
+
+
+def test_negative_mse_is_not_a_valid_training_score():
+    module = _load_sklearn_wrapper_module()
+    assert module.SymbolicTransformerRegressor._finite_mse(-1.0) is None
 
 
 class _RecordingScaler:
@@ -184,7 +225,7 @@ def test_emit_scaled_candidate_inverse_transforms_before_feature_relabel(tmp_pat
 
     reg._emit_progress_candidate(
         0,
-        {"predicted_tree": _FakeTree("x_0 + x_1")},
+        {"predicted_tree": _FakeTree("x_0 + x_1"), "_mse": 0.1},
         None,
         None,
         stage="refine_final",
@@ -211,7 +252,7 @@ def test_emit_candidate_with_rescale_disabled_only_relabels_features(tmp_path):
 
     reg._emit_progress_candidate(
         0,
-        {"predicted_tree": _FakeTree("x_0 - x_1")},
+        {"predicted_tree": _FakeTree("x_0 - x_1"), "_mse": 0.1},
         None,
         None,
         stage="noref_best",
@@ -232,7 +273,7 @@ def test_emit_final_candidate_does_not_inverse_transform_twice(tmp_path):
 
     reg._emit_progress_candidate(
         0,
-        {"predicted_tree": _FakeTree("0.5*x_0 - 5.0")},
+        {"predicted_tree": _FakeTree("0.5*x_0 - 5.0"), "_mse": 0.1},
         None,
         None,
         stage="fit_final",
@@ -253,7 +294,7 @@ def test_emit_scaled_candidate_does_not_mutate_candidate_tree(tmp_path):
 
     reg._emit_progress_candidate(
         0,
-        {"predicted_tree": tree},
+        {"predicted_tree": tree, "_mse": 0.1},
         None,
         None,
         stage="forward_partial",
@@ -274,7 +315,7 @@ def test_emit_scaled_candidate_fails_closed_when_inverse_transform_fails(tmp_pat
 
     reg._emit_progress_candidate(
         0,
-        {"predicted_tree": _FakeTree("x_0"), "native_model_score": -0.1},
+        {"predicted_tree": _FakeTree("x_0"), "native_model_score": -0.1, "_mse": 0.1},
         None,
         None,
         stage="forward_partial",
@@ -325,7 +366,7 @@ def test_fit_tracks_scaler_and_params_per_dataset_and_marks_final_unscaled(tmp_p
         progress_state_path=str(tmp_path / "state.json"),
     )
     reg.refine = lambda dataset_idx, X, y, candidates, verbose: [  # type: ignore[method-assign]
-        {"predicted_tree": candidates[0], "refinement_type": "NoRef"}
+        {**candidates[0], "refinement_type": "NoRef", "_mse": 0.1}
     ]
     emissions = []
     reg._emit_progress_candidate = (  # type: ignore[method-assign]
@@ -369,7 +410,9 @@ def test_refine_marks_every_progress_candidate_as_scaled(tmp_path):
     reg.start_fit = 0.0
     reg.order_candidates = lambda X, y, candidates, metric, verbose=False: candidates  # type: ignore[method-assign]
     reg._safe_tree_metric = (  # type: ignore[method-assign]
-        lambda tree, X, y, metric: 1.0 if tree is refined_tree else 0.0
+        lambda tree, X, y, metric: (
+            0.0 if tree is refined_tree else 1.0
+        ) if metric == "_mse" else None
     )
     emissions = []
     reg._emit_progress_candidate = (  # type: ignore[method-assign]
@@ -385,3 +428,192 @@ def test_refine_marks_every_progress_candidate_as_scaled(tmp_path):
         ("bfgs_best", True),
         ("refine_final", True),
     ]
+
+
+def test_refine_uses_mse_and_bfgs_without_decode_score_can_become_best(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    raw_tree = _FakeTree("x_0")
+    refined_tree = _FakeTree("2*x_0")
+
+    class Refinement:
+        def go(self, **kwargs):
+            return refined_tree
+
+    generator = types.SimpleNamespace(
+        function_to_skeleton=lambda tree, constants_with_idx: (tree, [])
+    )
+    model = types.SimpleNamespace(env=types.SimpleNamespace(generator=generator))
+    module.utils_wrapper.BFGSRefinement = Refinement
+    emitted = []
+    reg = module.SymbolicTransformerRegressor(
+        model=model,
+        progress_callback=lambda **payload: emitted.append(payload),
+        rescale=False,
+    )
+    reg.start_fit = 0.0
+    reg._safe_tree_metric = (  # type: ignore[method-assign]
+        lambda tree, X, y, metric: {
+            (raw_tree, "_mse"): 1.0,
+            (refined_tree, "_mse"): 0.25,
+        }.get((tree, metric))
+    )
+
+    candidates = reg.refine(
+        0,
+        np.array([[0.0], [1.0]]),
+        np.array([2.0, 2.0]),
+        [{"predicted_tree": raw_tree, "native_model_score": -0.4}],
+        verbose=False,
+    )
+
+    assert candidates[0]["predicted_tree"] is refined_tree
+    assert candidates[0]["_mse"] == 0.25
+    bfgs_events = [payload for payload in emitted if payload["stage"] == "bfgs_best"]
+    assert len(bfgs_events) == 1
+    assert bfgs_events[0]["native_model_score"] is None
+    assert bfgs_events[0]["training_mse"] == 0.25
+    assert bfgs_events[0]["refinement_type"] == "BFGS"
+
+
+def test_refine_does_not_start_bfgs_after_deadline_and_keeps_scored_raw_candidate():
+    module = _load_sklearn_wrapper_module()
+    raw_tree = _FakeTree("x_0")
+    bfgs_calls = []
+
+    class Refinement:
+        def go(self, **kwargs):
+            bfgs_calls.append(kwargs)
+            return _FakeTree("2*x_0")
+
+    generator = types.SimpleNamespace(
+        function_to_skeleton=lambda tree, constants_with_idx: (tree, [])
+    )
+    model = types.SimpleNamespace(env=types.SimpleNamespace(generator=generator))
+    module.utils_wrapper.BFGSRefinement = Refinement
+    reg = module.SymbolicTransformerRegressor(model=model, rescale=False)
+    reg.start_fit = 0.0
+    reg._time_budget_exhausted = lambda: True  # type: ignore[method-assign]
+    reg._safe_tree_metric = lambda tree, X, y, metric: 0.5 if metric == "_mse" else None  # type: ignore[method-assign]
+
+    candidates = reg.refine(
+        0,
+        np.array([[0.0], [1.0]]),
+        np.array([0.0, 1.0]),
+        [raw_tree],
+        verbose=False,
+    )
+
+    assert bfgs_calls == []
+    assert len(candidates) == 1
+    assert candidates[0]["predicted_tree"] is raw_tree
+    assert candidates[0]["_mse"] == 0.5
+
+
+def test_time_budget_honors_finite_bags_refines_early_and_keeps_global_best():
+    module = _load_sklearn_wrapper_module()
+    events = []
+
+    class FakeModel:
+        def __init__(self):
+            self.env = types.SimpleNamespace(
+                params=types.SimpleNamespace(max_input_dimension=10)
+            )
+            self.last_generation_metadata = [[]]
+            self.forward_count = 0
+
+        def __call__(self, inputs):
+            self.forward_count += 1
+            events.append(("forward", self.forward_count))
+            return [[_FakeTree("x_0" if self.forward_count == 1 else "2*x_0")]]
+
+    model = FakeModel()
+    reg = module.SymbolicTransformerRegressor(
+        model=model,
+        max_input_points=10,
+        max_number_bags=2,
+        timeout_in_seconds=180,
+        rescale=False,
+    )
+    module.get_top_k_features = lambda X, y, k: list(range(X.shape[1]))
+    reg._time_budget_exhausted = lambda: model.forward_count >= 2  # type: ignore[method-assign]
+
+    def fake_refine(dataset_idx, X, y, candidates, verbose):
+        events.append(("refine", model.forward_count))
+        candidate = dict(candidates[0])
+        candidate["refinement_type"] = "NoRef"
+        candidate["_mse"] = 0.1 if model.forward_count == 1 else 1.0
+        return [candidate]
+
+    reg.refine = fake_refine  # type: ignore[method-assign]
+    reg._emit_progress_candidate = lambda *args, **kwargs: None  # type: ignore[method-assign]
+
+    reg.fit(np.array([[0.0], [1.0]]), np.array([0.0, 1.0]))
+
+    assert events == [
+        ("forward", 1),
+        ("refine", 1),
+        ("forward", 2),
+        ("refine", 2),
+    ]
+    assert model.forward_count == 2
+    assert reg.tree[0][0]["predicted_tree"].expression == "x_0"
+    assert reg.tree[0][0]["_mse"] == 0.1
+
+
+def test_fit_without_progress_path_still_produces_valid_final_candidate():
+    module = _load_sklearn_wrapper_module()
+    raw_tree = _FakeTree("x_0")
+
+    class FakeModel:
+        def __init__(self):
+            generator = types.SimpleNamespace(
+                function_to_skeleton=lambda tree, constants_with_idx: (tree, [])
+            )
+            self.env = types.SimpleNamespace(
+                params=types.SimpleNamespace(max_input_dimension=10),
+                generator=generator,
+            )
+            self.last_generation_metadata = [[]]
+
+        def __call__(self, inputs):
+            return [[raw_tree] for _ in inputs]
+
+    class NoOpRefinement:
+        def go(self, **kwargs):
+            return None
+
+    module.utils_wrapper.BFGSRefinement = NoOpRefinement
+    module.get_top_k_features = lambda X, y, k: list(range(X.shape[1]))
+    reg = module.SymbolicTransformerRegressor(model=FakeModel(), rescale=False)
+    reg._safe_tree_metric = lambda tree, X, y, metric: 0.2 if metric == "_mse" else None  # type: ignore[method-assign]
+
+    reg.fit(np.array([[0.0], [1.0]]), np.array([0.0, 1.0]))
+
+    assert reg.tree[0][0]["predicted_tree"] is raw_tree
+    assert reg.tree[0][0]["_mse"] == 0.2
+
+
+def test_worse_progress_candidate_does_not_overwrite_best_mse(tmp_path):
+    module = _load_sklearn_wrapper_module()
+    reg = module.SymbolicTransformerRegressor(progress_state_path=str(tmp_path / "state.json"))
+    captured = {}
+    reg._write_progress_state = lambda payload: captured.update(payload)  # type: ignore[method-assign]
+
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": _FakeTree("x_0"), "_mse": 0.1},
+        None,
+        None,
+        stage="noref_best",
+    )
+    reg._emit_progress_candidate(
+        0,
+        {"predicted_tree": _FakeTree("2*x_0"), "_mse": 1.0},
+        None,
+        None,
+        stage="refine_final",
+    )
+
+    assert captured["equation"] == "x_0"
+    assert captured["training_mse"] == 0.1
+    assert captured["stage"] == "noref_best"

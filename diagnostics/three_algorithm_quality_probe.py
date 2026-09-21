@@ -63,6 +63,10 @@ def worker(job_path):
 
             def capture(*args, **kwargs):
                 payload = dict(args[0]) if args else dict(kwargs)
+                if job['algorithm'] == 'e2esr' and 'training_mse' in payload:
+                    payload.update(score=payload['training_mse'], internal_loss=payload['training_mse'],
+                                   internal_objective='native_training_mse', objective_direction='min',
+                                   selection_policy=reg._SELECTION_POLICY)
                 payload['probe_elapsed_seconds'] = time.monotonic() - started
                 with (out / 'emitted_candidates.jsonl').open('a') as handle:
                     handle.write(json.dumps(payload, default=str) + '\n')
@@ -72,6 +76,10 @@ def worker(job_path):
         result['status'] = 'fitting'
         write_json(out / 'worker.json', result)
         reg.fit(arrays['train_X'], arrays['train_y'])
+        if job['algorithm'] == 'e2esr':
+            result['selection_policy'] = reg._SELECTION_POLICY
+            result['completed_rounds'] = reg._budget_chunks_run
+            result['refinement_type'] = reg.best_tree.get('refinement_type')
         result['equation'] = reg.get_optimal_equation()
         result['artifact'] = reg.export_canonical_symbolic_program()
         predictions = {}
@@ -141,6 +149,11 @@ def validation_status(report):
         if 'restored' in values and (
                 not values['restored'].get('finite') or values.get('restored_matches_native') is not True):
             issues.append(split + ':restored_mismatch')
+        if (report.get('algorithm') == 'e2esr'
+                and report['worker'].get('selection_policy') == 'e2esr_training_mse_v1'
+                and (not values.get('snapshot', {}).get('finite')
+                     or values.get('snapshot_matches_native') is not True)):
+            issues.append(split + ':snapshot_mismatch')
     return {'ok': not issues, 'issues': issues,
             'exit_code': 124 if execution.get('hard_timeout') else (1 if issues else 0)}
 
@@ -155,6 +168,8 @@ def main():
     parser.add_argument('--output', type=Path)
     parser.add_argument('--seconds', type=float, default=180)
     parser.add_argument('--fit-seconds', type=float, default=45)
+    parser.add_argument('--hard-stop-seconds', type=float,
+                        help='Optional earlier worker cutoff for timeout recovery checks')
     args = parser.parse_args()
     sys.path.insert(0, str(ROOT))
     if args.worker:
@@ -163,10 +178,15 @@ def main():
         parser.error('--algorithm and --output are required')
     if not 0 < args.seconds <= 180 or not 0 < args.fit_seconds < args.seconds:
         parser.error('Require 0 < fit-seconds < seconds <= 180')
+    if args.hard_stop_seconds is not None and not 0 < args.hard_stop_seconds <= args.seconds:
+        parser.error('Require 0 < hard-stop-seconds <= seconds')
 
     import numpy as np
     from scientific_intelligent_modelling.benchmarks import normalizers
-    from scientific_intelligent_modelling.benchmarks.runner import load_canonical_dataset, _predict_from_canonical_artifact
+    from scientific_intelligent_modelling.benchmarks.runner import (
+        load_canonical_dataset, _predict_from_canonical_artifact,
+        _extract_e2esr_periodic_candidate, _recover_timeout_payload_from_candidate,
+    )
 
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=False)
@@ -199,17 +219,21 @@ def main():
                     ROOT / 'scientific_intelligent_modelling/benchmarks/normalizers.py']
     if args.algorithm == 'e2esr':
         source_paths.append(ROOT / 'scientific_intelligent_modelling/algorithms/e2esr_wrapper/e2esr/symbolicregression/model/sklearn_wrapper.py')
+        source_paths.append(ROOT / 'scientific_intelligent_modelling/algorithms/e2esr_wrapper/e2esr/symbolicregression/model/utils_wrapper.py')
     job = {'algorithm': args.algorithm, 'case': str(args.dataset or args.case), 'params': params,
            'diagnostic_only': True, 'source_sha256': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                                                       for p in source_paths}}
     write_json(out / 'job.json', job)
     env = dict(os.environ, PYTHONPATH=str(ROOT), OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1')
     execution = run_bounded([args.python, '-u', str(Path(__file__).resolve()), '--worker', str(out / 'job.json')],
-                            args.seconds, out / 'worker.log', env)
+                            args.hard_stop_seconds or args.seconds, out / 'worker.log', env)
     report = dict(job, execution=execution, metrics={})
     result_path = out / 'worker.json'
     result = json.loads(result_path.read_text()) if result_path.exists() else {}
     report['worker'] = result
+    selected_snapshot = _extract_e2esr_periodic_candidate(out / 'native') if args.algorithm == 'e2esr' else None
+    if args.algorithm == 'e2esr':
+        report['selected_snapshot'] = selected_snapshot
     predictions = np.load(str(out / 'predictions.npz')) if (out / 'predictions.npz').exists() else {}
     for split in ('train', 'id', 'ood'):
         if split + '_y' not in arrays:
@@ -232,11 +256,25 @@ def main():
                         replay, predictions[split + '_native'], rtol=1e-7, atol=1e-10))
             except Exception as exc:
                 report['metrics'][split]['export_error'] = repr(exc)
+        if selected_snapshot is not None:
+            try:
+                artifact = normalizers.normalize_e2esr_artifact(selected_snapshot['equation'], expected_n_features=len(names))
+                replay = _predict_from_canonical_artifact(artifact, arrays[split + '_X'])
+                report['metrics'][split]['snapshot'] = metrics(arrays[split + '_y'], replay)
+                if split + '_native' in predictions:
+                    report['metrics'][split]['snapshot_matches_native'] = bool(np.allclose(
+                        replay, predictions[split + '_native'], rtol=1e-7, atol=1e-10))
+            except Exception as exc:
+                report['metrics'][split]['snapshot_error'] = repr(exc)
+    if args.algorithm == 'e2esr' and args.dataset:
+        report['timeout_recovery'] = _recover_timeout_payload_from_candidate(
+            tool_name='e2esr', dataset=data, experiment_dir=out / 'native')
     events_path = out / 'emitted_candidates.jsonl'
     events = [json.loads(line) for line in events_path.read_text().splitlines()] if events_path.exists() else []
     report['snapshots'] = []
     for event in events:
-        entry = {k: event.get(k) for k in ('source', 'score', 'native_model_score', 'probe_elapsed_seconds', 'equation')}
+        entry = {k: event.get(k) for k in ('source', 'score', 'training_mse', 'stage', 'refinement_type',
+                                          'native_model_score', 'probe_elapsed_seconds', 'equation')}
         try:
             artifact = getattr(normalizers, 'normalize_' + args.algorithm + '_artifact')(event['equation'], expected_n_features=len(names))
             entry['id'] = metrics(arrays['id_y'], _predict_from_canonical_artifact(artifact, arrays['id_X']))

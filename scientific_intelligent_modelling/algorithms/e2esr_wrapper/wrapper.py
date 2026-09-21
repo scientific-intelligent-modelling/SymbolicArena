@@ -9,6 +9,7 @@ import torch
 import time
 import json
 import hashlib
+import re
 
 from ..base_wrapper import BaseWrapper 
 from scientific_intelligent_modelling.benchmarks.normalizers import normalize_e2esr_artifact
@@ -16,6 +17,8 @@ from scientific_intelligent_modelling.benchmarks.normalizers import normalize_e2
 class E2ESRRegressor(BaseWrapper):
     _PROGRESS_STATE_FILENAME = ".e2esr_current_best.json"
     _PROGRESS_HISTORY_FILENAME = ".e2esr_native_candidates.jsonl"
+    _SELECTION_POLICY = "e2esr_training_mse_v1"
+    _DESERIALIZE_WITHOUT_INIT = True
 
     @staticmethod
     def _resolve_default_model_path(current_dir):
@@ -65,6 +68,11 @@ class E2ESRRegressor(BaseWrapper):
         rescale: 是否重新缩放数据
         torch_num_threads: CPU 推理时每个进程允许使用的 PyTorch 线程数
         """
+        serialized_recovery = kwargs.pop("_serialized_recovery", None)
+        has_existing_exp_dir = "existing_exp_dir" in kwargs
+        existing_exp_dir = kwargs.get("existing_exp_dir")
+        # 首次 fit 的预算包含模型加载，避免加载后重新获得一整份预算。
+        self._pending_fit_started_at = time.time()
         # 保存参数
         self._exp_path = kwargs.get("exp_path")
         self._exp_name = kwargs.get("exp_name")
@@ -87,6 +95,9 @@ class E2ESRRegressor(BaseWrapper):
         self.regressor = None
         self.best_tree = None
         self.n_features_ = None
+        self._recovery_equation = None
+        self._recovery_artifact = None
+        self._recovery_snapshot = None
         self._progress_state_path = self._resolve_progress_state_path(self._exp_path, self._exp_name)
         self._fit_started_at = None
         
@@ -103,9 +114,24 @@ class E2ESRRegressor(BaseWrapper):
         
         self.model_path = model_path
         self.model_url = model_url
-        
-        # 立即加载模型
-        self._load_model()
+
+        recovered = False
+        if serialized_recovery is not None:
+            recovered = self._install_recovery_snapshot(serialized_recovery)
+            if not recovered:
+                raise ValueError("E2ESR 序列化恢复状态无效")
+        elif has_existing_exp_dir:
+            if not isinstance(existing_exp_dir, str) or not existing_exp_dir.strip():
+                raise ValueError("E2ESR existing_exp_dir 必须是非空目录路径")
+            recovered = self._load_recovery_snapshot(existing_exp_dir.strip())
+            if not recovered:
+                raise ValueError(
+                    "E2ESR existing_exp_dir 中没有符合 training MSE 契约的可恢复快照"
+                )
+
+        # 有效的超时快照已经足够支持预测，无需加载大型预训练权重。
+        if not recovered:
+            self._load_model()
 
     @staticmethod
     def _as_positive_float(value):
@@ -114,6 +140,198 @@ class E2ESRRegressor(BaseWrapper):
         except Exception:
             return None
         return value if value > 0 else None
+
+    @staticmethod
+    def _as_feature_count(value):
+        if value is None or isinstance(value, (bool, np.bool_)):
+            return None
+        try:
+            parsed = int(value)
+            numeric = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if parsed <= 0 or not np.isfinite(numeric) or numeric != parsed:
+            return None
+        return parsed
+
+    @staticmethod
+    def _snapshot_metadata(payload, key):
+        if key in payload:
+            return payload.get(key)
+        contract = payload.get("dataset_contract")
+        if isinstance(contract, dict):
+            return contract.get(key)
+        return None
+
+    def _validate_recovery_snapshot(self, payload):
+        if not isinstance(payload, dict):
+            return None
+        if (
+            payload.get("selection_policy") != self._SELECTION_POLICY
+            or payload.get("internal_objective") != "native_training_mse"
+            or payload.get("objective_direction") != "min"
+        ):
+            return None
+
+        losses = []
+        for key in ("training_mse", "internal_loss", "score"):
+            value = payload.get(key)
+            if isinstance(value, (bool, np.bool_)):
+                return None
+            try:
+                value = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            if not np.isfinite(value) or value < 0:
+                return None
+            losses.append(value)
+        if losses[1:] != losses[:-1]:
+            return None
+        if "loss" in payload:
+            try:
+                loss_alias = float(payload["loss"])
+            except (TypeError, ValueError, OverflowError):
+                return None
+            if not np.isfinite(loss_alias) or loss_alias != losses[0]:
+                return None
+
+        equation = payload.get("equation")
+        if not isinstance(equation, str) or not equation.strip():
+            return None
+        equation = equation.strip()
+
+        contract_n_features = self._as_feature_count(self._contract_n_features)
+        if self._contract_n_features is not None and contract_n_features is None:
+            return None
+        snapshot_n_features_raw = self._snapshot_metadata(payload, "n_features")
+        snapshot_n_features = self._as_feature_count(snapshot_n_features_raw)
+        if snapshot_n_features_raw is not None and snapshot_n_features is None:
+            return None
+        if (
+            contract_n_features is not None
+            and snapshot_n_features is not None
+            and contract_n_features != snapshot_n_features
+        ):
+            return None
+
+        contract_feature_names = self._contract_feature_names
+        snapshot_feature_names = self._snapshot_metadata(payload, "feature_names")
+        if contract_feature_names is not None:
+            if not isinstance(contract_feature_names, (list, tuple)):
+                return None
+            if contract_n_features is not None and len(contract_feature_names) != contract_n_features:
+                return None
+        if snapshot_feature_names is not None:
+            if not isinstance(snapshot_feature_names, list):
+                return None
+            if snapshot_n_features is not None and len(snapshot_feature_names) != snapshot_n_features:
+                return None
+            if contract_feature_names is not None and list(contract_feature_names) != snapshot_feature_names:
+                return None
+
+        contract_target_name = self._contract_target_name
+        snapshot_target_name = self._snapshot_metadata(payload, "target_name")
+        if contract_target_name is not None and (
+            not isinstance(contract_target_name, str) or not contract_target_name.strip()
+        ):
+            return None
+        if snapshot_target_name is not None:
+            if not isinstance(snapshot_target_name, str) or not snapshot_target_name.strip():
+                return None
+            if contract_target_name is not None and contract_target_name != snapshot_target_name:
+                return None
+
+        expected_n_features = contract_n_features or snapshot_n_features
+        raw_indices = []
+        for direct_index, bracket_index in re.findall(
+            r"\bx_?(\d+)\b|\bx\[(\d+)\]",
+            equation,
+        ):
+            raw_indices.append(int(direct_index or bracket_index))
+        if expected_n_features is not None:
+            if any(index >= expected_n_features for index in raw_indices):
+                return None
+        normalization_equation = equation
+        preserve_zero_based_indices = raw_indices and 0 not in raw_indices
+        if preserve_zero_based_indices:
+            # E2ESR 原生变量是零基索引；给 normalizer 一个零系数 x_0 锚点，
+            # 防止仅含 x_1/x_2 的原生公式被误判成一基索引后左移。
+            normalization_equation = "0*x_0 + ({})".format(equation)
+        try:
+            artifact = normalize_e2esr_artifact(
+                normalization_equation,
+                expected_n_features=expected_n_features,
+            )
+        except Exception:
+            return None
+        if not artifact.get("sympy_parse_ok") or not artifact.get("artifact_valid"):
+            return None
+        artifact["raw_equation"] = equation
+        if preserve_zero_based_indices:
+            artifact["normalization_notes"] = list(artifact.get("normalization_notes") or [])
+            artifact["normalization_notes"].append("preserve_e2esr_zero_based_indices")
+        normalized_expression = artifact.get("normalized_expression")
+        try:
+            parsed_expression = sp.sympify(normalized_expression)
+        except Exception:
+            return None
+        free_symbols = sorted(str(symbol) for symbol in parsed_expression.free_symbols)
+        if any(re.fullmatch(r"x\d+", variable) is None for variable in free_symbols):
+            return None
+        artifact_variables = sorted(str(variable) for variable in (artifact.get("variables") or []))
+        if artifact_variables != free_symbols:
+            return None
+        variable_indices = [int(variable[1:]) for variable in free_symbols]
+        if expected_n_features is not None and any(
+            index >= expected_n_features for index in variable_indices
+        ):
+            return None
+        if expected_n_features is None and variable_indices:
+            expected_n_features = max(variable_indices) + 1
+
+        normalized_snapshot = dict(payload)
+        normalized_snapshot.update(
+            {
+                "equation": equation,
+                "selection_policy": self._SELECTION_POLICY,
+                "internal_objective": "native_training_mse",
+                "objective_direction": "min",
+                "training_mse": losses[0],
+                "internal_loss": losses[0],
+                "score": losses[0],
+            }
+        )
+        if expected_n_features is not None:
+            normalized_snapshot["n_features"] = expected_n_features
+        return normalized_snapshot, artifact, expected_n_features
+
+    def _install_recovery_snapshot(self, payload):
+        validated = self._validate_recovery_snapshot(payload)
+        if validated is None:
+            return False
+        snapshot, artifact, expected_n_features = validated
+        self._recovery_snapshot = snapshot
+        self._recovery_equation = snapshot["equation"]
+        self._recovery_artifact = artifact
+        self.n_features_ = expected_n_features
+        return True
+
+    def _load_recovery_snapshot(self, existing_exp_dir):
+        try:
+            state_path = os.path.join(
+                os.path.abspath(os.path.expanduser(existing_exp_dir)),
+                self._PROGRESS_STATE_FILENAME,
+            )
+            with open(state_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except Exception:
+            return False
+        return self._install_recovery_snapshot(payload)
+
+    def _clear_recovery_state(self):
+        self._recovery_equation = None
+        self._recovery_artifact = None
+        self._recovery_snapshot = None
     
     def _load_model(self):
         """加载预训练模型，如果本地不存在则从URL下载"""
@@ -194,17 +412,26 @@ class E2ESRRegressor(BaseWrapper):
         bag_index,
         candidate_rank,
         generation_source="beam_search",
+        training_mse=None,
+        refinement_type=None,
+        stage=None,
     ):
-        """按模型原生对数似然（越大越好）持久化全局 incumbent。"""
+        """全局最佳与最终模型均按训练 MSE 选择，解码似然仅作诊断记录。"""
         if not self._progress_state_path or not isinstance(equation, str) or not equation.strip():
             return
         observed_at = time.time()
         try:
-            score = float(native_model_score)
+            score = float(training_mse)
         except (TypeError, ValueError, OverflowError):
             score = None
-        if score is not None and not np.isfinite(score):
+        if score is not None and (not np.isfinite(score) or score < 0):
             score = None
+        try:
+            decoder_score = float(native_model_score)
+        except (TypeError, ValueError, OverflowError):
+            decoder_score = None
+        if decoder_score is not None and not np.isfinite(decoder_score):
+            decoder_score = None
         elapsed = (
             max(0.0, observed_at - float(self._fit_started_at))
             if isinstance(self._fit_started_at, (int, float))
@@ -220,12 +447,24 @@ class E2ESRRegressor(BaseWrapper):
             rank_value = None
         evidence = {
             "equation": equation.strip(),
-            "native_model_score": score,
+            "training_mse": score,
+            "native_model_score": decoder_score,
+            "selection_policy": self._SELECTION_POLICY,
+            "fit_started_at_unix": self._fit_started_at,
+            "refinement_type": refinement_type,
+            "stage": stage,
             "bag_index": bag_value,
             "candidate_rank": rank_value,
             "generation_source": str(generation_source),
             "source_timestamp_unix": float(observed_at),
         }
+        for key, attr_name in (
+            ("n_features", "n_features_"),
+            ("feature_names", "_contract_feature_names"),
+            ("target_name", "_contract_target_name"),
+        ):
+            if hasattr(self, attr_name):
+                evidence[key] = getattr(self, attr_name)
         evidence["candidate_sha256"] = hashlib.sha256(
             json.dumps(evidence, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
@@ -247,21 +486,28 @@ class E2ESRRegressor(BaseWrapper):
                 existing = json.load(handle)
         except Exception:
             existing = None
-        old_score = existing.get("native_model_score") if isinstance(existing, dict) else None
+        same_run = (
+            isinstance(existing, dict)
+            and existing.get("selection_policy") == self._SELECTION_POLICY
+            and existing.get("fit_started_at_unix") == self._fit_started_at
+        )
+        old_score = existing.get("training_mse") if same_run else None
         try:
             old_score = float(old_score)
         except (TypeError, ValueError, OverflowError):
             old_score = None
-        if old_score is not None and np.isfinite(old_score) and score <= old_score:
+        if old_score is not None and np.isfinite(old_score) and old_score >= 0 and score >= old_score:
             return
         payload = {
             **evidence,
             "score": score,
-            "internal_objective": "decoder_length_normalized_log_likelihood",
-            "objective_direction": "max",
+            "loss": score,
+            "internal_loss": score,
+            "internal_objective": "native_training_mse",
+            "objective_direction": "min",
             "first_discovered_elapsed_seconds": round(elapsed, 6),
             "first_discovered_minute": max(1, int(np.ceil(elapsed / 60.0))),
-            "source": "e2esr_native_model_likelihood",
+            "source": "e2esr_training_mse",
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
         try:
@@ -276,12 +522,8 @@ class E2ESRRegressor(BaseWrapper):
     def _tree_score(tree_info):
         if not isinstance(tree_info, dict):
             return None
-        for key in ("r2", "score"):
-            value = tree_info.get(key)
-            if isinstance(value, (int, float, np.floating)) and np.isfinite(value):
-                return float(value)
         loss = tree_info.get("_mse")
-        if isinstance(loss, (int, float, np.floating)) and np.isfinite(loss):
+        if isinstance(loss, (int, float, np.floating)) and np.isfinite(loss) and loss >= 0:
             return -float(loss)
         return None
     
@@ -291,14 +533,26 @@ class E2ESRRegressor(BaseWrapper):
         否则创建一个新模型
         """
         try:
-            self._validate_explicit_dataset_contract(
+            input_n_features = self._validate_explicit_dataset_contract(
                 X,
                 n_features=self._contract_n_features,
                 feature_names=self._contract_feature_names,
                 target_name=self._contract_target_name,
                 context="E2ESRRegressor.fit",
             )
-            self.n_features_ = int(np.asarray(X).shape[1]) if np.asarray(X).ndim == 2 else 1
+            if getattr(self, "_recovery_equation", None) is not None:
+                # 恢复实例再次 fit 时必须显式进入新训练，不能沿用只读公式状态。
+                self._pending_fit_started_at = time.time()
+                self._load_model()
+                if self.model is None:
+                    raise ValueError("模型未加载成功，请检查模型路径或网络连接")
+                self._clear_recovery_state()
+            self.n_features_ = input_n_features
+            self.regressor = None
+            self.best_tree = None
+            for cache_name in ("_cached_optimal_equation", "_cached_total_equations"):
+                if hasattr(self, cache_name):
+                    delattr(self, cache_name)
             # 导入E2ESR相关模块
             from symbolicregression.model import SymbolicTransformerRegressor
             
@@ -326,18 +580,35 @@ class E2ESRRegressor(BaseWrapper):
                 # 剔除 SymbolicRegressor 注入的元参数，避免 __init__ 透传失败
                 pass
             
-            started_at = time.time()
+            started_at = getattr(self, "_pending_fit_started_at", None)
+            if started_at is None:
+                started_at = time.time()
+            self._pending_fit_started_at = None
             self._fit_started_at = started_at
+            if self._progress_state_path:
+                os.makedirs(os.path.dirname(self._progress_state_path), exist_ok=True)
+                with open(self._progress_state_path, "w", encoding="utf-8") as handle:
+                    json.dump({"equation": None, "selection_policy": self._SELECTION_POLICY,
+                               "internal_objective": "native_training_mse", "objective_direction": "min",
+                               "fit_started_at_unix": started_at,
+                               "n_features": self.n_features_,
+                               "feature_names": self._contract_feature_names,
+                               "target_name": self._contract_target_name}, handle)
             base_seed = self.params.get("seed")
             best_regressor = None
             best_tree = None
             best_score = None
             chunk_index = 0
             natural_completions = 0
+            longest_chunk_seconds = 0.0
 
             while True:
                 if self._timeout_in_seconds is not None and self._time_budget_exhausted(started_at):
                     break
+                if best_regressor is not None and self._timeout_in_seconds is not None:
+                    remaining = self._timeout_in_seconds - self._timeout_guard_seconds - (time.time() - started_at)
+                    if remaining < longest_chunk_seconds:
+                        break
                 try:
                     seed = int(base_seed) + chunk_index if base_seed is not None else None
                 except Exception:
@@ -358,10 +629,12 @@ class E2ESRRegressor(BaseWrapper):
                 regressor._external_start_fit = started_at
 
                 # 训练回归器。若底层自然完成但预算未耗尽，外层会立刻启动下一轮。
+                chunk_started_at = time.time()
                 regressor.fit(X, y)
+                longest_chunk_seconds = max(longest_chunk_seconds, time.time() - chunk_started_at)
                 tree = regressor.retrieve_tree(with_infos=True)
                 score = self._tree_score(tree)
-                if best_tree is None or (score is not None and (best_score is None or score > best_score)):
+                if score is not None and (best_score is None or score > best_score):
                     best_regressor = regressor
                     best_tree = tree
                     best_score = score
@@ -390,12 +663,62 @@ class E2ESRRegressor(BaseWrapper):
     
     def predict(self, X):
         """使用训练好的模型进行预测"""
+        if getattr(self, "_recovery_equation", None) is not None:
+            return self._predict_recovered_expression(X)
         if self.regressor is None:
             raise ValueError("模型尚未训练，请先调用fit方法")
         return self.regressor.predict(X)
+
+    def _predict_recovered_expression(self, X):
+        X_arr = np.asarray(X, dtype=float)
+        if X_arr.ndim == 1:
+            X_arr = X_arr.reshape(-1, 1)
+        if X_arr.ndim != 2:
+            raise ValueError("E2ESR 恢复预测要求二维特征矩阵")
+        if self.n_features_ is not None and X_arr.shape[1] != self.n_features_:
+            raise ValueError(
+                "E2ESR 恢复公式特征维度不一致: "
+                f"期望 {self.n_features_}, 实际 {X_arr.shape[1]}"
+            )
+
+        expression = self._recovery_artifact.get("normalized_expression")
+        variables = list(self._recovery_artifact.get("variables") or [])
+        symbols = {name: sp.Symbol(name) for name in variables}
+        parsed = sp.sympify(expression, locals=symbols)
+        ordered_variables = sorted(variables, key=lambda name: int(name[1:]))
+        ordered_symbols = [symbols[name] for name in ordered_variables]
+        function = sp.lambdify(
+            ordered_symbols,
+            parsed,
+            modules=[
+                {
+                    "Abs": np.abs,
+                    "Max": np.maximum,
+                    "Min": np.minimum,
+                    "cbrt": np.cbrt,
+                },
+                "numpy",
+            ],
+        )
+        args = [X_arr[:, int(name[1:])] for name in ordered_variables]
+        values = np.asarray(function(*args), dtype=float)
+        if values.ndim == 0:
+            values = np.full(X_arr.shape[0], float(values), dtype=float)
+        else:
+            values = values.reshape(-1)
+        if values.size == 1 and X_arr.shape[0] != 1:
+            values = np.full(X_arr.shape[0], float(values[0]), dtype=float)
+        if values.shape != (X_arr.shape[0],):
+            raise ValueError(
+                "E2ESR 恢复公式预测形状异常: "
+                f"期望 {(X_arr.shape[0],)}, 实际 {values.shape}"
+            )
+        return values
     
     def get_optimal_equation(self):
         """返回模型拟合的最优数学方程"""
+        if getattr(self, "_recovery_equation", None) is not None:
+            return self._recovery_equation
         if self.best_tree is None:
             raise ValueError("模型尚未训练，请先调用fit方法")
         
@@ -422,6 +745,8 @@ class E2ESRRegressor(BaseWrapper):
 
     def get_total_equations(self):
         """获取模型学习到的所有符号方程"""
+        if getattr(self, "_recovery_equation", None) is not None:
+            return [self._recovery_equation]
         if self.best_tree is None:
             raise ValueError("模型尚未训练，请先调用fit方法")
         
@@ -434,11 +759,54 @@ class E2ESRRegressor(BaseWrapper):
         return self._cached_total_equations
 
     def export_canonical_symbolic_program(self):
+        if getattr(self, "_recovery_artifact", None) is not None:
+            return json.loads(json.dumps(self._recovery_artifact))
         if self.best_tree is None:
             raise ValueError("模型尚未训练，请先调用fit方法")
         return normalize_e2esr_artifact(
             self.get_optimal_equation(),
             expected_n_features=getattr(self, "n_features_", None),
+        )
+
+    def serialize(self):
+        if getattr(self, "_recovery_snapshot", None) is None:
+            return super().serialize()
+        payload = {
+            "mode": "e2esr_expression_recovery_v1",
+            "params": self.params,
+            "contract": {
+                "n_features": self._contract_n_features,
+                "feature_names": self._contract_feature_names,
+                "target_name": self._contract_target_name,
+            },
+            "model_path": self.model_path,
+            "model_url": self.model_url,
+            "snapshot": self._recovery_snapshot,
+        }
+        return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+    @classmethod
+    def deserialize(cls, payload):
+        # 普通 pickle 包含上游树/模型类；恢复导入路径不需要先加载权重。
+        vendor_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "e2esr")
+        if vendor_path not in sys.path:
+            sys.path.insert(0, vendor_path)
+        try:
+            state = json.loads(payload)
+        except Exception:
+            return BaseWrapper.deserialize(payload)
+        if not isinstance(state, dict) or state.get("mode") != "e2esr_expression_recovery_v1":
+            return BaseWrapper.deserialize(payload)
+        contract = dict(state.get("contract") or {})
+        params = dict(state.get("params") or {})
+        return cls(
+            model_path=state.get("model_path"),
+            model_url=state.get("model_url") or "https://dl.fbaipublicfiles.com/symbolicregression/model1.pt",
+            n_features=contract.get("n_features"),
+            feature_names=contract.get("feature_names"),
+            target_name=contract.get("target_name"),
+            _serialized_recovery=state.get("snapshot"),
+            **params,
         )
 
 

@@ -435,7 +435,7 @@ class SymbolicNormalizersTest(unittest.TestCase):
             self.assertEqual(payload["source_timestamp_unix"], 120.0)
             self.assertEqual(len(payload["candidate_sha256"]), 64)
 
-    def test_e2esr_native_model_score_controls_incumbent(self):
+    def test_e2esr_training_mse_controls_incumbent(self):
         with tempfile.TemporaryDirectory() as tmp:
             model = E2ESRRegressor.__new__(E2ESRRegressor)
             model._progress_state_path = str(Path(tmp) / ".e2esr_current_best.json")
@@ -445,18 +445,19 @@ class SymbolicNormalizersTest(unittest.TestCase):
                 side_effect=[110.0, 120.0, 130.0],
             ):
                 model._write_progress_state(
-                    equation="x_0", native_model_score=-2.0, bag_index=0, candidate_rank=0
+                    equation="x_0", native_model_score=-2.0, training_mse=0.2, bag_index=0, candidate_rank=0
                 )
                 model._write_progress_state(
-                    equation="x_1", native_model_score=-1.0, bag_index=1, candidate_rank=1
+                    equation="x_1", native_model_score=-3.0, training_mse=0.1, bag_index=1, candidate_rank=1
                 )
                 model._write_progress_state(
-                    equation="x_2", native_model_score=-1.0, bag_index=2, candidate_rank=0
+                    equation="x_2", native_model_score=-1.0, training_mse=0.1, bag_index=2, candidate_rank=0
                 )
             payload = json.loads(Path(model._progress_state_path).read_text(encoding="utf-8"))
             self.assertEqual(payload["equation"], "x_1")
-            self.assertEqual(payload["native_model_score"], -1.0)
-            self.assertEqual(payload["objective_direction"], "max")
+            self.assertEqual(payload["native_model_score"], -3.0)
+            self.assertEqual(payload["training_mse"], 0.1)
+            self.assertEqual(payload["objective_direction"], "min")
             self.assertEqual(payload["bag_index"], 1)
             self.assertEqual(payload["candidate_rank"], 1)
 
@@ -466,7 +467,7 @@ class SymbolicNormalizersTest(unittest.TestCase):
             model._progress_state_path = str(Path(tmp) / ".e2esr_current_best.json")
             model._fit_started_at = 100.0
             model._write_progress_state(
-                equation="x_0", native_model_score=float("nan"), bag_index=0, candidate_rank=0
+                equation="x_0", native_model_score=-0.1, training_mse=float("nan"), bag_index=0, candidate_rank=0
             )
             self.assertFalse(Path(model._progress_state_path).exists())
 

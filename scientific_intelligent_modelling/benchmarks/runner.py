@@ -51,6 +51,7 @@ _SNAPSHOT_CAPABLE_TOOLS = {
     "symbolfit",
 }
 _SNAPSHOT_CAPABLE_TOOL_KEYS = {tool.lower() for tool in _SNAPSHOT_CAPABLE_TOOLS}
+_E2ESR_SELECTION_POLICY = "e2esr_training_mse_v1"
 
 
 def _is_snapshot_capable_tool(tool_name: str) -> bool:
@@ -1312,6 +1313,39 @@ def _extract_gplearn_periodic_candidate(experiment_dir: str | Path) -> dict[str,
     return item
 
 
+def _e2esr_candidate_evidence(candidate: Mapping[str, Any]) -> dict[str, Any] | None:
+    policy = candidate.get("selection_policy", candidate.get("candidate_selection_policy"))
+    direction = candidate.get("objective_direction", candidate.get("internal_objective_direction"))
+    loss = _safe_float(candidate.get(
+        "training_mse", candidate.get("internal_loss", candidate.get("internal_objective_value"))
+    ))
+    if (policy != _E2ESR_SELECTION_POLICY
+            or candidate.get("internal_objective") != "native_training_mse"
+            or direction != "min" or loss is None or loss < 0):
+        return None
+    for key in ("training_mse", "internal_loss", "score", "loss", "internal_objective_value"):
+        if key in candidate and _safe_float(candidate[key]) != loss:
+            return None
+    evidence = {
+        "selection_policy": policy,
+        "internal_objective": "native_training_mse",
+        "objective_direction": "min",
+        "training_mse": loss,
+        "internal_loss": loss,
+        "native_model_score": candidate.get("native_model_score"),
+    }
+    for key, minute_key in (
+        ("first_discovered_elapsed_seconds", "candidate_first_discovered_elapsed_seconds"),
+        ("first_discovered_minute", "candidate_first_discovered_minute"),
+        ("source_timestamp_unix", "candidate_source_timestamp_unix"),
+        ("candidate_sha256", "candidate_sha256"),
+    ):
+        value = candidate.get(key, candidate.get(minute_key))
+        if value is not None:
+            evidence[key] = value
+    return evidence
+
+
 def _extract_e2esr_periodic_candidate(experiment_dir: str | Path) -> dict[str, Any] | None:
     path = Path(experiment_dir) / ".e2esr_current_best.json"
     item = _read_json_file(path)
@@ -1320,6 +1354,10 @@ def _extract_e2esr_periodic_candidate(experiment_dir: str | Path) -> dict[str, A
     equation = item.get("equation")
     if not isinstance(equation, str) or not equation.strip():
         return None
+    evidence = _e2esr_candidate_evidence(item)
+    if evidence is None:
+        return None
+    item.update(evidence)
     return item
 
 
@@ -1975,7 +2013,7 @@ def _build_periodic_snapshot_payload(
         payload["elapsed_minutes"] = max(0, int(round(payload["elapsed_seconds"] / 60.0)))
         payload["candidate_available"] = False
         native_contract = {
-            "e2esr": ("decoder_length_normalized_log_likelihood", "max"),
+            "e2esr": ("native_training_mse", "min"),
             "imcts": ("native_reward", "max"),
             "pysr": ("hof_loss", "min"),
         }.get(str(tool_name).strip().lower())
@@ -2074,6 +2112,8 @@ def _build_periodic_snapshot_payload(
     )
     payload["candidate_coordinate_transform"] = candidate.get("coordinate_transform")
     payload["candidate_source"] = candidate.get("source")
+    payload["candidate_selection_policy"] = candidate.get("selection_policy")
+    payload["training_mse"] = candidate.get("training_mse")
     payload["algorithm_native_incumbent"] = candidate.get("internal_objective") is not None
     payload["native_objective_unavailable"] = candidate.get("internal_objective") is None
     payload["internal_objective"] = candidate.get("internal_objective")
@@ -2174,7 +2214,9 @@ def _recover_timeout_payload_from_candidate(
             if canonical_artifact_error is None:
                 canonical_artifact_error = repr(exc)
 
-    if not _recovered_metrics_are_usable(dataset, valid_metrics, id_metrics, ood_metrics):
+    # E2ESR 不能因测试集的数值表现改选另一个候选；保留训练 MSE 选出的公式。
+    if (str(tool_name).strip().lower() != "e2esr"
+            and not _recovered_metrics_are_usable(dataset, valid_metrics, id_metrics, ood_metrics)):
         snapshot_payload = _recover_timeout_payload_from_progress_snapshots(
             tool_name=tool_name,
             dataset=dataset,
@@ -2195,6 +2237,8 @@ def _recover_timeout_payload_from_candidate(
     }
     if str(tool_name).strip().lower() in {"imcts", "imcts_wrapper"}:
         recovered.update(_imcts_candidate_evidence(candidate))
+    elif str(tool_name).strip().lower() == "e2esr":
+        recovered.update(_e2esr_candidate_evidence(candidate) or {})
     return recovered
 
 
@@ -2220,6 +2264,8 @@ def _recover_timeout_payload_from_progress_snapshots(
             continue
         if str(item.get("tool") or "").strip().lower() != expected_tool:
             continue
+        if expected_tool == "e2esr" and _e2esr_candidate_evidence(item) is None:
+            continue
         equation = str(item.get("equation") or "").strip()
         artifact = item.get("canonical_artifact")
         if not equation or not isinstance(artifact, dict):
@@ -2227,7 +2273,8 @@ def _recover_timeout_payload_from_progress_snapshots(
         valid_metrics = item.get("valid")
         id_metrics = item.get("id_test")
         ood_metrics = item.get("ood_test")
-        if not _recovered_metrics_are_usable(dataset, valid_metrics, id_metrics, ood_metrics):
+        if (expected_tool != "e2esr"
+                and not _recovered_metrics_are_usable(dataset, valid_metrics, id_metrics, ood_metrics)):
             continue
         train_metrics = item.get("train")
         if train_metrics is None:
@@ -2248,6 +2295,8 @@ def _recover_timeout_payload_from_progress_snapshots(
         }
         if expected_tool in {"imcts", "imcts_wrapper"}:
             recovered.update(_imcts_candidate_evidence(item))
+        elif expected_tool == "e2esr":
+            recovered.update(_e2esr_candidate_evidence(item) or {})
         return recovered
     return None
 
@@ -2897,6 +2946,11 @@ def run_benchmark_task(
     result["no_valid_output_reason"] = no_valid_output_reason
     result["train_label_noise"] = train_label_noise
     result["condition"] = _condition_from_train_label_noise(train_label_noise)
+    if str(tool_name).strip().lower() == "e2esr":
+        result["selection_policy"] = _E2ESR_SELECTION_POLICY
+        candidate = _extract_e2esr_periodic_candidate(experiment_dir) if experiment_dir else None
+        if candidate is not None and candidate.get("equation") == equation:
+            result.update(_e2esr_candidate_evidence(candidate) or {})
     if str(tool_name).strip().lower() in {"imcts", "imcts_wrapper"}:
         if not internal_candidate_evidence and experiment_dir:
             internal_candidate_evidence = _imcts_candidate_evidence(

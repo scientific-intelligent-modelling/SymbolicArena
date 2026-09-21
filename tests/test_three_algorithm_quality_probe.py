@@ -60,3 +60,13 @@ def test_diagnostic_rejects_export_mismatch_and_nonfinite_metrics():
 
 def test_diagnostic_success_has_zero_exit_code():
     assert probe.validation_status(_valid_report())['exit_code'] == 0
+
+
+def test_e2esr_selection_policy_requires_snapshot_to_match_final_model():
+    report = _valid_report()
+    report['algorithm'] = 'e2esr'
+    report['worker']['selection_policy'] = 'e2esr_training_mse_v1'
+    assert probe.validation_status(report)['exit_code'] == 1
+    report['metrics']['id']['snapshot'] = {'finite': True}
+    report['metrics']['id']['snapshot_matches_native'] = True
+    assert probe.validation_status(report)['exit_code'] == 0
