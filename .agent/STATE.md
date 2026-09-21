@@ -2,12 +2,21 @@
 
 ## 当前任务
 
+- 编号：IMPORT-001；任务：按新 Core80 交集整理已有实验数据；状态：已完成。
+- 当前采用方案：[2、experiments](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/) 使用 `{algorithm}/{dataset}/{condition}/{seed}`；排除 E2ESR、TPSR、RAG-SR、SymbolFit。
+- 已确认：11算法、51数据集、3993次运行。旧 Core50 的35个交集任务贡献3465次，stage6新增30中的16个交集任务贡献528次。clean=1683，noise001=1155，noise005=1155。
+- 有效索引：[manifest.csv](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.csv)、[manifest.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.json)；文件说明见同目录 README.md。整理脚本保留在 `.agent/work/IMPORT-001/import_experiments.py`。
+- 验证：3993份结果原文与最新汇总的选定冻结哈希一致，718740条逐分钟指标齐全，快照来源哈希已核验。stage6终态与分钟快照的元信息版本分别按各自绑定保留；源文件未移动或改写。
+- 下一步：该目录作为已有结果输入；尚未启动新 Core80 实验。
+
+## 选集入口
+
 - 编号：CORE-001；任务：整理并阅读 Core30~Core80 压缩包；状态：目录创建、复制、解压及阅读已完成，选集仍为候选。
 - 文件位置：[1、build_core30_80](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、build_core30_80/)；压缩包复制到该目录，原始文件保留在 stage4 根目录。
 - 阅读入口：[README.md](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、build_core30_80/core30_core80_all_sensitivity_package/core_nested_all_sensitivity/README.md)。程序入口为 `select_nested_cores.py`，名单位于包内 `results/core30.csv` 至 `core80.csv`。
 - 已确认：包含664任务及2656条四探针聚合输入；六份默认名单按30、40、50、60、70、80严格嵌套；每个规模有5000条敏感性结果。敏感性固定各自父集合，不表示整链联合扰动；包不含实际训练和测试数据。
 - 验证：249个文件哈希、压缩包复制一致性、名单数量及前缀嵌套、敏感性CSV行数均通过；未重新求解。证据：[inspection.json](work/CORE-001/inspection.json)。
-- 下一步：按后续任务决定采用哪些规模的名单；本次未替换已有实验输入。
+- Core80 名单已用于 IMPORT-001 的路径交集筛选，未更改包内名单。
 
 ## 集群任务：待处理
 
@@ -49,3 +58,4 @@
 - CL-001 已完成；`.agent/work/CL-001/` 已归档，默认不读取。
 - DIR-001 已完成；未产生过程记录。
 - CORE-001 已完成；`.agent/work/CORE-001/` 原位归档，默认不读取。
+- IMPORT-001 已完成；过程目录原位归档，整理脚本持续保留供复现。
