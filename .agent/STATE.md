@@ -2,12 +2,13 @@
 
 ## 当前任务
 
-- 编号：ENV-002；任务：逐机器、逐算法执行两个 180 秒训练测试；状态：15 台可连接机器已完成，54 不可达。
+- 编号：ENV-002；任务：逐机器训练测试及 DeepInfra 网络修复；状态：15 台完成测试，5 台 API 连接已修复，54 不可达。
 - 当前采用方案：22~29、48~53、55，每台 15 算法，使用 g0275（feynman-i.14.4，含干扰变量）和 g0596（strogatz_glider1），clean、seed=520。训练预算 180 秒，保留预算内最佳候选；结果恢复和评估另计时间。LLMSR/DRSR 使用 DeepInfra Meta-Llama-3.1-8B-Instruct-Turbo，3 轮各 4 个样本。
 - 有效结果：[逐机器结果](work/ENV-002/results_by_machine.csv)、[逐测试明细](work/ENV-002/results.csv)；脚本、配置、输入及 SHA256 见 [ENV-002](work/ENV-002/) 内 `run_checks.py`、`params.json`、`inputs_manifest.json`。远端原始输出位于 `<根目录>/sim-runtime/checks/ENV-002/results/`。
 - 已确认：450/450 测试结束，无遗留测试会话；449 条产生有限 ID R2，25 上 E2ESR/g0275 预算内无有效公式。产生指标不代表预测效果或评估逻辑通过。
-- 未解决问题：49、51、52、53、55 的 LLMSR/DRSR 无成功 API 日志，已见 DeepInfra DNS 解析失败；已有基线指标不能作为 LLM 调用成功证据。PySR/PyOperon 表达式未使用首列时，normalizers.py 会错误移动变量索引；已复算 PySR 示例，原公式 ID R2=0.9999999999999963，报告为 -8.822646727794563e37，证据 `metric_mapping_check.json`。本轮尚未修改算法代码、系统 DNS 或原始结果。54 仍不可达，30 个测试未执行。
-- 下一步：处理 DeepInfra DNS 和变量索引问题；54 恢复后补充部署和同口径测试。
+- 网络修复：49、51、52、53、55 的 `sim_llm` 通过 `.pth` 加载 `<根目录>/sim-runtime/network/sitecustomize.py`，仅将 `api.deepinfra.com` 连接地址设为 `38.101.151.13`，保留 URL、SNI 与 TLS 证书校验。5 台真实 Llama-3.1-8B-Instruct-Turbo 请求均回复 OK，证据 `dns_api_*.json`；原始 DNS/IP 连通检查为 `dns_49.json` 等。安装与复核脚本为 `install_dns.py`、`verify_deepinfra.py`。
+- 未解决问题：历史 20 项 LLM 训练尚未重跑，原结果保留；系统 DNS 未修改。IP 变化时通过 `SIM_DEEPINFRA_CONNECT_IP` 更新，空字符串可停用覆盖。PySR/PyOperon 的变量索引错误尚未修复；复算证据 `metric_mapping_check.json` 中原公式 ID R2=0.9999999999999963、原报告=-8.822646727794563e37。54 仍有30项测试未执行。
+- 下一步：重测历史20项 LLM、处理变量索引；54 恢复后补充部署和同口径测试。
 
 ## 环境入口：已确认
 
