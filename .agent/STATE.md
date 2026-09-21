@@ -6,8 +6,8 @@
 - 当前采用方案：22~29、48~53、55，每台 15 算法，使用 g0275（feynman-i.14.4，含干扰变量）和 g0596（strogatz_glider1），clean、seed=520。训练预算 180 秒，保留预算内最佳候选；结果恢复和评估另计时间。LLMSR/DRSR 使用 DeepInfra Meta-Llama-3.1-8B-Instruct-Turbo，3 轮各 4 个样本。
 - 有效结果：[逐机器结果](work/ENV-002/results_by_machine.csv)、[逐测试明细](work/ENV-002/results.csv)；脚本、配置、输入及 SHA256 见 [ENV-002](work/ENV-002/) 内 `run_checks.py`、`params.json`、`inputs_manifest.json`。远端原始输出位于 `<根目录>/sim-runtime/checks/ENV-002/results/`。
 - 已确认：450/450 测试结束，无遗留测试会话；449 条产生有限 ID R2，25 上 E2ESR/g0275 预算内无有效公式。产生指标不代表预测效果或评估逻辑通过。
-- 未解决问题：PySR/PyOperon 表达式未使用首列时，normalizers.py 会错误移动变量索引；已复算 PySR 示例，原公式 ID R2=0.9999999999999963，报告为 -8.822646727794563e37，证据 `metric_mapping_check.json`。本轮只执行测试，尚未修改该算法代码或原始结果。54 仍不可达，30 个测试未执行。
-- 下一步：处理变量索引问题；54 恢复后补充部署和同口径测试。
+- 未解决问题：49、51、52、53、55 的 LLMSR/DRSR 无成功 API 日志，已见 DeepInfra DNS 解析失败；已有基线指标不能作为 LLM 调用成功证据。PySR/PyOperon 表达式未使用首列时，normalizers.py 会错误移动变量索引；已复算 PySR 示例，原公式 ID R2=0.9999999999999963，报告为 -8.822646727794563e37，证据 `metric_mapping_check.json`。本轮尚未修改算法代码、系统 DNS 或原始结果。54 仍不可达，30 个测试未执行。
+- 下一步：处理 DeepInfra DNS 和变量索引问题；54 恢复后补充部署和同口径测试。
 
 ## 环境入口：已确认
 
