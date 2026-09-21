@@ -1,0 +1,54 @@
+"""
+Find the mathematical function skeleton that represents the object's velocity, given data on the total energy of an object, the relativistic mass of an object, and the speed of light.
+"""
+
+
+import numpy as np
+
+#Initialize parameters
+MAX_NPARAMS = 10
+params = [1.0]*MAX_NPARAMS
+
+
+@evaluate.run
+def evaluate(data: dict) -> float:
+    """ Evaluate the equation on data observations."""
+    
+    # Load data observations
+    inputs, outputs = data['inputs'], data['outputs']
+    X = inputs
+    
+    # Optimize parameters based on data
+    from scipy.optimize import minimize
+    def loss(params):
+        y_pred = equation(*X.T, params)
+        return np.mean((y_pred - outputs) ** 2)
+
+    loss_partial = lambda params: loss(params)
+    result = minimize(loss_partial, [1.0]*MAX_NPARAMS, method='BFGS')
+    
+    # Return evaluation score
+    optimized_params = result.x
+    loss = result.fun
+
+    if np.isnan(loss) or np.isinf(loss):
+        return None
+    else:
+        return -loss
+
+        
+@equation.evolve
+def equation(E_n: np.ndarray, m: np.ndarray, c: np.ndarray, params: np.ndarray) -> np.ndarray:
+    """ Mathematical function for the object's velocity
+
+    Args:
+        E_n: A numpy array representing observations of the total energy of an object.
+        m: A numpy array representing observations of the relativistic mass of an object.
+        c: A numpy array representing observations of the speed of light.
+        params: Array of numeric constants or parameters to be optimized
+
+    Return:
+        A numpy array representing the object's velocity as the result of applying the mathematical function to the inputs.
+    """
+    output = params[0] * E_n + params[1] * m + params[2] * c + params[3]
+    return output

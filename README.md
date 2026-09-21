@@ -44,22 +44,19 @@ Scientific Intelligent Modelling 是一个统一接入、运行和评测符号�
 主控环境使用 Python 3.10。部分算法环境使用其他 Python 版本，具体配置见
 [`envs_config.json`](./scientific_intelligent_modelling/config/envs_config.json)。
 
-### 2. 克隆仓库及子模块
+### 2. 克隆仓库及数据子仓库
 
 ```bash
 git clone \
   https://github.com/scientific-intelligent-modelling/scientific-intelligent-modelling.git
 cd scientific-intelligent-modelling
 
-# 拉取算法源码和数据集 Python 包，不要求访问论文私有子模块。
-git submodule update --init --recursive -- \
-  scientific_intelligent_modelling/algorithms \
-  sim-datasets-py
+# 算法源码已经内置；这里只初始化数据集 Python 包。
+git submodule update --init --recursive -- sim-datasets-py
 ```
 
-若你有全部子模块的访问权限，也可以直接使用
-`git clone --recursive`，或在已有仓库中执行
-`git submodule update --init --recursive`。
+`sim-datasets-data/` 继续作为独立数据仓库使用，不纳入主仓库历史。
+论文源码子模块不是运行工具箱的必需项，无需为正常安装初始化。
 
 ### 3. 安装主控环境
 
@@ -235,14 +232,19 @@ bench_results/sim_cli/
 
 先在独立环境中确认上游仓库能够完成最小训练和预测，再接入工具箱。若上游依赖与现有环境冲突，为新算法创建独立环境，不要直接污染 `sim` 主控环境。
 
-外部源码可以作为子模块放在包装器目录下：
+外部算法源码必须以内置第三方源码的方式放在包装器目录下，不再使用算法子模块：
 
-```bash
-mkdir -p scientific_intelligent_modelling/algorithms/mytool_wrapper
-git submodule add <上游仓库地址> \
-  scientific_intelligent_modelling/algorithms/mytool_wrapper/mytool
+```text
+scientific_intelligent_modelling/algorithms/mytool_wrapper/
+├── wrapper.py
+└── mytool/
+    ├── LICENSE
+    └── <上游源码>
 ```
 
+同步上游源码时，只复制目标提交跟踪的文件，保留许可证，并在
+`scientific_intelligent_modelling/algorithms/VENDORED_SOURCES.md` 中记录来源 URL
+和提交号。不要复制上游 `.git/`、缓存、构建产物或本地实验结果。
 如果上游包可稳定从 PyPI 安装，也可以仅在环境配置中声明依赖。
 
 ### 2. 创建 Manifest
@@ -375,13 +377,13 @@ DSO 的历史接入过程可参考
 
 ## 常见问题
 
-### 子模块目录为空
+### 数据集 Python 包目录为空
 
 ```bash
-git submodule update --init --recursive -- \
-  scientific_intelligent_modelling/algorithms \
-  sim-datasets-py
+git submodule update --init --recursive -- sim-datasets-py
 ```
+
+算法源码随主仓库直接分发，不需要再执行算法子模块初始化。
 
 ### 找不到算法环境
 

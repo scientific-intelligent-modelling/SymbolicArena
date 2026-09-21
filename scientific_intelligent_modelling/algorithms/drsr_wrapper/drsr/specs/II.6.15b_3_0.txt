@@ -1,0 +1,55 @@
+"""
+Find the mathematical function skeleton that represents the distance from the dipole to the point where the electric field is being measured, given data on the electric field, the electric constant or permittivity of the medium, the dipole moment, and the angle between the dipole axis and the position vector.
+"""
+
+
+import numpy as np
+
+#Initialize parameters
+MAX_NPARAMS = 10
+params = [1.0]*MAX_NPARAMS
+
+
+@evaluate.run
+def evaluate(data: dict) -> float:
+    """ Evaluate the equation on data observations."""
+    
+    # Load data observations
+    inputs, outputs = data['inputs'], data['outputs']
+    X = inputs
+    
+    # Optimize parameters based on data
+    from scipy.optimize import minimize
+    def loss(params):
+        y_pred = equation(*X.T, params)
+        return np.mean((y_pred - outputs) ** 2)
+
+    loss_partial = lambda params: loss(params)
+    result = minimize(loss_partial, [1.0]*MAX_NPARAMS, method='BFGS')
+    
+    # Return evaluation score
+    optimized_params = result.x
+    loss = result.fun
+
+    if np.isnan(loss) or np.isinf(loss):
+        return None
+    else:
+        return -loss
+
+        
+@equation.evolve
+def equation(Ef: np.ndarray, epsilon: np.ndarray, p_d: np.ndarray, theta: np.ndarray, params: np.ndarray) -> np.ndarray:
+    """ Mathematical function for the distance from the dipole to the point where the electric field is being measured
+
+    Args:
+        Ef: A numpy array representing observations of the electric field.
+        epsilon: A numpy array representing observations of the electric constant or permittivity of the medium.
+        p_d: A numpy array representing observations of the dipole moment.
+        theta: A numpy array representing observations of the angle between the dipole axis and the position vector.
+        params: Array of numeric constants or parameters to be optimized
+
+    Return:
+        A numpy array representing the distance from the dipole to the point where the electric field is being measured as the result of applying the mathematical function to the inputs.
+    """
+    output = params[0] * Ef + params[1] * epsilon + params[2] * p_d + params[3] * theta + params[4]
+    return output

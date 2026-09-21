@@ -11,8 +11,11 @@
 建议同时存在：
 
 - `scientific_intelligent_modelling/algorithms/<tool>_wrapper/__init__.py`
-- 外部仓库目录或子模块目录，例如：
+- 内置第三方源码目录，例如：
   - `scientific_intelligent_modelling/algorithms/<tool>_wrapper/<vendor_repo>`
+
+第三方算法源码必须由主仓库直接跟踪，不得保留嵌套 `.git` 或注册为算法子模块。
+接入时应保留上游许可证，并在 `algorithms/VENDORED_SOURCES.md` 中记录来源与提交号。
 
 包装器必须满足：
 

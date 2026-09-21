@@ -1,0 +1,54 @@
+"""
+Find the mathematical function skeleton that represents the intensity of the first wave source, given data on the resultant intensity of two wave sources, the intensity of the second wave source, and the phase difference between the two wave sources.
+"""
+
+
+import numpy as np
+
+#Initialize parameters
+MAX_NPARAMS = 10
+params = [1.0]*MAX_NPARAMS
+
+
+@evaluate.run
+def evaluate(data: dict) -> float:
+    """ Evaluate the equation on data observations."""
+    
+    # Load data observations
+    inputs, outputs = data['inputs'], data['outputs']
+    X = inputs
+    
+    # Optimize parameters based on data
+    from scipy.optimize import minimize
+    def loss(params):
+        y_pred = equation(*X, params)
+        return np.mean((y_pred - outputs) ** 2)
+
+    loss_partial = lambda params: loss(params)
+    result = minimize(loss_partial, [1.0]*MAX_NPARAMS, method='BFGS')
+    
+    # Return evaluation score
+    optimized_params = result.x
+    loss = result.fun
+
+    if np.isnan(loss) or np.isinf(loss):
+        return None
+    else:
+        return -loss
+
+        
+@equation.evolve
+def equation(Int: np.ndarray, I2: np.ndarray, delta: np.ndarray, params: np.ndarray) -> np.ndarray:
+    """ Mathematical function for the intensity of the first wave source
+
+    Args:
+        Int: A numpy array representing observations of the resultant intensity of two wave sources.
+        I2: A numpy array representing observations of the intensity of the second wave source.
+        delta: A numpy array representing observations of the phase difference between the two wave sources.
+        params: Array of numeric constants or parameters to be optimized
+
+    Return:
+        A numpy array representing the intensity of the first wave source as the result of applying the mathematical function to the inputs.
+    """
+    output = params[0] * Int + params[1] * I2 + params[2] * delta + params[3]
+    return output

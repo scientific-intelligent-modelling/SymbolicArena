@@ -1,0 +1,55 @@
+"""
+Find the mathematical function skeleton that represents the temperature of the system, given data on the energy of the nth mode of a quantum harmonic oscillator, the Planck constant, the angular frequency of the oscillator, and the Boltzmann constant.
+"""
+
+
+import numpy as np
+
+#Initialize parameters
+MAX_NPARAMS = 10
+params = [1.0]*MAX_NPARAMS
+
+
+@evaluate.run
+def evaluate(data: dict) -> float:
+    """ Evaluate the equation on data observations."""
+    
+    # Load data observations
+    inputs, outputs = data['inputs'], data['outputs']
+    X = inputs
+    
+    # Optimize parameters based on data
+    from scipy.optimize import minimize
+    def loss(params):
+        y_pred = equation(*X.T, params)
+        return np.mean((y_pred - outputs) ** 2)
+
+    loss_partial = lambda params: loss(params)
+    result = minimize(loss_partial, [1.0]*MAX_NPARAMS, method='BFGS')
+    
+    # Return evaluation score
+    optimized_params = result.x
+    loss = result.fun
+
+    if np.isnan(loss) or np.isinf(loss):
+        return None
+    else:
+        return -loss
+
+        
+@equation.evolve
+def equation(E_n: np.ndarray, h: np.ndarray, omega: np.ndarray, kb: np.ndarray, params: np.ndarray) -> np.ndarray:
+    """ Mathematical function for the temperature of the system
+
+    Args:
+        E_n: A numpy array representing observations of the energy of the nth mode of a quantum harmonic oscillator.
+        h: A numpy array representing observations of the Planck constant.
+        omega: A numpy array representing observations of the angular frequency of the oscillator.
+        kb: A numpy array representing observations of the Boltzmann constant.
+        params: Array of numeric constants or parameters to be optimized
+
+    Return:
+        A numpy array representing the temperature of the system as the result of applying the mathematical function to the inputs.
+    """
+    output = params[0] * E_n + params[1] * h + params[2] * omega + params[3] * kb + params[4]
+    return output
