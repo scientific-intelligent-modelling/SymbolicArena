@@ -2,6 +2,13 @@
 
 ## 当前任务
 
+- 编号：CLEAR-001；任务：清空 `stage4_core80_15algs_3seeds_3h/2、experiments` 文件并保留原目录结构；状态：已完成。
+- 已确认：删除前161996个文件、10616个目录、约2.8 GiB；删除后文件数为0，目录数仍为10616，目录列表哈希保持 `1db4a0da500ed5908758c05d667e7739aca2fd4dc7d0a579baf6e65a40911722`。没有运行中的相关实验进程。
+- 当前采用方案：清理后的目录保留11个算法及数据集、条件、seed、`corrected`、`progress`等目录，等待新的Core80正式实验写入；本次未处理 `1、build_core30_80` 或外部来源资料。
+- 下一步：执行 Core80 × 15算法 × 3seed（520/521/522）× clean/noise001/noise005 的正式实验，共10800个任务，再进入Opus后处理。
+
+## 最近任务
+
 - 编号：FIX-004；任务：修复 FePySR 并逐机器重跑；状态：已完成15台各3个180秒实验，共45项，54不可达。
 - 当前方案：核验原生配置和依赖后再写初始常数；常数基线不阻止短预算启动，先确定实际搜索次数再分配PySR时间；异常恢复保留指标但不标记训练成功。GPU七台配置从22的持久源码复制并通过Hydra验证。
 - 有效文件：`algorithms/fepysr_wrapper/wrapper.py`、`benchmarks/runner.py`（均在 `scientific_intelligent_modelling/`）、`tests/test_fepysr_initialization.py`；执行脚本、输入、配置和逐节点结果位于 `.agent/work/FIX-004/`。配置核验 `config_verification.json`、代码同步 `remote_sync.json`；[前后对比及原式](work/FIX-004/results.csv)由 `export_results.py` 生成。3个输入与ENV-003相同，原结果不覆盖。
@@ -38,16 +45,14 @@
 - 当前采用方案：PySR 保持零基变量，PyOperon 只转换一次；PyOperon 数值回放使用原生 X 变量公式。历史回放从原始公式重建，保留训练目标选择与来源。
 - 已确认：51个数据集的输入与历史冻结数据相符。726次旧训练记录可复用（PySR/PyOperon各363；合计clean306、noise001210、noise005210），无需因索引错误重新训练。708次有有效终态，18次按无有效输出保留。
 - 更正范围：291份终态表达式、52747条分钟表达式；全部130680条分钟数值、ID/OOD/EFF及STAB数值部分已核验。300份符号评估和142组三种子结构评估待更新，其他旧裁决仍需绑定核验；未调用付费API，未标记六维正式就绪。
-- 有效入口：[current_evaluations.csv](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/current_evaluations.csv)。更正数据在每个seed的 `corrected/`，`current.json` 指定有效文件；原始文件保留。正式脚本、输入核验、复用报告为同目录 `correct_history.py`、`input_audit.json`、`reuse_report.json`。
+- 历史更正入口曾位于 `2、experiments/current_evaluations.csv`，已由 CLEAR-001 按用户确认清除；本次未处理外部来源资料。
 - 验证：3个针对性测试通过；15台可连接机器同步并全部通过相同测试，54仍不可达。远端记录：[remote_sync.json](work/FIX-001/remote_sync.json)；数据核验：[verification.json](work/FIX-001/verification.json)。
 - 下一步：依据当前有效索引更新受影响的 Opus 后处理，再汇总正式六维指标；其余9个已导入算法未在本次做数值复用审核。
 
 ## 已有实验
 
-- 编号：IMPORT-001；任务：按新 Core80 交集整理已有实验数据；状态：已完成。
-- 当前采用方案：[2、experiments](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/) 使用 `{algorithm}/{dataset}/{condition}/{seed}`；排除 E2ESR、TPSR、RAG-SR、SymbolFit。
-- 已确认：11算法、51数据集、3993次运行。旧 Core50 的35个交集任务贡献3465次，stage6新增30中的16个交集任务贡献528次。clean=1683，noise001=1155，noise005=1155。
-- 原始导入索引：[manifest.csv](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.csv)、[manifest.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/manifest.json)；当前评估使用上方 `current_evaluations.csv`。整理脚本保留在 `.agent/work/IMPORT-001/import_experiments.py`。
+- 编号：IMPORT-001；任务：按新 Core80 交集整理已有实验数据；状态：已完成，结果文件已由 CLEAR-001 清除。
+- 原目录结构曾使用 `{algorithm}/{dataset}/{condition}/{seed}`；导入时为11算法、51数据集、3993次运行。原导入索引和更正结果文件位于目标目录中的文件已一并清除；整理脚本仍保留在 `.agent/work/IMPORT-001/import_experiments.py`。
 - 验证：3993份结果原文与最新汇总的选定冻结哈希一致，718740条逐分钟指标齐全，快照来源哈希已核验。stage6终态与分钟快照的元信息版本分别按各自绑定保留；源文件未移动或改写。
 - 下一步：该目录作为已有结果输入；尚未启动新 Core80 实验。
 
@@ -106,3 +111,4 @@
 - FIX-003 已完成；过程目录原位归档，保留同步脚本与验证记录。
 - ENV-003 已完成；过程目录原位归档，保留运行脚本、输入、配置和结果。
 - FIX-004 已完成；过程目录原位归档，保留部署与重跑脚本、配置来源和结果。
+- CLEAR-001 已完成；过程目录无新增文件，删除范围与目录结构核验记录保留在本状态文件。
