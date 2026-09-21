@@ -2,13 +2,18 @@
 
 ## 当前任务
 
-- 编号：ENV-001；任务：更新 iaaccn22~29 算法代码，再同步 iaaccn48~55 实验环境；状态：部分完成，54 待恢复连接。
-- 当前采用方案：当前代码已同步到 CPU 节点的 `~/workplace/scientific-intelligent-modelling` 和 `~/projects/scientific-intelligent-modelling`。依赖取自已有 CPU 环境；GPU 复用已有 8 个环境，补充 FePySR、JAXSR、SymbolFit 和缺失依赖。
-- GPU 路径：48、50~53、55 使用 `/data1/zhangziwen`，49 经用户确认使用 `/data3/zhangziwen`；代码为 `<根目录>/sim-runtime/code`，环境为 `<根目录>/anaconda3/envs`，使用前加载 `<根目录>/sim-runtime/runtime.env`。
-- 有效证据：[ENV-001](work/ENV-001/)；CPU 文件校验 `cpu_sync_*.json`，CPU 导入检查 `cpu_prepare_*.json`，GPU 检查 `gpu_verify_*.json`。源机器同目录保留部署脚本、环境包和 `code_manifest.json`。
-- 已确认：22~29 两处代码目录文件校验一致，TPSR、E2ESR、RAG-SR、SymbolFit、FePySR 导入通过。48~53、55 共 7 台机器的 1596 个同步文件与本地 SHA256 一致，77/77 环境导入检查通过，77/77 环境在不设置 PYTHONPATH 时均指向新代码目录。55 最后核验剩余 106.15 GiB。
-- 未解决问题：54 无法通过 SSH 连接。复用环境存在部分第三方包版本差异；本次未执行正式数据集实验或 LLM API 调用。
-- 下一步：54 恢复连接后复用同一任务目录补充部署。
+- 编号：ENV-002；任务：逐机器、逐算法执行两个 180 秒训练测试；状态：15 台可连接机器已完成，54 不可达。
+- 当前采用方案：22~29、48~53、55，每台 15 算法，使用 g0275（feynman-i.14.4，含干扰变量）和 g0596（strogatz_glider1），clean、seed=520。训练预算 180 秒，保留预算内最佳候选；结果恢复和评估另计时间。LLMSR/DRSR 使用 DeepInfra Meta-Llama-3.1-8B-Instruct-Turbo，3 轮各 4 个样本。
+- 有效结果：[逐机器结果](work/ENV-002/results_by_machine.csv)、[逐测试明细](work/ENV-002/results.csv)；脚本、配置、输入及 SHA256 见 [ENV-002](work/ENV-002/) 内 `run_checks.py`、`params.json`、`inputs_manifest.json`。远端原始输出位于 `<根目录>/sim-runtime/checks/ENV-002/results/`。
+- 已确认：450/450 测试结束，无遗留测试会话；449 条产生有限 ID R2，25 上 E2ESR/g0275 预算内无有效公式。产生指标不代表预测效果或评估逻辑通过。
+- 未解决问题：PySR/PyOperon 表达式未使用首列时，normalizers.py 会错误移动变量索引；已复算 PySR 示例，原公式 ID R2=0.9999999999999963，报告为 -8.822646727794563e37，证据 `metric_mapping_check.json`。本轮只执行测试，尚未修改该算法代码或原始结果。54 仍不可达，30 个测试未执行。
+- 下一步：处理变量索引问题；54 恢复后补充部署和同口径测试。
+
+## 环境入口：已确认
+
+- CPU 项目位于 `~/workplace/scientific-intelligent-modelling` 和 `~/projects/scientific-intelligent-modelling`，两处已同步当前代码。
+- GPU 48、50~53、55 使用 `/data1/zhangziwen`，49 使用 `/data3/zhangziwen`；代码为 `<根目录>/sim-runtime/code`，激活入口为 `<根目录>/sim-runtime/runtime.env`。复用环境仍存在部分第三方包版本差异。
+- ENV-001 的文件校验与导入结果位于 [ENV-001](work/ENV-001/)，默认不重复读取。
 
 ## 有效入口：已确认
 
