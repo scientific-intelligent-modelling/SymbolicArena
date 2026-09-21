@@ -2,6 +2,14 @@
 
 ## 当前任务
 
+- 编号：EXP-001；任务：执行冻结的Core80正式全量实验；状态：已启动，调度器正在同步支持文件并派发任务。
+- 当前批次：`stage4_core80_all_20260922`；总任务10800，15台机器（22~29、48~53、55），54未纳入；每项10800秒，clean/noise001/noise005按顺序调度，seed520/521/522按顺序调度。LLM桶无数量限制，技术重试上限为3。
+- 有效入口：[experiment_config.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/experiment_config.json)；任务源、参数切片和队列状态位于 `.agent/work/EXP-001/controller/`；调度日志：[controller.log](work/EXP-001/controller/queue/controller.log)；本地tmux会话：`core80_dispatch_20260922`。
+- 当前验证：Dry-run已确认15算法×80数据集×3种子×3条件=10800项；LLM运行配置已部署到15台可用机器，配置哈希一致。训练结果尚未产生，Opus后处理尚未启动。
+- 下一步：持续轮询队列状态、主机状态和任务结果；按阶段向用户汇报已派发、运行、完成、失败和重试数量。完成训练后执行逐分钟六维Opus后处理。
+
+## 实验冻结配置
+
 - 编号：FREEZE-001；任务：参考AAAI Stage6冻结新Core80统一实验配置；状态：已完成，尚未启动实验。
 - 当前采用方案：[experiment_config.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/experiment_config.json)为统一入口；保留15份 `formal_clean_params` 的算法参数与线程数，公共种子520/521/522、三条件0/0.01/0.05、每项10800秒、每60秒快照，共10800项。Core80名单固定80个唯一完整路径；噪声种子按固定数据集身份计算，运行时显式传入，避免主机路径影响噪声。
 - 验证：15算法源JSON与最新wrapper/runner哈希已绑定；LLM正式配置的非敏感字段已在22核验（DeepInfra Llama3.1-8B Turbo，temperature0.6、max_tokens1024）。主机路径及密钥运行时绑定；TPSR模板seed23改由统一任务种子传入，符合当前runner行为。配置哈希 `e03430efd758dd26c2be62ac85807c92dec31f1e07c4259de9ed00cccbf7949a`，同目录 `freeze_experiment_config.py --check` 通过。
