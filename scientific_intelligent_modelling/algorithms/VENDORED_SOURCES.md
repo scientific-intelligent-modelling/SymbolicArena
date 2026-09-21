@@ -20,8 +20,9 @@
 
 - 2026-09-21：E2ESR 的 `symbolicregression/model/sklearn_wrapper.py` 在发布进度公式前
   逆标准化并恢复特征索引，避免 runner 在原始输入上回放标准化坐标公式。
-  上表提交号表示导入基线，当前源码包含此本地修复；诊断证据见
-  `diagnostics/three_algorithm_quality_20260921.md`（主仓库根目录下）。
+  上表提交号表示导入基线，当前源码包含此本地修复；相关验证见
+  [候选顺序测试](../../tests/test_e2esr_candidate_ordering.py)。
 - 2026-09-21：经用户确认，E2ESR 采用 `e2esr_training_mse_v1` 统一训练/快照选模，
   每 bag 及时精化；修复 `utils_wrapper.py` 的 BFGS 广播损失、最佳参数保存及缩放边界，
-  并修复特征同时重标。验收见 `diagnostics/e2esr_final_selection_20260921.md`。
+  并修复特征同时重标。相关验证见 [精化测试](../../tests/test_e2esr_refinement.py)
+  和 [训练选模测试](../../tests/test_e2esr_training_selection.py)。
