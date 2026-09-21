@@ -2,6 +2,13 @@
 
 ## 当前任务
 
+- 编号：FIX-003；任务：只修复 LLMSR/DRSR 及最初4算法的共享恢复问题；状态：已完成。
+- 已确认：LLMSR、DRSR、TPSR、RAG-SR、SymbolFit 存在根据不可用测试指标改选旧公式的问题，E2ESR 原有保护有效。共享恢复现对全部15算法统一保留原生候选，PySR/PyOperon 同一分支同时覆盖；不改变各算法搜索、公式导出或指标定义。
+- 有效文件：`scientific_intelligent_modelling/benchmarks/runner.py`、`tests/test_native_budget_selection.py`。本地15算法的候选恢复和分钟快照恢复检查通过，另3个变量索引测试通过；15台同步后各4项测试通过，共60项，23处源码哈希一致，54不可达。证据：[remote_sync.json](work/FIX-003/remote_sync.json)；执行脚本为同目录 `run_sync.py`、`sync_remote.py`。
+- 未解决问题与下一步：未调用 LLM、未重跑训练、未改写历史结果；54恢复后补同步。此项保证选模规则正确，不代表评测精度必然提高。
+
+## 已完成检查
+
 - 编号：FIX-002；任务：检查 QLattice、DSO、FePySR、gplearn、iMCTS、JAXSR、uDSR；状态：本轮检查、修复和同步已完成，排除 LLMSR/DRSR。
 - 当前采用方案：7算法预算恢复保留原生选中公式，不按测试集有限性改选；gplearn 完整精度导出并保留跨代最佳 program；QLattice 数值导出使用17位有效数字；iMCTS 常数预测按样本数广播；JAXSR 从已验证 model_state 恢复。DSO/uDSR 明确拒绝尚无可靠导出的 protected=True，默认 False 不受影响。
 - 已确认：FePySR、DSO、uDSR、iMCTS 稀疏变量回放一致；gplearn/QLattice/JAXSR 用真实依赖复现并验证修复。15台完成6个源码文件同步，138处目标文件哈希一致；每台13个针对性测试通过，共195个。54仍不可达。
@@ -80,3 +87,4 @@
 - IMPORT-001 已完成；过程目录原位归档，整理脚本持续保留供复现。
 - FIX-001 数值更正完成；过程目录原位归档，正式更正脚本和核验输入已保存在实验目录。
 - FIX-002 已完成；过程目录原位归档，保留真实复现脚本与远端同步、验证记录。
+- FIX-003 已完成；过程目录原位归档，保留同步脚本与验证记录。

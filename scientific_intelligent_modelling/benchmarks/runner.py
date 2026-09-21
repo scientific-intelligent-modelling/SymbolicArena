@@ -52,9 +52,6 @@ _SNAPSHOT_CAPABLE_TOOLS = {
 }
 _SNAPSHOT_CAPABLE_TOOL_KEYS = {tool.lower() for tool in _SNAPSHOT_CAPABLE_TOOLS}
 _E2ESR_SELECTION_POLICY = "e2esr_training_mse_v1"
-_NATIVE_SELECTION_RECOVERY_TOOLS = {
-    "e2esr", "gplearn", "qlattice", "dso", "udsr", "imcts", "jaxsr", "fepysr",
-}
 
 
 def _is_snapshot_capable_tool(tool_name: str) -> bool:
@@ -2233,17 +2230,7 @@ def _recover_timeout_payload_from_candidate(
             if canonical_artifact_error is None:
                 canonical_artifact_error = repr(exc)
 
-    # 测试集是否产生有限数值不能改变算法按训练目标选出的公式。
-    if (str(tool_name).strip().lower() not in _NATIVE_SELECTION_RECOVERY_TOOLS
-            and not _recovered_metrics_are_usable(dataset, valid_metrics, id_metrics, ood_metrics)):
-        snapshot_payload = _recover_timeout_payload_from_progress_snapshots(
-            tool_name=tool_name,
-            dataset=dataset,
-            experiment_dir=experiment_dir,
-        )
-        if snapshot_payload is not None:
-            return snapshot_payload
-
+    # 所有算法都保留原生选中公式，测试集数值无效仅影响评估状态。
     recovered = {
         "equation": equation,
         "equation_count": 1,
@@ -2287,9 +2274,6 @@ def _recover_timeout_payload_from_progress_snapshots(
         valid_metrics = item.get("valid")
         id_metrics = item.get("id_test")
         ood_metrics = item.get("ood_test")
-        if (expected_tool not in _NATIVE_SELECTION_RECOVERY_TOOLS
-                and not _recovered_metrics_are_usable(dataset, valid_metrics, id_metrics, ood_metrics)):
-            continue
         train_metrics = item.get("train")
         if train_metrics is None:
             try:
