@@ -2,9 +2,9 @@
 
 ## 当前任务
 
-- 编号：CL-001；任务：清理已授权的诊断目录和过时测试；状态：已确认。
-- 当前采用方案：删除 `diagnostics/`、关联诊断测试和测试对象已不存在的旧测试；保留现有功能的测试与数据。
-- 验证情况：受影响的数据格式测试 4 项通过；已检查引用并更新 [源码说明](../scientific_intelligent_modelling/algorithms/VENDORED_SOURCES.md)。删除明细由本次 Git 提交记录。
+- 编号：DIR-001；任务：创建 ICLR stage4 实验目录；状态：已确认。
+- 当前采用方案：使用 `A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/`。
+- 验证情况：目录创建成功，路径已核对。
 - 未解决问题：规则中的远程项目路径记录仍待对应任务核验。
 - 下一步：根据用户指定的新任务更新索引。
 
@@ -16,6 +16,7 @@
 - 配置：[toolbox_config.json](../scientific_intelligent_modelling/config/toolbox_config.json)、[envs_config.json](../scientific_intelligent_modelling/config/envs_config.json)。
 - 数据目录：[sim-datasets-data/](../sim-datasets-data/)、[sim-datasets-py/](../sim-datasets-py/)；独立仓库保持原位置。
 - 目录分类：`AAAI_experiments/`、`A_ICLR_experiments/`、`A_Neurips_experiments/` 为现有实验目录，按具体任务读取。
+- ICLR stage4 目录：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/)。
 
 ## 候选文件与问题：待验证
 
@@ -29,3 +30,4 @@
 - WS-002 已完成；未产生独立过程记录，无需移动文件。
 - SR-CLOUD-30 已关闭；本地诊断文件和关联测试已按用户确认删除。
 - CL-001 已完成；`.agent/work/CL-001/` 已归档，默认不读取。
+- DIR-001 已完成；未产生过程记录。
