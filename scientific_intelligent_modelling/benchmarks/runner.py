@@ -2908,7 +2908,8 @@ def run_benchmark_task(
                 )
                 == "budget_exhausted_with_output"
             )
-        if recovered_from_error:
+        # FePySR 可保留异常前候选，但不能把初始常数恢复当成训练成功。
+        if recovered_from_error and str(tool_name).strip().lower() != 'fepysr':
             status = "ok"
             error = None
         else:

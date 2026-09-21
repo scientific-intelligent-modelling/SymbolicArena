@@ -1,7 +1,9 @@
 import json
+import importlib.util
 import sys
 import time
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -288,6 +290,28 @@ class FePySRRegressor(BaseWrapper):
         except Exception:
             return float("inf")
 
+    def _prepare_attempt_params(self, *, attempt: int, remaining: int | None,
+                                has_fitted_model: bool) -> dict[str, Any]:
+        params = dict(self.params)
+        if remaining is not None:
+            self._apply_bootstrap_attempt_params(
+                params, attempt=attempt, has_best_equation=has_fitted_model, remaining=remaining,
+            )
+            # 按本次实际神经搜索次数分配时间，常数基线不代表已完成搜索。
+            attempt_timeout = self._fit_attempt_timeout_seconds(params, remaining)
+            if attempt_timeout is not None:
+                params['timeout_in_seconds'] = attempt_timeout
+        if params.get('random_state') is not None:
+            params['random_state'] = int(params['random_state']) + attempt - 1
+        params.pop('max_fit_attempt_seconds', None)
+        return params
+
+    @staticmethod
+    def _require_native_config(package_dir: Path) -> None:
+        config = package_dir / 'config' / 'config_regression.yaml'
+        if not config.is_file():
+            raise FileNotFoundError(f'FePySR 原生配置缺失: {config}')
+
     @staticmethod
     def _optional_import(name: str):
         module = sys.modules.get(name)
@@ -430,23 +454,21 @@ class FePySRRegressor(BaseWrapper):
         X_arr = np.asarray(X, dtype=float)
         y_arr = np.asarray(y, dtype=float).reshape(-1, 1)
         deadline = self._budget_deadline()
+        spec = importlib.util.find_spec('fepysr')
+        if spec is None or spec.origin is None:
+            raise ModuleNotFoundError('FePySR 原生包未安装')
+        self._require_native_config(Path(spec.origin).resolve().parent)
+        import pysr  # noqa: F401
+        import torch
+        from fepysr import FePySR
+
+        self._patch_fepysr_runtime()
         baseline_score = self._install_mean_constant_baseline(y_arr)
         self._write_current_best_snapshot(
             attempt=0,
             score=baseline_score,
             source="mean_constant_baseline",
         )
-        try:
-            import pysr  # noqa: F401
-            import torch
-            from fepysr import FePySR
-            self._patch_fepysr_runtime()
-        except Exception as err:  # pragma: no cover - exercised in integration env
-            raise ImportError(
-                "FePySRRegressor 需要安装 fepysr、torch、hydra-core、pysr；"
-                "请先创建/激活 sim_fepysr 环境。"
-            ) from err
-
         X_tensor = torch.as_tensor(X_arr, dtype=torch.float64)
         y_tensor = torch.as_tensor(y_arr, dtype=torch.float64)
         best_model = None
@@ -459,20 +481,9 @@ class FePySRRegressor(BaseWrapper):
             if attempt > 0 and remaining is not None and remaining < self._MIN_BUDGET_REFIT_SECONDS:
                 break
             attempt += 1
-            iteration_params = dict(self.params)
-            if remaining is not None:
-                attempt_timeout = self._fit_attempt_timeout_seconds(iteration_params, remaining)
-                if attempt_timeout is not None:
-                    iteration_params["timeout_in_seconds"] = attempt_timeout
-                self._apply_bootstrap_attempt_params(
-                    iteration_params,
-                    attempt=attempt,
-                    has_best_equation=best_equation is not None,
-                    remaining=remaining,
-                )
-            if iteration_params.get("random_state") is not None:
-                iteration_params["random_state"] = int(iteration_params["random_state"]) + attempt - 1
-            iteration_params.pop("max_fit_attempt_seconds", None)
+            iteration_params = self._prepare_attempt_params(
+                attempt=attempt, remaining=remaining, has_fitted_model=best_model is not None,
+            )
             model = FePySR(
                 overrides=self._build_overrides(iteration_params),
                 custom_pysr_model=iteration_params.get("custom_pysr_model"),

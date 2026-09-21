@@ -2,6 +2,14 @@
 
 ## 当前任务
 
+- 编号：FIX-004；任务：修复 FePySR 并逐机器重跑；状态：已完成15台各3个180秒实验，共45项，54不可达。
+- 当前方案：核验原生配置和依赖后再写初始常数；常数基线不阻止短预算启动，先确定实际搜索次数再分配PySR时间；异常恢复保留指标但不标记训练成功。GPU七台配置从22的持久源码复制并通过Hydra验证。
+- 有效文件：`algorithms/fepysr_wrapper/wrapper.py`、`benchmarks/runner.py`（均在 `scientific_intelligent_modelling/`）、`tests/test_fepysr_initialization.py`；执行脚本、输入、配置和逐节点结果位于 `.agent/work/FIX-004/`。配置核验 `config_verification.json`、代码同步 `remote_sync.json`；[前后对比及原式](work/FIX-004/results.csv)由 `export_results.py` 生成。3个输入与ENV-003相同，原结果不覆盖。
+- 验证：15台代码同步且各2项针对性测试通过；45项重跑均有指标，无执行错误和剩余测试会话；44项选中真实搜索公式。ID R²中位数：g0275 -0.005105→0.338951，g0596 -0.044665→0.995413，g0005 -0.000111→0.999985；44项ID改善。
+- 未解决问题：feynman-i.14.4在3分钟内效果仍不足，其中1项保留初始常数；54恢复后仍需补部署与3项重跑。28的初次独立配置探测连接中断，其后3项真实训练均完成，配置可正常使用。
+
+## 上轮快速测试
+
 - 编号：ENV-003；任务：每台机器3数据集、15算法、每实验180秒快速测试；状态：15台各45项全部结束，共675项，54不可达。
 - 当前方案：feynman-i.14.4（g0275，含干扰变量）、strogatz_glider1（g0596）、BPG3（g0005）；clean、seed520，每台并发45。LLMSR/DRSR 使用 DeepInfra Llama-3.1-8B-Instruct-Turbo，3轮每轮4候选、max_tokens1024，不额外重试。
 - 有效文件：[逐实验结果](work/ENV-003/results.csv)、[算法汇总](work/ENV-003/summary.csv)；同目录保留 `run_checks.py`、`run.sh`、`control.py`、`node.py`、`prepare_inputs.py`、`export_results.py`、`params.json`、`inputs_manifest.json` 和 `results_*.json`。远端原始结果为各节点数据根目录的 `sim-runtime/checks/ENV-003/results/`。结果采用预算内原生最佳快照或终态，不按测试分数改选。
@@ -97,3 +105,4 @@
 - FIX-002 已完成；过程目录原位归档，保留真实复现脚本与远端同步、验证记录。
 - FIX-003 已完成；过程目录原位归档，保留同步脚本与验证记录。
 - ENV-003 已完成；过程目录原位归档，保留运行脚本、输入、配置和结果。
+- FIX-004 已完成；过程目录原位归档，保留部署与重跑脚本、配置来源和结果。
