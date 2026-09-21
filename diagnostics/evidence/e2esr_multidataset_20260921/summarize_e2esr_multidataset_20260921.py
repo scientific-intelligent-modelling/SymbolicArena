@@ -153,7 +153,7 @@ if __name__ == '__main__':
                 record.update(equation=None, unresolved_expression=True)
             minutes.append(record)
     with (evidence / 'summary.csv').open('w') as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator='\n')
         writer.writeheader()
         writer.writerows(rows)
     summary = {'diagnostic_only': True, 'formal_ready': False, 'paid_api_calls': 0,
