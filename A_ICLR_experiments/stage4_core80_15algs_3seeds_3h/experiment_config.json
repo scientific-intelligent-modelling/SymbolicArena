@@ -1,0 +1,1490 @@
+{
+  "schema_version": "core80.experiment_config.v1",
+  "status": "frozen",
+  "experiment": {
+    "dataset_count": 80,
+    "algorithm_count": 15,
+    "seeds": [
+      520,
+      521,
+      522
+    ],
+    "conditions": [
+      {
+        "name": "clean",
+        "enabled": false,
+        "sigma": 0.0
+      },
+      {
+        "name": "noise001",
+        "enabled": true,
+        "sigma": 0.01
+      },
+      {
+        "name": "noise005",
+        "enabled": true,
+        "sigma": 0.05
+      }
+    ],
+    "run_count": 10800,
+    "run_count_per_condition": 3600,
+    "training_budget_seconds": 10800,
+    "snapshot_interval_seconds": 60,
+    "minutes_per_run": 180,
+    "expected_run_minutes": 1944000,
+    "condition_order": [
+      "clean",
+      "noise001",
+      "noise005"
+    ],
+    "seed_binding": "run_benchmark_task.seed; not an algorithm-specific constant",
+    "selection": "algorithm_native_training_objective_best_within_budget",
+    "select_using_test_metrics": false,
+    "noise": {
+      "target": "training_labels_only",
+      "feature_noise": false,
+      "formula": "y + sigma * std(y, ddof=0) * N(0,1)",
+      "rng": "numpy.random.default_rng",
+      "seed_parameter": "train_label_noise_seed",
+      "seed_rule": "int.from_bytes(sha256(f'{dataset_rel}|seed={seed}|sigma={sigma:.12g}|train_label_noise'.encode('utf-8')).digest()[:8], 'big') % (2**32)",
+      "seed_identity": "Frozen dataset_rel including sim-datasets-data/; never the machine absolute path",
+      "evaluation_labels": "clean",
+      "validation_and_test_noise": false
+    }
+  },
+  "dataset_selection": {
+    "reference": {
+      "path": "A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、build_core30_80/core30_core80_all_sensitivity_package/core_nested_all_sensitivity/results/core80.csv",
+      "sha256": "154f8e2dd59cae7f1b7b8bb325a32be08daa9ab135d9bd1e1ec1fe83b735f834"
+    },
+    "datasets": [
+      {
+        "dataset_id": "g0018",
+        "dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG3",
+        "directory_name": "BPG3",
+        "global_index": 18
+      },
+      {
+        "dataset_id": "g0024",
+        "dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+        "directory_name": "BPG9",
+        "global_index": 24
+      },
+      {
+        "dataset_id": "g0027",
+        "dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK10",
+        "directory_name": "CRK10",
+        "global_index": 27
+      },
+      {
+        "dataset_id": "g0053",
+        "dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK34",
+        "directory_name": "CRK34",
+        "global_index": 53
+      },
+      {
+        "dataset_id": "g0125",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.34.29a_2_0",
+        "directory_name": "II.34.29a_2_0",
+        "global_index": 125
+      },
+      {
+        "dataset_id": "g0130",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.34.2_1_0",
+        "directory_name": "II.34.2_1_0",
+        "global_index": 130
+      },
+      {
+        "dataset_id": "g0151",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.6.15b_3_0",
+        "directory_name": "II.6.15b_3_0",
+        "global_index": 151
+      },
+      {
+        "dataset_id": "g0168",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/III.21.20_3_0",
+        "directory_name": "III.21.20_3_0",
+        "global_index": 168
+      },
+      {
+        "dataset_id": "g0218",
+        "dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO28",
+        "directory_name": "PO28",
+        "global_index": 218
+      },
+      {
+        "dataset_id": "g0258",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.2.42",
+        "directory_name": "feynman-ii.2.42",
+        "global_index": 258
+      },
+      {
+        "dataset_id": "g0277",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.18.16",
+        "directory_name": "feynman-i.18.16",
+        "global_index": 277
+      },
+      {
+        "dataset_id": "g0290",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.27.18",
+        "directory_name": "feynman-ii.27.18",
+        "global_index": 290
+      },
+      {
+        "dataset_id": "g0347",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-iii.4.33",
+        "directory_name": "feynman-iii.4.33",
+        "global_index": 347
+      },
+      {
+        "dataset_id": "g0365",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-i.15.3t",
+        "directory_name": "feynman-i.15.3t",
+        "global_index": 365
+      },
+      {
+        "dataset_id": "g0390",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-iii.10.19",
+        "directory_name": "feynman-iii.10.19",
+        "global_index": 390
+      },
+      {
+        "dataset_id": "g0399",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.13.12",
+        "directory_name": "feynman-i.13.12",
+        "global_index": 399
+      },
+      {
+        "dataset_id": "g0459",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-ii.34.2",
+        "directory_name": "feynman-ii.34.2",
+        "global_index": 459
+      },
+      {
+        "dataset_id": "g0461",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-ii.34.2a",
+        "directory_name": "feynman-ii.34.2a",
+        "global_index": 461
+      },
+      {
+        "dataset_id": "g0496",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_4",
+        "directory_name": "feynman_II_15_4",
+        "global_index": 496
+      },
+      {
+        "dataset_id": "g0505",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_34_29a",
+        "directory_name": "feynman_II_34_29a",
+        "global_index": 505
+      },
+      {
+        "dataset_id": "g0524",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_12_11",
+        "directory_name": "feynman_I_12_11",
+        "global_index": 524
+      },
+      {
+        "dataset_id": "g0542",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_27_6",
+        "directory_name": "feynman_I_27_6",
+        "global_index": 542
+      },
+      {
+        "dataset_id": "g0596",
+        "dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_glider1",
+        "directory_name": "strogatz_glider1",
+        "global_index": 596
+      },
+      {
+        "dataset_id": "g0602",
+        "dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_shearflow1",
+        "directory_name": "strogatz_shearflow1",
+        "global_index": 602
+      },
+      {
+        "dataset_id": "g0604",
+        "dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_vdp1",
+        "directory_name": "strogatz_vdp1",
+        "global_index": 604
+      },
+      {
+        "dataset_id": "g0613",
+        "dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_planck",
+        "directory_name": "first_principles_planck",
+        "global_index": 613
+      },
+      {
+        "dataset_id": "g0622",
+        "dataset_rel": "sim-datasets-data/keijzer/Keijzer-13",
+        "directory_name": "Keijzer-13",
+        "global_index": 622
+      },
+      {
+        "dataset_id": "g0636",
+        "dataset_rel": "sim-datasets-data/nguyen/Nguyen-12",
+        "directory_name": "Nguyen-12",
+        "global_index": 636
+      },
+      {
+        "dataset_id": "g0649",
+        "dataset_rel": "sim-datasets-data/korns/Korns-2",
+        "directory_name": "Korns-2",
+        "global_index": 649
+      },
+      {
+        "dataset_id": "g0658",
+        "dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-2",
+        "directory_name": "Vladislavleva-2",
+        "global_index": 658
+      },
+      {
+        "dataset_id": "g0025",
+        "dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK0",
+        "directory_name": "CRK0",
+        "global_index": 25
+      },
+      {
+        "dataset_id": "g0111",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.3_4_1",
+        "directory_name": "II.11.3_4_1",
+        "global_index": 111
+      },
+      {
+        "dataset_id": "g0236",
+        "dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO5",
+        "directory_name": "PO5",
+        "global_index": 236
+      },
+      {
+        "dataset_id": "g0358",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+        "directory_name": "feynman-bonus.20",
+        "global_index": 358
+      },
+      {
+        "dataset_id": "g0396",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.11.19",
+        "directory_name": "feynman-i.11.19",
+        "global_index": 396
+      },
+      {
+        "dataset_id": "g0438",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.12.2",
+        "directory_name": "feynman-i.12.2",
+        "global_index": 438
+      },
+      {
+        "dataset_id": "g0557",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_39_22",
+        "directory_name": "feynman_I_39_22",
+        "global_index": 557
+      },
+      {
+        "dataset_id": "g0601",
+        "dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_predprey2",
+        "directory_name": "strogatz_predprey2",
+        "global_index": 601
+      },
+      {
+        "dataset_id": "g0620",
+        "dataset_rel": "sim-datasets-data/keijzer/Keijzer-11",
+        "directory_name": "Keijzer-11",
+        "global_index": 620
+      },
+      {
+        "dataset_id": "g0651",
+        "dataset_rel": "sim-datasets-data/korns/Korns-4",
+        "directory_name": "Korns-4",
+        "global_index": 651
+      },
+      {
+        "dataset_id": "g0028",
+        "dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK11",
+        "directory_name": "CRK11",
+        "global_index": 28
+      },
+      {
+        "dataset_id": "g0067",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_5_0",
+        "directory_name": "I.11.19_5_0",
+        "global_index": 67
+      },
+      {
+        "dataset_id": "g0209",
+        "dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO2",
+        "directory_name": "PO2",
+        "global_index": 209
+      },
+      {
+        "dataset_id": "g0381",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-ii.11.27",
+        "directory_name": "feynman-ii.11.27",
+        "global_index": 381
+      },
+      {
+        "dataset_id": "g0440",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.13.4",
+        "directory_name": "feynman-i.13.4",
+        "global_index": 440
+      },
+      {
+        "dataset_id": "g0448",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-i.34.27",
+        "directory_name": "feynman-i.34.27",
+        "global_index": 448
+      },
+      {
+        "dataset_id": "g0488",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_10_9",
+        "directory_name": "feynman_II_10_9",
+        "global_index": 488
+      },
+      {
+        "dataset_id": "g0595",
+        "dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag2",
+        "directory_name": "strogatz_barmag2",
+        "global_index": 595
+      },
+      {
+        "dataset_id": "g0610",
+        "dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_kepler",
+        "directory_name": "first_principles_kepler",
+        "global_index": 610
+      },
+      {
+        "dataset_id": "g0635",
+        "dataset_rel": "sim-datasets-data/nguyen/Nguyen-11",
+        "directory_name": "Nguyen-11",
+        "global_index": 635
+      },
+      {
+        "dataset_id": "g0043",
+        "dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK25",
+        "directory_name": "CRK25",
+        "global_index": 43
+      },
+      {
+        "dataset_id": "g0104",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/II.11.27_0_0",
+        "directory_name": "II.11.27_0_0",
+        "global_index": 104
+      },
+      {
+        "dataset_id": "g0179",
+        "dataset_rel": "sim-datasets-data/llm-srbench/matsci/MatSci16",
+        "directory_name": "MatSci16",
+        "global_index": 179
+      },
+      {
+        "dataset_id": "g0208",
+        "dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO19",
+        "directory_name": "PO19",
+        "global_index": 208
+      },
+      {
+        "dataset_id": "g0275",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-i.14.4",
+        "directory_name": "feynman-i.14.4",
+        "global_index": 275
+      },
+      {
+        "dataset_id": "g0405",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.29.4",
+        "directory_name": "feynman-i.29.4",
+        "global_index": 405
+      },
+      {
+        "dataset_id": "g0467",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium_dummy/feynman-iii.15.12",
+        "directory_name": "feynman-iii.15.12",
+        "global_index": 467
+      },
+      {
+        "dataset_id": "g0552",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_I_34_8",
+        "directory_name": "feynman_I_34_8",
+        "global_index": 552
+      },
+      {
+        "dataset_id": "g0594",
+        "dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_barmag1",
+        "directory_name": "strogatz_barmag1",
+        "global_index": 594
+      },
+      {
+        "dataset_id": "g0660",
+        "dataset_rel": "sim-datasets-data/vladislavleva/Vladislavleva-4",
+        "directory_name": "Vladislavleva-4",
+        "global_index": 660
+      },
+      {
+        "dataset_id": "g0063",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_1_0",
+        "directory_name": "I.11.19_1_0",
+        "global_index": 63
+      },
+      {
+        "dataset_id": "g0092",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.43.43_0_0",
+        "directory_name": "I.43.43_0_0",
+        "global_index": 92
+      },
+      {
+        "dataset_id": "g0212",
+        "dataset_rel": "sim-datasets-data/llm-srbench/phys_osc/PO22",
+        "directory_name": "PO22",
+        "global_index": 212
+      },
+      {
+        "dataset_id": "g0292",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy_dummy/feynman-ii.34.11",
+        "directory_name": "feynman-ii.34.11",
+        "global_index": 292
+      },
+      {
+        "dataset_id": "g0346",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-iii.21.20",
+        "directory_name": "feynman-iii.21.20",
+        "global_index": 346
+      },
+      {
+        "dataset_id": "g0406",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_medium/feynman-i.32.5",
+        "directory_name": "feynman-i.32.5",
+        "global_index": 406
+      },
+      {
+        "dataset_id": "g0497",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_II_15_5",
+        "directory_name": "feynman_II_15_5",
+        "global_index": 497
+      },
+      {
+        "dataset_id": "g0583",
+        "dataset_rel": "sim-datasets-data/srbench1.0/feynman/feynman_test_2",
+        "directory_name": "feynman_test_2",
+        "global_index": 583
+      },
+      {
+        "dataset_id": "g0621",
+        "dataset_rel": "sim-datasets-data/keijzer/Keijzer-12",
+        "directory_name": "Keijzer-12",
+        "global_index": 621
+      },
+      {
+        "dataset_id": "g0625",
+        "dataset_rel": "sim-datasets-data/keijzer/Keijzer-2",
+        "directory_name": "Keijzer-2",
+        "global_index": 625
+      },
+      {
+        "dataset_id": "g0020",
+        "dataset_rel": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG5",
+        "directory_name": "BPG5",
+        "global_index": 20
+      },
+      {
+        "dataset_id": "g0035",
+        "dataset_rel": "sim-datasets-data/llm-srbench/chem_react/CRK18",
+        "directory_name": "CRK18",
+        "global_index": 35
+      },
+      {
+        "dataset_id": "g0064",
+        "dataset_rel": "sim-datasets-data/llm-srbench/lsrtransform/I.11.19_2_0",
+        "directory_name": "I.11.19_2_0",
+        "global_index": 64
+      },
+      {
+        "dataset_id": "g0242",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-i.12.4",
+        "directory_name": "feynman-i.12.4",
+        "global_index": 242
+      },
+      {
+        "dataset_id": "g0263",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_easy/feynman-ii.34.29b",
+        "directory_name": "feynman-ii.34.29b",
+        "global_index": 263
+      },
+      {
+        "dataset_id": "g0303",
+        "dataset_rel": "sim-datasets-data/srsd/srsd-feynman_hard/feynman-bonus.11",
+        "directory_name": "feynman-bonus.11",
+        "global_index": 303
+      },
+      {
+        "dataset_id": "g0599",
+        "dataset_rel": "sim-datasets-data/srbench1.0/strogatz/strogatz_lv2",
+        "directory_name": "strogatz_lv2",
+        "global_index": 599
+      },
+      {
+        "dataset_id": "g0606",
+        "dataset_rel": "sim-datasets-data/srbench2025/firstprinciples/first_principles_absorption",
+        "directory_name": "first_principles_absorption",
+        "global_index": 606
+      },
+      {
+        "dataset_id": "g0644",
+        "dataset_rel": "sim-datasets-data/nguyen/Nguyen-9",
+        "directory_name": "Nguyen-9",
+        "global_index": 644
+      },
+      {
+        "dataset_id": "g0648",
+        "dataset_rel": "sim-datasets-data/korns/Korns-12",
+        "directory_name": "Korns-12",
+        "global_index": 648
+      }
+    ]
+  },
+  "algorithms": {
+    "drsr": {
+      "env": "sim_llm",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "niterations": 100000,
+        "samples_per_iteration": 4,
+        "max_params": 10,
+        "inject_prompt_semantics": true,
+        "canonical_prompt_variables": true,
+        "persist_all_samples": false
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/drsr__clean.json",
+        "sha256": "1b40f4f453c260f97f68d1b82bdc2fb50470d2d56210cb6e83d1fcf86d0252e0"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        },
+        "llm_config_path": {
+          "reference_value": "/home/zhangziwen/workplace/scientific-intelligent-modelling/benchmark-runs/drsr3h/drsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260618-162355/llm_configs/benchmark_llm.config",
+          "binding": "runtime.llm_config_path"
+        },
+        "llm_model_assignment": {
+          "reference_value": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+          "binding": "training_llm.parameters.model"
+        }
+      }
+    },
+    "dso": {
+      "env": "sim_dso",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "task": {
+          "task_type": "regression",
+          "function_set": [
+            "add",
+            "sub",
+            "mul",
+            "div",
+            "sin",
+            "cos",
+            "exp",
+            "log"
+          ],
+          "metric": "inv_nrmse",
+          "metric_params": [
+            1.0
+          ],
+          "threshold": 1e-12,
+          "protected": false
+        },
+        "training": {
+          "n_samples": 2000000,
+          "batch_size": 1000,
+          "epsilon": 0.05,
+          "n_cores_batch": 4
+        },
+        "policy_optimizer": {
+          "learning_rate": 0.0005,
+          "entropy_weight": 0.03,
+          "entropy_gamma": 0.7
+        },
+        "prior": {
+          "length": {
+            "min_": 4,
+            "max_": 64,
+            "on": true
+          },
+          "repeat": {
+            "tokens": "const",
+            "min_": null,
+            "max_": 3,
+            "on": true
+          },
+          "inverse": {
+            "on": true
+          },
+          "trig": {
+            "on": true
+          },
+          "const": {
+            "on": true
+          },
+          "no_inputs": {
+            "on": true
+          },
+          "uniform_arity": {
+            "on": true
+          },
+          "soft_length": {
+            "loc": 10,
+            "scale": 5,
+            "on": true
+          },
+          "domain_range": {
+            "on": false
+          }
+        }
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/dso__clean.json",
+        "sha256": "7ee550419bc63a08d05bfd463a6f3a0d02af7a6d75933cb9d352a0813fdc68fb"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "e2esr": {
+      "env": "sim_e2esr",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "max_input_points": 200,
+        "max_number_bags": 10,
+        "stop_refinement_after": 1,
+        "n_trees_to_refine": 10,
+        "rescale": true,
+        "force_cpu": true,
+        "torch_num_threads": 1
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/e2esr__clean.json",
+        "sha256": "51a875d606fb199cb7b22fb70d445c3987cf9767b21da8f8369768f4a9f394b9"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "fepysr": {
+      "env": "sim_fepysr",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "num_workers": 4,
+        "num_experiments": 8,
+        "fmn_epochs": 30,
+        "fmn_batch_size": 64,
+        "fmn_lr": 0.1,
+        "fea_num": 10,
+        "pysr_num": 6,
+        "niterations": 1000000,
+        "population_size": 40,
+        "populations": 4,
+        "ncycles_per_iteration": 100,
+        "maxsize": 20,
+        "maxdepth": 8,
+        "binary_operators": [
+          "+",
+          "-",
+          "*",
+          "/"
+        ],
+        "unary_operators": [
+          "sin",
+          "cos",
+          "exp",
+          "log"
+        ]
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/fepysr__clean.json",
+        "sha256": "d40c5907ba9ca060b0998feaae680636cd19d937e868bcd1ae2dffe00041caf9"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "gplearn": {
+      "env": "sim_base",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "population_size": 1000,
+        "generations": 1000000,
+        "tournament_size": 20,
+        "stopping_criteria": 0.0,
+        "const_range": [
+          -1.0,
+          1.0
+        ],
+        "init_depth": [
+          2,
+          6
+        ],
+        "init_method": "half and half",
+        "function_set": "add,sub,mul,div,sqrt,log,sin,cos",
+        "metric": "mean absolute error",
+        "parsimony_coefficient": 0.001,
+        "p_crossover": 0.9,
+        "p_subtree_mutation": 0.01,
+        "p_hoist_mutation": 0.01,
+        "p_point_mutation": 0.01,
+        "p_point_replace": 0.05,
+        "max_samples": 1.0,
+        "n_jobs": 1,
+        "low_memory": true,
+        "warm_start": false,
+        "verbose": 0
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/gplearn__clean.json",
+        "sha256": "ceca30952a0386ad927969a109d291fd3bd2ded5144b39c210f403c842e5a36d"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "iMCTS": {
+      "env": "sim_iMCTS",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "ops": [
+          "+",
+          "-",
+          "*",
+          "/",
+          "sin",
+          "cos",
+          "exp",
+          "log",
+          "R"
+        ],
+        "max_depth": 6,
+        "K": 500,
+        "c": 4.0,
+        "gamma": 0.5,
+        "gp_rate": 0.2,
+        "mutation_rate": 0.1,
+        "exploration_rate": 0.2,
+        "max_single_arity_ops": 999,
+        "max_constants": 10,
+        "max_expressions": 2000000,
+        "verbose": false,
+        "optimization_method": "LN_NELDERMEAD"
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/imcts__clean.json",
+        "sha256": "d09bc8832735b9592e2403704740f352759a25437fd402e0759a1a074236832f"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "jaxsr": {
+      "env": "sim_jaxsr",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "max_terms": 5,
+        "strategy": "greedy_forward",
+        "information_criterion": "bic",
+        "cv_folds": 5,
+        "regularization": null,
+        "max_polynomial_degree": 3,
+        "max_interaction_order": 2,
+        "include_constant": true,
+        "include_linear": true,
+        "include_polynomials": true,
+        "include_interactions": true,
+        "include_transcendental": false,
+        "include_ratios": false
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/jaxsr__clean.json",
+        "sha256": "6fb6a8b740368fa81305cc77e9bfd689ef52d1ddc1401bb68a28cd029a7dfec3"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "llmsr": {
+      "env": "sim_llm",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "niterations": 100000,
+        "samples_per_iteration": 4,
+        "max_params": 10,
+        "inject_prompt_semantics": true,
+        "canonical_prompt_variables": true,
+        "persist_all_samples": false
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/llmsr__clean.json",
+        "sha256": "001379d219f1c198ab5b796c79919a625c7d2f6254bec6d91ad5c9d0282df45b"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        },
+        "llm_config_path": {
+          "reference_value": "/home/zhangziwen/workplace/scientific-intelligent-modelling/benchmark-runs/llmsr3h/llmsr3h_ssr50_seed520-522_noise0-001-005_turbo_20260614-220442/llm_configs/benchmark_llm.config",
+          "binding": "runtime.llm_config_path"
+        }
+      }
+    },
+    "pyoperon": {
+      "env": "sim_base",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "population_size": 500,
+        "pool_size": 500,
+        "max_length": 50,
+        "max_depth": 10,
+        "tournament_size": 5,
+        "allowed_symbols": "add,sub,mul,div,aq,exp,log,sin,cos,tanh,sqrt,square,constant,variable",
+        "offspring_generator": "basic",
+        "reinserter": "keep-best",
+        "optimizer": "lm",
+        "local_search_probability": 1.0,
+        "max_evaluations": 144000000,
+        "n_threads": 4
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/pyoperon__clean.json",
+        "sha256": "7f49150588589c42cf301558b11c9c94356609def9a87f3a7d8abff1a06b8252"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "pysr": {
+      "env": "sim_base",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "niterations": 10000000,
+        "population_size": 64,
+        "populations": 8,
+        "ncycles_per_iteration": 500,
+        "maxsize": 30,
+        "maxdepth": 10,
+        "parsimony": 0.001,
+        "binary_operators": [
+          "+",
+          "-",
+          "*",
+          "/"
+        ],
+        "unary_operators": [
+          "square",
+          "cube",
+          "exp",
+          "log",
+          "sin",
+          "cos"
+        ],
+        "constraints": {
+          "/": [
+            -1,
+            9
+          ],
+          "square": 9,
+          "cube": 9,
+          "exp": 7,
+          "log": 7,
+          "sin": 9,
+          "cos": 9
+        },
+        "nested_constraints": {
+          "exp": {
+            "exp": 0,
+            "log": 1
+          },
+          "log": {
+            "exp": 0,
+            "log": 0
+          },
+          "square": {
+            "square": 1,
+            "cube": 1,
+            "exp": 0,
+            "log": 0
+          },
+          "cube": {
+            "square": 1,
+            "cube": 1,
+            "exp": 0,
+            "log": 0
+          }
+        },
+        "complexity_of_operators": {
+          "/": 2,
+          "square": 2,
+          "cube": 3,
+          "sin": 2,
+          "cos": 2,
+          "exp": 3,
+          "log": 3
+        },
+        "complexity_of_constants": 2,
+        "complexity_of_variables": 1,
+        "precision": 32,
+        "deterministic": true,
+        "parallelism": "serial",
+        "model_selection": "best",
+        "progress": true,
+        "verbosity": 1,
+        "procs": 1
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/pysr__clean.json",
+        "sha256": "3fe9c7e1c0a034696d93422ed424606a280da905136521a0593bc7e523769167"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "QLattice": {
+      "env": "sim_qLattice",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "n_epochs": 100000,
+        "kind": "regression",
+        "criterion": "bic",
+        "signif": 4,
+        "threads": 4
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/qlattice__clean.json",
+        "sha256": "314e5b451834fc18826b1e341d9249e3f5e3792ac7d791b478b9940dfa2069ff"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "ragsr": {
+      "env": "sim_ragsr",
+      "params": {
+        "benchmark_variant": "ragsr_evolutionary_forest_official_defaults",
+        "component_notes": "RAG-SR / EvolutionaryForest 口径；wrapper 对齐官方 Target encoding 默认值，并在 benchmark 中启用分钟级 best-so-far 快照恢复。",
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "cpu_num_threads": 4,
+        "n_gen": 100000,
+        "n_pop": 200,
+        "select": "AutomaticLexicase",
+        "cross_pb": 0.9,
+        "mutation_pb": 0.1,
+        "max_height": 10,
+        "ensemble_size": 1,
+        "initial_tree_size": "0-6",
+        "gene_num": 10,
+        "basic_primitives": "Add,Sub,Mul,AQ,Sqrt,AbsLog,Abs,Square,RSin,RCos,Max,Min,Neg",
+        "base_learner": "RidgeCV",
+        "ridge_alphas": "Auto",
+        "verbose": false,
+        "boost_size": null,
+        "normalize": "MinMax",
+        "external_archive": 1,
+        "max_trees": 10000,
+        "library_clustering_mode": "Worst",
+        "pool_addition_mode": "Smallest~Auto",
+        "pool_hard_instance_interval": 10,
+        "random_order_replacement": true,
+        "pool_based_addition": true,
+        "semantics_length": 50,
+        "change_semantic_after_deletion": true,
+        "include_subtree_to_lib": true,
+        "library_updating_mode": "Recent",
+        "categorical_encoding": "Target",
+        "root_crossover": true,
+        "scaling_before_replacement": false,
+        "score_func": "R2",
+        "number_of_invokes": 0,
+        "mutation_scheme": "uniform-plus",
+        "environmental_selection": null,
+        "record_training_data": false,
+        "complementary_replacement": false,
+        "validation_size": 0,
+        "constant_type": "Float",
+        "full_scaling_after_replacement": false,
+        "neural_pool": 0.1,
+        "neural_pool_num_of_functions": 5,
+        "weight_of_contrastive_learning": 0.05,
+        "neural_pool_dropout": 0.1,
+        "neural_pool_transformer_layer": 1,
+        "neural_pool_hidden_size": 64,
+        "neural_pool_mlp_layers": 3,
+        "selective_retrain": true,
+        "negative_data_augmentation": true,
+        "negative_local_search": false,
+        "time_limit": null
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/ragsr__clean.json",
+        "sha256": "5e1062ade963fc7eb37ca4e2eb0654a74ee8f54846c1a9523b1acb96be717a20"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "symbolfit": {
+      "env": "sim_symbolfit",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "niterations": 1000000,
+        "maxsize": 25,
+        "model_selection": "accuracy",
+        "binary_operators": [
+          "+",
+          "*",
+          "/",
+          "-"
+        ],
+        "unary_operators": [
+          "sin",
+          "cos",
+          "exp",
+          "log"
+        ],
+        "max_complexity": 25,
+        "input_rescale": true,
+        "scale_y_by": "mean",
+        "max_stderr": 20,
+        "fit_y_unc": false,
+        "y_uncertainty": 1.0,
+        "procs": 1,
+        "parallelism": "serial",
+        "deterministic": true
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/symbolfit__clean.json",
+        "sha256": "14257a17d05988ce366d0bc5ba8fec361a00a1bd823e2e80a221886394b4e642"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "tpsr": {
+      "env": "sim_tpsr",
+      "params": {
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "backbone_model": "e2e",
+        "max_input_points": 200,
+        "max_number_bags": 10,
+        "stop_refinement_after": 1,
+        "n_trees_to_refine": 10,
+        "rescale": true,
+        "beam_size": 10,
+        "beam_type": "sampling",
+        "no_seq_cache": false,
+        "no_prefix_cache": true,
+        "width": 3,
+        "num_beams": 1,
+        "rollout": 3,
+        "horizon": 200,
+        "lam": 0.1,
+        "train_value": false,
+        "reward_sample_limit": 2048,
+        "cpu": true,
+        "cpu_num_threads": 4,
+        "cpu_interop_threads": 1
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/tpsr__clean.json",
+        "sha256": "cff110e4e85de0025cc7c773a52db156aeeba5ee44003bcf10d727ce246485e3"
+      },
+      "runtime_bindings": {
+        "seed": {
+          "reference_value": 23,
+          "binding": "run.seed"
+        },
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    },
+    "udsr": {
+      "env": "sim_dso",
+      "params": {
+        "benchmark_variant": "udsr_trunk_dso_poly_gp_meld",
+        "component_flags": {
+          "aif": false,
+          "dsr": true,
+          "lspt": false,
+          "gp_meld": true,
+          "linear_poly": true
+        },
+        "component_notes": "保持 tool_name=udsr 与 wrapper_dir=udsr_wrapper；当前算法口径固定为 DSO controller + LINEAR/poly token + GP-meld，不标称 full uDSR。",
+        "timeout_in_seconds": 10800,
+        "progress_snapshot_interval_seconds": 60,
+        "task": {
+          "task_type": "regression",
+          "function_set": [
+            "add",
+            "sub",
+            "mul",
+            "div",
+            "sin",
+            "cos",
+            "exp",
+            "log",
+            "sqrt",
+            1.0,
+            "const",
+            "poly"
+          ],
+          "metric": "inv_nrmse",
+          "metric_params": [
+            1.0
+          ],
+          "threshold": 1e-12,
+          "protected": false,
+          "poly_optimizer_params": {
+            "degree": 3,
+            "coef_tol": 1e-06,
+            "regressor": "dso_least_squares",
+            "regressor_params": {
+              "cutoff_p_value": 1.0,
+              "n_max_terms": null,
+              "coef_tol": 1e-06
+            }
+          }
+        },
+        "training": {
+          "n_samples": 2000000,
+          "batch_size": 1000,
+          "epsilon": 0.05,
+          "baseline": "R_e",
+          "n_cores_batch": 1
+        },
+        "policy_optimizer": {
+          "policy_optimizer_type": "pg",
+          "learning_rate": 0.0005,
+          "entropy_weight": 0.03,
+          "entropy_gamma": 0.7
+        },
+        "gp_meld": {
+          "run_gp_meld": true,
+          "population_size": 100,
+          "generations": 20,
+          "crossover_operator": "cxOnePoint",
+          "p_crossover": 0.5,
+          "mutation_operator": "multi_mutate",
+          "p_mutate": 0.5,
+          "tournament_size": 5,
+          "train_n": 50,
+          "mutate_tree_max": 3,
+          "verbose": false,
+          "parallel_eval": false
+        },
+        "prior": {
+          "length": {
+            "min_": 4,
+            "max_": 100,
+            "on": true
+          },
+          "repeat": {
+            "tokens": "const",
+            "min_": null,
+            "max_": 3,
+            "on": true
+          },
+          "inverse": {
+            "on": true
+          },
+          "trig": {
+            "on": true
+          },
+          "const": {
+            "on": true
+          },
+          "no_inputs": {
+            "on": true
+          },
+          "uniform_arity": {
+            "on": true
+          },
+          "soft_length": {
+            "loc": 10,
+            "scale": 5,
+            "on": true
+          },
+          "domain_range": {
+            "on": true
+          }
+        }
+      },
+      "reference": {
+        "path": "AAAI_experiments/stage6_multiCore60-70-80/smoke_preflight_20260918/formal_clean_params/udsr__clean.json",
+        "sha256": "6d6bec4ddc57746ca5c1102af68e36835b644c4dbb45c100c72167023060190f"
+      },
+      "runtime_bindings": {
+        "train_label_noise_sigma": {
+          "reference_value": 0.0,
+          "binding": "condition.sigma"
+        },
+        "train_label_noise_enabled": {
+          "reference_value": false,
+          "binding": "condition.enabled"
+        }
+      }
+    }
+  },
+  "training_llm": {
+    "algorithms": [
+      "llmsr",
+      "drsr"
+    ],
+    "parameters": {
+      "model": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "temperature": 0.6,
+      "max_tokens": 1024,
+      "base_url": "https://api.deepinfra.com/v1/openai"
+    },
+    "reference_public_parameters_sha256": "0b85d50af7ffd2ff91448e6b915d5d772f7a461e662faf15c072035dd5ec98e3",
+    "reference_verification": "Stage6 llm_config_path files checked on iaaccn22; credentials excluded",
+    "credentials": "Runtime only; never embedded in the frozen configuration",
+    "runtime_config_requirement": "Resolved config must match parameters exactly; only credentials are supplied separately"
+  },
+  "output": {
+    "root": "A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments",
+    "layout": "{algorithm}/{dataset}/{condition}/{seed}",
+    "dataset_field": "dataset_selection.datasets[].directory_name",
+    "reuse_historical_results": false
+  },
+  "code_reference": {
+    "git_commit": "6f7a2977a3622bf40daa0ef3aecdbc5d89887a47",
+    "files": [
+      {
+        "path": "scientific_intelligent_modelling/benchmarks/runner.py",
+        "sha256": "16cb510d91ecccae11b0f53bbcac12682c34b75778045c65db88720e87090c86"
+      },
+      {
+        "path": "scientific_intelligent_modelling/benchmarks/normalizers.py",
+        "sha256": "45f8a11d9bb05ada671ecda84f644a2d0c092d6cc0da29604c7eb70a4fff7cf7"
+      },
+      {
+        "path": "scientific_intelligent_modelling/benchmarks/result_artifacts.py",
+        "sha256": "c850c9310d7454b79d9421457122696647f02cc31b74f7306070d86ad027ca76"
+      },
+      {
+        "path": "scientific_intelligent_modelling/benchmarks/artifact_schema.py",
+        "sha256": "1f2f0ecc88eaac6f74f28a4fb84d7141db4637e5ef2b50522558e727fe0abb1e"
+      },
+      {
+        "path": "scientific_intelligent_modelling/srkit/regressor.py",
+        "sha256": "d90293b3f323a45e6729f1eca8e0c3c117a7ac42b7e95ddae80ea310ef7b1c2d"
+      },
+      {
+        "path": "scientific_intelligent_modelling/srkit/subprocess_runner.py",
+        "sha256": "0d32dd32b27ab7891d4bfec854e6b6db947b37a461448e433b9127c8a7121eaf"
+      },
+      {
+        "path": "scientific_intelligent_modelling/srkit/llm.py",
+        "sha256": "4871640ee268e7419efb51e76b77f699fe467c2dc8bc5e58b58c49307f6c9f77"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/drsr_wrapper/wrapper.py",
+        "sha256": "03044008371838cc361e116baaf817cc49789a8d3721c040942184329adbe1f3"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/dso_wrapper/wrapper.py",
+        "sha256": "3257343712dca91af0dc56d611d979933edc291a2de2dac868eae106ddedb5b5"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/e2esr_wrapper/wrapper.py",
+        "sha256": "949e3c2edcab8b15c1fe76bc4fa15cb9a828f883995679f68d2f975bd47829b4"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/fepysr_wrapper/wrapper.py",
+        "sha256": "62177c72404de8ddab9f08c1d576a67ab8ad28fd53349099e5e5696d38cceee3"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/gplearn_wrapper/wrapper.py",
+        "sha256": "6aaf17c376117117e6fbede91a040dc0b7929146f2c874587cd64146c84ad15e"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/iMCTS_wrapper/wrapper.py",
+        "sha256": "7196a806dae55a6c6b2fd1f38cfa7561d2ddb24febd23773ba6b56ed6a93d374"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/jaxsr_wrapper/wrapper.py",
+        "sha256": "7675f70f8cbef6ba27de708f99c02b78c531eb1577e5bb3513c2504bb748e6bc"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/llmsr_wrapper/wrapper.py",
+        "sha256": "3f2506107d6d08a12627633d8c8f9d5d9086c8b2ae01e1384b6aeebae14f0bc4"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/pyoperon_wrapper/wrapper.py",
+        "sha256": "445b432f43493d5145d1d18765c91f0e77ee7f40d86a513969135dd231073a8f"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/pysr_wrapper/wrapper.py",
+        "sha256": "63664181d090a1cb920099473dcc442f743c4f8650568eae3b100d4e85520c29"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/QLattice_wrapper/wrapper.py",
+        "sha256": "ab56a4bc4b96149cf866491a1001cd3a5c0fbe9f0c1108f7428518bab1f764bf"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/ragsr_wrapper/wrapper.py",
+        "sha256": "1ce1aee505c45b31c1976f97d7b3829f98504b5b99e56cdac3334bbf67cd5b5f"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/symbolfit_wrapper/wrapper.py",
+        "sha256": "fbd7d6a0d4b78d73af7505326445fbe69f5683f4a8bbef7a246ff364b190698b"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/tpsr_wrapper/wrapper.py",
+        "sha256": "cab007b1c3f12b96f107f7563e21a40220fb9ce7e3a55883190a7f05033eef13"
+      },
+      {
+        "path": "scientific_intelligent_modelling/algorithms/udsr_wrapper/wrapper.py",
+        "sha256": "5b701103a804b5349ee5687f3f140b2c9db25ac83802b37a923dc8209e0de8a7"
+      }
+    ],
+    "toolbox": {
+      "path": "scientific_intelligent_modelling/config/toolbox_config.json",
+      "sha256": "638c0a1d606683e6aa540c2ba9411d1e758766e6ad83dfbce4e319bda73f91d0"
+    }
+  },
+  "postprocessing": {
+    "required": true,
+    "model": "claude-opus-5[1m]",
+    "effort": "xhigh",
+    "contract": {
+      "path": "AAAI_experiments/stage5_metric_calculation_0831/pipeline/claude_contract.py",
+      "sha256": "114d094eb97048dfdc924f083367b4dbd5a7a940afeb7d6926e24977179ad558"
+    },
+    "metrics_definition": {
+      "path": "AAAI_experiments/stage5_metric_calculation_0831/SymbolicArena_SixAxis_Revised.md",
+      "sha256": "eb463a4d7819d3d835c153e1a8a4bd7f8fa5a54d4ede652be85d21786c9692ab"
+    },
+    "axes": [
+      "ID",
+      "OOD",
+      "SYM",
+      "MIN",
+      "EFF",
+      "STAB"
+    ],
+    "minute_level_required": true,
+    "llm_judgments": "independent_stateless_single_turn"
+  },
+  "dispatch_requirements": {
+    "verify_config_and_code_hashes": true,
+    "freeze_input_file_hashes_before_dispatch": true,
+    "bind_seed_condition_and_machine_paths_explicitly": true,
+    "preserve_algorithm_thread_parameters": true,
+    "paid_llm_cost_and_retry_limits_require_separate_confirmation": true,
+    "experiments_started": false
+  },
+  "content_sha256": "e03430efd758dd26c2be62ac85807c92dec31f1e07c4259de9ed00cccbf7949a"
+}

@@ -2,6 +2,13 @@
 
 ## 当前任务
 
+- 编号：FREEZE-001；任务：参考AAAI Stage6冻结新Core80统一实验配置；状态：已完成，尚未启动实验。
+- 当前采用方案：[experiment_config.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/experiment_config.json)为统一入口；保留15份 `formal_clean_params` 的算法参数与线程数，公共种子520/521/522、三条件0/0.01/0.05、每项10800秒、每60秒快照，共10800项。Core80名单固定80个唯一完整路径；噪声种子按固定数据集身份计算，运行时显式传入，避免主机路径影响噪声。
+- 验证：15算法源JSON与最新wrapper/runner哈希已绑定；LLM正式配置的非敏感字段已在22核验（DeepInfra Llama3.1-8B Turbo，temperature0.6、max_tokens1024）。主机路径及密钥运行时绑定；TPSR模板seed23改由统一任务种子传入，符合当前runner行为。配置哈希 `e03430efd758dd26c2be62ac85807c92dec31f1e07c4259de9ed00cccbf7949a`，同目录 `freeze_experiment_config.py --check` 通过。
+- 下一步：调度前固定实际输入文件哈希、解析运行时路径与凭据、确认付费请求预算；参数冻结不表示实验或Opus请求已启动。`2、experiments`仍无文件。
+
+## 目录清理
+
 - 编号：CLEAR-001；任务：清空 `stage4_core80_15algs_3seeds_3h/2、experiments` 文件并保留原目录结构；状态：已完成。
 - 已确认：删除前161996个文件、10616个目录、约2.8 GiB；删除后文件数为0，目录数仍为10616，目录列表哈希保持 `1db4a0da500ed5908758c05d667e7739aca2fd4dc7d0a579baf6e65a40911722`。没有运行中的相关实验进程。
 - 当前采用方案：清理后的目录保留11个算法及数据集、条件、seed、`corrected`、`progress`等目录，等待新的Core80正式实验写入；本次未处理 `1、build_core30_80` 或外部来源资料。
@@ -112,3 +119,4 @@
 - ENV-003 已完成；过程目录原位归档，保留运行脚本、输入、配置和结果。
 - FIX-004 已完成；过程目录原位归档，保留部署与重跑脚本、配置来源和结果。
 - CLEAR-001 已完成；过程目录无新增文件，删除范围与目录结构核验记录保留在本状态文件。
+- FREEZE-001 已完成；核验过程原位归档，正式配置及生成/校验脚本保留在stage4根目录。
