@@ -2,6 +2,10 @@
 
 ## 当前任务
 
+- METHOD-002（2026-09-24，已完成候选计算）：按用户要求重构选择规则，当前候选方法直接最小化四probe分别标准化response的一维W1均值，保留通用family/subgroup、资格及两类去重约束。Coverage和Info作为诊断项。入口 [select_response_distribution.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_response_distribution.py)，[方法与结果](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/response_distribution_method.md)，[候选名单](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/response_distribution_core50/core50.csv)。
+- METHOD-002实测：180秒预算下Core50的四probe构造内MAE=0.013024427640043565；W1均值0.02783574193218572，求解下界0.02568934735860432，相对gap约7.71%，尚未证明全局最优。Coverage=0.961111，MeanInfo=0.215744，信息量低于用户固定50的0.518694。与暂存旧Core80重叠10，新增40；与用户50重叠7。约束、整数性、线性模型和独立W1计算通过，另由原始记录独立复算MAE一致；证据 `.agent/work/METHOD-001/response_distribution_verification.json`。模型未使用历史成员标签或MAE目标；该MAE用于方法开发，LOO与历史原生预测回放待做，formal_ready=false。
+- METHOD-002保留的比较：仅替换Balance并保留Coverage/Info几何目标的方案，MAE=0.485717，记录位于preflight/response_balance_core50/。当前两个方案的脚本、配置、源码及输入哈希均保留；未启动训练或API。
+
 - METHOD-001（2026-09-24，已确认调研）：用户固定50与SymbolicArenaCode/check/core50_selection/outputs/core50.csv为50/50一致；配套core50_selector_recovered.py使用历史成员标签训练ExtraTrees，属于名单兼容复现，不能据此确认原始文字方案独立生成了该名单。未修改公开仓库或选集程序。
 - 两份50名单在暂存Core80方法的全部约束下均可行。按该方法重算，用户50的Coverage/Info/Balance为0.966667/0.518694/0.870042，暂存方法的Core50为0.994444/0.577630/0.904687；当前评分MAE分别0.151155/1.017740。后者三个目标分量均更高，因此改变这些分量的正权重无法使用户50在这两份名单间得分更高。
 - 候选调整仅作双名单计算：Balance使用exp(-四probe分别标准化response的一维W1均值)，保留Coverage和Info。两个名单的响应分布距离分别0.256466/0.422651，对应几何目标0.729349/0.722035。尚未用该目标重新选集，不能承诺MAE改善。证据 `.agent/work/METHOD-001/selection_comparison.json`，脚本同目录inspect_selection.py；后续方法修改待确认。
