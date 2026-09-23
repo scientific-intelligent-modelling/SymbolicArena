@@ -55,10 +55,11 @@ def load_data(k):
     return p, r, z, config, {"mean": mu.tolist(), "std": sigma.tolist()}
 
 
-def build_model(p, z):
-    n, k, g = len(p["ids"]), p["k"], len(p["coeff"])
+def build_model(p, z, include_diagnostics=True):
+    n, k = len(p["ids"]), p["k"]
+    g = len(p["coeff"]) if include_diagnostics else 0
     supports = []
-    for column in range(len(PROBES)):
+    for column in range(z.shape[1]):
         levels = np.unique(z[:, column])
         levels = levels[:-1]
         cumulative = csc_matrix((z[:, column][None, :] <= levels[:, None]).astype(float))
@@ -75,6 +76,10 @@ def build_model(p, z):
     lower[[c_index, i_index]] = 1e-12
     lower[[tc_index, ti_index]], upper[[tc_index, ti_index]] = -np.inf, 0
     cost[[tc_index, ti_index]] = -SCALE
+    if not include_diagnostics:
+        lower[[c_index, i_index, tc_index, ti_index]] = 0
+        upper[[c_index, i_index, tc_index, ti_index]] = 0
+        cost[[tc_index, ti_index]] = 0
     matrices, lbs, ubs = [], [], []
 
     def append(matrix, lo, hi):
@@ -105,16 +110,17 @@ def build_model(p, z):
         columns = np.column_stack([members, np.full(count, n+j)]).ravel()
         append(csc_matrix((np.tile([1., -1.], count), (np.repeat(np.arange(count), 2), columns)),
                            shape=(count, nv)), -np.inf, 0)
-    append(csc_matrix((np.r_[-p["coeff"], 1.],
-                        (np.zeros(g+1), np.r_[np.arange(n, n+g), c_index])), shape=(1, nv)), 0, 0)
-    append(csc_matrix((np.r_[-p["info"]/k, 1.],
-                        (np.zeros(n+1), np.r_[np.arange(n), i_index])), shape=(1, nv)), 0, 0)
+    if include_diagnostics:
+        append(csc_matrix((np.r_[-p["coeff"], 1.],
+                            (np.zeros(g+1), np.r_[np.arange(n, n+g), c_index])), shape=(1, nv)), 0, 0)
+        append(csc_matrix((np.r_[-p["info"]/k, 1.],
+                            (np.zeros(n+1), np.r_[np.arange(n), i_index])), shape=(1, nv)), 0, 0)
 
     for column, (cumulative, gaps, target) in enumerate(supports):
         start, end = offsets[column:column+2]
         size = len(gaps)
         identity = eye(size, format="csc")
-        cost[start:end] = gaps/k/len(PROBES)*SCALE
+        cost[start:end] = gaps/k/z.shape[1]*SCALE
         upper[start:end] = k
         def embed(left, right):
             return hstack([left, csc_matrix((size, start-n)), right,

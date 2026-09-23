@@ -771,3 +771,18 @@ python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_re
   --size 50 --min-info 0.5 --seconds 170 \
   --output .agent/work/METHOD-003/reproduce_info050
 ~~~
+
+## 14. 固定留出uDSR的泛化检查
+
+本次检查纯W1基准方法，固定留出uDSR，使用DSO、iMCTS、PyOperon重新选择50项；不使用Info下限。固定uDSR使construction保留三个算法范式，该选择在求解及评估前确定。资格筛选仅使用construction的9次运行，有效运行比例至少0.5；response及标准化也仅使用这三个probe。元信息只读取dataset_id、dataset_name、dataset_rel、family、subgroup、semantic_duplicate_group和basename，保留原family/subgroup及两类去重约束。四probe汇总的Info、difficulty、failure、winner和资格标签不进入模型。
+
+入口为`select_heldout_response.py`，输出为`heldout_udsr_core50/`。名单写入CSV并记录SHA256之后才计算uDSR的response；评估完成后再次检查名单SHA256不变。输入、源码哈希、选择字段、参数及依赖版本保存在`configuration.json`，解和约束保存在`solver_solution.json`及`constraints.json`。
+
+170秒求解得到construction MAE=0.0167286348；uDSR的Full664平均response=5.6965008195、Core50平均response=5.9104906084，held-out绝对误差=0.2139897890。留出算法只有一个，因此本次held-out MAE等于该绝对误差。W1目标=0.0259763534、下界=0.0254834743、gap约1.90%，未证明全局最优。资格检查排除7项，约束及指标复算通过；核验脚本`.agent/work/METHOD-004/verify_heldout.py`、证据同目录`verification.json`也确认共享模型默认四probe路径可以复算原始保存解。
+
+本次是已有数据上的单次留出检查，尚未检验其他留出算法。方法开发此前使用过全部四probe，因此这次结果具有回顾性，不能视作全新外部算法的独立确认；未按本次held-out指标继续调整选择规则。
+
+~~~bash
+python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_heldout_response.py \
+  --held-out udsr --seconds 170 --output .agent/work/METHOD-004/reproduce_udsr
+~~~

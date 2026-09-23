@@ -2,6 +2,9 @@
 
 ## 当前任务
 
+- METHOD-004（2026-09-24，已完成单次留出检查）：固定uDSR为held-out，DSO/iMCTS/PyOperon构造纯W1 Core50，资格依据construction的9次运行重算，排除7项；选择阶段只读取身份和结构元信息，不使用四probe的Info/资格/响应标签。170秒求解，construction MAE=0.016728635；uDSR Full664均值5.6965008195、Core50均值5.9104906084，held-out绝对误差0.213989789，未达到约0.15。W1 gap约1.90%，未证明全局最优。
+- METHOD-004入口为preflight1 `select_heldout_response.py`，配置、输入及源码哈希、冻结名单、完整解和报告位于`heldout_udsr_core50/`。名单保存后才评估held-out，原候选未替换。真实数据复算和约束检查通过；共享模型默认四probe路径复算原保存解通过，证据`.agent/work/METHOD-004/verification.json`，脚本同目录`verify_heldout.py`；过程原位归档。本次检验纯W1方法，未检验Info≥0.5候选。方法开发此前使用全部四probe，当前是回顾性单次检查，外部算法泛化尚未确认；后续任务待用户决定。
+
 - METHOD-003（2026-09-24，候选实验完成）：在preflight1选择器增加可选`--min-info`（默认0保持基准），本次下限0.5，保留原W1目标及全部选择约束。170秒求解、外部180秒限制，Info从0.215744提高到0.500069，MAE从0.013024提高到0.271454，Coverage=0.911111；W1=0.1265233624、下界0.1250389814、gap约1.17%，尚未证明全局最优。Info达标，MAE未达到约0.15。
 - METHOD-003有效文件：preflight1的`select_response_distribution.py`及方法说明第13节；输入版本、参数与源码哈希、名单和解保存在`response_distribution_info050_core50/`。原候选未覆盖或替换；未执行训练/API/LOO。`.agent/work/METHOD-003/verify_info.py`从原始运行与元信息复算MAE/Info/W1、核验50项及去重和约束，证据同目录`verification.json`；过程目录原位归档，后续方案待确认。
 
