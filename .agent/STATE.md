@@ -2,6 +2,10 @@
 
 ## 当前任务
 
+- COMPARE-001（2026-09-24，已确认）：用户新放入preflight的`core50_selection_outputs.zip`内`core50.csv`包含50个唯一任务，与`pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/experiment_config.json`冻结Core80重叠35项，Core50新增15项，Core80独有45项，并集95项。ID与完整数据集路径两种比较一致；脚本`.agent/work/COMPARE-001/compare.py`，文件哈希及差异名单见同目录`comparison.json`，过程原位归档。压缩包未修改或解压，原preflight文件未恢复。
+
+- DIR-002（2026-09-24，已完成）：用户删除原`1、preflight/`后，按要求重新创建同名空目录，已核验目录为空，未恢复任何原文件。以下METHOD任务引用该目录的代码、名单和报告现已失效，仅保留历史记录。METHOD-007调整任务已被用户中止，未继续计算。
+
 - METHOD-006（2026-09-24，已确认）：当前采用纯四probe W1选择及既有资格、family/subgroup和去重约束；`select_response_distribution.py`已移除Info下限参数及约束，Info保持诊断用途。当前有效候选为preflight1 `response_distribution_core50/core50.csv`，名单哈希未变，MAE=0.0130244276、Info=0.2157438292。帮助入口、真实保存解、变量边界、数量约束、W1和MAE复算通过，证据`.agent/work/METHOD-006/verification.json`，核验脚本同目录`verify_current.py`；过程原位归档。
 - METHOD-006评估：该候选可用于固定Core50上的算法训练评测；四次留出均值0.201357、最大0.503287，尚不支持其稳定达到约0.15或可靠替代Full664。方法说明第13节记录使用范围；历史原生预测回放、新算法/三个小时/噪声/六维代表性尚未确认，formal_ready=false。METHOD-003候选已替代，原结果保留在`response_distribution_info050_core50/`，生成源码由提交`b773c44c`保留；本次未删除历史结果，未重新选集或启动训练。
 
