@@ -1,8 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import argparse
 import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import time
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -10,6 +12,9 @@ WORK = ROOT / '.agent/work/EXP-001/followup'
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--retry-failed', action='store_true')
+    args = parser.parse_args()
     path = ROOT / '.agent/work/EXP-001/opus_postprocess/sync_results.py'
     spec = importlib.util.spec_from_file_location('core80_sync', path)
     sync = importlib.util.module_from_spec(spec)
@@ -24,7 +29,12 @@ def main():
         command = ['rsync', '-ar', '--timeout=60', '-e',
                    'ssh -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=2',
                    '--files-from=-', f'{host}:{sync.REMOTE_ROOTS[host]}/experiments/{sync.BATCH}/', str(destination)]
-        result = subprocess.run(command, input='\n'.join(files)+'\n', text=True, capture_output=True, timeout=3600)
+        for attempt in range(5):
+            result = subprocess.run(command, input='\n'.join(files)+'\n', text=True, capture_output=True, timeout=3600)
+            if result.returncode == 0:
+                break
+            if attempt < 4:
+                time.sleep(10 * (attempt + 1))
         copied = 0
         for item in files:
             task_id = Path(item).parts[3]
@@ -36,9 +46,11 @@ def main():
             copied += sync.copy_json_tree(destination / item, target)
         return {'host': host, 'requested_runs': len(files), 'copied_snapshots': copied,
                 'returncode': result.returncode, 'error_tail': result.stderr[-1200:]}
-    reports = []
+    reports = json.loads((WORK / 'progress_collection.json').read_text()) if args.retry_failed else []
+    completed = {report['host'] for report in reports if report['returncode'] == 0}
+    reports = [report for report in reports if report['host'] in completed]
     with ThreadPoolExecutor(max_workers=3) as pool:
-        futures = [pool.submit(collect, host) for host in sync.REMOTE_ROOTS]
+        futures = [pool.submit(collect, host) for host in sync.REMOTE_ROOTS if host not in completed]
         for future in as_completed(futures):
             report = future.result()
             reports.append(report)

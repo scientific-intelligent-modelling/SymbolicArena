@@ -7,7 +7,6 @@ import json
 import math
 from pathlib import Path
 import resource
-import signal
 import sqlite3
 import sys
 import time
@@ -16,6 +15,7 @@ from sympy.core.cache import clear_cache
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline import symbolic_task_builder as builder
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import _resolve_simplify_effective_expression
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.prepare_current_terminal_opus48_downstream import _pair_evidence_isolated
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,16 +48,12 @@ def context_binding(prefix, plan, frozen):
 
 
 def pair_evidence(arguments):
-    def expired(signum, frame):
-        raise TimeoutError('pair evidence exceeded 180 seconds')
-    signal.signal(signal.SIGALRM, expired)
-    signal.setitimer(signal.ITIMER_REAL, 180)
     try:
-        return {'evidence': builder._build_full_pair_evidence(**arguments)}
+        return {'evidence': _pair_evidence_isolated(timeout_seconds=180,
+                            memory_limit_bytes=4 * 1024**3, **arguments)}
     except Exception as error:
         return {'error': f'{type(error).__name__}: {error}'}
     finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
         clear_cache()
         gc.collect()
 
@@ -172,6 +168,7 @@ def prepare_pass():
                        'prediction_b_result_sha256': numeric[right.evaluation_key]['result_sha256']}
             if logical_id not in emitted:
                 jobs.append((condition, logical_id, 'structure', left, left_frozen, right, right_frozen, seed_a*1000+seed_b, request))
+    jobs.sort(key=lambda job: len(job[4].effective_expression) + len(job[6].effective_expression))
     chunks = []
     count = max((int(path.stem.split('_')[1]) for path in OUTPUT.glob('batch_*.jsonl')), default=0)
     def flush():
@@ -210,7 +207,7 @@ def prepare_pass():
                         request=request, evidence_hash=evidence['evidence_sha256'], contract=contracts[kind],
                         dependencies=(left_frozen.evaluation_key, right_frozen.evaluation_key), condition=condition)
             chunks.append(builder._task_json_record(task))
-            if len(chunks) >= 100:
+            if len(chunks) >= 25:
                 flush()
                 print(json.dumps({'batches': count, 'unresolved': len(unresolved)}), flush=True)
     flush()
