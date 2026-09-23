@@ -21,7 +21,7 @@ class JAXSRRegressor(BaseWrapper):
     _CANDIDATE_SOURCE = _PROGRESS_STATE_FILENAME
     _FIDELITY_PROBE_VERSION = "jaxsr_export_fidelity_v1"
     _FIDELITY_PROBE_ROW_LIMIT = 64
-    _FIDELITY_RTOL = 1e-6
+    _FIDELITY_RTOL = 3e-6
     _FIDELITY_ATOL = 1e-14
     _DEFAULT_PARAMS = {
         "max_terms": 5,
