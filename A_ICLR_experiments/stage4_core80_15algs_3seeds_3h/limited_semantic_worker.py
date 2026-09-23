@@ -2,7 +2,7 @@ import os
 import resource
 
 
-limit = 2 * 1024**3
+limit = 4 * 1024**3
 resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['OMP_NUM_THREADS'] = '1'

@@ -1164,7 +1164,11 @@ def _evaluate_real(
         exact_numeric_literals=exact_numeric_literals,
     )
     try:
-        substituted = expr.subs(substitutions)
+        substituted = (
+            expr.evalf(digits, subs=substitutions)
+            if exact_numeric_literals
+            else expr.subs(substitutions)
+        )
     except Exception:
         return None
     if substituted.free_symbols:
@@ -1343,6 +1347,11 @@ def _bounded_symbolic_difference(lhs: sp.Basic, rhs: sp.Basic) -> sp.Basic | Non
     signal.signal(signal.SIGALRM, raise_timeout)
     previous_timer = signal.setitimer(signal.ITIMER_REAL, SYMBOLIC_PROOF_TIMEOUT_SECONDS)
     try:
+        # 证明限定在实数域，让正值对数恒等式在通分前完成化简。
+        real_symbols = {symbol: sp.Symbol(symbol.name, real=True)
+                        for symbol in lhs.free_symbols | rhs.free_symbols}
+        lhs = sp.expand_log(lhs.xreplace(real_symbols), force=False)
+        rhs = sp.expand_log(rhs.xreplace(real_symbols), force=False)
         return sp.simplify(sp.together(lhs - rhs))
     except _SymbolicProofTimedOut:
         return None
@@ -1419,11 +1428,10 @@ def _build_exact_decimal_pair(
         )
     except (SymbolicEvidenceError, SyntaxError, ValueError):
         return None
-    return (
-        exact_original,
-        exact_simplified,
-        sp.simplify(sp.together(exact_original - exact_simplified)),
-    )
+    difference = _bounded_symbolic_difference(exact_original, exact_simplified)
+    if difference is None:
+        return None
+    return exact_original, exact_simplified, difference
 
 
 def _is_nonzero_rational_function(expr: sp.Basic) -> bool:
@@ -1685,7 +1693,7 @@ def _equivalence_core(
             )
             probe_records.append(record)
             if abs_error > tolerance:
-                if symbolic_decision == "equivalent" and proof_basis != "artifact_identity":
+                if not has_opaque_function:
                     if exact_decimal_pair is not None:
                         exact_original_expr, exact_simplified_expr, _ = exact_decimal_pair
                         rebuilt_record = _rebuild_probe_record(
@@ -1699,9 +1707,16 @@ def _equivalence_core(
                             digits=100,
                         )
                     else:
+                        # 从原始十进制文本重建，避免复用浮点表达式中的精度损失。
+                        exact_original_expr, _, _ = _build_sympy_expression(
+                            str(original_artifact['source_text']), exact_numeric_literals=True,
+                        )
+                        exact_simplified_expr, _, _ = _build_sympy_expression(
+                            str(simplified_artifact['source_text']), exact_numeric_literals=True,
+                        )
                         rebuilt_record = _rebuild_probe_record(
-                            expr_lhs=original_expr,
-                            expr_rhs=simplified_expr,
+                            expr_lhs=exact_original_expr,
+                            expr_rhs=exact_simplified_expr,
                             values=values,
                             point=point,
                             abs_tolerance=abs_tolerance,

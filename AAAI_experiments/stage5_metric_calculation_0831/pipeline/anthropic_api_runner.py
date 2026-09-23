@@ -32,6 +32,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner impo
     TaskDefinition,
     _atomic_write_json,
     _sanitize_for_audit,
+    _sha256_file,
     _sha256_text,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskStateStore
@@ -525,6 +526,7 @@ class AnthropicApiRunner(ClaudeRunner):
             "prompt_sha256": prompt_sha256,
             "rendered_prompt_sha256": _sha256_text(prompt),
             "system_prompt_sha256": _sha256_text(self.system_prompt),
+            "semantic_validator_sha256": _sha256_file(Path(__file__).with_name('symbolic_evidence.py')),
             "schema_path": str(definition.schema_path),
             "schema_sha256": schema_sha256,
             "request_sha256": _sha256_text(canonical_json(definition.request)),

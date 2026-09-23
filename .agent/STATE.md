@@ -2,6 +2,9 @@
 
 ## 当前任务
 
+- 当前化简队列已完成（2026-09-23 20:04，已确认）：`oversample/opus/progress.json` 为6291/6291，其中clean重试101/101、noise001 3094/3094、noise005 3096/3096。最后3项UDSR均已通过；clean和noise seed521由更新后的API请求完成，noise seed522使用原始API回复重新执行完整输入绑定、HTTP模型/schema和数学验证后，由 `TaskStateStore.promote_failed_attempt` 接受，原始失败记录保留。API执行器已停止，每分钟监控将完整队列显示为complete。此处范围仅限现有化简计划，恢复的3项JAXSR补入、全量覆盖及后续等价性/结构判定仍未完成。
+- 校验修复与放宽（已确认）：精确十进制复核从原始文本重建表达式，使用带subs的高精度evalf处理大数相消；真实数值反例在未取得符号证明时也进行高精度复核。实数域对数恒等式在通分前展开，精确差分复用限时计算。单校验地址空间4GiB、时间180秒、全局1并发；prompt为 `exact_expression.v3`。5项真实回复回放测试通过（4项等价回复接受、1项舍入导致不等价的回复拒绝），证据为 `.agent/work/EXP-001/oversample/recheck_*.json`。最后一项的正式重新验收脚本为stage4 `revalidate_opus_attempt.py`，冻结文件为 `oversample/opus/noise005/replica_3/frozen/748e671aa3296fb20228412255741ebaaaa715f38f1eaf88dddbc0ab8d961d06.json`，证明为 `symbolic_difference_zero`，来源和新校验代码哈希保存在其revalidation字段。
+
 - 剩余失败任务超发（2026-09-23 19:33，已确认）：141项未选定任务各安排5份独立API请求，总并发300；执行器PID `2451331`，启动参数增加 `--replicas 5 --max-tokens 65536`。问题已定位为部分回复舍入常数造成严格符号差异非零，以及16384个token全部用于thinking导致 `stop_reason=max_tokens`；另有504和本机数学校验内存限制错误。采用 `exact_expression.v2` system prompt，明确以原始expression为准、保留精确常数算式、严格输出JSON；输出上限65536，数学验收标准不变。真实API测试HTTP 200、模型 `claude-opus-5`，新回复通过 `symbolic_difference_zero`，已新增2项选定结果、剩139项。证据：`oversample/opus/noise005/replica_4/attempts/8450914149c1020b85d3a16a579acd0942b763f68349347a6199d59fed006362.a01.json`；配置和system prompt哈希保留于 `run_configurations.jsonl` 与逐请求记录。已通过项不重复派发，每分钟监控和2GiB校验内存限制继续使用。
 
 - 最新并发（2026-09-23 17:33，已确认）：用户要求提高至300，API执行器已使用 `--workers 300 --include-noise --recover-interrupted` 恢复，PID `2435653`；clean与两个noise条件共用300个请求线程。本机公式校验继续为全局2并发、每进程2GiB，每分钟监控服务保持运行。启动时已选clean76项、noise001 1063项、noise005 1093项，结果均保留；实时计数以 `oversample/opus/progress.json` 为准。以下100并发配置已替代。

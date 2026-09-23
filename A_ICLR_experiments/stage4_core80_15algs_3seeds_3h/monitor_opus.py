@@ -26,8 +26,9 @@ def sample():
         except psutil.NoSuchProcess:
             continue
     memory = psutil.virtual_memory()
+    status = 'complete' if len(selected) == progress['total'] else ('running' if controllers else 'stopped')
     return {'time': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'controllers': controllers,
-            'status': 'running' if controllers else 'stopped', 'selected': len(selected),
+            'status': status, 'selected': len(selected),
             'by_condition': progress.get('by_condition', {}),
             'transport_version': progress.get('transport_version'),
             'remaining': progress['total'] - len(selected), 'workers': progress['workers'],
