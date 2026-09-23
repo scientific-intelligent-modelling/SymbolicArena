@@ -2,6 +2,10 @@
 
 ## 当前任务
 
+- METHOD-001（2026-09-24，已确认调研）：用户固定50与SymbolicArenaCode/check/core50_selection/outputs/core50.csv为50/50一致；配套core50_selector_recovered.py使用历史成员标签训练ExtraTrees，属于名单兼容复现，不能据此确认原始文字方案独立生成了该名单。未修改公开仓库或选集程序。
+- 两份50名单在暂存Core80方法的全部约束下均可行。按该方法重算，用户50的Coverage/Info/Balance为0.966667/0.518694/0.870042，暂存方法的Core50为0.994444/0.577630/0.904687；当前评分MAE分别0.151155/1.017740。后者三个目标分量均更高，因此改变这些分量的正权重无法使用户50在这两份名单间得分更高。
+- 候选调整仅作双名单计算：Balance使用exp(-四probe分别标准化response的一维W1均值)，保留Coverage和Info。两个名单的响应分布距离分别0.256466/0.422651，对应几何目标0.729349/0.722035。尚未用该目标重新选集，不能承诺MAE改善。证据 `.agent/work/METHOD-001/selection_comparison.json`，脚本同目录inspect_selection.py；后续方法修改待确认。
+
 - EVAL-002（2026-09-24，已完成）：以pre_exp_26.09.23暂存实验冻结的Core80名单，在同一Stage3 Full664数据及EVAL-001评分口径下计算MAE=0.9633741588372269。DSO/iMCTS/PyOperon/uDSR分别为0.550300648621008、0.7938809941935538、0.7749096449956594、1.7344053475386865。入口 [evaluate_core80.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/evaluate_core80.py)，结果 [core80_mae.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/core80_mae.json)；已核验80个唯一ID及完整路径、冻结参考CSV哈希、评分函数和Full664数据哈希与EVAL-001一致。结果是四probe历史运行诊断，未执行LOO或原生模型回放。
 
 - EVAL-001（2026-09-24，已完成）：计算用户指定50个任务相对Full664的四probe平均response绝对差，使用已确认的probe_consensus_response_v1，MAE=0.15115479966356438。DSO/iMCTS/PyOperon/uDSR分别为0.06744972332041543、0.012748913307117249、0.07498742617122117、0.4494331358555037。入口 [evaluate_core50.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/evaluate_core50.py)，结果 [core50_mae.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/core50_mae.json)；保存50个ID、原始数据SHA256、脚本SHA256及评分参数。已核验7968条运行、每组3个seed、50个唯一任务及Full664覆盖。该结果基于历史原始指标，是固定名单诊断，未执行LOO或原生模型回放。
