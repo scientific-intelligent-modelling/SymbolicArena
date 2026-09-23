@@ -1,6 +1,5 @@
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import gc
 import hashlib
 from itertools import combinations
 import json
@@ -10,8 +9,6 @@ import resource
 import sqlite3
 import sys
 import time
-
-from sympy.core.cache import clear_cache
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline import symbolic_task_builder as builder
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import _resolve_simplify_effective_expression
@@ -53,9 +50,6 @@ def pair_evidence(arguments):
                             memory_limit_bytes=4 * 1024**3, **arguments)}
     except Exception as error:
         return {'error': f'{type(error).__name__}: {error}'}
-    finally:
-        clear_cache()
-        gc.collect()
 
 
 def prepare_pass():

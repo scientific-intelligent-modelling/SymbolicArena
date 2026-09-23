@@ -2,7 +2,7 @@
 
 ## 当前任务
 
-- 后续准备进程采用独立子进程执行每个配对证据，父进程执行180秒时限、每个子进程4GiB限制，2个计算并发；按表达式长度安排顺序，每25项发布计划。准备进程PID已更新为 `2460776`，tmux为 `core80_prepare`；API执行器PID `2459526` 保持运行，共享300并发上限。原准备进程的两个计算任务持续12分钟未返回，证据为 `followup/downstream_preparation.log` 和进程时间记录，不能将配置并发数当作实际HTTP并发数。分钟记录采集已完成iaaccn23的132057份；25、26连接超时，已安排当前采集结束后只重试失败机器、每台最多5次，入口 `followup/retry_progress.sh`。最新数量以实时文件为准。
+- 后续准备进程采用独立子进程执行每个配对证据，父进程执行180秒时限、每个子进程4GiB限制，2个计算并发；按表达式长度安排顺序，每25项发布计划。准备进程PID已更新为 `2461461`，tmux为 `core80_prepare`；API执行器PID `2459526` 保持运行，共享300并发上限。每个配对结束后由操作系统释放子进程资源。原准备进程的两个计算任务持续12分钟未返回，证据为 `followup/downstream_preparation.log` 和进程时间记录，不能将配置并发数当作实际HTTP并发数。已验证新批次被API执行器接收，结构判定真实请求已产生通过记录，证据 `followup/base/events.jsonl`。分钟记录采集已完成iaaccn23的132057份；25、26连接超时，已安排当前采集结束后只重试失败机器、每台最多5次，入口 `followup/retry_progress.sh`。最新数量以实时文件为准。
 
 - 后续处理已启动（2026-09-23 20:38，EXP-001）：修正iMCTS/QLattice同步路径大小写并优先保留JAXSR恢复结果，本地结果已核验10800份。新增前置计划1523项（80个GT、1443个补齐/恢复预测）；GT 80项已全部处理，补充预测已处理1421项。等价性判定已开始，首批100项已处理81项；后续等价性/结构任务由准备进程持续生成，共享同一个300并发API执行器。实时状态为 `.agent/work/EXP-001/followup/progress.json`，分类型计数持续更新；批次仍在生成，注册任务数不代表完整覆盖。
 - 当前入口：stage4下 `prepare_core80_followup.py`、`run_core80_followup.py`、`prepare_core80_downstream.py`；API执行器PID `2459526`，准备进程PID `2459451`，tmux为 `core80_downstream`（沿用持久socket）。输入计划、依赖来源数据库和文件哈希位于 `followup/base_plan.jsonl`、`dependencies.json`、`downstream_plans/`；原生支持脚本已原样保存至stage4 `runtime_support_sources.zip`，SHA256 `991d93f0c5996c3f05ad3cea241b575f68ed65def45848fac8f4c8f56da8bf8a`。API继续使用Opus5单轮请求，本机化简校验1并发、4GiB；独立数值和结构证据由现有Stage5模块生成，已有通过结果不重复请求。
