@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- 准备任务总内存上限更新（2026-09-24，已确认）：按用户要求调整为14GiB，仅覆盖准备服务及全部子进程；单进程不设置RLIMIT_AS，API仍为32并发。stage4 `core80-prepare.service` 已更新，运行时无重启应用；主PID2485101保持不变，systemd MemoryMax及该服务cgroup的memory.max均为15032385536。旧8GiB设置已替代。本机物理内存约15.4GiB，API及其他进程另占内存，仍存在系统级内存压力风险。
+
 - API并发更新（已确认）：用户要求32并发，已停止原300并发执行器，并使用 `--workers 32 --recover-interrupted` 启动PID2483768；所有类型和条件共用32个请求线程及HTTP连接上限。入口为stage4 `run_core80_followup.sh`，tmux为 `core80_followup32`。已有选定结果、SQLite及计划保留，启动时恢复未完成请求；准备服务及8GiB总上限不变。已核验唯一API执行器启动参数为32，启动后的计划载入期间，旧进度文件仍可能显示上次参数；以下300并发记录已替代。
 
 - 准备任务内存配置（2026-09-23，已确认）：按用户要求取消该准备任务工作进程和配对计算子进程的RLIMIT_AS限制，全部准备进程由 `core80-prepare.service` 统一使用8GiB总上限；旧单进程4GiB及进程组6GiB配置已替代。服务已重启，PID2483184，实际MemoryMax=8589934592，主进程地址空间限制为unlimited；配对助手接收memory_limit_bytes=None，其他调用者默认设置保持不变。真实BPG3/DRSR配对重算与既有完整证据一致，脚本及输出沿用 `followup/check_preparation_resume.py`、`pair_replay.json`。API PID2459526仍使用300并发，未重启。复杂输入的持续运行内存情况仍需监控；当前确认范围为配置生效和真实单项验证。
