@@ -2,6 +2,9 @@
 
 ## 当前任务
 
+- REVIEW-001（2026-09-24，已确认）：核验 `2、preflight2/core50_selection_package.zip`，原脚本真实运行0.61秒选出50项，独立重放名单一致，包内四份数据与Stage3逐字节相同。按已确认response口径从7968条原始记录复算MAE=2.23158742216141，DSO/iMCTS/PyOperon/uDSR分别1.291151/3.128115/1.274196/3.232888。当前输出未达到约0.15目标。
+- REVIEW-001问题：程序只按固定个人评分排序并检查semantic duplicate和subgroup≤6；没有执行eligibility、family/difficulty/failure配额、basename约束或MILP，未调用MAE计算。实际选入有效比例1/3的g0619；LLM-SRBench仅4项、SRSD有23项，违反此前通用family配额。当前名单没有两类重复，subgroup上限通过。原压缩包及源码未修改，候选版本未替换。核验脚本 `.agent/work/REVIEW-001/audit_preflight2.py`，输入原包SHA256=a080317ecfed38c7ca7d9415c4856dc1633767ef444290144e1d175d440eb04d，完整命令、哈希、指标和约束证据 `audit.json`，输出 `replay/core50.csv`；该过程目录原位归档。后续修正待用户确认，历史原生预测回放未执行。
+
 - METHOD-002（2026-09-24，已完成候选计算）：按用户要求重构选择规则，当前候选方法直接最小化四probe分别标准化response的一维W1均值，保留通用family/subgroup、资格及两类去重约束。Coverage和Info作为诊断项。入口 [select_response_distribution.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_response_distribution.py)，[方法与结果](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/response_distribution_method.md)，[候选名单](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/response_distribution_core50/core50.csv)。
 - METHOD-002说明已补全：方法文档逐项定义输入字段、有效seed、response、总体标准化、经验CDF/W1、每项数量约束、整数CDF加强约束、MAE及Coverage/Info全部诊断分量，附真实数值例子、参数表和函数/输出映射。新增核验脚本 `.agent/work/METHOD-002/document_checks.py`，证据同目录documentation_checks.json；Disc/Stab/Info重算最大差小于3e-16，历史类别标签一致，实际W1、MAE、Coverage、配额和示例复算通过。说明明确区分历史NMSE输入与原生预测回放，以及当前目标和仅供诊断的字段。本次没有修改算法、参数或名单，也没有重新求解MILP。
 - METHOD-002实测：180秒预算下Core50的四probe构造内MAE=0.013024427640043565；W1均值0.02783574193218572，求解下界0.02568934735860432，相对gap约7.71%，尚未证明全局最优。Coverage=0.961111，MeanInfo=0.215744，信息量低于用户固定50的0.518694。与暂存旧Core80重叠10，新增40；与用户50重叠7。约束、整数性、线性模型和独立W1计算通过，另由原始记录独立复算MAE一致；证据 `.agent/work/METHOD-001/response_distribution_verification.json`。模型未使用历史成员标签或MAE目标；该MAE用于方法开发，LOO与历史原生预测回放待做，formal_ready=false。
