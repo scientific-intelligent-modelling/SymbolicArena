@@ -6,13 +6,19 @@ import json
 import os
 import sqlite3
 import sys
+import threading
 import time
 from pathlib import Path
 
 import psutil
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import render_prompt
-from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import ClaudeRunner, ClaudeRunnerCircuitBreaker
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import ClaudeRunnerCircuitBreaker
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.anthropic_api_runner import (
+    API_TRANSPORT_VERSION, AnthropicApiRunner, HttpxAnthropicTransport,
+    STRICT_EVALUATOR_SYSTEM_PROMPT,
+)
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_anthropic_api_plan import load_api_channels
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.run_claude_plan import load_plan_jsonl
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskStateStore
 
@@ -20,14 +26,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskS
 ROOT = Path(__file__).resolve().parents[2]
 OLD = ROOT / '.agent/work/EXP-001/opus_postprocess'
 WORK = ROOT / '.agent/work/EXP-001/oversample/opus'
-SYSTEM = (
-    'You are a single-turn mathematical evaluator. Solve the supplied symbolic task using only '
-    'the request and your own mathematical reasoning. Return exactly one JSON object conforming '
-    'to OUTPUT_JSON_SCHEMA_DRAFT_07. All tools are unavailable. Do not emit tool calls, shell '
-    'commands, code fences, simulated execution, or surrounding prose. Preserve all supplied '
-    'constants, domains, protected operators, evidence hashes and identifiers. Express uncertainty '
-    'using the schema. Never claim a computation or tool execution that did not occur.'
-)
+SYSTEM = STRICT_EVALUATOR_SYSTEM_PROMPT
 
 
 def write_json(path, value):
@@ -61,18 +60,14 @@ def stop_old():
     print(json.dumps({'stopped': [p.pid for p in targets], 'children': len(children)}), flush=True)
 
 
-class ReplicaRunner(ClaudeRunner):
-    def _build_and_validate_command(self, schema):
-        command = super()._build_and_validate_command(schema)
-        return command + ['--system-prompt', SYSTEM]
-
+class ReplicaRunner(AnthropicApiRunner):
     def execute_once(self, definition):
         self.store.register_task(definition.task_spec)
         cached = self._load_existing_frozen(definition.task_spec.evaluation_key)
         if cached is not None:
             return cached
         prompt_sha, schema_sha = self._verify_task_definition(definition)
-        lease = self.store.reserve_attempt(definition.task_spec.evaluation_key, lease_seconds=2100)
+        lease = self.store.reserve_attempt(definition.task_spec.evaluation_key, lease_seconds=self.lease_seconds)
         return self._run_attempt(
             definition=definition, task_kind='simplify',
             prompt=render_prompt(definition.prompt_template, definition.request, definition.schema),
@@ -88,6 +83,7 @@ def main():
     parser.add_argument('--stop-old', action='store_true')
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--recover-interrupted', action='store_true')
+    parser.add_argument('--channel-settings', default=f'routify={Path.home() / ".claude/settings.json"}')
     args = parser.parse_args()
     if args.workers < 1:
         parser.error('--workers 必须为正整数')
@@ -112,6 +108,8 @@ def main():
         'plan': str(plan.plan_path), 'plan_sha256': plan.plan_sha256,
         'task_count': len(entries), 'replicas': 3, 'workers': args.workers,
         'timeout_seconds': 1800, 'system_prompt': SYSTEM,
+        'transport_version': API_TRANSPORT_VERSION, 'max_tokens': 16384,
+        'semantic_validation_concurrency': 2, 'semantic_memory_limit_bytes': 2 * 1024**3,
         'system_prompt_sha256': hashlib.sha256(SYSTEM.encode()).hexdigest(),
         'selection': 'first_valid_completion', 'logical_ids': [e.logical_id for e in entries],
     }
@@ -124,6 +122,9 @@ def main():
     with (WORK / 'run_configurations.jsonl').open('a') as handle:
         handle.write(json.dumps({'time': time.time(), **configuration}) + '\n')
     runners = []
+    channels = load_api_channels([args.channel_settings], allow_single_channel=True)
+    transport = HttpxAnthropicTransport(channels, max_connections=args.workers)
+    semantic_semaphore = threading.BoundedSemaphore(2)
     for replica in range(1, 4):
         directory = WORK / f'replica_{replica}'
         store = TaskStateStore(directory / 'state.sqlite3', attempt_cap=10**9,
@@ -135,13 +136,21 @@ def main():
                 interrupted = connection.execute("SELECT attempt_id FROM attempts WHERE status='running'").fetchall()
             for (attempt_id,) in interrupted:
                 store.finish_failure(attempt_id, error_class='controller_interrupted', retryable=True)
-        runners.append(ReplicaRunner(store, attempts_dir=directory / 'attempts',
-                                     frozen_dir=directory / 'frozen', timeout_seconds=1800,
-                                     lease_seconds=2100))
+        runner = ReplicaRunner(store, attempts_dir=directory / 'attempts',
+                               frozen_dir=directory / 'frozen', channels=channels,
+                               transport=transport, timeout_seconds=1800, lease_seconds=3600,
+                               max_tokens=16384, per_channel_concurrency=args.workers,
+                               semantic_validation_concurrency=2, allow_single_channel=True)
+        runner._semantic_semaphore = semantic_semaphore
+        runner.semantic_validator_command_builder = lambda: [
+            sys.executable, str(Path(__file__).with_name('limited_semantic_worker.py')),
+        ]
+        runners.append(runner)
     progress_path = WORK / 'progress.json'
     round_number = json.loads(progress_path.read_text()).get('round', 0) if progress_path.exists() else 0
     startup = {'time': time.time(), 'round': round_number, 'selected': len(selected),
-               'total': len(entries), 'workers': args.workers, 'replicas': 3, 'status': 'running'}
+               'total': len(entries), 'workers': args.workers, 'replicas': 3, 'status': 'running',
+               'transport_version': API_TRANSPORT_VERSION}
     write_json(progress_path, startup)
     print(json.dumps(startup), flush=True)
     while len(selected) < len(entries):
@@ -172,7 +181,9 @@ def main():
                     event.update(result)
                 else:
                     event.update({'status': result.state, 'error_class': result.error_class,
-                                  'attempt_id': result.attempt_id, 'cost_usd': result.total_cost_usd})
+                                  'attempt_id': result.attempt_id, 'cost_usd': result.total_cost_usd,
+                                  'estimated_cost_cny': result.total_cost_cny,
+                                  'transport_version': API_TRANSPORT_VERSION})
                     if result.state == 'frozen' and entry.evaluation_key not in selected:
                         selected[entry.evaluation_key] = {
                             **event, 'evaluation_key': entry.evaluation_key,
@@ -183,7 +194,7 @@ def main():
                     handle.write(json.dumps(event, ensure_ascii=False) + '\n')
                 write_json(WORK / 'progress.json', {'time': time.time(), 'round': round_number,
                            'selected': len(selected), 'total': len(entries), 'workers': args.workers,
-                           'replicas': 3, 'last_event': event})
+                           'replicas': 3, 'transport_version': API_TRANSPORT_VERSION, 'last_event': event})
                 print(json.dumps(event, ensure_ascii=False), flush=True)
         time.sleep(5)
     print(json.dumps({'status': 'complete', 'selected': len(selected)}), flush=True)

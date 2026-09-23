@@ -2,6 +2,9 @@
 
 ## 当前任务
 
+- 当前Opus传输（2026-09-23 16:56，已确认）：从本次开始仅使用项目现有 `AnthropicApiRunner` 直接请求 Messages API，停止使用CC客户端；执行器PID `2430154`，HTTP并发32。已验证真实HTTP 200、响应模型 `claude-opus-5`、完整JSON和数学语义校验链。原有67项选定结果及3016项原始冻结结果保留，当前仍有34项待完成。有效脚本为stage4 `opus_remaining_replicas.py`；渠道凭据仅从既有用户设置读取，不写入结果。每分钟监控仍运行。
+- 本机公式校验采用全局2并发，每个独立进程地址空间上限2GiB，入口为stage4 `limited_semantic_worker.py`，超限保留错误并拒绝接受结果。已确认LLMSR g0649/seed520的真实API回复在SymPy `simplify -> trigsimp -> factor`处理期间触及内存上限，主执行器保持运行；证据为 `oversample/opus/replica_3/attempts/1732d0bc3aa2d94ad53c1182deb2271e2a9f0ca5f3843c7689455cdaa5964ae7.a04.json`。16:55监控主进程约377MiB、可用内存约13.7GiB。HTTP请求、usage、校验结果和传输版本保存在各 `replica_*/attempts/` 中，当前运行配置保存在 `run_configurations.jsonl`。以下CC运行状态均已替代。
+
 - 每分钟监控（2026-09-23，已启动）：`core80-opus-monitor.service` 独立运行，每5秒采样进程与内存，每60秒记录完成数、剩余数、进程存活和内存峰值。脚本为stage4下 `monitor_opus.py`，状态为 `.agent/work/EXP-001/oversample/opus/monitor_latest.json`，记录为同目录 `monitor.jsonl`。最新异常：16:43:22 Opus的32并发任务组再次被systemd-oomd终止（33个进程），已选67项、剩余34项；以下16:41运行状态已替代。监控服务只观察，不自动重启任务。
 
 - JAXSR校验阈值（2026-09-23，已确认）：按用户要求将 `jaxsr_wrapper/wrapper.py` 的 `_FIDELITY_RTOL` 调整为 `3e-6`，沿用 `1e-14 + rtol * native_abs_scale` 判断方式；iaaccn48真实依赖下原生模型恢复测试2项通过（2.37秒）。正在运行的训练进程仍使用启动时载入的阈值，已有失败快照未更改，后续恢复须以原生模型重新核验。
