@@ -2,6 +2,9 @@
 
 ## 当前任务
 
+- METHOD-003（2026-09-24，候选实验完成）：在preflight1选择器增加可选`--min-info`（默认0保持基准），本次下限0.5，保留原W1目标及全部选择约束。170秒求解、外部180秒限制，Info从0.215744提高到0.500069，MAE从0.013024提高到0.271454，Coverage=0.911111；W1=0.1265233624、下界0.1250389814、gap约1.17%，尚未证明全局最优。Info达标，MAE未达到约0.15。
+- METHOD-003有效文件：preflight1的`select_response_distribution.py`及方法说明第13节；输入版本、参数与源码哈希、名单和解保存在`response_distribution_info050_core50/`。原候选未覆盖或替换；未执行训练/API/LOO。`.agent/work/METHOD-003/verify_info.py`从原始运行与元信息复算MAE/Info/W1、核验50项及去重和约束，证据同目录`verification.json`；过程目录原位归档，后续方案待确认。
+
 - REVIEW-001（2026-09-24，已确认）：核验 `2、preflight2/core50_selection_package.zip`，原脚本真实运行0.61秒选出50项，独立重放名单一致，包内四份数据与Stage3逐字节相同。按已确认response口径从7968条原始记录复算MAE=2.23158742216141，DSO/iMCTS/PyOperon/uDSR分别1.291151/3.128115/1.274196/3.232888。当前输出未达到约0.15目标。
 - REVIEW-001问题：程序只按固定个人评分排序并检查semantic duplicate和subgroup≤6；没有执行eligibility、family/difficulty/failure配额、basename约束或MILP，未调用MAE计算。实际选入有效比例1/3的g0619；LLM-SRBench仅4项、SRSD有23项，违反此前通用family配额。当前名单没有两类重复，subgroup上限通过。原压缩包及源码未修改，候选版本未替换。核验脚本 `.agent/work/REVIEW-001/audit_preflight2.py`，输入原包SHA256=a080317ecfed38c7ca7d9415c4856dc1633767ef444290144e1d175d440eb04d，完整命令、哈希、指标和约束证据 `audit.json`，输出 `replay/core50.csv`；该过程目录原位归档。后续修正待用户确认，历史原生预测回放未执行。
 

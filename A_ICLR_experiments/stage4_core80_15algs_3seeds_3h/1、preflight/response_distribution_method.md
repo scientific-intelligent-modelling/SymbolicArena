@@ -757,3 +757,17 @@ python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_re
 已有summary.json时入口拒绝覆盖。有限时间内的可行解可能随机器速度和求解器版本变化；复查既有结论时应使用已保存名单及哈希。
 
 本次文档数值复算脚本为.agent/work/METHOD-002/document_checks.py，结果为同目录documentation_checks.json。它核验了历史Disc/Stab/Info及类别标签、当前标准化参数、四个W1、MAE、Coverage、family配额和真实示例，没有重新执行MILP或改写原始数据。
+
+## 13. Info下限候选实验
+
+`select_response_distribution.py`支持`--min-info`，默认0，保持上述基准方法。指定下限τ时，在原有约束基础上增加`MeanInfo(S) >= τ`，仍最小化四probe标准化response的W1均值。τ为显式实验参数，MAE仅在选集后计算。
+
+本次使用τ=0.5、K=50、求解预算170秒，外部执行上限180秒，输出独立保存在`response_distribution_info050_core50/`，原候选结果保留。Info=0.5000687851，MAE=0.2714542142，Coverage=0.9111111111，W1=0.1265233624；求解下界0.1250389814、相对gap约1.17%，尚未证明全局最优。Info达到目标，MAE未达到约0.15。
+
+输入版本与基准相同，源码及输入哈希、标准化参数、依赖版本、下限和预算记录在同目录`configuration.json`，完整解、约束检查、名单和指标分别为`solver_solution.json`、`constraints.json`、`core50.csv`和`summary.json`。复算脚本为`.agent/work/METHOD-003/verify_info.py`，证据为同目录`verification.json`。结果仍属于construction诊断，未执行LOO或历史原生预测回放。
+
+~~~bash
+python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_response_distribution.py \
+  --size 50 --min-info 0.5 --seconds 170 \
+  --output .agent/work/METHOD-003/reproduce_info050
+~~~
