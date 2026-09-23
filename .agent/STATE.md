@@ -2,6 +2,12 @@
 
 ## 当前任务
 
+- ARCHIVE-001（2026-09-24，已完成）：按用户确认，将ICLR Stage4完整迁移至 [pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验暂存，不再作为当前有效批次。
+- EXP-001已停止并归档：Opus执行器PID2483768已结束，监控与准备服务均inactive，准备服务已取消注册；未删除实验文件。`.agent/work/EXP-001/` 保留原位置并标记已归档，默认不读取、不续跑。后续重新选择数据集尚未执行。
+- 验证：同一文件系统目录重命名，Stage4目录inode70526846与实验目录inode70527320保持不变；冻结配置SHA256为c73295555568a46e00ea015a50df51caa01eeeaaf9f6ccfe4076cf09c9bf513a，支持源码ZIP为991d93f0c5996c3f05ad3cea241b575f68ed65def45848fac8f4c8f56da8bf8a，迁移前后一致。历史配置及证据原文保留，旧路径的前缀映射见 [暂存说明](../A_ICLR_experiments/pre_exp_26.09.23/README.md)。
+
+## EXP-001历史记录（已归档，默认不读取）
+
 - Opus API可用性（2026-09-24 01:38，已确认）：现有routify渠道真实请求1次、无重试，HTTP200，响应模型claude-opus-5，10.718秒返回OK，stop_reason=end_turn。脚本 `followup/probe_opus_api.py`，证据 `followup/probe_opus_api.jsonl`；使用与任务相同的adaptive thinking和xhigh配置。本次只检查接口，未修改或重启批处理执行器。
 
 - 准备任务总内存上限更新（2026-09-24，已确认）：按用户要求调整为14GiB，仅覆盖准备服务及全部子进程；单进程不设置RLIMIT_AS，API仍为32并发。stage4 `core80-prepare.service` 已更新，运行时无重启应用；主PID2485101保持不变，systemd MemoryMax及该服务cgroup的memory.max均为15032385536。旧8GiB设置已替代。本机物理内存约15.4GiB，API及其他进程另占内存，仍存在系统级内存压力风险。
@@ -44,7 +50,7 @@
 - 本机Opus后处理：已启动，使用 `.agent/work/EXP-001/opus_postprocess/`，并发32；当前运行预测公式 `simplify.v1`，单任务尝试上限已从6提高到1000000000，并已重新开放228项可重试任务；当前状态为冻结3016项、重试等待51项、数据库运行48项、耗尽2项。`run_report.json`最后于13:19写入，记录此前一次执行器因 circuit breaker 停止；当前计划执行器和 Claude worker 仍在运行，数据库在14:26继续更新重试任务，但自13:19以来尚未新增冻结结果。因超大 gplearn 表达式导致的本机内存占用已处理，计划生成器已将超过1000个 AST 节点的预测结果记入 unresolved；守护进程已改为计划运行期间跳过重复计划生成，避免再次占用大量内存。证据为 `plans/simplify_core80.report.json`、`state/opus_pred_simplify.sqlite3`、`state/run_report.json` 与 `daemon.log`。远端结果同步与本机处理同时进行。
 - 最新核验（2026-09-23 14:06）：Core80训练队列为 `10797 done / 3 running`；clean `3600 done`，noise001 `3599 done / 1 running`，noise005 `3598 done / 2 running`。三个 JAXSR `g0595` 的远端 tmux 会话和运行进程均保持存活，iaaccn29 已写出 `minute_0096.json`，iaaccn52 已写出 `minute_0065.json`；训练调度器PID `1978557`仍在运行。Opus继续使用32并发，详见下一条最新 Opus 核验。
 - 最新 Opus 核验（2026-09-23 14:26）：冻结结果仍为 `3016` 项；数据库为 `running 48 / retry_wait 51 / exhausted 2`，最近更新任务主要记录 `validation_failed` 与 `timeout`，当前计划执行器PID `2064853`及其 Claude worker仍存活。`run_report.json`的 circuit breaker 状态属于13:19的旧报告，不能作为当前进程已结束的依据；当前重试活动证据为数据库 `updated_at`、执行器进程和 `daemon.log`。
-- 有效入口：[experiment_config.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/experiment_config.json)；任务源、参数切片和队列状态位于 `.agent/work/EXP-001/controller/`；调度日志：[controller.log](work/EXP-001/controller/queue/controller.log)；训练调度器独立会话PID：`1978557`。
+- 归档配置：[experiment_config.json](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/experiment_config.json)；任务源、参数切片和队列状态位于 `.agent/work/EXP-001/controller/`；调度日志：[controller.log](work/EXP-001/controller/queue/controller.log)；原训练调度器PID：`1978557`。
 - 当前验证（2026-09-22 17:27）：Dry-run已确认15算法×80数据集×3种子×3条件=10800项；LLM运行配置已部署到15台可用机器，配置哈希一致。15台机器支持文件已同步完成，GPU七台数据审计均为 `__MISSING__=0`；当前队列为 `4234 done / 1473 running / 5122 pending`，15个算法均已有完成结果，其中 FePySR、PySR、SymbolFit 已分别完成 `268、269、283` 项，LLMSR、DRSR 已分别完成 `320、320` 项；已完成任务的远端 `result.json` 均为 `status=ok` 并包含 ID/OOD 指标；`clean` 已完成 `3598` 项、`2` 项运行中，`noise001` 正在执行（`636` 项已完成、`1471` 项运行中、`1522` 项待运行），`noise005` 尚未开始；Opus后处理尚未启动。首次派发发现 `/home/anonymous` Julia 路径和GPU数据不完整问题，已修正启动环境、持久临时目录并补齐GPU数据；新启动的PySR任务已写出 `minute_0001.json` 和 `hall_of_fame.csv`。iaaccn25 仍有间歇性状态查询无响应，17:23:34 的批量启动失败后继续按技术重试设置处理；iaaccn53 于17:27:47继续批量启动20余项 seed521 的 `noise001` 任务；clean 任务已基本完成，当前继续在多台机器派发任务。调度器已重启并将主机不可达宽限调整为900秒，随后继续派发任务。当前配置哈希为 `a0da7a60a112ff5ea1e9879140e8987e60bdfb8b6da4ba9186d8ef3231092629`，技术重试设置为高上限 `1000000`，付费服务按用户授权不设置费用上限。
 - 下一步：持续轮询队列状态、主机状态、任务结果和本机Opus状态；训练结果同步完成后继续补充 simplify 任务，再建立 equivalence 与 structure 任务。
 - Opus证据：预测运行状态库为 `.agent/work/EXP-001/opus_postprocess/state/opus_pred_simplify.sqlite3`，运行报告为 `.agent/work/EXP-001/opus_postprocess/state/run_report.json`，条件计划位于 `.agent/work/EXP-001/opus_postprocess/plans/simplify_core80_{clean,noise001,noise005}.jsonl`，同步报告为 `.agent/work/EXP-001/opus_postprocess/sync_report.json`。Ground Truth 另有1个公式静态抽取失败，证据为 `.agent/work/EXP-001/opus_postprocess/evidence/ground_truth.report.json`；12个算法结果暂不能建立 simplify 任务，清单为 `.agent/work/EXP-001/opus_postprocess/plans/simplify_core80.unresolved.jsonl`。初次全量计划的条件门错误已记录在运行报告，当前改用 clean、noise001、noise005 顺序处理。
@@ -53,7 +59,7 @@
 ## 实验冻结配置
 
 - 编号：FREEZE-001；任务：参考AAAI Stage6冻结新Core80统一实验配置；状态：已完成，已用于EXP-001。
-- 当前采用方案：[experiment_config.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/experiment_config.json)为统一入口；保留15份 `formal_clean_params` 的算法参数与线程数，公共种子520/521/522、三条件0/0.01/0.05、每项10800秒、每60秒快照，共10800项。Core80名单固定80个唯一完整路径；噪声种子按固定数据集身份计算，运行时显式传入，避免主机路径影响噪声。
+- 已归档方案：[experiment_config.json](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/experiment_config.json)；保留15份 `formal_clean_params` 的算法参数与线程数，公共种子520/521/522、三条件0/0.01/0.05、每项10800秒、每60秒快照，共10800项。Core80名单固定80个唯一完整路径；噪声种子按固定数据集身份计算，运行时显式传入，避免主机路径影响噪声。
 - 验证：15算法源JSON与最新wrapper/runner哈希已绑定；LLM正式配置的非敏感字段已在22核验（DeepInfra Llama3.1-8B Turbo，temperature0.6、max_tokens1024）。主机路径及密钥运行时绑定；TPSR模板seed23改由统一任务种子传入，符合当前runner行为。配置哈希 `a0da7a60a112ff5ea1e9879140e8987e60bdfb8b6da4ba9186d8ef3231092629`，同目录 `freeze_experiment_config.py --check` 通过。
 - 下一步：正式结果完成后回收远端输出并启动逐分钟Opus后处理；`2、experiments`本地目录仍无文件，当前输出位于远端实验目录。
 
@@ -116,8 +122,8 @@
 ## 选集入口
 
 - 编号：CORE-001；任务：整理并阅读 Core30~Core80 压缩包；状态：目录创建、复制、解压及阅读已完成，选集仍为候选。
-- 文件位置：[1、build_core30_80](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、build_core30_80/)；压缩包复制到该目录，原始文件保留在 stage4 根目录。
-- 阅读入口：[README.md](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、build_core30_80/core30_core80_all_sensitivity_package/core_nested_all_sensitivity/README.md)。程序入口为 `select_nested_cores.py`，名单位于包内 `results/core30.csv` 至 `core80.csv`。
+- 文件位置（已暂存）：[1、build_core30_80](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/1、build_core30_80/)；压缩包及原始文件随Stage4保留。
+- 阅读入口：[README.md](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/1、build_core30_80/core30_core80_all_sensitivity_package/core_nested_all_sensitivity/README.md)。程序入口为 `select_nested_cores.py`，名单位于包内 `results/core30.csv` 至 `core80.csv`。
 - 已确认：包含664任务及2656条四探针聚合输入；六份默认名单按30、40、50、60、70、80严格嵌套；每个规模有5000条敏感性结果。敏感性固定各自父集合，不表示整链联合扰动；包不含实际训练和测试数据。
 - 验证：249个文件哈希、压缩包复制一致性、名单数量及前缀嵌套、敏感性CSV行数均通过；未重新求解。证据：[inspection.json](work/CORE-001/inspection.json)。
 - Core80 名单已用于 IMPORT-001 的路径交集筛选，未更改包内名单。
@@ -146,7 +152,7 @@
 - 配置：[toolbox_config.json](../scientific_intelligent_modelling/config/toolbox_config.json)、[envs_config.json](../scientific_intelligent_modelling/config/envs_config.json)。
 - 数据目录：[sim-datasets-data/](../sim-datasets-data/)、[sim-datasets-py/](../sim-datasets-py/)；独立仓库保持原位置。
 - 目录分类：`AAAI_experiments/`、`A_ICLR_experiments/`、`A_Neurips_experiments/` 为现有实验目录，按具体任务读取。
-- ICLR stage4 目录：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/)。
+- ICLR Stage4已暂存：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，当前没有有效Stage4实验。
 
 ## 候选文件与问题：待验证
 
