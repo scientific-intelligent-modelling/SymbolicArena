@@ -86,7 +86,11 @@ class ReplicaRunner(ClaudeRunner):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--stop-old', action='store_true')
+    parser.add_argument('--workers', type=int, default=4)
+    parser.add_argument('--recover-interrupted', action='store_true')
     args = parser.parse_args()
+    if args.workers < 1:
+        parser.error('--workers 必须为正整数')
     WORK.mkdir(parents=True, exist_ok=True)
     if args.stop_old:
         stop_old()
@@ -100,13 +104,25 @@ def main():
     entries = [entry for entry in plan.entries if entry.evaluation_key not in frozen]
     selection_path = WORK / 'selected.json'
     selected = json.loads(selection_path.read_text()) if selection_path.exists() else {}
-    write_json(WORK / 'request_manifest.json', {
+    for record in selected.values():
+        actual = hashlib.sha256(Path(record['result_path']).read_bytes()).hexdigest()
+        if actual != record['result_sha256']:
+            raise RuntimeError(f"已选结果校验失败: {record['result_path']}")
+    configuration = {
         'plan': str(plan.plan_path), 'plan_sha256': plan.plan_sha256,
-        'task_count': len(entries), 'replicas': 3, 'workers': 32,
+        'task_count': len(entries), 'replicas': 3, 'workers': args.workers,
         'timeout_seconds': 1800, 'system_prompt': SYSTEM,
         'system_prompt_sha256': hashlib.sha256(SYSTEM.encode()).hexdigest(),
         'selection': 'first_valid_completion', 'logical_ids': [e.logical_id for e in entries],
-    })
+    }
+    manifest_path = WORK / 'request_manifest.json'
+    if manifest_path.exists():
+        if json.loads(manifest_path.read_text())['plan_sha256'] != plan.plan_sha256:
+            raise RuntimeError('恢复任务的输入计划哈希发生改变')
+    else:
+        write_json(manifest_path, configuration)
+    with (WORK / 'run_configurations.jsonl').open('a') as handle:
+        handle.write(json.dumps({'time': time.time(), **configuration}) + '\n')
     runners = []
     for replica in range(1, 4):
         directory = WORK / f'replica_{replica}'
@@ -114,10 +130,20 @@ def main():
                                logical_task_cap=40000, max_attempts_per_task=10**9)
         store.register_tasks([entry.definition.task_spec for entry in entries])
         store.recover_expired_leases()
+        if args.recover_interrupted:
+            with sqlite3.connect(store.path) as connection:
+                interrupted = connection.execute("SELECT attempt_id FROM attempts WHERE status='running'").fetchall()
+            for (attempt_id,) in interrupted:
+                store.finish_failure(attempt_id, error_class='controller_interrupted', retryable=True)
         runners.append(ReplicaRunner(store, attempts_dir=directory / 'attempts',
                                      frozen_dir=directory / 'frozen', timeout_seconds=1800,
                                      lease_seconds=2100))
-    round_number = 0
+    progress_path = WORK / 'progress.json'
+    round_number = json.loads(progress_path.read_text()).get('round', 0) if progress_path.exists() else 0
+    startup = {'time': time.time(), 'round': round_number, 'selected': len(selected),
+               'total': len(entries), 'workers': args.workers, 'replicas': 3, 'status': 'running'}
+    write_json(progress_path, startup)
+    print(json.dumps(startup), flush=True)
     while len(selected) < len(entries):
         round_number += 1
         pending = [entry for entry in entries if entry.evaluation_key not in selected]
@@ -125,7 +151,7 @@ def main():
                 if runners[replica].store.task_state(entry.evaluation_key) != 'exhausted']
         if not jobs:
             raise RuntimeError('剩余任务全部发生不可自动重试的错误，请检查 attempts')
-        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
             def execute(entry, replica):
                 if entry.evaluation_key in selected:
                     return None
@@ -156,7 +182,7 @@ def main():
                 with (WORK / 'events.jsonl').open('a') as handle:
                     handle.write(json.dumps(event, ensure_ascii=False) + '\n')
                 write_json(WORK / 'progress.json', {'time': time.time(), 'round': round_number,
-                           'selected': len(selected), 'total': len(entries), 'workers': 32,
+                           'selected': len(selected), 'total': len(entries), 'workers': args.workers,
                            'replicas': 3, 'last_event': event})
                 print(json.dumps(event, ensure_ascii=False), flush=True)
         time.sleep(5)

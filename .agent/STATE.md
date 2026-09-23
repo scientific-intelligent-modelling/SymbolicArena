@@ -3,7 +3,7 @@
 ## 当前任务
 
 - 当前超发方案（2026-09-23 14:58，已确认）：保留原有三个 JAXSR 运行任务，在 iaaccn48、50、51 各追加相同的三个任务，共9份，种子与10800秒预算不变；9份均已写出第一分钟快照。启动脚本为 `A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/launch_remaining_jaxsr.py`，输入为 `controller/queue/slices/jaxsr/` 与 `controller/params/jaxsr__noise*.json`，机器、会话、输出索引为 `.agent/work/EXP-001/oversample/jaxsr_launch.json`。旧任务保持运行，副本使用独立输出目录；待验证：预算结束后的有效结果与正式结果绑定。
-- 当前 Opus 超发（已确认）：旧执行器与守护进程已终止，原有3016份冻结结果保留。101项剩余 clean 化简任务各安排3份独立请求，共用32个执行线程；使用专用数学 JSON system prompt，保留原有完整输出与语义校验，首个通过校验的结果写入 `.agent/work/EXP-001/oversample/opus/selected.json`。新脚本为 `A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/opus_remaining_replicas.py`，tmux 为 `core80_opus_replicas`；14:58已新增1项通过完整校验的结果。实时进度为同目录 `progress.json`，输入与请求配置为 `request_manifest.json`，原始回复与校验为 `replica_*/attempts/`；失败任务逐轮重试，单次请求1800秒。待验证：101项全部完成、正式汇总绑定及后续两个噪声条件。旧数据库的 running 记录属于已停止执行器，不代表当前并发。远端原批次同步改由 `core80_sync_only` 会话负责。
+- 当前 Opus 超发（2026-09-23 16:11，已确认）：并发降为4并恢复运行，101项已选定67项，剩余34项继续每项3份独立请求；原有3016份冻结结果保留。脚本为 `A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/opus_remaining_replicas.py --workers 4 --recover-interrupted`，执行器PID `2418346`，已核验4个 Claude 子进程。首个通过完整校验的结果索引为 `.agent/work/EXP-001/oversample/opus/selected.json`，实时进度为同目录 `progress.json`，输入为 `request_manifest.json`，历次运行配置为 `run_configurations.jsonl`，回复与校验为 `replica_*/attempts/`。恢复时验证已选结果 SHA256，并将已终止执行器的在途请求记录为 `controller_interrupted` 后重新排队。tmux socket 为 `.agent/work/EXP-001/oversample/tmux/server.sock`，会话为 `core80_opus_replicas`。此前16:03因 systemd-oomd 内存压力终止33个进程，证据为该时段用户 journal 与 systemd-oomd journal；当前并发32方案已替代。待验证：剩余34项完成、正式汇总绑定、后续噪声条件和已停止的本机同步任务。
 - 以下14:26及更早 Opus 运行状态已替代，仅供追溯；当前采用以上超发方案。
 
 - 编号：EXP-001；任务：执行冻结的Core80正式全量实验；状态：已启动，训练已派发。
