@@ -48,7 +48,7 @@ def main():
     parser.add_argument('--plan', type=Path)
     parser.add_argument('--plan-dir', type=Path)
     parser.add_argument('--phase', required=True)
-    parser.add_argument('--workers', type=int, default=300)
+    parser.add_argument('--workers', type=int, default=32)
     parser.add_argument('--recover-interrupted', action='store_true')
     args = parser.parse_args()
     if args.plan is None and args.plan_dir is None:

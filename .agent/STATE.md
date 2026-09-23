@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- API并发更新（已确认）：用户要求32并发，已停止原300并发执行器，并使用 `--workers 32 --recover-interrupted` 启动PID2483768；所有类型和条件共用32个请求线程及HTTP连接上限。入口为stage4 `run_core80_followup.sh`，tmux为 `core80_followup32`。已有选定结果、SQLite及计划保留，启动时恢复未完成请求；准备服务及8GiB总上限不变。已核验唯一API执行器启动参数为32，启动后的计划载入期间，旧进度文件仍可能显示上次参数；以下300并发记录已替代。
+
 - 准备任务内存配置（2026-09-23，已确认）：按用户要求取消该准备任务工作进程和配对计算子进程的RLIMIT_AS限制，全部准备进程由 `core80-prepare.service` 统一使用8GiB总上限；旧单进程4GiB及进程组6GiB配置已替代。服务已重启，PID2483184，实际MemoryMax=8589934592，主进程地址空间限制为unlimited；配对助手接收memory_limit_bytes=None，其他调用者默认设置保持不变。真实BPG3/DRSR配对重算与既有完整证据一致，脚本及输出沿用 `followup/check_preparation_resume.py`、`pair_replay.json`。API PID2459526仍使用300并发，未重启。复杂输入的持续运行内存情况仍需监控；当前确认范围为配置生效和真实单项验证。
 
 - 准备进程恢复（2026-09-23 23:01，EXP-001）：已确认原PID2461461所属进程组在21:31被systemd-oomd终止，占用7.5GiB，内存压力64.42%持续超过20秒；证据 `/var/log/syslog:25917`、`:26176`、`:26256`。原代码累计保留已完成Future的全部证据。现采用spawn独立工作进程、最多4个待处理Future、完成后释放结果引用，保留2个计算并发和单项180秒/4GiB限制；从已发布466批继续，已有批次和API结果保留。正式启动配置为stage4 `core80-prepare.service`，整组内存上限6GiB、禁用该服务交换空间、异常10秒后重启、每小时最多5次启动；PID2479901，取代准备进程tmux入口。每分钟监控新增准备进程状态及内存统计。API PID2459526仍为300并发，未重启。代码编译和差异检查通过；用BPG3/DRSR真实冻结输入重算配对证据，与原证据完整JSON一致，脚本 `followup/check_preparation_resume.py`、输出 `followup/pair_replay.json`。当前服务正在重新核验完整输入，恢复后的新批次生成仍待确认。
