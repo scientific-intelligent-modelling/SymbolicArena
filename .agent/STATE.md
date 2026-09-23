@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- 最新并发（2026-09-23 17:33，已确认）：用户要求提高至300，API执行器已使用 `--workers 300 --include-noise --recover-interrupted` 恢复，PID `2435653`；clean与两个noise条件共用300个请求线程。本机公式校验继续为全局2并发、每进程2GiB，每分钟监控服务保持运行。启动时已选clean76项、noise001 1063项、noise005 1093项，结果均保留；实时计数以 `oversample/opus/progress.json` 为准。以下100并发配置已替代。
+
 - 当前Opus调度（2026-09-23 17:07，已确认）：按用户要求总API并发提高到100，clean剩余任务与noise001、noise005交替派发，共用100个线程和HTTP连接池；本机数学校验仍为全局2并发、每进程2GiB。执行器PID `2431371`，启动参数 `--workers 100 --include-noise --recover-interrupted`。clean重试批次101项已选72项；现有noise001计划3094项已选18项，noise005计划3096项已选13项，均已收到真实API结果并通过校验。两个噪声计划的6190项来源结果哈希全部核验一致。噪声任务首次各请求一次，失败后逐轮重试；clean保留3份独立请求。各条件使用独立SQLite数据库，输入哈希与运行配置保存在 `oversample/opus/{noise001,noise005}/request_manifest.json` 和 `run_configurations.jsonl`，已选结果仍统一索引于 `selected.json`。每分钟监控增加分条件统计，脚本为stage4 `monitor_opus.py`。待补充：新恢复的3项JAXSR结果尚未进入旧噪声化简计划，完整noise任务覆盖及后续裁决阶段仍待核验。以下32并发记录已替代。
 
 - 当前Opus传输（2026-09-23 16:56，已确认）：从本次开始仅使用项目现有 `AnthropicApiRunner` 直接请求 Messages API，停止使用CC客户端；执行器PID `2430154`，HTTP并发32。已验证真实HTTP 200、响应模型 `claude-opus-5`、完整JSON和数学语义校验链。原有67项选定结果及3016项原始冻结结果保留，当前仍有34项待完成。有效脚本为stage4 `opus_remaining_replicas.py`；渠道凭据仅从既有用户设置读取，不写入结果。每分钟监控仍运行。
