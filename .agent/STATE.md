@@ -2,6 +2,9 @@
 
 ## 当前任务
 
+- CORE-002（2026-09-24）：新建ICLR Stage4及 [1、preflight](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，已写入 [任务书](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/任务书.md) 和 [实验计划](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/实验计划.md)。采用候选Probe Consensus Coreset：四probe标准化后等权负均值难度、精确W1、联合嵌套Core30–80、资格及两类去重；包括四折LOO和冻结后的外部验证。文档创建已完成，尚未实施选集、补跑或训练。
+- 已确认输入：Stage3的7968条运行、2656条dataset×probe汇总及664条任务元信息，四份输入SHA256写入任务书。待核验：seed聚合与原稿评分的一致性、54个缺失误差组合、历史算法修复对旧指标的影响及外部算法名单。下一步按实验计划完成输入和评分定义核验，再实施选择器；正式名单目前不存在。过程目录约定为 `.agent/work/CORE-002/`，旧EXP-001保持归档及停止状态。
+
 - ARCHIVE-001（2026-09-24，已完成）：按用户确认，将ICLR Stage4完整迁移至 [pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验暂存，不再作为当前有效批次。
 - EXP-001已停止并归档：Opus执行器PID2483768已结束，监控与准备服务均inactive，准备服务已取消注册；未删除实验文件。`.agent/work/EXP-001/` 保留原位置并标记已归档，默认不读取、不续跑。后续重新选择数据集尚未执行。
 - 验证：同一文件系统目录重命名，Stage4目录inode70526846与实验目录inode70527320保持不变；冻结配置SHA256为c73295555568a46e00ea015a50df51caa01eeeaaf9f6ccfe4076cf09c9bf513a，支持源码ZIP为991d93f0c5996c3f05ad3cea241b575f68ed65def45848fac8f4c8f56da8bf8a，迁移前后一致。历史配置及证据原文保留，旧路径的前缀映射见 [暂存说明](../A_ICLR_experiments/pre_exp_26.09.23/README.md)。
@@ -152,7 +155,8 @@
 - 配置：[toolbox_config.json](../scientific_intelligent_modelling/config/toolbox_config.json)、[envs_config.json](../scientific_intelligent_modelling/config/envs_config.json)。
 - 数据目录：[sim-datasets-data/](../sim-datasets-data/)、[sim-datasets-py/](../sim-datasets-py/)；独立仓库保持原位置。
 - 目录分类：`AAAI_experiments/`、`A_ICLR_experiments/`、`A_Neurips_experiments/` 为现有实验目录，按具体任务读取。
-- ICLR Stage4已暂存：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，当前没有有效Stage4实验。
+- 新ICLR Stage4入口：[1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，当前仅有选集任务书与实验计划。
+- 旧ICLR Stage4已暂存：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验已停止。
 
 ## 候选文件与问题：待验证
 
