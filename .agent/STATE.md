@@ -2,14 +2,16 @@
 
 ## 当前任务
 
+- METHOD-006（2026-09-24，已确认）：当前采用纯四probe W1选择及既有资格、family/subgroup和去重约束；`select_response_distribution.py`已移除Info下限参数及约束，Info保持诊断用途。当前有效候选为preflight1 `response_distribution_core50/core50.csv`，名单哈希未变，MAE=0.0130244276、Info=0.2157438292。帮助入口、真实保存解、变量边界、数量约束、W1和MAE复算通过，证据`.agent/work/METHOD-006/verification.json`，核验脚本同目录`verify_current.py`；过程原位归档。
+- METHOD-006评估：该候选可用于固定Core50上的算法训练评测；四次留出均值0.201357、最大0.503287，尚不支持其稳定达到约0.15或可靠替代Full664。方法说明第13节记录使用范围；历史原生预测回放、新算法/三个小时/噪声/六维代表性尚未确认，formal_ready=false。METHOD-003候选已替代，原结果保留在`response_distribution_info050_core50/`，生成源码由提交`b773c44c`保留；本次未删除历史结果，未重新选集或启动训练。
+
 - METHOD-005（2026-09-24，四次留出检查完成）：纯W1方法保持不变，每次只用其余三个probe重新选Core50，复用uDSR结果，其他三项并行、每项170秒求解，进程约176.5秒。DSO/iMCTS/PyOperon/uDSR的held-out绝对误差为0.5032872262/0.0627355933/0.0254151988/0.2139897890，平均0.2013569518；construction MAE平均0.0191444845，2/4次held-out误差≤0.15。
 - METHOD-005有效入口：preflight1 `run_heldout_audit.py`及`heldout_loo_summary.json`；配置、输入/源码哈希、解和名单位于各`heldout_<probe>_core50/`。原始数据复算误差/W1及数量、资格、family/subgroup和去重检查全部通过，四次输入/选择器/评分/模型哈希一致。DSO/iMCTS/PyOperon/uDSR的求解gap约6.74%/3.43%/0.72%/1.90%，未证明全局最优。当前结果尚不支持各算法稳定达到约0.15；方法开发曾使用全部四probe，未执行外部验证或随机选集比较。方法说明第14.1节保留条件；`.agent/work/METHOD-005/`日志原位归档，原候选未替换，后续任务待确认。
 
 - METHOD-004（2026-09-24，已完成单次留出检查）：固定uDSR为held-out，DSO/iMCTS/PyOperon构造纯W1 Core50，资格依据construction的9次运行重算，排除7项；选择阶段只读取身份和结构元信息，不使用四probe的Info/资格/响应标签。170秒求解，construction MAE=0.016728635；uDSR Full664均值5.6965008195、Core50均值5.9104906084，held-out绝对误差0.213989789，未达到约0.15。W1 gap约1.90%，未证明全局最优。
 - METHOD-004入口为preflight1 `select_heldout_response.py`，配置、输入及源码哈希、冻结名单、完整解和报告位于`heldout_udsr_core50/`。名单保存后才评估held-out，原候选未替换。真实数据复算和约束检查通过；共享模型默认四probe路径复算原保存解通过，证据`.agent/work/METHOD-004/verification.json`，脚本同目录`verify_heldout.py`；过程原位归档。本次检验纯W1方法，未检验Info≥0.5候选。方法开发此前使用全部四probe，当前是回顾性单次检查，外部算法泛化尚未确认；后续任务待用户决定。
 
-- METHOD-003（2026-09-24，候选实验完成）：在preflight1选择器增加可选`--min-info`（默认0保持基准），本次下限0.5，保留原W1目标及全部选择约束。170秒求解、外部180秒限制，Info从0.215744提高到0.500069，MAE从0.013024提高到0.271454，Coverage=0.911111；W1=0.1265233624、下界0.1250389814、gap约1.17%，尚未证明全局最优。Info达标，MAE未达到约0.15。
-- METHOD-003有效文件：preflight1的`select_response_distribution.py`及方法说明第13节；输入版本、参数与源码哈希、名单和解保存在`response_distribution_info050_core50/`。原候选未覆盖或替换；未执行训练/API/LOO。`.agent/work/METHOD-003/verify_info.py`从原始运行与元信息复算MAE/Info/W1、核验50项及去重和约束，证据同目录`verification.json`；过程目录原位归档，后续方案待确认。
+- METHOD-003（已替代，历史证据）：Info下限0.5实验结果MAE=0.271454、Info=0.500069，未达到约0.15目标。配置、输入哈希、名单和解保存在preflight1 `response_distribution_info050_core50/`，生成源码为提交`b773c44c`；核验证据`.agent/work/METHOD-003/verification.json`，过程原位归档，默认不读取。当前入口见METHOD-006。
 
 - REVIEW-001（2026-09-24，已确认）：核验 `2、preflight2/core50_selection_package.zip`，原脚本真实运行0.61秒选出50项，独立重放名单一致，包内四份数据与Stage3逐字节相同。按已确认response口径从7968条原始记录复算MAE=2.23158742216141，DSO/iMCTS/PyOperon/uDSR分别1.291151/3.128115/1.274196/3.232888。当前输出未达到约0.15目标。
 - REVIEW-001问题：程序只按固定个人评分排序并检查semantic duplicate和subgroup≤6；没有执行eligibility、family/difficulty/failure配额、basename约束或MILP，未调用MAE计算。实际选入有效比例1/3的g0619；LLM-SRBench仅4项、SRSD有23项，违反此前通用family配额。当前名单没有两类重复，subgroup上限通过。原压缩包及源码未修改，候选版本未替换。核验脚本 `.agent/work/REVIEW-001/audit_preflight2.py`，输入原包SHA256=a080317ecfed38c7ca7d9415c4856dc1633767ef444290144e1d175d440eb04d，完整命令、哈希、指标和约束证据 `audit.json`，输出 `replay/core50.csv`；该过程目录原位归档。后续修正待用户确认，历史原生预测回放未执行。

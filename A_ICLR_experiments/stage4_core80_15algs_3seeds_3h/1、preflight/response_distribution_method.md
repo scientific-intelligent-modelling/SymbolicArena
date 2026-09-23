@@ -758,23 +758,15 @@ python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_re
 
 本次文档数值复算脚本为.agent/work/METHOD-002/document_checks.py，结果为同目录documentation_checks.json。它核验了历史Disc/Stab/Info及类别标签、当前标准化参数、四个W1、MAE、Coverage、family配额和真实示例，没有重新执行MILP或改写原始数据。
 
-## 13. Info下限候选实验
+## 13. 当前名单的使用范围
 
-`select_response_distribution.py`支持`--min-info`，默认0，保持上述基准方法。指定下限τ时，在原有约束基础上增加`MeanInfo(S) >= τ`，仍最小化四probe标准化response的W1均值。τ为显式实验参数，MAE仅在选集后计算。
+当前候选为`response_distribution_core50/core50.csv`，使用四probe等权W1目标及既有资格、family/subgroup和去重约束。Info只用于诊断，当前均值0.215744，高于Full664均值0.190357。50项数量和约束核验通过，构造内MAE为0.013024。
 
-本次使用τ=0.5、K=50、求解预算170秒，外部执行上限180秒，输出独立保存在`response_distribution_info050_core50/`，原候选结果保留。Info=0.5000687851，MAE=0.2714542142，Coverage=0.9111111111，W1=0.1265233624；求解下界0.1250389814、相对gap约1.17%，尚未证明全局最优。Info达到目标，MAE未达到约0.15。
-
-输入版本与基准相同，源码及输入哈希、标准化参数、依赖版本、下限和预算记录在同目录`configuration.json`，完整解、约束检查、名单和指标分别为`solver_solution.json`、`constraints.json`、`core50.csv`和`summary.json`。复算脚本为`.agent/work/METHOD-003/verify_info.py`，证据为同目录`verification.json`。结果仍属于construction诊断，未执行LOO或历史原生预测回放。
-
-~~~bash
-python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_response_distribution.py \
-  --size 50 --min-info 0.5 --seconds 170 \
-  --output .agent/work/METHOD-003/reproduce_info050
-~~~
+这份名单可以用于定义一个固定的Core50训练评测集合。已有证据尚不足以确认其可靠恢复Full664的整体结果：四次留出平均误差0.201357，最大0.503287；未比较随机选集，也未验证新算法、三个小时预算、噪声条件或六维指标的总体代表性。来源为历史一个小时探针结果，原生预测回放尚未完成，因此`formal_ready=false`保持不变。Core50上的正式实验结论应限定于该集合及实际运行条件。
 
 ## 14. 固定留出uDSR的泛化检查
 
-本次检查纯W1基准方法，固定留出uDSR，使用DSO、iMCTS、PyOperon重新选择50项；不使用Info下限。固定uDSR使construction保留三个算法范式，该选择在求解及评估前确定。资格筛选仅使用construction的9次运行，有效运行比例至少0.5；response及标准化也仅使用这三个probe。元信息只读取dataset_id、dataset_name、dataset_rel、family、subgroup、semantic_duplicate_group和basename，保留原family/subgroup及两类去重约束。四probe汇总的Info、difficulty、failure、winner和资格标签不进入模型。
+本次检查纯W1基准方法，固定留出uDSR，使用DSO、iMCTS、PyOperon重新选择50项。固定uDSR使construction保留三个算法范式，该选择在求解及评估前确定。资格筛选仅使用construction的9次运行，有效运行比例至少0.5；response及标准化也仅使用这三个probe。元信息只读取dataset_id、dataset_name、dataset_rel、family、subgroup、semantic_duplicate_group和basename，保留原family/subgroup及两类去重约束。四probe汇总的Info、difficulty、failure、winner和资格标签不进入模型。
 
 入口为`select_heldout_response.py`，输出为`heldout_udsr_core50/`。名单写入CSV并记录SHA256之后才计算uDSR的response；评估完成后再次检查名单SHA256不变。输入、源码哈希、选择字段、参数及依赖版本保存在`configuration.json`，解和约束保存在`solver_solution.json`及`constraints.json`。
 
@@ -800,4 +792,4 @@ python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_he
 
 四次held-out绝对误差等权平均为0.2013569518，construction MAE平均0.0191444845。两次held-out误差不超过0.15，最大误差为DSO的0.5032872262。按用户关注的约0.15目标，当前结果尚不支持纯W1选择对各算法都稳定达到该水平；iMCTS和PyOperon两次结果满足该目标。没有随机选集比较，因此不据此声称优于随机选集。此前方法开发使用四probe、每次求解保留非零gap，这些条件继续限制结论范围。
 
-四份名单均为50项；从原始记录独立复算construction及held-out误差、W1、资格、family/subgroup约束和两类去重通过，四次输入及选择器/模型/评分源码哈希一致。每次配置和完整解位于`heldout_<probe>_core50/`，执行命令、输入及脚本哈希保存在汇总文件，运行日志位于`.agent/work/METHOD-005/`。原有四probe候选及Info下限候选保留。
+四份名单均为50项；从原始记录独立复算construction及held-out误差、W1、资格、family/subgroup约束和两类去重通过，四次输入及选择器/模型/评分源码哈希一致。每次配置和完整解位于`heldout_<probe>_core50/`，执行命令、输入及脚本哈希保存在汇总文件，运行日志位于`.agent/work/METHOD-005/`。
