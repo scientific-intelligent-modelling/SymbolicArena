@@ -2,15 +2,10 @@
 
 ## 当前任务
 
-- CORE-002嵌套试算（2026-09-24，已确认）：按用户要求仅调用一次MILP，联合最小化六个W1的等权平均并约束Core30⊂40⊂50⊂60⊂70⊂80。用时44.962秒，status=0、mip_gap=0，目标均值0.022180324983946346，通过1e-9数值容差内最优性核验。入口 [select_cores_nested_milp.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_cores_nested_milp.py)，输出 [results_nested_milp](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/results_nested_milp/)，保留完整联合解、源代码和输入哈希。
-- 嵌套试算结果：各K四probe构造内MAE依次为0.178334、0.218561、0.190315、0.165726、0.214432、0.100335；与暂存旧Core80重叠数依次为2、3、6、7、9、10。六份并集80、共同交集30，相对旧Core80新增70。数量、资格、两类去重、嵌套及独立W1复算全部通过；旧名单按冻结配置及参考CSV哈希核验，比较身份为完整dataset_rel。MAE与重叠数未参与优化。本轮为试算，历史原生指标回放审核与LOO仍待完成，formal_ready=false。
+- CLEAR-002（2026-09-24，已完成）：按用户明确要求清空 [1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，删除其中58个文件和4个子目录，保留preflight空目录。已核验没有相关选集进程，目录内容为空。
+- 当前没有有效选集任务书、计划、脚本或名单。CORE-002过程目录 `.agent/work/CORE-002/` 保持原位置并标记已归档，默认不读取或执行。Stage3原始探针数据及pre_exp_26.09.23暂存实验未改动。下一步等待新的选集要求。
 
-## CORE-002独立选集记录
-
-- CORE-002（2026-09-24）：当前采用MILP/HiGHS，各K独立最小化精确W1，不要求嵌套。full_probe4的Core30/40/50/60/70/80全部返回status=0、mip_gap=0，通过1e-9数值容差内的最优性核验，求解合计10.20秒。W1依次为0.03271813、0.02425471、0.01861372、0.01548240、0.01443248、0.01287965。原爬山结果保留于results_hillclimb/供追溯，当前采用下述MILP名单。
-- 当前入口：[select_cores_milp.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_cores_milp.py)；[MILP结果](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/results_milp/) 包含六份名单、summary.json、configuration.json、input_audit.json、responses.csv、difficulty.csv及逐K完整解向量、最优界和gap。源文件及名单SHA256均保存；共用评分函数的源码哈希单独绑定。任务书与实验计划已同步当前方法。
-- 评分已执行：probe_consensus_response_v1；逐有效seed取log10并截断至[-12,12]，下界1e-12，ID/OOD相同有效seed集合分别取算术平均，失败惩罚2，response下界-12，全失败记-12，v分母为3。使用Stage3历史7968条记录；有效输出7616条，54个缺失汇总组合与原始标记下全失败组合逐键一致。eligible为663个，仅排除g0619。
-- 验证已确认：六份MILP名单的规模、资格、semantic duplicate、basename、整数性及全部线性约束通过；W1独立复算与最优界差在1e-9以内；Core30确定性重放名单一致。核验脚本 `.agent/work/CORE-002/verify_milp.py`；response及difficulty与前次逐字节一致，六个最优W1与前次最佳值一致。当前四probe构造内MAE依次为0.350459、0.382592、0.212127、0.335444、0.222825、0.256447。最优性只针对W1。历史原生预测回放审核仍待完成，formal_ready=false；LOO和随机参照尚未执行，没有启动训练或API调用。
+## 已暂存实验
 
 - ARCHIVE-001（2026-09-24，已完成）：按用户确认，将ICLR Stage4完整迁移至 [pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验暂存，不再作为当前有效批次。
 - EXP-001已停止并归档：Opus执行器PID2483768已结束，监控与准备服务均inactive，准备服务已取消注册；未删除实验文件。`.agent/work/EXP-001/` 保留原位置并标记已归档，默认不读取、不续跑。后续重新选择数据集尚未执行。
@@ -162,7 +157,7 @@
 - 配置：[toolbox_config.json](../scientific_intelligent_modelling/config/toolbox_config.json)、[envs_config.json](../scientific_intelligent_modelling/config/envs_config.json)。
 - 数据目录：[sim-datasets-data/](../sim-datasets-data/)、[sim-datasets-py/](../sim-datasets-py/)；独立仓库保持原位置。
 - 目录分类：`AAAI_experiments/`、`A_ICLR_experiments/`、`A_Neurips_experiments/` 为现有实验目录，按具体任务读取。
-- 新ICLR Stage4入口：[1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，当前仅有选集任务书与实验计划。
+- 新ICLR Stage4入口：[1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，当前为空。
 - 旧ICLR Stage4已暂存：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验已停止。
 
 ## 候选文件与问题：待验证
