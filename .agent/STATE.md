@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- EVAL-002（2026-09-24，已完成）：以pre_exp_26.09.23暂存实验冻结的Core80名单，在同一Stage3 Full664数据及EVAL-001评分口径下计算MAE=0.9633741588372269。DSO/iMCTS/PyOperon/uDSR分别为0.550300648621008、0.7938809941935538、0.7749096449956594、1.7344053475386865。入口 [evaluate_core80.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/evaluate_core80.py)，结果 [core80_mae.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/core80_mae.json)；已核验80个唯一ID及完整路径、冻结参考CSV哈希、评分函数和Full664数据哈希与EVAL-001一致。结果是四probe历史运行诊断，未执行LOO或原生模型回放。
+
 - EVAL-001（2026-09-24，已完成）：计算用户指定50个任务相对Full664的四probe平均response绝对差，使用已确认的probe_consensus_response_v1，MAE=0.15115479966356438。DSO/iMCTS/PyOperon/uDSR分别为0.06744972332041543、0.012748913307117249、0.07498742617122117、0.4494331358555037。入口 [evaluate_core50.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/evaluate_core50.py)，结果 [core50_mae.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/core50_mae.json)；保存50个ID、原始数据SHA256、脚本SHA256及评分参数。已核验7968条运行、每组3个seed、50个唯一任务及Full664覆盖。该结果基于历史原始指标，是固定名单诊断，未执行LOO或原生模型回放。
 
 - TRACK-001（2026-09-24，已完成）：新Stage4的 `1、preflight/` 已开放Git跟踪，当前仅添加 `.gitkeep` 保留目录；未来 `2、experiments/` 继续忽略。其他ICLR实验目录保持原有忽略范围，已跟踪文件不受忽略规则影响。已核验preflight内文档及CSV路径可跟踪、实验数据路径被忽略。
@@ -161,7 +163,7 @@
 - 配置：[toolbox_config.json](../scientific_intelligent_modelling/config/toolbox_config.json)、[envs_config.json](../scientific_intelligent_modelling/config/envs_config.json)。
 - 数据目录：[sim-datasets-data/](../sim-datasets-data/)、[sim-datasets-py/](../sim-datasets-py/)；独立仓库保持原位置。
 - 目录分类：`AAAI_experiments/`、`A_ICLR_experiments/`、`A_Neurips_experiments/` 为现有实验目录，按具体任务读取。
-- 新ICLR Stage4入口：[1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，当前包含.gitkeep及EVAL-001的固定Core50评估脚本与结果。
+- 新ICLR Stage4入口：[1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，当前包含.gitkeep及EVAL-001/002的固定Core50、暂存Core80评估脚本与结果。
 - 旧ICLR Stage4已暂存：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验已停止。
 
 ## 候选文件与问题：待验证
