@@ -3,7 +3,8 @@
 ## 当前任务
 
 - CORE-002（2026-09-24）：ICLR Stage4的 [1、preflight](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/) 包含 [任务书](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/任务书.md) 和 [实验计划](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/实验计划.md)。当前候选Probe Consensus Coreset由full_probe4按各K独立最小化精确W1，保留资格及两类去重；同等最优解采用预登记随机种子选择，各规模没有包含约束。验证范围为复用已有结果的四折LOO和随机参照，LOO不参与正式名单决策。文档已更新，尚未实施选集、补跑或训练。
-- 已确认输入：Stage3的7968条运行、2656条dataset×probe汇总及664条任务元信息，四份输入SHA256写入任务书。待核验：seed聚合与原稿评分的一致性、54个缺失误差组合、历史算法修复对旧指标的影响。下一步按实验计划完成输入和评分定义核验，再实施选择器；正式名单目前不存在。过程目录约定为 `.agent/work/CORE-002/`，旧EXP-001保持归档及停止状态。
+- 已确认评分：probe_consensus_response_v1；逐有效seed取log10并截断至[-12,12]，NMSE下界1e-12；ID/OOD使用相同有效seed集合分别取算术平均，失败惩罚2，response下界-12，确认全失败记-12，v的分母固定为3。两份文档已同步，不再使用历史中位数作为评分输入；尚未实现或运行评分程序。
+- 已确认输入：Stage3的7968条运行、2656条dataset×probe汇总及664条任务元信息，四份输入SHA256写入任务书。待核验：历史54个缺失误差组合、历史算法修复对旧指标的影响。下一步核验输入并按已确认规则生成response，再实施选择器；正式名单目前不存在。过程目录约定为 `.agent/work/CORE-002/`，旧EXP-001保持归档及停止状态。
 
 - ARCHIVE-001（2026-09-24，已完成）：按用户确认，将ICLR Stage4完整迁移至 [pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验暂存，不再作为当前有效批次。
 - EXP-001已停止并归档：Opus执行器PID2483768已结束，监控与准备服务均inactive，准备服务已取消注册；未删除实验文件。`.agent/work/EXP-001/` 保留原位置并标记已归档，默认不读取、不续跑。后续重新选择数据集尚未执行。
