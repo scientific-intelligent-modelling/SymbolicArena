@@ -2,10 +2,10 @@
 
 ## 当前任务
 
-- GOAL-CORE50（2026-09-24，待创建）：用户要求继续后台复制，并通过新goal完成Core50实验与Opus化简。当前线程已有paused旧goal，新goal工具返回unfinished goal错误；未将旧goal标记完成，未创建新goal。待用户在界面处理旧goal后再创建。
-- GOAL-CORE50范围：复用35数据集的4725份运行，执行新增15数据集×15算法×3条件×3seed共2025项，每项10800秒，保留逐分钟证据；缺失或绑定失效的Opus化简使用直接API，在iaaccn22执行。用户指定整个Opus服务及子进程的总内存上限为该机物理内存90%，实际并发根据可用内存控制，不设置过低单进程上限；此项尚未部署。付费调用前报告请求量、预计成本及重试额度，现有结果按输入哈希复用。复制进程PID2539014仍在后台运行，未停止；训练和API未启动。
+- GOAL-CORE50（2026-09-24，active）：Goal ID `01a0c369-4097-7a23-becd-0c28659d2627`，目标已创建。工作范围为复用Core50/Core80重叠35项共4725份运行目录及绑定有效的Opus结果，完成新增15项×15算法×3条件×3seed共2025项训练（每项10800秒），再在iaaccn22通过直接API完成缺失Opus化简。保留逐分钟数据及六维计算所需证据；用户要求Opus整组内存上限为物理内存90%，根据可用内存控制并发，不设置过低的单进程上限。付费API开始前先报告请求量、费用估算和重试上限；每个任务最多重试5次，全局额度不超过待处理任务数×5。
+- 当前进度：预期总计6750项，其中4725项复用、2025项待训练。目录复制进程PID2539014仍在运行；最近核验有4644个`import_binding.json`，等复制脚本结束后再读取完整清单及Opus绑定核验。尚未启动训练或API请求。不得重跑输入绑定有效的既有结果。
 
-- IMPORT-002（2026-09-24，执行中）：按用户要求创建新Stage4 `2、experiments/{noise}/{algorithm}/{dataset_name}/{seed}`，依据当前用户Core50 ZIP复用暂存Core80的35项，已核验4725份终态结果身份；新增15项×15算法×3条件×3seed，共2025项待训练。复制原有运行目录及逐分钟轨迹，保持源文件不变；Opus按冻结索引及result.json SHA256绑定复制，缺失项单独列出，尚未完成。入口为preflight `import_core50_experiments.py`，支持保留已完成导入记录继续复制；最终清单和核验汇总待生成。未启动训练或API。
+- IMPORT-002（并入GOAL-CORE50）：新Stage4目录`2、experiments/{noise}/{algorithm}/{dataset_name}/{seed}`。Core50与Core80重叠35项、4725份源结果身份已核验；新增15项、2025份待训练。后台复制正在进行，入口为preflight `import_core50_experiments.py`，结束后生成reuse_manifest、pending_training、pending_opus清单及哈希证据。未启动训练或API。
 
 - COMPARE-001（2026-09-24，已确认）：用户新放入preflight的`core50_selection_outputs.zip`内`core50.csv`包含50个唯一任务，与`pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/experiment_config.json`冻结Core80重叠35项，Core50新增15项，Core80独有45项，并集95项。ID与完整数据集路径两种比较一致；脚本`.agent/work/COMPARE-001/compare.py`，文件哈希及差异名单见同目录`comparison.json`，过程原位归档。压缩包未修改或解压，原preflight文件未恢复。
 
