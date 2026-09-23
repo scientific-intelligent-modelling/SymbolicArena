@@ -2,6 +2,7 @@ import argparse
 import concurrent.futures
 import fcntl
 import hashlib
+from itertools import zip_longest
 import json
 import os
 import sqlite3
@@ -83,6 +84,7 @@ def main():
     parser.add_argument('--stop-old', action='store_true')
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--recover-interrupted', action='store_true')
+    parser.add_argument('--include-noise', action='store_true')
     parser.add_argument('--channel-settings', default=f'routify={Path.home() / ".claude/settings.json"}')
     args = parser.parse_args()
     if args.workers < 1:
@@ -94,10 +96,18 @@ def main():
     lock = (WORK / 'controller.lock').open('a+')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     sys.setrecursionlimit(100000)
-    plan = load_plan_jsonl(OLD / 'plans/simplify_core80_clean.jsonl')
+    conditions = ['clean', 'noise001', 'noise005'] if args.include_noise else ['clean']
+    plans = {condition: load_plan_jsonl(OLD / f'plans/simplify_core80_{condition}.jsonl')
+             for condition in conditions}
+    plan = plans['clean']
     with sqlite3.connect(f'file:{OLD}/state/opus_pred_simplify.sqlite3?mode=ro', uri=True) as connection:
         frozen = {row[0] for row in connection.execute("SELECT evaluation_key FROM tasks WHERE state='frozen'")}
-    entries = [entry for entry in plan.entries if entry.evaluation_key not in frozen]
+    entries_by_condition = {
+        condition: [entry for entry in item.entries if entry.evaluation_key not in frozen]
+        for condition, item in plans.items()
+    }
+    entries = [entry for group in entries_by_condition.values() for entry in group]
+    replicas = {condition: 3 if condition == 'clean' else 1 for condition in conditions}
     selection_path = WORK / 'selected.json'
     selected = json.loads(selection_path.read_text()) if selection_path.exists() else {}
     for record in selected.values():
@@ -106,7 +116,9 @@ def main():
             raise RuntimeError(f"已选结果校验失败: {record['result_path']}")
     configuration = {
         'plan': str(plan.plan_path), 'plan_sha256': plan.plan_sha256,
-        'task_count': len(entries), 'replicas': 3, 'workers': args.workers,
+        'task_count': len(entries), 'replicas': replicas, 'workers': args.workers,
+        'condition_plans': {condition: {'path': str(item.plan_path), 'sha256': item.plan_sha256}
+                            for condition, item in plans.items()},
         'timeout_seconds': 1800, 'system_prompt': SYSTEM,
         'transport_version': API_TRANSPORT_VERSION, 'max_tokens': 16384,
         'semantic_validation_concurrency': 2, 'semantic_memory_limit_bytes': 2 * 1024**3,
@@ -119,17 +131,28 @@ def main():
             raise RuntimeError('恢复任务的输入计划哈希发生改变')
     else:
         write_json(manifest_path, configuration)
+    for condition in conditions:
+        if condition == 'clean':
+            continue
+        condition_manifest = WORK / condition / 'request_manifest.json'
+        current = configuration['condition_plans'][condition]
+        if condition_manifest.exists():
+            if json.loads(condition_manifest.read_text()) != current:
+                raise RuntimeError(f'{condition} 输入计划哈希发生改变')
+        else:
+            write_json(condition_manifest, current)
     with (WORK / 'run_configurations.jsonl').open('a') as handle:
         handle.write(json.dumps({'time': time.time(), **configuration}) + '\n')
-    runners = []
+    runners = {}
     channels = load_api_channels([args.channel_settings], allow_single_channel=True)
     transport = HttpxAnthropicTransport(channels, max_connections=args.workers)
     semantic_semaphore = threading.BoundedSemaphore(2)
-    for replica in range(1, 4):
-        directory = WORK / f'replica_{replica}'
+    for condition, replica in ((condition, replica) for condition in conditions
+                               for replica in range(1, replicas[condition] + 1)):
+        directory = (WORK if condition == 'clean' else WORK / condition) / f'replica_{replica}'
         store = TaskStateStore(directory / 'state.sqlite3', attempt_cap=10**9,
                                logical_task_cap=40000, max_attempts_per_task=10**9)
-        store.register_tasks([entry.definition.task_spec for entry in entries])
+        store.register_tasks([entry.definition.task_spec for entry in entries_by_condition[condition]])
         store.recover_expired_leases()
         if args.recover_interrupted:
             with sqlite3.connect(store.path) as connection:
@@ -145,19 +168,27 @@ def main():
         runner.semantic_validator_command_builder = lambda: [
             sys.executable, str(Path(__file__).with_name('limited_semantic_worker.py')),
         ]
-        runners.append(runner)
+        runners[condition, replica - 1] = runner
+    def by_condition():
+        return {condition: {'total': len(group),
+                            'selected': sum(entry.evaluation_key in selected for entry in group)}
+                for condition, group in entries_by_condition.items()}
     progress_path = WORK / 'progress.json'
     round_number = json.loads(progress_path.read_text()).get('round', 0) if progress_path.exists() else 0
     startup = {'time': time.time(), 'round': round_number, 'selected': len(selected),
-               'total': len(entries), 'workers': args.workers, 'replicas': 3, 'status': 'running',
+               'total': len(entries), 'workers': args.workers, 'replicas': replicas,
+               'by_condition': by_condition(), 'status': 'running',
                'transport_version': API_TRANSPORT_VERSION}
     write_json(progress_path, startup)
     print(json.dumps(startup), flush=True)
     while len(selected) < len(entries):
         round_number += 1
-        pending = [entry for entry in entries if entry.evaluation_key not in selected]
-        jobs = [(entry, replica) for entry in pending for replica in range(3)
-                if runners[replica].store.task_state(entry.evaluation_key) != 'exhausted']
+        pending_groups = [[entry for entry in group if entry.evaluation_key not in selected]
+                          for group in entries_by_condition.values()]
+        pending = [entry for group in zip_longest(*pending_groups) for entry in group if entry is not None]
+        jobs = [(entry, replica) for entry in pending
+                for replica in range(replicas[entry.definition.task_spec.condition])
+                if runners[entry.definition.task_spec.condition, replica].store.task_state(entry.evaluation_key) != 'exhausted']
         if not jobs:
             raise RuntimeError('剩余任务全部发生不可自动重试的错误，请检查 attempts')
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
@@ -165,7 +196,7 @@ def main():
                 if entry.evaluation_key in selected:
                     return None
                 try:
-                    return runners[replica].execute_once(entry.definition)
+                    return runners[entry.definition.task_spec.condition, replica].execute_once(entry.definition)
                 except ClaudeRunnerCircuitBreaker as exc:
                     return {'error': str(exc), 'replica': replica + 1}
 
@@ -174,6 +205,7 @@ def main():
                 entry, replica = futures[future]
                 result = future.result()
                 event = {'time': time.time(), 'logical_id': entry.logical_id,
+                         'condition': entry.definition.task_spec.condition,
                          'replica': replica + 1, 'round': round_number}
                 if result is None:
                     event['status'] = 'sibling_selected'
@@ -194,7 +226,8 @@ def main():
                     handle.write(json.dumps(event, ensure_ascii=False) + '\n')
                 write_json(WORK / 'progress.json', {'time': time.time(), 'round': round_number,
                            'selected': len(selected), 'total': len(entries), 'workers': args.workers,
-                           'replicas': 3, 'transport_version': API_TRANSPORT_VERSION, 'last_event': event})
+                           'replicas': replicas, 'by_condition': by_condition(),
+                           'transport_version': API_TRANSPORT_VERSION, 'last_event': event})
                 print(json.dumps(event, ensure_ascii=False), flush=True)
         time.sleep(5)
     print(json.dumps({'status': 'complete', 'selected': len(selected)}), flush=True)

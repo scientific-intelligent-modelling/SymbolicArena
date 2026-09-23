@@ -28,6 +28,8 @@ def sample():
     memory = psutil.virtual_memory()
     return {'time': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'controllers': controllers,
             'status': 'running' if controllers else 'stopped', 'selected': len(selected),
+            'by_condition': progress.get('by_condition', {}),
+            'transport_version': progress.get('transport_version'),
             'remaining': progress['total'] - len(selected), 'workers': progress['workers'],
             'progress_age_seconds': round(time.time() - progress['time']),
             'available_memory_bytes': memory.available, 'swap_used_bytes': psutil.swap_memory().used,

@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- 当前Opus调度（2026-09-23 17:07，已确认）：按用户要求总API并发提高到100，clean剩余任务与noise001、noise005交替派发，共用100个线程和HTTP连接池；本机数学校验仍为全局2并发、每进程2GiB。执行器PID `2431371`，启动参数 `--workers 100 --include-noise --recover-interrupted`。clean重试批次101项已选72项；现有noise001计划3094项已选18项，noise005计划3096项已选13项，均已收到真实API结果并通过校验。两个噪声计划的6190项来源结果哈希全部核验一致。噪声任务首次各请求一次，失败后逐轮重试；clean保留3份独立请求。各条件使用独立SQLite数据库，输入哈希与运行配置保存在 `oversample/opus/{noise001,noise005}/request_manifest.json` 和 `run_configurations.jsonl`，已选结果仍统一索引于 `selected.json`。每分钟监控增加分条件统计，脚本为stage4 `monitor_opus.py`。待补充：新恢复的3项JAXSR结果尚未进入旧噪声化简计划，完整noise任务覆盖及后续裁决阶段仍待核验。以下32并发记录已替代。
+
 - 当前Opus传输（2026-09-23 16:56，已确认）：从本次开始仅使用项目现有 `AnthropicApiRunner` 直接请求 Messages API，停止使用CC客户端；执行器PID `2430154`，HTTP并发32。已验证真实HTTP 200、响应模型 `claude-opus-5`、完整JSON和数学语义校验链。原有67项选定结果及3016项原始冻结结果保留，当前仍有34项待完成。有效脚本为stage4 `opus_remaining_replicas.py`；渠道凭据仅从既有用户设置读取，不写入结果。每分钟监控仍运行。
 - 本机公式校验采用全局2并发，每个独立进程地址空间上限2GiB，入口为stage4 `limited_semantic_worker.py`，超限保留错误并拒绝接受结果。已确认LLMSR g0649/seed520的真实API回复在SymPy `simplify -> trigsimp -> factor`处理期间触及内存上限，主执行器保持运行；证据为 `oversample/opus/replica_3/attempts/1732d0bc3aa2d94ad53c1182deb2271e2a9f0ca5f3843c7689455cdaa5964ae7.a04.json`。16:55监控主进程约377MiB、可用内存约13.7GiB。HTTP请求、usage、校验结果和传输版本保存在各 `replica_*/attempts/` 中，当前运行配置保存在 `run_configurations.jsonl`。以下CC运行状态均已替代。
 
