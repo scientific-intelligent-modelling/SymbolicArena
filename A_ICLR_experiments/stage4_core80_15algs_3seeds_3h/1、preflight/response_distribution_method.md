@@ -786,3 +786,18 @@ python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_re
 python A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/select_heldout_response.py \
   --held-out udsr --seconds 170 --output .agent/work/METHOD-004/reproduce_udsr
 ~~~
+
+### 14.1 四次leave-one-probe-out结果
+
+入口`run_heldout_audit.py`，汇总`heldout_loo_summary.json`。保持上一节方法及170秒预算，复用uDSR结果，DSO/iMCTS/PyOperon三项并行完成，单个进程总时间约176.5秒。每次均使用其余三个probe重新计算资格、response及标准化并重新选集。每份名单保存后才计算对应held-out误差，没有根据留出结果更改方法或选择重复运行中的较好结果。
+
+| 留出算法 | construction MAE | held-out绝对误差 | 求解gap |
+| --- | ---: | ---: | ---: |
+| DSO | 0.01304508 | 0.50328723 | 6.74397% |
+| iMCTS | 0.02173517 | 0.06273559 | 3.42671% |
+| PyOperon | 0.02506906 | 0.02541520 | 0.71787% |
+| uDSR | 0.01672863 | 0.21398979 | 1.89741% |
+
+四次held-out绝对误差等权平均为0.2013569518，construction MAE平均0.0191444845。两次held-out误差不超过0.15，最大误差为DSO的0.5032872262。按用户关注的约0.15目标，当前结果尚不支持纯W1选择对各算法都稳定达到该水平；iMCTS和PyOperon两次结果满足该目标。没有随机选集比较，因此不据此声称优于随机选集。此前方法开发使用四probe、每次求解保留非零gap，这些条件继续限制结论范围。
+
+四份名单均为50项；从原始记录独立复算construction及held-out误差、W1、资格、family/subgroup约束和两类去重通过，四次输入及选择器/模型/评分源码哈希一致。每次配置和完整解位于`heldout_<probe>_core50/`，执行命令、输入及脚本哈希保存在汇总文件，运行日志位于`.agent/work/METHOD-005/`。原有四probe候选及Info下限候选保留。
