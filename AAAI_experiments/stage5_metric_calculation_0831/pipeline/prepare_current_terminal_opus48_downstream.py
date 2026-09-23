@@ -88,9 +88,10 @@ class _JsonlSink:
         self.partial.replace(self.path)
 
 
-def _pair_worker(connection, arguments: dict[str, Any], memory_limit_bytes: int) -> None:
+def _pair_worker(connection, arguments: dict[str, Any], memory_limit_bytes: int | None) -> None:
     try:
-        resource.setrlimit(resource.RLIMIT_AS, (memory_limit_bytes, memory_limit_bytes))
+        if memory_limit_bytes is not None:
+            resource.setrlimit(resource.RLIMIT_AS, (memory_limit_bytes, memory_limit_bytes))
         evidence = builder._build_full_pair_evidence(**arguments)
         connection.send(("ok", evidence))
     except BaseException as exc:
@@ -103,7 +104,7 @@ def _pair_worker(connection, arguments: dict[str, Any], memory_limit_bytes: int)
 
 
 def _pair_evidence_isolated(*, timeout_seconds: float = 120.0,
-                            memory_limit_bytes: int = 2 * 1024**3, **arguments: Any) -> dict[str, Any]:
+                            memory_limit_bytes: int | None = 2 * 1024**3, **arguments: Any) -> dict[str, Any]:
     context = multiprocessing.get_context("fork")
     receiver, sender = context.Pipe(duplex=False)
     child = context.Process(target=_pair_worker, args=(sender, arguments, memory_limit_bytes))

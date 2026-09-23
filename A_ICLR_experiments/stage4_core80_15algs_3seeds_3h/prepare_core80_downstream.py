@@ -6,7 +6,6 @@ import json
 import math
 import multiprocessing
 from pathlib import Path
-import resource
 import sqlite3
 import sys
 import time
@@ -34,7 +33,6 @@ def rows(path):
 
 def initialize_worker():
     sys.setrecursionlimit(100000)
-    resource.setrlimit(resource.RLIMIT_AS, (4 * 1024**3, 4 * 1024**3))
 
 
 def context_binding(prefix, plan, frozen):
@@ -49,7 +47,7 @@ def context_binding(prefix, plan, frozen):
 def pair_evidence(arguments):
     try:
         return {'evidence': _pair_evidence_isolated(timeout_seconds=180,
-                            memory_limit_bytes=4 * 1024**3, **arguments)}
+                            memory_limit_bytes=None, **arguments)}
     except Exception as error:
         return {'error': f'{type(error).__name__}: {error}'}
 
