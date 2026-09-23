@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- Opus API可用性（2026-09-24 01:38，已确认）：现有routify渠道真实请求1次、无重试，HTTP200，响应模型claude-opus-5，10.718秒返回OK，stop_reason=end_turn。脚本 `followup/probe_opus_api.py`，证据 `followup/probe_opus_api.jsonl`；使用与任务相同的adaptive thinking和xhigh配置。本次只检查接口，未修改或重启批处理执行器。
+
 - 准备任务总内存上限更新（2026-09-24，已确认）：按用户要求调整为14GiB，仅覆盖准备服务及全部子进程；单进程不设置RLIMIT_AS，API仍为32并发。stage4 `core80-prepare.service` 已更新，运行时无重启应用；主PID2485101保持不变，systemd MemoryMax及该服务cgroup的memory.max均为15032385536。旧8GiB设置已替代。本机物理内存约15.4GiB，API及其他进程另占内存，仍存在系统级内存压力风险。
 
 - API并发更新（已确认）：用户要求32并发，已停止原300并发执行器，并使用 `--workers 32 --recover-interrupted` 启动PID2483768；所有类型和条件共用32个请求线程及HTTP连接上限。入口为stage4 `run_core80_followup.sh`，tmux为 `core80_followup32`。已有选定结果、SQLite及计划保留，启动时恢复未完成请求；准备服务及8GiB总上限不变。已核验唯一API执行器启动参数为32，启动后的计划载入期间，旧进度文件仍可能显示上次参数；以下300并发记录已替代。
