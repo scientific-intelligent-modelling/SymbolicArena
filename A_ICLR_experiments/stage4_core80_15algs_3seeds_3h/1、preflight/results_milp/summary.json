@@ -1,0 +1,266 @@
+{
+  "status": "optimal_for_historical_inputs",
+  "all_sizes_optimal": true,
+  "formal_ready": false,
+  "loo_executed": false,
+  "input_audit": {
+    "source_sha256": {
+      "probe4_current_run_level_raw_digest_7968.csv": "1a588501a0b31b5b392592b05c3105489aee18ab19e3cffb190102e6bee5ddcb",
+      "probe4_postprocess_dataset_level.csv": "f88a594cd678ef7497f91301675a7c7f3e8169f14e6fd7dc9dbcf640821f7a13"
+    },
+    "runs": 7968,
+    "dataset_probe_groups": 2656,
+    "valid_runs": 7616,
+    "all_invalid_groups": 54,
+    "eligible_count": 663,
+    "excluded": [
+      {
+        "dataset_id": "g0619",
+        "dataset_name": "Keijzer-10",
+        "dataset_valid_rate": 0.3333333333333333
+      }
+    ],
+    "historical_state_counts": {
+      "done": 7933,
+      "failed": 35
+    },
+    "historical_native_replay_verified": false,
+    "status": "historical_input_trial",
+    "pending": [
+      "历史算法修复对这些原生预测与指标的影响尚未重新回放核验"
+    ],
+    "normalization": {
+      "dso": {
+        "mean": 2.4746133664052516,
+        "std": 4.251781837393702
+      },
+      "pyoperon": {
+        "mean": -0.20286323658377764,
+        "std": 3.9161869514117322
+      },
+      "imcts": {
+        "mean": 4.550114233502055,
+        "std": 5.587098983038633
+      },
+      "udsr": {
+        "mean": 5.696500819487067,
+        "std": 4.613400588510424
+      }
+    }
+  },
+  "results": [
+    {
+      "k": 30,
+      "method": "scipy_highs_milp_integer_cdf",
+      "solver_status": 0,
+      "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+      "seconds": 1.985784,
+      "time_limit_seconds": 180,
+      "mip_gap": 0.0,
+      "mip_node_count": 1,
+      "objective_scale": 1000000.0,
+      "verification_tolerance": 1e-09,
+      "optimal_within_numerical_tolerance": true,
+      "binary_variables": 664,
+      "continuous_variables": 661,
+      "constraint_rows": 2215,
+      "duplicate_constraints": {
+        "semantic_duplicate_group": 116,
+        "basename": 115
+      },
+      "integer_cdf_cuts_verified": true,
+      "integer_cut_check_count": 20491,
+      "objective_w1": 0.032718133318059964,
+      "dual_bound_w1": 0.032718133318059964,
+      "w1": 0.03271813331805936,
+      "absolute_gap_w1": -6.036837696399289e-16,
+      "constraints_passed": true,
+      "scipy_w1_verified": true,
+      "selection_sha256": "795455fc22eb921cd4c2837bdda472afc7660d49a21dfa462b4420aa16b15c3c",
+      "construction_mae": 0.35045878416339804
+    },
+    {
+      "k": 40,
+      "method": "scipy_highs_milp_integer_cdf",
+      "solver_status": 0,
+      "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+      "seconds": 1.804592,
+      "time_limit_seconds": 180,
+      "mip_gap": 0.0,
+      "mip_node_count": 1,
+      "objective_scale": 1000000.0,
+      "verification_tolerance": 1e-09,
+      "optimal_within_numerical_tolerance": true,
+      "binary_variables": 664,
+      "continuous_variables": 661,
+      "constraint_rows": 2215,
+      "duplicate_constraints": {
+        "semantic_duplicate_group": 116,
+        "basename": 115
+      },
+      "integer_cdf_cuts_verified": true,
+      "integer_cut_check_count": 27101,
+      "objective_w1": 0.02425470573665189,
+      "dual_bound_w1": 0.02425470573665189,
+      "w1": 0.02425470573665125,
+      "absolute_gap_w1": -6.418476861114186e-16,
+      "constraints_passed": true,
+      "scipy_w1_verified": true,
+      "selection_sha256": "53578b3c760ed6dd2ccfaad463ab37bfd5724deb48d8026b00ad8ad9029e54f4",
+      "construction_mae": 0.3825921166347892
+    },
+    {
+      "k": 50,
+      "method": "scipy_highs_milp_integer_cdf",
+      "solver_status": 0,
+      "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+      "seconds": 1.734083,
+      "time_limit_seconds": 180,
+      "mip_gap": 0.0,
+      "mip_node_count": 1,
+      "objective_scale": 1000000.0,
+      "verification_tolerance": 1e-09,
+      "optimal_within_numerical_tolerance": true,
+      "binary_variables": 664,
+      "continuous_variables": 661,
+      "constraint_rows": 2215,
+      "duplicate_constraints": {
+        "semantic_duplicate_group": 116,
+        "basename": 115
+      },
+      "integer_cdf_cuts_verified": true,
+      "integer_cut_check_count": 33711,
+      "objective_w1": 0.0186137233331482,
+      "dual_bound_w1": 0.018613723333148202,
+      "w1": 0.01861372333314755,
+      "absolute_gap_w1": -6.522560269672795e-16,
+      "constraints_passed": true,
+      "scipy_w1_verified": true,
+      "selection_sha256": "59ea1fa94cdb9e8b02011f0f6050279df58c2857fbedac6f7aca92b2b36e0e5a",
+      "construction_mae": 0.21212653679134585
+    },
+    {
+      "k": 60,
+      "method": "scipy_highs_milp_integer_cdf",
+      "solver_status": 0,
+      "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+      "seconds": 1.67168,
+      "time_limit_seconds": 180,
+      "mip_gap": 0.0,
+      "mip_node_count": 1,
+      "objective_scale": 1000000.0,
+      "verification_tolerance": 1e-09,
+      "optimal_within_numerical_tolerance": true,
+      "binary_variables": 664,
+      "continuous_variables": 661,
+      "constraint_rows": 2215,
+      "duplicate_constraints": {
+        "semantic_duplicate_group": 116,
+        "basename": 115
+      },
+      "integer_cdf_cuts_verified": true,
+      "integer_cut_check_count": 40321,
+      "objective_w1": 0.015482396738938975,
+      "dual_bound_w1": 0.015482396738938973,
+      "w1": 0.015482396738938347,
+      "absolute_gap_w1": -6.262351748276274e-16,
+      "constraints_passed": true,
+      "scipy_w1_verified": true,
+      "selection_sha256": "892e0f59d399a5eeea3d7be4fdb4c2e07f20e4a9d57591e68c90415f7caa3ace",
+      "construction_mae": 0.335444236694869
+    },
+    {
+      "k": 70,
+      "method": "scipy_highs_milp_integer_cdf",
+      "solver_status": 0,
+      "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+      "seconds": 1.53124,
+      "time_limit_seconds": 180,
+      "mip_gap": 0.0,
+      "mip_node_count": 1,
+      "objective_scale": 1000000.0,
+      "verification_tolerance": 1e-09,
+      "optimal_within_numerical_tolerance": true,
+      "binary_variables": 664,
+      "continuous_variables": 661,
+      "constraint_rows": 2215,
+      "duplicate_constraints": {
+        "semantic_duplicate_group": 116,
+        "basename": 115
+      },
+      "integer_cdf_cuts_verified": true,
+      "integer_cut_check_count": 46931,
+      "objective_w1": 0.014432482150217628,
+      "dual_bound_w1": 0.014432482150217625,
+      "w1": 0.014432482150216966,
+      "absolute_gap_w1": -6.591949208711867e-16,
+      "constraints_passed": true,
+      "scipy_w1_verified": true,
+      "selection_sha256": "fb8643d53c324db0fd5cc6374f88cbd411984a5cc4ae6a007cf63bf4ca2a6274",
+      "construction_mae": 0.22282491748290573
+    },
+    {
+      "k": 80,
+      "method": "scipy_highs_milp_integer_cdf",
+      "solver_status": 0,
+      "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+      "seconds": 1.471244,
+      "time_limit_seconds": 180,
+      "mip_gap": 0.0,
+      "mip_node_count": 1,
+      "objective_scale": 1000000.0,
+      "verification_tolerance": 1e-09,
+      "optimal_within_numerical_tolerance": true,
+      "binary_variables": 664,
+      "continuous_variables": 661,
+      "constraint_rows": 2215,
+      "duplicate_constraints": {
+        "semantic_duplicate_group": 116,
+        "basename": 115
+      },
+      "integer_cdf_cuts_verified": true,
+      "integer_cut_check_count": 53541,
+      "objective_w1": 0.012879646003364227,
+      "dual_bound_w1": 0.012879646003364227,
+      "w1": 0.01287964600336355,
+      "absolute_gap_w1": -6.765421556309548e-16,
+      "constraints_passed": true,
+      "scipy_w1_verified": true,
+      "selection_sha256": "d1c0e03e913c06152f4de1bf3431f63e4f45cc0e8e8758dcd496974445edaa2b",
+      "construction_mae": 0.2564470042616534
+    }
+  ],
+  "adjacent_overlaps": [
+    {
+      "left": 30,
+      "right": 40,
+      "intersection": 0,
+      "jaccard": 0.0
+    },
+    {
+      "left": 40,
+      "right": 50,
+      "intersection": 0,
+      "jaccard": 0.0
+    },
+    {
+      "left": 50,
+      "right": 60,
+      "intersection": 1,
+      "jaccard": 0.009174311926605505
+    },
+    {
+      "left": 60,
+      "right": 70,
+      "intersection": 5,
+      "jaccard": 0.04
+    },
+    {
+      "left": 70,
+      "right": 80,
+      "intersection": 7,
+      "jaccard": 0.04895104895104895
+    }
+  ],
+  "configuration_sha256": "81de18c7f42b244491664cb46c4edec2d6a4bec3522afbdfd3b7cd159d1d24b6"
+}
