@@ -27,7 +27,15 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.state import TaskS
 ROOT = Path(__file__).resolve().parents[2]
 OLD = ROOT / '.agent/work/EXP-001/opus_postprocess'
 WORK = ROOT / '.agent/work/EXP-001/oversample/opus'
-SYSTEM = STRICT_EVALUATOR_SYSTEM_PROMPT
+SYSTEM = STRICT_EVALUATOR_SYSTEM_PROMPT + '''
+Exact-expression policy v2:
+The authoritative expression is request.expression. Canonical forms and numerical probes are supporting evidence; they may contain rounded coefficients and must not replace the authoritative expression.
+Treat every supplied decimal literal as an exact decimal value. Never replace a product, quotient, sum, or difference of numeric literals with a rounded decimal approximation. Keep the original numeric arithmetic unevaluated, or use an exactly equal integer/rational representation.
+For example, retain (1.2345678901234567/3)*x instead of rounding its coefficient to a finite decimal. Approximate numerical agreement is insufficient for exact equivalence.
+Perform only exact, domain-preserving reductions. Preserve variable names and real-domain restrictions, especially for roots, powers, logarithms, and protected operators. Do not expand expressions solely for presentation.
+Return outcome unchanged only when justified by the mathematical task. Do not use unchanged or unable merely to bypass validation.
+Complete the requested judgment within one response. Return exactly the supplied JSON schema, with all required keys, no additional keys or surrounding text, and a brief reason. No tool calls or simulated computations.
+'''
 
 
 def write_json(path, value):
@@ -85,10 +93,14 @@ def main():
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--recover-interrupted', action='store_true')
     parser.add_argument('--include-noise', action='store_true')
+    parser.add_argument('--replicas', type=int)
+    parser.add_argument('--max-tokens', type=int, default=65536)
     parser.add_argument('--channel-settings', default=f'routify={Path.home() / ".claude/settings.json"}')
     args = parser.parse_args()
     if args.workers < 1:
         parser.error('--workers 必须为正整数')
+    if args.max_tokens < 1 or (args.replicas is not None and args.replicas < 1):
+        parser.error('--replicas 和 --max-tokens 必须为正整数')
     WORK.mkdir(parents=True, exist_ok=True)
     if args.stop_old:
         stop_old()
@@ -107,7 +119,7 @@ def main():
         for condition, item in plans.items()
     }
     entries = [entry for group in entries_by_condition.values() for entry in group]
-    replicas = {condition: 3 if condition == 'clean' else 1 for condition in conditions}
+    replicas = {condition: args.replicas or (3 if condition == 'clean' else 1) for condition in conditions}
     selection_path = WORK / 'selected.json'
     selected = json.loads(selection_path.read_text()) if selection_path.exists() else {}
     for record in selected.values():
@@ -120,7 +132,8 @@ def main():
         'condition_plans': {condition: {'path': str(item.plan_path), 'sha256': item.plan_sha256}
                             for condition, item in plans.items()},
         'timeout_seconds': 1800, 'system_prompt': SYSTEM,
-        'transport_version': API_TRANSPORT_VERSION, 'max_tokens': 16384,
+        'transport_version': API_TRANSPORT_VERSION, 'max_tokens': args.max_tokens,
+        'system_prompt_version': 'exact_expression.v2',
         'semantic_validation_concurrency': 2, 'semantic_memory_limit_bytes': 2 * 1024**3,
         'system_prompt_sha256': hashlib.sha256(SYSTEM.encode()).hexdigest(),
         'selection': 'first_valid_completion', 'logical_ids': [e.logical_id for e in entries],
@@ -152,7 +165,8 @@ def main():
         directory = (WORK if condition == 'clean' else WORK / condition) / f'replica_{replica}'
         store = TaskStateStore(directory / 'state.sqlite3', attempt_cap=10**9,
                                logical_task_cap=40000, max_attempts_per_task=10**9)
-        store.register_tasks([entry.definition.task_spec for entry in entries_by_condition[condition]])
+        store.register_tasks([entry.definition.task_spec for entry in entries_by_condition[condition]
+                              if entry.evaluation_key not in selected])
         store.recover_expired_leases()
         if args.recover_interrupted:
             with sqlite3.connect(store.path) as connection:
@@ -162,8 +176,9 @@ def main():
         runner = ReplicaRunner(store, attempts_dir=directory / 'attempts',
                                frozen_dir=directory / 'frozen', channels=channels,
                                transport=transport, timeout_seconds=1800, lease_seconds=3600,
-                               max_tokens=16384, per_channel_concurrency=args.workers,
-                               semantic_validation_concurrency=2, allow_single_channel=True)
+                               max_tokens=args.max_tokens, per_channel_concurrency=args.workers,
+                               semantic_validation_concurrency=2, allow_single_channel=True,
+                               system_prompt=SYSTEM)
         runner._semantic_semaphore = semantic_semaphore
         runner.semantic_validator_command_builder = lambda: [
             sys.executable, str(Path(__file__).with_name('limited_semantic_worker.py')),

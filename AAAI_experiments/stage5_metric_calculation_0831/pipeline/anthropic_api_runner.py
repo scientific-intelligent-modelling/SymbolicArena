@@ -212,6 +212,7 @@ class AnthropicApiRunner(ClaudeRunner):
         semantic_validation_concurrency: int = 4,
         backoff_schedule_seconds: Sequence[float] = (1.0, 2.0),
         allow_single_channel: bool = False,
+        system_prompt: str = STRICT_EVALUATOR_SYSTEM_PROMPT,
     ) -> None:
         if len(channels) < 2 and not allow_single_channel:
             raise ValueError("双渠道 API runner 至少需要两个渠道")
@@ -230,6 +231,9 @@ class AnthropicApiRunner(ClaudeRunner):
             backoff_schedule_seconds=backoff_schedule_seconds,
         )
         self.channels = tuple(channels)
+        if not isinstance(system_prompt, str) or not system_prompt.strip():
+            raise ValueError('API system_prompt 必须为非空字符串')
+        self.system_prompt = system_prompt
         self.max_tokens = int(max_tokens)
         self.transport: ApiTransport = transport or HttpxAnthropicTransport(
             self.channels,
@@ -272,7 +276,7 @@ class AnthropicApiRunner(ClaudeRunner):
             "model": CONTRACT_CANONICAL_MODEL,
             "stream": False,
             "max_tokens": self.max_tokens,
-            "system": STRICT_EVALUATOR_SYSTEM_PROMPT,
+            "system": self.system_prompt,
             "messages": [{"role": "user", "content": prompt}],
             "thinking": {"type": "adaptive"},
             "output_config": {"effort": CONTRACT_EFFORT},
@@ -520,7 +524,7 @@ class AnthropicApiRunner(ClaudeRunner):
             "prompt_path": str(definition.prompt_path),
             "prompt_sha256": prompt_sha256,
             "rendered_prompt_sha256": _sha256_text(prompt),
-            "system_prompt_sha256": _sha256_text(STRICT_EVALUATOR_SYSTEM_PROMPT),
+            "system_prompt_sha256": _sha256_text(self.system_prompt),
             "schema_path": str(definition.schema_path),
             "schema_sha256": schema_sha256,
             "request_sha256": _sha256_text(canonical_json(definition.request)),

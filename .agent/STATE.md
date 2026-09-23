@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- 剩余失败任务超发（2026-09-23 19:33，已确认）：141项未选定任务各安排5份独立API请求，总并发300；执行器PID `2451331`，启动参数增加 `--replicas 5 --max-tokens 65536`。问题已定位为部分回复舍入常数造成严格符号差异非零，以及16384个token全部用于thinking导致 `stop_reason=max_tokens`；另有504和本机数学校验内存限制错误。采用 `exact_expression.v2` system prompt，明确以原始expression为准、保留精确常数算式、严格输出JSON；输出上限65536，数学验收标准不变。真实API测试HTTP 200、模型 `claude-opus-5`，新回复通过 `symbolic_difference_zero`，已新增2项选定结果、剩139项。证据：`oversample/opus/noise005/replica_4/attempts/8450914149c1020b85d3a16a579acd0942b763f68349347a6199d59fed006362.a01.json`；配置和system prompt哈希保留于 `run_configurations.jsonl` 与逐请求记录。已通过项不重复派发，每分钟监控和2GiB校验内存限制继续使用。
+
 - 最新并发（2026-09-23 17:33，已确认）：用户要求提高至300，API执行器已使用 `--workers 300 --include-noise --recover-interrupted` 恢复，PID `2435653`；clean与两个noise条件共用300个请求线程。本机公式校验继续为全局2并发、每进程2GiB，每分钟监控服务保持运行。启动时已选clean76项、noise001 1063项、noise005 1093项，结果均保留；实时计数以 `oversample/opus/progress.json` 为准。以下100并发配置已替代。
 
 - 当前Opus调度（2026-09-23 17:07，已确认）：按用户要求总API并发提高到100，clean剩余任务与noise001、noise005交替派发，共用100个线程和HTTP连接池；本机数学校验仍为全局2并发、每进程2GiB。执行器PID `2431371`，启动参数 `--workers 100 --include-noise --recover-interrupted`。clean重试批次101项已选72项；现有noise001计划3094项已选18项，noise005计划3096项已选13项，均已收到真实API结果并通过校验。两个噪声计划的6190项来源结果哈希全部核验一致。噪声任务首次各请求一次，失败后逐轮重试；clean保留3份独立请求。各条件使用独立SQLite数据库，输入哈希与运行配置保存在 `oversample/opus/{noise001,noise005}/request_manifest.json` 和 `run_configurations.jsonl`，已选结果仍统一索引于 `selected.json`。每分钟监控增加分条件统计，脚本为stage4 `monitor_opus.py`。待补充：新恢复的3项JAXSR结果尚未进入旧噪声化简计划，完整noise任务覆盖及后续裁决阶段仍待核验。以下32并发记录已替代。
