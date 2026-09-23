@@ -11,12 +11,15 @@ WORK = ROOT / '.agent/work/EXP-001/oversample/opus'
 
 
 def sample():
-    progress = json.loads((WORK / 'progress.json').read_text())
-    selected = json.loads((WORK / 'selected.json').read_text())
+    followup = ROOT / '.agent/work/EXP-001/followup'
+    progress_path = followup / 'progress.json' if (followup / 'progress.json').exists() else WORK / 'progress.json'
+    progress = json.loads(progress_path.read_text())
+    selected_path = followup / progress['phase'] / 'selected.json' if 'phase' in progress else WORK / 'selected.json'
+    selected = json.loads(selected_path.read_text()) if selected_path.exists() else {}
     controllers = []
     processes = {}
     for process in psutil.process_iter(['pid', 'cmdline']):
-        if not any(arg.endswith('/opus_remaining_replicas.py') for arg in (process.info['cmdline'] or [])):
+        if not any(arg.endswith(('/opus_remaining_replicas.py', '/run_core80_followup.py')) for arg in (process.info['cmdline'] or [])):
             continue
         try:
             controllers.append(process.pid)
@@ -26,10 +29,13 @@ def sample():
         except psutil.NoSuchProcess:
             continue
     memory = psutil.virtual_memory()
-    status = 'complete' if len(selected) == progress['total'] else ('running' if controllers else 'stopped')
+    finished = len(selected) == progress['total'] and progress.get('preparation_complete', True)
+    status = 'complete' if finished else ('running' if controllers else 'stopped')
     return {'time': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'controllers': controllers,
             'status': status, 'selected': len(selected),
             'by_condition': progress.get('by_condition', {}),
+            'phase': progress.get('phase', 'prediction_simplify'),
+            'by_task_type': progress.get('by_task_type', {}),
             'transport_version': progress.get('transport_version'),
             'remaining': progress['total'] - len(selected), 'workers': progress['workers'],
             'progress_age_seconds': round(time.time() - progress['time']),

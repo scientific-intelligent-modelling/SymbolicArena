@@ -2,6 +2,10 @@
 
 ## 当前任务
 
+- 后续处理已启动（2026-09-23 20:38，EXP-001）：修正iMCTS/QLattice同步路径大小写并优先保留JAXSR恢复结果，本地结果已核验10800份。新增前置计划1523项（80个GT、1443个补齐/恢复预测）；GT 80项已全部处理，补充预测已处理1421项。等价性判定已开始，首批100项已处理81项；后续等价性/结构任务由准备进程持续生成，共享同一个300并发API执行器。实时状态为 `.agent/work/EXP-001/followup/progress.json`，分类型计数持续更新；批次仍在生成，注册任务数不代表完整覆盖。
+- 当前入口：stage4下 `prepare_core80_followup.py`、`run_core80_followup.py`、`prepare_core80_downstream.py`；API执行器PID `2459526`，准备进程PID `2459451`，tmux为 `core80_downstream`（沿用持久socket）。输入计划、依赖来源数据库和文件哈希位于 `followup/base_plan.jsonl`、`dependencies.json`、`downstream_plans/`；原生支持脚本已原样保存至stage4 `runtime_support_sources.zip`，SHA256 `991d93f0c5996c3f05ad3cea241b575f68ed65def45848fac8f4c8f56da8bf8a`。API继续使用Opus5单轮请求，本机化简校验1并发、4GiB；独立数值和结构证据由现有Stage5模块生成，已有通过结果不重复请求。
+- 逐分钟记录同步已启动：stage4 `collect_core80_progress.py`，PID `2459197`，tmux `core80_progress_collection`；进度为 `followup/progress_collection.json` 和 `.log`，后续需据真实完整轨迹生成逐分钟SYM/MIN/EFF/STAB，禁止提前使用最终公式填充旧分钟。当前仍有66个非空/缺失表达式的解析或大小问题待核验，明细为 `followup/unresolved.jsonl`；新生成配对中的待完成依赖、缺失种子及数值指标问题也保留为unresolved。整体汇总与完整动态覆盖尚未完成，不能将局部API队列完成视为全部实验验收。
+
 - 当前化简队列已完成（2026-09-23 20:04，已确认）：`oversample/opus/progress.json` 为6291/6291，其中clean重试101/101、noise001 3094/3094、noise005 3096/3096。最后3项UDSR均已通过；clean和noise seed521由更新后的API请求完成，noise seed522使用原始API回复重新执行完整输入绑定、HTTP模型/schema和数学验证后，由 `TaskStateStore.promote_failed_attempt` 接受，原始失败记录保留。API执行器已停止，每分钟监控将完整队列显示为complete。此处范围仅限现有化简计划，恢复的3项JAXSR补入、全量覆盖及后续等价性/结构判定仍未完成。
 - 校验修复与放宽（已确认）：精确十进制复核从原始文本重建表达式，使用带subs的高精度evalf处理大数相消；真实数值反例在未取得符号证明时也进行高精度复核。实数域对数恒等式在通分前展开，精确差分复用限时计算。单校验地址空间4GiB、时间180秒、全局1并发；prompt为 `exact_expression.v3`。5项真实回复回放测试通过（4项等价回复接受、1项舍入导致不等价的回复拒绝），证据为 `.agent/work/EXP-001/oversample/recheck_*.json`。最后一项的正式重新验收脚本为stage4 `revalidate_opus_attempt.py`，冻结文件为 `oversample/opus/noise005/replica_3/frozen/748e671aa3296fb20228412255741ebaaaa715f38f1eaf88dddbc0ab8d961d06.json`，证明为 `symbolic_difference_zero`，来源和新校验代码哈希保存在其revalidation字段。
 

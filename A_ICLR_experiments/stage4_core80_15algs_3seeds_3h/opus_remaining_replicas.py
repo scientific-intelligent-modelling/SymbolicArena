@@ -14,7 +14,7 @@ from pathlib import Path
 import psutil
 
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_contract import render_prompt
-from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import ClaudeRunnerCircuitBreaker
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.claude_runner import ClaudeRunnerCircuitBreaker, _infer_task_kind
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.anthropic_api_runner import (
     API_TRANSPORT_VERSION, AnthropicApiRunner, HttpxAnthropicTransport,
     STRICT_EVALUATOR_SYSTEM_PROMPT,
@@ -79,7 +79,7 @@ class ReplicaRunner(AnthropicApiRunner):
         prompt_sha, schema_sha = self._verify_task_definition(definition)
         lease = self.store.reserve_attempt(definition.task_spec.evaluation_key, lease_seconds=self.lease_seconds)
         return self._run_attempt(
-            definition=definition, task_kind='simplify',
+            definition=definition, task_kind=_infer_task_kind(definition.task_spec.task_type, definition.task_kind),
             prompt=render_prompt(definition.prompt_template, definition.request, definition.schema),
             prompt_sha256=prompt_sha, schema_sha256=schema_sha,
             command=self._build_and_validate_command(definition.schema),
