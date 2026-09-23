@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- 每分钟监控（2026-09-23，已启动）：`core80-opus-monitor.service` 独立运行，每5秒采样进程与内存，每60秒记录完成数、剩余数、进程存活和内存峰值。脚本为stage4下 `monitor_opus.py`，状态为 `.agent/work/EXP-001/oversample/opus/monitor_latest.json`，记录为同目录 `monitor.jsonl`。最新异常：16:43:22 Opus的32并发任务组再次被systemd-oomd终止（33个进程），已选67项、剩余34项；以下16:41运行状态已替代。监控服务只观察，不自动重启任务。
+
 - JAXSR校验阈值（2026-09-23，已确认）：按用户要求将 `jaxsr_wrapper/wrapper.py` 的 `_FIDELITY_RTOL` 调整为 `3e-6`，沿用 `1e-14 + rtol * native_abs_scale` 判断方式；iaaccn48真实依赖下原生模型恢复测试2项通过（2.37秒）。正在运行的训练进程仍使用启动时载入的阈值，已有失败快照未更改，后续恢复须以原生模型重新核验。
 
 - JAXSR三个原始任务恢复（2026-09-23 16:36，已确认）：采用 iaaccn29的seed520/noise001、iaaccn28的seed521/noise005、iaaccn52的seed522/noise005原生模型，均通过3e-6重新校验和序列化预测一致性验证。正式结果为 `A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/jaxsr/strogatz_barmag2/{noise001/520,noise005/521,noise005/522}/result.json`；对应 `recovered_rtol3e6/` 保存原生状态、输入哈希、原始错误报告及恢复证据。179个已有分钟记录逐项核验相同原生模型哈希后补充指标，第180分钟明确继承第179分钟。ID R2依次为0.886840、0.885528、0.884512；OOD R2依次为-2.610194、-2.844296、-2.720641。恢复脚本 `recover_original_jaxsr.py`、发布脚本 `publish_jaxsr_recovery.py` 位于stage4目录；未重新训练或按测试分数选模。
