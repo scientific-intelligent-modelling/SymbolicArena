@@ -2,10 +2,12 @@
 
 ## 当前任务
 
+- EVAL-001（2026-09-24，已完成）：计算用户指定50个任务相对Full664的四probe平均response绝对差，使用已确认的probe_consensus_response_v1，MAE=0.15115479966356438。DSO/iMCTS/PyOperon/uDSR分别为0.06744972332041543、0.012748913307117249、0.07498742617122117、0.4494331358555037。入口 [evaluate_core50.py](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/evaluate_core50.py)，结果 [core50_mae.json](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/core50_mae.json)；保存50个ID、原始数据SHA256、脚本SHA256及评分参数。已核验7968条运行、每组3个seed、50个唯一任务及Full664覆盖。该结果基于历史原始指标，是固定名单诊断，未执行LOO或原生模型回放。
+
 - TRACK-001（2026-09-24，已完成）：新Stage4的 `1、preflight/` 已开放Git跟踪，当前仅添加 `.gitkeep` 保留目录；未来 `2、experiments/` 继续忽略。其他ICLR实验目录保持原有忽略范围，已跟踪文件不受忽略规则影响。已核验preflight内文档及CSV路径可跟踪、实验数据路径被忽略。
 
 - CLEAR-002（2026-09-24，已完成）：按用户明确要求清空 [1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，删除其中58个文件和4个子目录，保留preflight空目录。已核验没有相关选集进程，目录内容为空。
-- 当前没有有效选集任务书、计划、脚本或名单。CORE-002过程目录 `.agent/work/CORE-002/` 保持原位置并标记已归档，默认不读取或执行。Stage3原始探针数据及pre_exp_26.09.23暂存实验未改动。下一步等待新的选集要求。
+- CORE-002的选集任务书、计划、脚本及名单已清除，其过程目录 `.agent/work/CORE-002/` 保持原位置并标记已归档，默认不读取或执行。Stage3原始探针数据及pre_exp_26.09.23暂存实验未改动；当前固定名单评估见EVAL-001。
 
 ## 已暂存实验
 
@@ -159,7 +161,7 @@
 - 配置：[toolbox_config.json](../scientific_intelligent_modelling/config/toolbox_config.json)、[envs_config.json](../scientific_intelligent_modelling/config/envs_config.json)。
 - 数据目录：[sim-datasets-data/](../sim-datasets-data/)、[sim-datasets-py/](../sim-datasets-py/)；独立仓库保持原位置。
 - 目录分类：`AAAI_experiments/`、`A_ICLR_experiments/`、`A_Neurips_experiments/` 为现有实验目录，按具体任务读取。
-- 新ICLR Stage4入口：[1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，当前仅有Git目录占位文件.gitkeep。
+- 新ICLR Stage4入口：[1、preflight/](../A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/)，当前包含.gitkeep及EVAL-001的固定Core50评估脚本与结果。
 - 旧ICLR Stage4已暂存：[stage4_core80_15algs_3seeds_3h/](../A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h/)，实验已停止。
 
 ## 候选文件与问题：待验证
