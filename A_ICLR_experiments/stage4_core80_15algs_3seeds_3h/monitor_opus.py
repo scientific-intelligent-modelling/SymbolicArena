@@ -17,12 +17,16 @@ def sample():
     selected_path = followup / progress['phase'] / 'selected.json' if 'phase' in progress else WORK / 'selected.json'
     selected = json.loads(selected_path.read_text()) if selected_path.exists() else {}
     controllers = []
+    preparers = []
     processes = {}
     for process in psutil.process_iter(['pid', 'cmdline']):
-        if not any(arg.endswith(('/opus_remaining_replicas.py', '/run_core80_followup.py')) for arg in (process.info['cmdline'] or [])):
+        arguments = process.info['cmdline'] or []
+        is_preparer = any(arg.endswith('/prepare_core80_downstream.py') for arg in arguments)
+        is_controller = any(arg.endswith(('/opus_remaining_replicas.py', '/run_core80_followup.py')) for arg in arguments)
+        if not (is_preparer or is_controller):
             continue
         try:
-            controllers.append(process.pid)
+            (preparers if is_preparer else controllers).append(process.pid)
             for child in [process, *process.children(recursive=True)]:
                 processes[child.pid] = {'pid': child.pid, 'name': child.name(),
                                         'rss_bytes': child.memory_info().rss}
@@ -32,6 +36,9 @@ def sample():
     finished = len(selected) == progress['total'] and progress.get('preparation_complete', True)
     status = 'complete' if finished else ('running' if controllers else 'stopped')
     return {'time': time.strftime('%Y-%m-%dT%H:%M:%S%z'), 'controllers': controllers,
+            'preparers': preparers,
+            'preparation_status': 'complete' if progress.get('preparation_complete', True)
+                                  else ('running' if preparers else 'stopped'),
             'status': status, 'selected': len(selected),
             'by_condition': progress.get('by_condition', {}),
             'phase': progress.get('phase', 'prediction_simplify'),

@@ -1,0 +1,21 @@
+[Unit]
+Description=Core80 downstream evidence preparation
+StartLimitIntervalSec=3600
+StartLimitBurst=5
+
+[Service]
+Type=exec
+WorkingDirectory=/home/family/workplace/scientific-intelligent-modelling
+Environment=PYTHONPATH=.
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=OMP_NUM_THREADS=1
+Environment=MKL_NUM_THREADS=1
+Environment=TMPDIR=/home/family/workplace/scientific-intelligent-modelling/.agent/work/EXP-001/followup
+ExecStart=/home/family/anaconda3/bin/python -u A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/prepare_core80_downstream.py
+StandardOutput=append:/home/family/workplace/scientific-intelligent-modelling/.agent/work/EXP-001/followup/downstream_preparation.log
+StandardError=inherit
+MemoryMax=6G
+MemorySwapMax=0
+OOMPolicy=stop
+Restart=on-failure
+RestartSec=10

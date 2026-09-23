@@ -1,9 +1,10 @@
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 import hashlib
 from itertools import combinations
 import json
 import math
+import multiprocessing
 from pathlib import Path
 import resource
 import sqlite3
@@ -32,6 +33,7 @@ def rows(path):
 
 
 def initialize_worker():
+    sys.setrecursionlimit(100000)
     resource.setrlimit(resource.RLIMIT_AS, (4 * 1024**3, 4 * 1024**3))
 
 
@@ -50,6 +52,29 @@ def pair_evidence(arguments):
                             memory_limit_bytes=4 * 1024**3, **arguments)}
     except Exception as error:
         return {'error': f'{type(error).__name__}: {error}'}
+
+
+def pair_results(jobs):
+    # 仅保留正在处理的任务，工作进程独立载入，避免继承全部输入。
+    with ProcessPoolExecutor(max_workers=2, initializer=initialize_worker,
+                             mp_context=multiprocessing.get_context('spawn')) as pool:
+        pending = {}
+        remaining = iter(jobs)
+        while True:
+            while len(pending) < 4:
+                job = next(remaining, None)
+                if job is None:
+                    break
+                condition, logical_id, kind, left, left_frozen, right, right_frozen, seed, context = job
+                arguments = dict(logical_id=logical_id, phase=kind, left_plan=left, left_frozen=left_frozen,
+                                 right_plan=right, right_frozen=right_frozen, pair_seed=seed)
+                pending[pool.submit(pair_evidence, arguments)] = job
+            if not pending:
+                return
+            completed, _ = wait(pending, return_when=FIRST_COMPLETED)
+            for future in completed:
+                yield pending.pop(future), future.result()
+            completed.clear()
 
 
 def prepare_pass():
@@ -177,33 +202,29 @@ def prepare_pass():
         temporary.replace(path)
         emitted.update(row['logical_id'] for row in chunks)
         chunks.clear()
-    with ProcessPoolExecutor(max_workers=2, initializer=initialize_worker) as pool:
-        futures = {}
-        for job in jobs:
-            condition, logical_id, kind, left, left_frozen, right, right_frozen, seed, context = job
-            arguments = dict(logical_id=logical_id, phase=kind, left_plan=left, left_frozen=left_frozen,
-                             right_plan=right, right_frozen=right_frozen, pair_seed=seed)
-            futures[pool.submit(pair_evidence, arguments)] = job
-        for future in as_completed(futures):
-            condition, logical_id, kind, left, left_frozen, right, right_frozen, seed, context = futures[future]
-            response = future.result()
-            if 'error' in response:
-                unresolved.append({'logical_id': logical_id, 'reason': response['error']})
-                continue
-            evidence = response['evidence']
-            request = {**context, 'allowed_functions': evidence['allowed_functions'],
-                       'deterministic_evidence': evidence, 'evidence_hash': evidence['evidence_sha256']}
-            if kind == 'structure':
-                request['deterministic_pair_evidence'] = evidence
-            task = builder._task_from_request(logical_id=logical_id,
-                        task_type='equivalence' if kind == 'equivalence' else 'stab_structure',
-                        priority=builder.EQUIVALENCE_PRIORITY if kind == 'equivalence' else builder.STRUCTURE_PRIORITY,
-                        request=request, evidence_hash=evidence['evidence_sha256'], contract=contracts[kind],
-                        dependencies=(left_frozen.evaluation_key, right_frozen.evaluation_key), condition=condition)
-            chunks.append(builder._task_json_record(task))
-            if len(chunks) >= 25:
-                flush()
-                print(json.dumps({'batches': count, 'unresolved': len(unresolved)}), flush=True)
+    print(json.dumps({'event': 'preparation_started', 'remaining_jobs': len(jobs),
+                      'existing_tasks': len(emitted), 'workers': 2, 'max_pending': 4}), flush=True)
+    for job, response in pair_results(jobs):
+        condition, logical_id, kind, left, left_frozen, right, right_frozen, seed, context = job
+        if 'error' in response:
+            unresolved.append({'logical_id': logical_id, 'reason': response['error']})
+            with (OUTPUT / 'pair_errors.jsonl').open('a') as handle:
+                handle.write(json.dumps(unresolved[-1]) + '\n')
+            continue
+        evidence = response['evidence']
+        request = {**context, 'allowed_functions': evidence['allowed_functions'],
+                   'deterministic_evidence': evidence, 'evidence_hash': evidence['evidence_sha256']}
+        if kind == 'structure':
+            request['deterministic_pair_evidence'] = evidence
+        task = builder._task_from_request(logical_id=logical_id,
+                    task_type='equivalence' if kind == 'equivalence' else 'stab_structure',
+                    priority=builder.EQUIVALENCE_PRIORITY if kind == 'equivalence' else builder.STRUCTURE_PRIORITY,
+                    request=request, evidence_hash=evidence['evidence_sha256'], contract=contracts[kind],
+                    dependencies=(left_frozen.evaluation_key, right_frozen.evaluation_key), condition=condition)
+        chunks.append(builder._task_json_record(task))
+        if len(chunks) >= 25:
+            flush()
+            print(json.dumps({'batches': count, 'unresolved': len(unresolved)}), flush=True)
     flush()
     (OUTPUT / 'unresolved.json').write_text(json.dumps(unresolved, ensure_ascii=False, indent=2)+'\n')
     missing = sum(item['reason'] == 'missing_frozen_dependency' for item in unresolved)
