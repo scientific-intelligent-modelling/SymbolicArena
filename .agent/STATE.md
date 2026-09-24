@@ -2,7 +2,7 @@
 
 ## 当前任务
 
-- 当前进度：用户已授权本Goal产生DeepInfra和Opus API费用，无须逐批确认。`core50_new15_nonllm_v2`在15台机器运行1352/1755项，403项等待资源；源码、75份数据文件、参数哈希及10个运行环境预检均通过。`core50_new15_llm_v1`的14台预检全部通过，DeepInfra Turbo配置与密钥存在性检查通过；100/270项已运行，170项等待资源，iaaccn25因连线不稳排除。iaaccn22的LLMSR真实任务已生成minute_0008，状态ok且公式可用，API请求结果仍需从任务记录核验。当前没有新训练终态结果；采集器`core50_new15_collection`每60秒检查远端任务。
+- 当前进度：用户已授权本Goal产生DeepInfra和Opus API费用，无须逐批确认。`core50_new15_nonllm_v2`在15台机器运行1352/1755项，403项等待资源；源码、75份数据文件、参数哈希及10个运行环境预检均通过。`core50_new15_llm_v1`的14台预检全部通过，DeepInfra Turbo配置与密钥存在性检查通过；100/270项已运行，170项等待资源，iaaccn25因连线不稳排除。iaaccn22的LLMSR任务minute_0037为ok、公式可用且无错误；iaaccn27的gplearn任务已写到minute_0103，状态ok。当前没有新训练终态结果；采集器`core50_new15_collection`每60秒检查远端任务。
 - 复用范围未变：原Core50/Core80重叠35项的4725份运行已复制并核验，共859349个文件、8,147,741,253字节，保留849876个逐分钟progress文件。Opus输入SHA256绑定核验通过：1960项有效结果已复制，2762项缺少化简，3项无可用表达式；GT化简覆盖36个数据集。证据为preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。
 - 六轴输入预审：4725份复用结果SHA256和任务身份通过；当前Core50 50个数据集的`metadata.yaml`、`formula.py`、`train.csv`、`valid.csv`、`id_test.csv`、`ood_test.csv`哈希均与Stage5冻结来源一致。完整6750份source freeze尚未生成，等待2025项训练结果齐备。脚本 `1、preflight/build_core50_sixaxis_inputs.py`；预审报告 `.agent/work/GOAL-CORE50/sixaxis_input_audit.json`，当前状态4725/6750，剩余2025。
 - 有效执行入口：`1、preflight/run_core50_queue.py`、`run_core50_nonllm_queue.sh`、`run_core50_llm_queue.sh`、`collect_core50_new15_results.py`、`build_core50_sixaxis_inputs.py`；持久队列状态位于`.agent/work/GOAL-CORE50/queue_{nonllm_v2,llm_v1}/`。
