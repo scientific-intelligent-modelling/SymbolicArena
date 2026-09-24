@@ -57,6 +57,7 @@ def _source_row(
 def _numeric_csv(path: Path, *, condition: str, seeds: tuple[int, ...], clean: bool) -> None:
     first = phi_nmse(10.0)
     second = phi_nmse(0.1)
+    third = second if clean else phi_nmse(0.2)
     fieldnames = [
         "logical_key",
         "algorithm",
@@ -87,10 +88,10 @@ def _numeric_csv(path: Path, *, condition: str, seeds: tuple[int, ...], clean: b
                 "source_tier": "canonical" if clean else "base",
                 "q_0001": first,
                 "q_0002": second,
-                "q_0003": second,
+                "q_0003": third,
             }
             if not clean:
-                for minute, value in enumerate((first, second, second), start=1):
+                for minute, value in enumerate((first, second, third), start=1):
                     row[f"id_q_{minute:04d}"] = value
                     row[f"ood_q_{minute:04d}"] = value
             writer.writerow(row)
@@ -100,7 +101,7 @@ def _read_jsonl(path: Path) -> list[dict[str, object]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 
-def test_noise_plan_reconstructs_and_deduplicates(tmp_path: Path) -> None:
+def test_noise_plan_uses_same_minute_native_incumbent_and_deduplicates(tmp_path: Path) -> None:
     source = tmp_path / "noise.jsonl"
     seeds = (520, 521, 522)
     _jsonl(source, [_source_row(condition="noise001", seed=seed) for seed in seeds])
@@ -147,9 +148,10 @@ def test_noise_plan_reconstructs_and_deduplicates(tmp_path: Path) -> None:
         for point in points
     )
     assert points[2]["expression"] == "x0 + 1"
-    assert points[2]["relative_progress"] == pytest.approx(1.0)
+    assert points[2]["relative_progress"] == pytest.approx(phi_nmse(0.2) / phi_nmse(0.1))
+    assert points[2]["source_evidence"]["source_minute"] == 3
     assert points[2]["cumulative_eff"] == pytest.approx(
-        (phi_nmse(10.0) / phi_nmse(0.1) + 2.0) / 3.0
+        (phi_nmse(10.0) / phi_nmse(0.1) + 1.0 + phi_nmse(0.2) / phi_nmse(0.1)) / 3.0
     )
     assert len(_read_jsonl(output / "symbolic_task_plan.jsonl")) == 4
     pairs = _read_jsonl(output / "task_minute_stab_pair_plan.jsonl")

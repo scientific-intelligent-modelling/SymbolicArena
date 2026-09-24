@@ -393,9 +393,15 @@ def scan_task(
             mtime_ns=result_record.get("mtime_ns"),
             record_kind="result",
         )
-        experiment_dir = result_payload.get("experiment_dir")
-        if isinstance(experiment_dir, str) and experiment_dir.strip():
-            inner_progress = Path(experiment_dir) / "progress"
+        local_inner_progress = task.get("inner_progress_dir")
+        if isinstance(local_inner_progress, str) and local_inner_progress.strip():
+            inner_progress = Path(local_inner_progress)
+            if not inner_progress.is_dir():
+                raise FileNotFoundError(f"本地 inner progress 目录不存在: {inner_progress}")
+        else:
+            experiment_dir = result_payload.get("experiment_dir")
+            if isinstance(experiment_dir, str) and experiment_dir.strip():
+                inner_progress = Path(experiment_dir) / "progress"
     outer_progress = result_path.parent / "progress"
 
     snapshots: list[dict[str, Any]] = []

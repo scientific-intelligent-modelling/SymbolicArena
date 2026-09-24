@@ -65,6 +65,11 @@ class CompactSnapshot:
     selected_path: str | None
     selected_sha256: str | None
     backfilled_from_minute: int | None
+    outer_path: str | None
+    outer_sha256: str | None
+    inner_path: str | None
+    inner_sha256: str | None
+    conflict: bool
 
 
 @dataclass(frozen=True)
@@ -188,6 +193,11 @@ def _compact_snapshot(snapshot: Mapping[str, Any]) -> CompactSnapshot:
         selected_path=str(snapshot["selected_path"]) if snapshot.get("selected_path") else None,
         selected_sha256=str(snapshot["selected_sha256"]) if snapshot.get("selected_sha256") else None,
         backfilled_from_minute=_optional_int(snapshot.get("backfilled_from_minute")),
+        outer_path=str(snapshot["outer_path"]) if snapshot.get("outer_path") else None,
+        outer_sha256=str(snapshot["outer_sha256"]) if snapshot.get("outer_sha256") else None,
+        inner_path=str(snapshot["inner_path"]) if snapshot.get("inner_path") else None,
+        inner_sha256=str(snapshot["inner_sha256"]) if snapshot.get("inner_sha256") else None,
+        conflict=bool(snapshot.get("conflict")),
     )
 
 
@@ -323,7 +333,8 @@ def _read_numeric_rows(path: Path, *, condition: str, horizon: int) -> list[dict
         if row.get("condition", row.get("noise_tag")) != condition:
             raise DynamicBackfillPlanError(f"numeric {key} condition 不匹配")
         for minute in range(1, horizon + 1):
-            if _finite_quality(row.get(f"q_{minute:04d}")) is None:
+            value = row.get(f"q_{minute:04d}")
+            if value not in (None, "") and _finite_quality(value) is None:
                 raise DynamicBackfillPlanError(f"numeric {key} 缺少合法 q_{minute:04d}")
     return rows
 
@@ -342,10 +353,15 @@ def _source_evidence(run: CompactRun, snapshot: CompactSnapshot | None, *, sourc
         "source_minute": source_minute,
         "snapshot_path": snapshot.selected_path if snapshot else None,
         "snapshot_sha256": snapshot.selected_sha256 if snapshot else None,
+        "outer_path": snapshot.outer_path if snapshot else None,
+        "outer_sha256": snapshot.outer_sha256 if snapshot else None,
+        "inner_path": snapshot.inner_path if snapshot else None,
+        "inner_sha256": snapshot.inner_sha256 if snapshot else None,
+        "snapshot_conflict": snapshot.conflict if snapshot else False,
     }
 
 
-def _unresolved_point(run: CompactRun, minute: int, q: float, reason: str, *, source_label: str = "") -> dict[str, Any]:
+def _unresolved_point(run: CompactRun, minute: int, q: float | None, reason: str, *, source_label: str = "") -> dict[str, Any]:
     return {
         "expression": None,
         "expression_status": "unresolved",
@@ -375,38 +391,86 @@ def _invalid_point(run: CompactRun, q: float, *, reason: str, source_label: str)
     }
 
 
+def _unresolved_snapshot_point(
+    run: CompactRun,
+    minute: int,
+    q: float | None,
+    reason: str,
+    snapshot: CompactSnapshot | None,
+    source_label: str | None = None,
+) -> dict[str, Any]:
+    if snapshot is None:
+        source_minute = None
+        label = source_label or ""
+    else:
+        source_minute = snapshot.backfilled_from_minute or snapshot.minute
+        label = source_label or (f"carry_forward:{source_minute}" if source_minute != minute else f"snapshot:{minute}")
+    point = _unresolved_point(run, minute, q, reason, source_label=label)
+    point["source_evidence"] = _source_evidence(
+        run, snapshot, source_minute=source_minute, source_label=label
+    )
+    return point
+
+
 def _resolve_noise_points(run: CompactRun, numeric: Mapping[str, str], horizon: int) -> list[dict[str, Any]]:
-    best_snapshot: CompactSnapshot | None = None
-    best_quality = 0.0
     points: list[dict[str, Any]] = []
     for minute in range(1, horizon + 1):
         snapshot = run.snapshots.get(minute)
-        if snapshot is not None and snapshot.quality is not None and snapshot.quality > best_quality:
-            best_snapshot = snapshot
-            best_quality = snapshot.quality
-        q = float(numeric[f"q_{minute:04d}"])
+        q = _finite_quality(numeric.get(f"q_{minute:04d}"))
         id_q = _finite_quality(numeric.get(f"id_q_{minute:04d}"))
         ood_q = _finite_quality(numeric.get(f"ood_q_{minute:04d}"))
-        if id_q is None or ood_q is None:
-            points.append(_unresolved_point(run, minute, q, "noise numeric 缺少 ID/OOD quality"))
-            continue
-        if not _close(q, (id_q + ood_q) / 2.0):
-            points.append(_unresolved_point(run, minute, q, "noise q 与 ID/OOD 均值不一致"))
-            continue
-        if best_snapshot is None:
-            points.append(_invalid_point(run, q, reason="截至当前分钟无可评估快照", source_label="observed_best_so_far:none"))
-            continue
-        if not (_close(id_q, best_snapshot.id_quality) and _close(ood_q, best_snapshot.ood_quality) and _close(q, best_snapshot.quality)):
-            points.append(_unresolved_point(run, minute, q, "noise 数值轨迹与冻结 best-so-far 快照不一致"))
-            continue
-        if best_snapshot.expression is None:
-            point = _unresolved_point(run, minute, q, "数值最优快照缺少表达式", source_label=f"observed_best_so_far:{best_snapshot.minute}")
-            point["id_quality"] = id_q
-            point["ood_quality"] = ood_q
+        if q is None:
+            point = (
+                _unresolved_snapshot_point(run, minute, None, "noise numeric q is unavailable", snapshot)
+                if snapshot is not None
+                else _unresolved_point(run, minute, None, "noise numeric q is unavailable")
+            )
             points.append(point)
             continue
+        if snapshot is None:
+            points.append(_unresolved_point(run, minute, q, "noise minute has no auditable snapshot"))
+            continue
+        if snapshot.status != "ok":
+            points.append(_unresolved_snapshot_point(
+                run, minute, q, f"noise snapshot status is {snapshot.status}", snapshot
+            ))
+            continue
+        if id_q is None or ood_q is None:
+            points.append(_unresolved_snapshot_point(run, minute, q, "noise numeric 缺少 ID/OOD quality", snapshot))
+            continue
+        if not _close(q, (id_q + ood_q) / 2.0):
+            points.append(_unresolved_snapshot_point(run, minute, q, "noise q 与 ID/OOD 均值不一致", snapshot))
+            continue
+        if not (
+            _close(id_q, snapshot.id_quality)
+            and _close(ood_q, snapshot.ood_quality)
+            and _close(q, snapshot.quality)
+        ):
+            points.append(_unresolved_snapshot_point(
+                run, minute, q, "noise numeric differs from same-minute native incumbent snapshot", snapshot
+            ))
+            continue
+        source_minute = snapshot.backfilled_from_minute or snapshot.minute
+        source_label = f"carry_forward:{source_minute}" if source_minute != minute else f"snapshot:{minute}"
+        if snapshot.expression is None:
+            if _close(q, 0.0) and _close(id_q, 0.0) and _close(ood_q, 0.0):
+                point = _invalid_point(
+                    run,
+                    q,
+                    reason=f"no valid native expression at minute {minute}",
+                    source_label=source_label,
+                )
+                point["source_evidence"] = _source_evidence(
+                    run, snapshot, source_minute=source_minute, source_label=source_label
+                )
+                points.append(point)
+            else:
+                points.append(_unresolved_snapshot_point(
+                    run, minute, q, "same-minute native snapshot has no expression", snapshot
+                ))
+            continue
         points.append({
-            "expression": best_snapshot.expression,
+            "expression": snapshot.expression,
             "expression_status": "resolved",
             "valid_output": True,
             "invalid_reason": None,
@@ -414,7 +478,7 @@ def _resolve_noise_points(run: CompactRun, numeric: Mapping[str, str], horizon: 
             "id_quality": id_q,
             "ood_quality": ood_q,
             "q": q,
-            "source_evidence": _source_evidence(run, best_snapshot, source_minute=best_snapshot.minute, source_label=f"observed_best_so_far:{best_snapshot.minute}"),
+            "source_evidence": _source_evidence(run, snapshot, source_minute=source_minute, source_label=source_label),
         })
     return points
 
@@ -426,18 +490,28 @@ def _source_minute(source_label: str) -> int | None:
 
 def _resolve_clean_points(run: CompactRun, numeric: Mapping[str, str], evidence: Mapping[str, Any] | None, horizon: int) -> list[dict[str, Any]]:
     if evidence is None:
-        return [_unresolved_point(run, minute, float(numeric[f"q_{minute:04d}"]), "缺少对应 source_tier 的 clean canonical EFF 证据") for minute in range(1, horizon + 1)]
+        return [
+            _unresolved_snapshot_point(
+                run,
+                minute,
+                _finite_quality(numeric.get(f"q_{minute:04d}")),
+                "缺少对应 source_tier 的 clean canonical EFF 证据",
+                run.snapshots.get(minute),
+            )
+            for minute in range(1, horizon + 1)
+        ]
     contract_errors = evidence.get("_contract_errors")
     if isinstance(contract_errors, list) and contract_errors:
         reason = "clean canonical EFF 证据契约失败: " + "; ".join(
             str(item) for item in contract_errors
         )
         return [
-            _unresolved_point(
+            _unresolved_snapshot_point(
                 run,
                 minute,
-                float(numeric[f"q_{minute:04d}"]),
+                _finite_quality(numeric.get(f"q_{minute:04d}")),
                 reason,
+                run.snapshots.get(minute),
             )
             for minute in range(1, horizon + 1)
         ]
@@ -449,24 +523,35 @@ def _resolve_clean_points(run: CompactRun, numeric: Mapping[str, str], evidence:
     valid_outputs = evidence["valid_output_trajectory"]
     points: list[dict[str, Any]] = []
     for minute in range(1, horizon + 1):
-        q = float(numeric[f"q_{minute:04d}"])
         source_label = str(evidence_sources[minute - 1])
+        source_minute = _source_minute(source_label)
+        snapshot = run.snapshots.get(source_minute) if source_minute is not None else None
+        q = _finite_quality(numeric.get(f"q_{minute:04d}"))
+        if q is None:
+            points.append(_unresolved_snapshot_point(
+                run, minute, None, "clean numeric q is unavailable", snapshot, source_label
+            ))
+            continue
         if not _close(q, _finite_quality(evidence_q[minute - 1])):
-            points.append(_unresolved_point(run, minute, q, "clean numeric 与 canonical EFF 证据不一致", source_label=source_label))
+            points.append(_unresolved_snapshot_point(
+                run, minute, q, "clean numeric 与 canonical EFF 证据不一致", snapshot, source_label
+            ))
             continue
         id_quality = _finite_quality(id_qualities[minute - 1])
         ood_quality = _finite_quality(ood_qualities[minute - 1])
         if id_quality is None or ood_quality is None or not _close(
             q, (id_quality + ood_quality) / 2.0
         ):
-            points.append(_unresolved_point(run, minute, q, "clean canonical ID/OOD 分量与 combined q 不一致", source_label=source_label))
+            points.append(_unresolved_snapshot_point(
+                run, minute, q, "clean canonical ID/OOD 分量与 combined q 不一致", snapshot, source_label
+            ))
             continue
         valid_output = valid_outputs[minute - 1]
         if not isinstance(valid_output, bool):
-            points.append(_unresolved_point(run, minute, q, "clean canonical valid_output 不是布尔值", source_label=source_label))
+            points.append(_unresolved_snapshot_point(
+                run, minute, q, "clean canonical valid_output 不是布尔值", snapshot, source_label
+            ))
             continue
-        source_minute = _source_minute(source_label)
-        snapshot = run.snapshots.get(source_minute) if source_minute is not None else None
         expression_value = expressions[minute - 1]
         expression = (
             expression_value.strip()
@@ -482,7 +567,9 @@ def _resolve_clean_points(run: CompactRun, numeric: Mapping[str, str], evidence:
         }
         if not valid_output:
             if not (_close(q, 0.0) and _close(id_quality, 0.0) and _close(ood_quality, 0.0)):
-                points.append(_unresolved_point(run, minute, q, "clean 无效 canonical 候选没有显式零分", source_label=source_label))
+                points.append(_unresolved_snapshot_point(
+                    run, minute, q, "clean 无效 canonical 候选没有显式零分", snapshot, source_label
+                ))
                 continue
             point = _invalid_point(
                 run,
@@ -491,13 +578,21 @@ def _resolve_clean_points(run: CompactRun, numeric: Mapping[str, str], evidence:
                 source_label=source_label,
             )
             point["source_evidence"]["canonical_evidence"] = canonical_evidence
+            if snapshot is not None:
+                point["source_evidence"] = _source_evidence(
+                    run, snapshot, source_minute=source_minute, source_label=source_label
+                ) | {"canonical_evidence": canonical_evidence}
             points.append(point)
             continue
         if expression is None:
-            points.append(_unresolved_point(run, minute, q, "clean 有效 canonical 候选缺少所选表达式", source_label=source_label))
+            points.append(_unresolved_snapshot_point(
+                run, minute, q, "clean 有效 canonical 候选缺少所选表达式", snapshot, source_label
+            ))
             continue
         if source_minute is None:
-            points.append(_unresolved_point(run, minute, q, "clean trajectory_source 缺少实际候选来源分钟", source_label=source_label))
+            points.append(_unresolved_snapshot_point(
+                run, minute, q, "clean trajectory_source 缺少实际候选来源分钟", snapshot, source_label
+            ))
             continue
         source_evidence = _source_evidence(
             run,
@@ -626,11 +721,22 @@ def build_dynamic_six_axis_backfill_plan(
                     points = _resolve_clean_points(run, numeric, evidence.get((tier, key)), horizon)
                 else:
                     points = _resolve_noise_points(run, numeric, horizon)
-                q_star = max(float(numeric[f"q_{minute:04d}"]) for minute in range(1, horizon + 1))
+                q_values = [
+                    _finite_quality(numeric.get(f"q_{minute:04d}"))
+                    for minute in range(1, horizon + 1)
+                ]
+                complete_q_trajectory = all(value is not None for value in q_values)
+                q_star = max(value for value in q_values if value is not None) if complete_q_trajectory else None
                 cumulative = 0.0
                 for minute, point in enumerate(points, start=1):
-                    relative = float(point["q"]) / q_star if q_star > 0.0 else 0.0
-                    cumulative += relative
+                    point_q = _finite_quality(point.get("q"))
+                    if q_star is None or point_q is None:
+                        relative = None
+                        cumulative_eff = None
+                    else:
+                        relative = point_q / q_star if q_star > 0.0 else 0.0
+                        cumulative += relative
+                        cumulative_eff = cumulative / minute
                     expression_key = None
                     equivalence_key = None
                     if point["expression_status"] == "resolved":
@@ -651,7 +757,9 @@ def build_dynamic_six_axis_backfill_plan(
                         "min_score": None,
                         "stab_score": None,
                         "relative_progress": relative,
-                        "cumulative_eff": cumulative / minute,
+                        "cumulative_eff": cumulative_eff,
+                        "efficiency_status": "available" if complete_q_trajectory else "unavailable_incomplete_q_trajectory",
+                        "q_star": q_star,
                         "pred_simplify_key": expression_key,
                         "equivalence_key": equivalence_key,
                         "numeric_source": {"path": str(numeric_path), "sha256": numeric_sha, "logical_key": key},
