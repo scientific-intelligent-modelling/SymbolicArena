@@ -14,7 +14,7 @@
 - Stage5候选预测化简计划基于5309项输入：可调用clean 1777、noise001 1771、noise005 1755；6项无公式任务记为no-call。复用缓存1995项通过来源、表达式及prompt/schema核验；v5直接API待处理3358项（clean240、noise0011560、noise0051543、GT15），单任务重试上限16790、总尝试上限20148。该快照未包括后续采集结果，也未计等价、结构及逐分钟任务。计划与哈希见`.agent/work/GOAL-CORE50/opus_plan_merge_collected_v5/merge_report.json`。
 - Stage5逐分钟选择已修正为使用同一分钟的算法原生incumbent，不按ID/OOD质量选择历史快照。动态噪声真实数据核验：DSO/Keijzer-11三个seed共540个run-minute点通过，seed522的`q(t)`从0.2551降至0.1871时仍使用minute 50公式及其SHA；证据`.agent/work/GOAL-CORE50/dynamic_real_smoke_v5b/`。定向测试4项通过；代码提交`daca57c1`。
 - Opus直接API代码和密钥配置已在iaaccn22准备，未发送本Goal的API请求。物理内存264010832 kB，90%目标上限约237.9 GB；`systemd-run --user --scope --property=MemoryMax=237907890000`仍因委派权限失败，实际限制不可用。待管理员启用memory cgroup委派或提供系统级受限服务后再启动Opus；训练、采集和离线计划继续运行。
-- clean EFF确定性计算正在运行，进程PID `2733006`；输入为v5 clean绑定、Stage5原生incumbent adapters及`trajectory_repairs_none_v5.json`。原`trajectory_repairs.v1.json`所绑定的wrapper SHA与当前源码不符，已拒绝沿用；当前不应用任何历史修复，769个缺失分钟保持unresolved。
+- clean EFF：首次计算因Stage5完整网格门要求2250行、v5当前仅有1778行而退出，保留`.agent/work/GOAL-CORE50/clean_eff_v5/run_trajectory_wide.csv`及失败原因。重算进程PID `2739592`显式使用`limit_runs=1778`，结果标记为部分输入，不能作为完整Core50正式结果。输入为v5 clean绑定、Stage5原生incumbent adapters及`trajectory_repairs_none_v5.json`。历史`trajectory_repairs.v1.json`的wrapper SHA与当前源码不符，已拒绝沿用；769个缺失分钟不修补，保留为unresolved。
 
 - IMPORT-002（并入GOAL-CORE50，复制已完成）：新Stage4目录`2、experiments/{noise}/{algorithm}/{dataset_name}/{seed}`。35个重叠数据集的4725份运行已复制，15个新数据集对应2025项待训练；保存859349个文件及849876个逐分钟progress文件。4721项有可用数值指标，Opus SHA256绑定有效1960项、缺失2762项、无可用表达式3项；GT已覆盖36个数据集。全部统计、pending清单和来源哈希见preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。源实验未修改。
 
