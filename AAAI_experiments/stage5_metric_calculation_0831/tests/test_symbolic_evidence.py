@@ -96,6 +96,22 @@ def test_function_definition_cannot_bypass_allowed_variables() -> None:
         )
 
 
+def test_drsr_none_guard_defaults_to_numeric_feature() -> None:
+    artifact = build_symbolic_artifact(
+        "def equation(x0, x1):\n"
+        "    return x0 + (x1 if not isinstance(x1, type(None)) else 0)",
+        allowed_variables={"x0", "x1"},
+        allowed_functions=set(),
+    )
+
+    assert artifact["canonical_expression"] == "x0 + x1"
+
+
+def test_symbolic_evidence_rejects_other_conditional_expressions() -> None:
+    with pytest.raises(SymbolicEvidenceError, match="条件表达式"):
+        build_symbolic_artifact("x0 if x0 > 0 else 0", allowed_variables={"x0"})
+
+
 def test_real_ground_truth_tasks_all_parse() -> None:
     requests = _iter_gt_requests()
     artifacts = [

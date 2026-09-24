@@ -219,6 +219,7 @@ def run_worker_request(payload: Mapping[str, object]) -> JsonDict:
 
 
 def main() -> int:
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), 20000))
     raw = sys.stdin.read()
     try:
         payload = json.loads(raw)

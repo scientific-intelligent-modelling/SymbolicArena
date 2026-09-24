@@ -666,6 +666,43 @@ def _convert_clip_call(node: ast.Call, ctx: _BuildContext) -> sp.Basic:
     return result
 
 
+def _convert_none_guarded_ifexp(node: ast.IfExp, ctx: _BuildContext) -> sp.Basic:
+    test = node.test
+    if not isinstance(test, ast.UnaryOp) or not isinstance(test.op, ast.Not):
+        raise SymbolicEvidenceError("不支持的条件表达式")
+    check = test.operand
+    if (
+        not isinstance(check, ast.Call)
+        or not isinstance(check.func, ast.Name)
+        or check.func.id != "isinstance"
+        or check.keywords
+        or len(check.args) != 2
+    ):
+        raise SymbolicEvidenceError("不支持的条件表达式")
+    type_check = check.args[1]
+    if (
+        not isinstance(type_check, ast.Call)
+        or not isinstance(type_check.func, ast.Name)
+        or type_check.func.id != "type"
+        or type_check.keywords
+        or len(type_check.args) != 1
+        or not isinstance(type_check.args[0], ast.Constant)
+        or type_check.args[0].value is not None
+    ):
+        raise SymbolicEvidenceError("不支持的条件表达式")
+    fallback = node.orelse
+    if (
+        not isinstance(fallback, ast.Constant)
+        or isinstance(fallback.value, bool)
+        or not isinstance(fallback.value, (int, float))
+        or fallback.value != 0
+        or ast.dump(check.args[0]) != ast.dump(node.body)
+    ):
+        raise SymbolicEvidenceError("不支持的条件表达式")
+    # DRSR 为可选列添加空值保护；benchmark 特征始终以数值数组传入。
+    return _convert_node(node.body, ctx)
+
+
 def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
     if isinstance(node, ast.Constant):
         return _convert_constant(node, ctx)
@@ -712,6 +749,8 @@ def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
         if isinstance(node.op, ast.UAdd):
             return operand
         raise SymbolicEvidenceError(f"不支持的一元运算: {type(node.op).__name__}")
+    if isinstance(node, ast.IfExp):
+        return _convert_none_guarded_ifexp(node, ctx)
     if isinstance(node, ast.Call):
         is_piecewise = (
             isinstance(node.func, ast.Name)
@@ -766,7 +805,6 @@ def _convert_node(node: ast.AST, ctx: _BuildContext) -> sp.Basic:
         ast.Tuple,
         ast.Dict,
         ast.Set,
-        ast.IfExp,
         ast.BoolOp,
         ast.NamedExpr,
     )
