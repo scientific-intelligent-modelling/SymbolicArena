@@ -313,6 +313,9 @@ if __name__ == '__main__':
     parser.add_argument('--runtime', type=Path, default=Path('/home/zhangziwen/sim-runtime/core50-opus-runtime'))
     args = parser.parse_args()
     args.root = args.runtime / 'core50_minutes'
+    stop_path = args.root / 'stopped_by_user.json'
+    if stop_path.exists() and json.loads(stop_path.read_text()).get('scope') == 'terminal_formulas_only':
+        raise SystemExit('当前仅处理最终公式，逐分钟Opus执行入口已停用。')
     args.workers = 300
     args.prepare_workers = 50
     args.logical_task_cap = 1000000

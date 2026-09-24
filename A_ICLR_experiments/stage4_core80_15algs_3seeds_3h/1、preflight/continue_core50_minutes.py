@@ -17,6 +17,9 @@ def main():
     runtime = Path('/home/zhangziwen/sim-runtime/core50-opus-runtime')
     root = runtime / 'core50_minutes'
     root.mkdir(parents=True, exist_ok=True)
+    stop_path = root / 'stopped_by_user.json'
+    if stop_path.exists() and json.loads(stop_path.read_text()).get('scope') == 'terminal_formulas_only':
+        raise SystemExit('当前仅处理最终公式，逐分钟Opus自动续行已停用。')
     lock = (root / 'pipeline.lock').open('a+')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     args = argparse.Namespace(runtime=runtime, root=root, workers=300, prepare_workers=50,

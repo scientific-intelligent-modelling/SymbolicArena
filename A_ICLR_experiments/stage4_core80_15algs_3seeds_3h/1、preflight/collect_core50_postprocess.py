@@ -42,11 +42,17 @@ if __name__ == '__main__':
             continue
         failures = 0
         status = json.loads(result.stdout)
+        if status.get('phase') == 'stopped_by_user':
+            write_json(WORK / 'postprocess_delivery.json', {'phase': 'awaiting_terminal_metrics',
+                'scope': status.get('scope'), 'remote_status': status, 'time': time.time()})
+            break
         write_json(WORK / 'postprocess_delivery.json', {'phase': 'waiting_remote_results',
             'remote_status': status, 'time': time.time()})
         if status.get('complete'):
             break
         time.sleep(60)
+    if status.get('phase') == 'stopped_by_user':
+        raise SystemExit('逐分钟采集已停止，最终公式汇总待完成。')
     transfer(f'{REMOTE}/core50_minutes/results', DESTINATION)
     report = json.loads((DESTINATION / 'verification.json').read_text())
     if report['run_count'] != 6750 or report['run_minute_count'] != 1215000 or report['task_minute_count'] != 405000:
