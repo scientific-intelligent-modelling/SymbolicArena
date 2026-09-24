@@ -1,0 +1,1159 @@
+{
+  "attempt_id": "25589b8e94c7bacaa18d2bc6c447c44c955fd199db95ac6f2037ff9184c4f6b9.a01",
+  "command": [
+    "anthropic-messages-api",
+    "--model",
+    "claude-opus-5",
+    "--effort",
+    "xhigh",
+    "--stream",
+    "false"
+  ],
+  "envelope": {
+    "container": null,
+    "content": [
+      {
+        "block_sha256": "9c61f11e6e46a92e0fc2294c16fae41220d71fb9d3424099f36b57ce57091cff",
+        "original_type": "thinking",
+        "redacted": true,
+        "type": "redacted_thinking"
+      },
+      {
+        "text": "{\"outcome\":\"simplified\",\"simplified_expression\":\"0.1699888096710614*P*(P*(1 - P/10.210545156320043)/1.0472843670254641 + 1 - exp(-0.09709294493863778*P))\",\"equivalence_assessment\":\"preserved\",\"assumptions\":[\"Real-domain semantics; P real so exp argument is real and all divisions have nonzero constant denominators.\"],\"confidence\":0.95,\"brief_reason\":\"The first two terms share the factor c*(1 - P/10.2105...)*P, and (-1 + P/1.0472...) + 1 = P/1.0472..., collapsing them into one term. Factoring the common c*P gives a compact exact form with all original numeric literals kept unevaluated.\"}",
+        "type": "text"
+      }
+    ],
+    "id": "msg_bdrk_i6gro5qysrobditehxp3dhhxqf2v6hesoliwzfthq62aeti2akqq",
+    "model": "claude-opus-5",
+    "role": "assistant",
+    "routify_response": {
+      "ak_quota": {
+        "api_key": "[REDACTED]",
+        "current_rpm": 3,
+        "rpm_limit": 600,
+        "status": "NORMAL"
+      },
+      "is_fall_back_triggered": false,
+      "model_name": "claude-opus-5",
+      "provider_code_md5": "9ae6c0",
+      "request_id": "bc61f5668d5f423cb6d3ab7ebfdc4a25",
+      "status": 200,
+      "success": true,
+      "trace_id": "2166686b17901657539702321e224c"
+    },
+    "stop_details": null,
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 4927,
+      "output_tokens": 793,
+      "output_tokens_details": {
+        "thinking_tokens": 545
+      },
+      "service_tier": "standard"
+    }
+  },
+  "evaluation_key": "25589b8e94c7bacaa18d2bc6c447c44c955fd199db95ac6f2037ff9184c4f6b9",
+  "logical_id": "gt_simplify::BPG9::core80",
+  "metadata": {
+    "api_base_url": "https://routify-pub.alibaba-inc.com/protocol/anthropic",
+    "api_channel": "routify",
+    "api_endpoint": "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages",
+    "api_request_sha256": "f88744fa52398348251153139a68312b968b3cb3cccae6c824fecc937da3c135",
+    "api_response_sha256": "28ac6ed3a8b3cd07bca5cea88482eb3b9bad38a9c3a972326a0c43d95d072950",
+    "attempt_id": "25589b8e94c7bacaa18d2bc6c447c44c955fd199db95ac6f2037ff9184c4f6b9.a01",
+    "attempt_number": 1,
+    "error_class": null,
+    "estimated_cost_cny": 0.026676,
+    "evaluation_key": "25589b8e94c7bacaa18d2bc6c447c44c955fd199db95ac6f2037ff9184c4f6b9",
+    "finished_at": 1790165765.5101428,
+    "http_status": 200,
+    "lease_expires_at": 1790169353.005271,
+    "logical_id": "gt_simplify::BPG9::core80",
+    "persisted_api_response_sha256": "c43944bf5740492ec2687a625652d944c5516e99fe117b561f07cac860d4e2d6",
+    "prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/simplify.v1.txt",
+    "prompt_sha256": "167d2e022a4dd0e2f9ad455e095b68e54bdb08c13d8349b33cc3f4c3a8020f02",
+    "raw_response_sha256": "355aae82a6b93cda808fb6a9b1e92fc4c5a324886cb6d7a132637a254bf9c1a5",
+    "rendered_prompt_sha256": "230cf888bc6a28be53a81175802f98c09ac69eb3dd669df57c4476acde9f9d2e",
+    "request_sha256": "97618d4a23da6ea9892dad3f2f6d7b5d1ac1b102cf68f2792034c912ea438b11",
+    "requested_effort": "xhigh",
+    "requested_model": "claude-opus-5",
+    "response_headers": {},
+    "response_metadata": {
+      "content_types": [
+        "thinking",
+        "text"
+      ],
+      "message_id": "msg_bdrk_i6gro5qysrobditehxp3dhhxqf2v6hesoliwzfthq62aeti2akqq",
+      "model": "claude-opus-5",
+      "stop_reason": "end_turn",
+      "stop_sequence": null
+    },
+    "response_model": "claude-opus-5",
+    "retryable": false,
+    "schema_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/schemas/simplify.v1.json",
+    "schema_sha256": "eb0957a945d11292bb16c8d00a2f47d347ae74269ddf02f7d8f962e4797ff5ba",
+    "semantic_validator_sha256": "d485c31798b406163175d5070e623296e604113f181bae08edf822ef4929ac12",
+    "started_at": 1790165753.9227402,
+    "stream": false,
+    "system_prompt_sha256": "50f2e4abbc10909ce926730b2eafe1b72b3485a838475424085a81fd374930e0",
+    "tariff_cny_per_million_tokens": {
+      "cache_read": 0.3,
+      "input": 3.0,
+      "output": 15.0
+    },
+    "task_kind": "simplify",
+    "task_type": "gt_simplify",
+    "timeout_seconds": 1800.0,
+    "transport_version": "anthropic_messages_nonstream_dual_channel.v1",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 4927,
+      "output_tokens": 793,
+      "output_tokens_details": {
+        "thinking_tokens": 545
+      },
+      "service_tier": "standard"
+    },
+    "wall_latency_seconds": 11.59071560006123
+  },
+  "prompt": "You are the mandatory single-turn symbolic simplification judge for SymbolicArena.\n\nSimplify exactly one mathematical expression while preserving its mathematical meaning under the supplied domain and protected-operator assumptions.\n\nRules:\n1. Use only variables and mathematical functions declared in the request.\n2. Do not fit new constants, rename variables, or introduce unstated assumptions.\n3. Prefer a concise ASCII infix expression compatible with SymPy notation.\n4. Preserve instantiated numeric constants unless an exact algebraic simplification removes them.\n5. Treat deterministic checks as evidence, not as a substitute for your own judgment.\n6. If safe simplification cannot be established, return outcome \"unable\".\n7. For outcome \"unable\", set simplified_expression to null and equivalence_assessment to \"undetermined\".\n8. For outcome \"simplified\" or \"unchanged\", equivalence_assessment must be \"preserved\".\n9. Return only the JSON object required by the supplied schema.\n10. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"allowed_functions\":[\"exp\"],\"ast_source_evidence\":{\"ground_truth_source_evidence_sha256\":\"4f28f908a306dd7a83c7bfc0575b52440b2d23b89fd89dfba338ffc920f8a326\",\"raw_return_source\":\"0.1699888096710614*(-1 + P/1.0472843670254641)*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - np.exp(-0.09709294493863778*P))*P\",\"return_ast_dump\":\"BinOp(left=BinOp(left=BinOp(left=BinOp(left=BinOp(left=Constant(value=0.1699888096710614), op=Mult(), right=BinOp(left=UnaryOp(op=USub(), operand=Constant(value=1)), op=Add(), right=BinOp(left=Name(id='P', ctx=Load()), op=Div(), right=Constant(value=1.0472843670254641)))), op=Mult(), right=BinOp(left=Constant(value=1), op=Sub(), right=BinOp(left=Name(id='P', ctx=Load()), op=Div(), right=Constant(value=10.210545156320043)))), op=Mult(), right=Name(id='P', ctx=Load())), op=Add(), right=BinOp(left=BinOp(left=Constant(value=0.1699888096710614), op=Mult(), right=BinOp(left=Constant(value=1), op=Sub(), right=BinOp(left=Name(id='P', ctx=Load()), op=Div(), right=Constant(value=10.210545156320043)))), op=Mult(), right=Name(id='P', ctx=Load()))), op=Add(), right=BinOp(left=BinOp(left=Constant(value=0.1699888096710614), op=Mult(), right=BinOp(left=Constant(value=1), op=Sub(), right=Call(func=Attribute(value=Name(id='np', ctx=Load()), attr='exp', ctx=Load()), args=[BinOp(left=UnaryOp(op=USub(), operand=Constant(value=0.09709294493863778)), op=Mult(), right=Name(id='P', ctx=Load()))], keywords=[]))), op=Mult(), right=Name(id='P', ctx=Load())))\",\"return_source\":\"0.1699888096710614*(-1 + P/1.0472843670254641)*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - np.exp(-0.09709294493863778*P))*P\",\"selection_reason\":\"metadata_target_name\",\"source_checksums\":{\"formula_py_sha256\":\"d0ef406a412b4605ef5176afcdf4c1c2f356945d0912bbba7b3406708651a675\",\"id_test_csv_sha256\":\"53d67152b6cc7acf186dbcad9bef19203e3491b7f105c86c33812da422a3bfa7\",\"metadata_yaml_sha256\":\"d13f639dc29266ba93736a0dd4afa20471a6cc690de62f38269212545a529829\",\"ood_test_csv_sha256\":\"768a5ed6b6fad88fb46a2fca4fadf0f218eb06159bd1b4cdeac10d9c68fbd825\",\"train_csv_sha256\":\"fd42b9153d4a931455725f876426404318f838980f2600c4cf2bcf83dbeb2a69\",\"valid_csv_sha256\":\"73b97f264e4ab9a2436b61146a0f337063268f0a2f44f2ea3b72aafedf6b03ef\"}},\"dataset_id\":\"BPG9\",\"dataset_probe_evidence\":{\"basename\":\"BPG9\",\"core50_index\":24,\"dataset_dir\":\"sim-datasets-data/llm-srbench/bio_pop_growth/BPG9\",\"dataset_name\":\"BPG9\",\"evidence_sha256\":\"13a63a19ea93bbb6a6a958d08905c11548e9b14eef419883f1ef41d6940dffa0\",\"point_count\":16,\"sample_sha256\":\"141eab98d00a5e5d784ac19c03816b0c0e3c589ef4bdefff05b66693df75c674\",\"schema_version\":\"dataset_probes_v1\",\"source_sha256\":{\"id_test_csv\":\"53d67152b6cc7acf186dbcad9bef19203e3491b7f105c86c33812da422a3bfa7\",\"metadata_yaml\":\"d13f639dc29266ba93736a0dd4afa20471a6cc690de62f38269212545a529829\",\"ood_test_csv\":\"768a5ed6b6fad88fb46a2fca4fadf0f218eb06159bd1b4cdeac10d9c68fbd825\"},\"target_name\":\"dP_dt\",\"variables\":[\"t\",\"P\"]},\"deterministic_evidence\":{\"dataset_probe\":{\"basename\":\"BPG9\",\"core50_index\":24,\"dataset_dir\":\"sim-datasets-data/llm-srbench/bio_pop_growth/BPG9\",\"dataset_name\":\"BPG9\",\"evidence_sha256\":\"13a63a19ea93bbb6a6a958d08905c11548e9b14eef419883f1ef41d6940dffa0\",\"point_count\":16,\"sample_sha256\":\"141eab98d00a5e5d784ac19c03816b0c0e3c589ef4bdefff05b66693df75c674\",\"schema_version\":\"dataset_probes_v1\",\"source_sha256\":{\"id_test_csv\":\"53d67152b6cc7acf186dbcad9bef19203e3491b7f105c86c33812da422a3bfa7\",\"metadata_yaml\":\"d13f639dc29266ba93736a0dd4afa20471a6cc690de62f38269212545a529829\",\"ood_test_csv\":\"768a5ed6b6fad88fb46a2fca4fadf0f218eb06159bd1b4cdeac10d9c68fbd825\"},\"target_name\":\"dP_dt\",\"variables\":[\"t\",\"P\"]},\"symbolic_artifact\":{\"artifact_sha256\":\"ed9e568ccab2cc99d23dcf27f7d6dd12a49f96d66f48846c50e6f52fbf732404\",\"canonical_expression\":\"P*(-0.016648357856371955*P + 0.1699888096710614) + P*(0.1699888096710614 - 0.1699888096710614*exp(-0.09709294493863778*P)) + P*(-0.097937963614119845*P + 1)*(0.16231389966592352*P - 0.1699888096710614)\",\"constants_abstracted_tree_fingerprint\":\"e3f60d925abe6be753d8bf3e0d4aaacafcd533e5930335420bab23471d249928\",\"construction_mode\":\"evaluated\",\"function_set\":[\"exp\"],\"node_count\":30,\"operator_set\":[\"add\",\"exp\",\"mul\"],\"source_kind\":\"expression\",\"variables\":[\"P\"]}},\"domain_assumptions\":{\"equivalence_domain\":\"Compare expressions on their common real-valued domain where both sides are defined and finite.\",\"implicit_protected_operators\":\"none\",\"literal_protected_operators\":[],\"number_system\":\"real\",\"operator_semantics\":[\"Division is ordinary real division; zero denominators are outside the common domain.\",\"log, sqrt, and non-integer powers use ordinary real-domain semantics.\",\"maximum, minimum, clip, and where are literal functions only when written in the expression.\",\"Do not infer hidden clipping, epsilon guards, or fitted constants beyond the frozen expression.\"]},\"evidence_hash\":\"3e59e5f494dcfeae73813cc7c7b50cf2b00c9a81bd62bc5daadc163c851e1942\",\"expression\":\"0.1699888096710614 * (-1 + P / 1.0472843670254641) * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - np.exp(-0.09709294493863778 * P)) * P\",\"probe_points\":[{\"row_index\":6,\"split\":\"id_test\",\"values\":{\"P\":1.6781361103057861,\"t\":3.56111216545105}},{\"row_index\":77,\"split\":\"id_test\",\"values\":{\"P\":10.8546142578125,\"t\":19.19923973083496}},{\"row_index\":90,\"split\":\"id_test\",\"values\":{\"P\":1.1815333366394043,\"t\":1.9559911489486694}},{\"row_index\":114,\"split\":\"id_test\",\"values\":{\"P\":10.848145484924316,\"t\":53.697540283203125}},{\"row_index\":138,\"split\":\"id_test\",\"values\":{\"P\":10.844289779663086,\"t\":32.00480270385742}},{\"row_index\":346,\"split\":\"id_test\",\"values\":{\"P\":10.853983879089355,\"t\":13.274455070495605}},{\"row_index\":350,\"split\":\"id_test\",\"values\":{\"P\":10.853178977966309,\"t\":53.437889099121094}},{\"row_index\":484,\"split\":\"id_test\",\"values\":{\"P\":10.846429824829102,\"t\":16.272254943847656}},{\"row_index\":174,\"split\":\"ood_test\",\"values\":{\"P\":10.851805686950684,\"t\":56.16423416137695}},{\"row_index\":213,\"split\":\"ood_test\",\"values\":{\"P\":10.858327865600586,\"t\":56.6245231628418}},{\"row_index\":238,\"split\":\"ood_test\",\"values\":{\"P\":10.8540620803833,\"t\":56.91958236694336}},{\"row_index\":242,\"split\":\"ood_test\",\"values\":{\"P\":10.852890014648438,\"t\":56.966793060302734}},{\"row_index\":312,\"split\":\"ood_test\",\"values\":{\"P\":10.849002838134766,\"t\":57.7929573059082}},{\"row_index\":397,\"split\":\"ood_test\",\"values\":{\"P\":10.84879207611084,\"t\":58.79615783691406}},{\"row_index\":429,\"split\":\"ood_test\",\"values\":{\"P\":10.846148490905762,\"t\":59.17383575439453}},{\"row_index\":492,\"split\":\"ood_test\",\"values\":{\"P\":10.850808143615723,\"t\":59.91738510131836}}],\"probe_sample_sha256\":\"141eab98d00a5e5d784ac19c03816b0c0e3c589ef4bdefff05b66693df75c674\",\"probe_source\":\"dataset_probes_v1\",\"target_name\":\"dP_dt\",\"variables\":[\"t\",\"P\"]}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.simplify.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"assumptions\":{\"items\":{\"type\":\"string\"},\"maxItems\":8,\"type\":\"array\"},\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"equivalence_assessment\":{\"enum\":[\"preserved\",\"not_preserved\",\"undetermined\"],\"type\":\"string\"},\"outcome\":{\"enum\":[\"simplified\",\"unchanged\",\"unable\"],\"type\":\"string\"},\"simplified_expression\":{\"type\":[\"string\",\"null\"]}},\"required\":[\"outcome\",\"simplified_expression\",\"equivalence_assessment\",\"assumptions\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+  "request": {
+    "allowed_functions": [
+      "exp"
+    ],
+    "ast_source_evidence": {
+      "ground_truth_source_evidence_sha256": "4f28f908a306dd7a83c7bfc0575b52440b2d23b89fd89dfba338ffc920f8a326",
+      "normalized_expression_input": "0.1699888096710614 * (-1 + P / 1.0472843670254641) * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - np.exp(-0.09709294493863778 * P)) * P",
+      "raw_return_source": "0.1699888096710614*(-1 + P/1.0472843670254641)*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - np.exp(-0.09709294493863778*P))*P",
+      "return_ast_dump": "BinOp(left=BinOp(left=BinOp(left=BinOp(left=BinOp(left=Constant(value=0.1699888096710614), op=Mult(), right=BinOp(left=UnaryOp(op=USub(), operand=Constant(value=1)), op=Add(), right=BinOp(left=Name(id='P', ctx=Load()), op=Div(), right=Constant(value=1.0472843670254641)))), op=Mult(), right=BinOp(left=Constant(value=1), op=Sub(), right=BinOp(left=Name(id='P', ctx=Load()), op=Div(), right=Constant(value=10.210545156320043)))), op=Mult(), right=Name(id='P', ctx=Load())), op=Add(), right=BinOp(left=BinOp(left=Constant(value=0.1699888096710614), op=Mult(), right=BinOp(left=Constant(value=1), op=Sub(), right=BinOp(left=Name(id='P', ctx=Load()), op=Div(), right=Constant(value=10.210545156320043)))), op=Mult(), right=Name(id='P', ctx=Load()))), op=Add(), right=BinOp(left=BinOp(left=Constant(value=0.1699888096710614), op=Mult(), right=BinOp(left=Constant(value=1), op=Sub(), right=Call(func=Attribute(value=Name(id='np', ctx=Load()), attr='exp', ctx=Load()), args=[BinOp(left=UnaryOp(op=USub(), operand=Constant(value=0.09709294493863778)), op=Mult(), right=Name(id='P', ctx=Load()))], keywords=[]))), op=Mult(), right=Name(id='P', ctx=Load())))",
+      "return_source": "0.1699888096710614*(-1 + P/1.0472843670254641)*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - P/10.210545156320043)*P + 0.1699888096710614*(1 - np.exp(-0.09709294493863778*P))*P",
+      "selection_reason": "metadata_target_name",
+      "source_checksums": {
+        "formula_py_sha256": "d0ef406a412b4605ef5176afcdf4c1c2f356945d0912bbba7b3406708651a675",
+        "id_test_csv_sha256": "53d67152b6cc7acf186dbcad9bef19203e3491b7f105c86c33812da422a3bfa7",
+        "metadata_yaml_sha256": "d13f639dc29266ba93736a0dd4afa20471a6cc690de62f38269212545a529829",
+        "ood_test_csv_sha256": "768a5ed6b6fad88fb46a2fca4fadf0f218eb06159bd1b4cdeac10d9c68fbd825",
+        "train_csv_sha256": "fd42b9153d4a931455725f876426404318f838980f2600c4cf2bcf83dbeb2a69",
+        "valid_csv_sha256": "73b97f264e4ab9a2436b61146a0f337063268f0a2f44f2ea3b72aafedf6b03ef"
+      }
+    },
+    "dataset_id": "BPG9",
+    "dataset_probe_evidence": {
+      "basename": "BPG9",
+      "core50_index": 24,
+      "dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+      "dataset_name": "BPG9",
+      "evidence_sha256": "13a63a19ea93bbb6a6a958d08905c11548e9b14eef419883f1ef41d6940dffa0",
+      "point_count": 16,
+      "points": [
+        {
+          "row_index": 6,
+          "split": "id_test",
+          "values": {
+            "P": 1.6781361103057861,
+            "t": 3.56111216545105
+          }
+        },
+        {
+          "row_index": 77,
+          "split": "id_test",
+          "values": {
+            "P": 10.8546142578125,
+            "t": 19.19923973083496
+          }
+        },
+        {
+          "row_index": 90,
+          "split": "id_test",
+          "values": {
+            "P": 1.1815333366394043,
+            "t": 1.9559911489486694
+          }
+        },
+        {
+          "row_index": 114,
+          "split": "id_test",
+          "values": {
+            "P": 10.848145484924316,
+            "t": 53.697540283203125
+          }
+        },
+        {
+          "row_index": 138,
+          "split": "id_test",
+          "values": {
+            "P": 10.844289779663086,
+            "t": 32.00480270385742
+          }
+        },
+        {
+          "row_index": 346,
+          "split": "id_test",
+          "values": {
+            "P": 10.853983879089355,
+            "t": 13.274455070495605
+          }
+        },
+        {
+          "row_index": 350,
+          "split": "id_test",
+          "values": {
+            "P": 10.853178977966309,
+            "t": 53.437889099121094
+          }
+        },
+        {
+          "row_index": 484,
+          "split": "id_test",
+          "values": {
+            "P": 10.846429824829102,
+            "t": 16.272254943847656
+          }
+        },
+        {
+          "row_index": 174,
+          "split": "ood_test",
+          "values": {
+            "P": 10.851805686950684,
+            "t": 56.16423416137695
+          }
+        },
+        {
+          "row_index": 213,
+          "split": "ood_test",
+          "values": {
+            "P": 10.858327865600586,
+            "t": 56.6245231628418
+          }
+        },
+        {
+          "row_index": 238,
+          "split": "ood_test",
+          "values": {
+            "P": 10.8540620803833,
+            "t": 56.91958236694336
+          }
+        },
+        {
+          "row_index": 242,
+          "split": "ood_test",
+          "values": {
+            "P": 10.852890014648438,
+            "t": 56.966793060302734
+          }
+        },
+        {
+          "row_index": 312,
+          "split": "ood_test",
+          "values": {
+            "P": 10.849002838134766,
+            "t": 57.7929573059082
+          }
+        },
+        {
+          "row_index": 397,
+          "split": "ood_test",
+          "values": {
+            "P": 10.84879207611084,
+            "t": 58.79615783691406
+          }
+        },
+        {
+          "row_index": 429,
+          "split": "ood_test",
+          "values": {
+            "P": 10.846148490905762,
+            "t": 59.17383575439453
+          }
+        },
+        {
+          "row_index": 492,
+          "split": "ood_test",
+          "values": {
+            "P": 10.850808143615723,
+            "t": 59.91738510131836
+          }
+        }
+      ],
+      "sample_sha256": "141eab98d00a5e5d784ac19c03816b0c0e3c589ef4bdefff05b66693df75c674",
+      "schema_version": "dataset_probes_v1",
+      "source_sha256": {
+        "id_test_csv": "53d67152b6cc7acf186dbcad9bef19203e3491b7f105c86c33812da422a3bfa7",
+        "metadata_yaml": "d13f639dc29266ba93736a0dd4afa20471a6cc690de62f38269212545a529829",
+        "ood_test_csv": "768a5ed6b6fad88fb46a2fca4fadf0f218eb06159bd1b4cdeac10d9c68fbd825"
+      },
+      "target_name": "dP_dt",
+      "variables": [
+        "t",
+        "P"
+      ]
+    },
+    "deterministic_evidence": {
+      "dataset_probe": {
+        "basename": "BPG9",
+        "core50_index": 24,
+        "dataset_dir": "sim-datasets-data/llm-srbench/bio_pop_growth/BPG9",
+        "dataset_name": "BPG9",
+        "evidence_sha256": "13a63a19ea93bbb6a6a958d08905c11548e9b14eef419883f1ef41d6940dffa0",
+        "point_count": 16,
+        "points": [
+          {
+            "row_index": 6,
+            "split": "id_test",
+            "values": {
+              "P": 1.6781361103057861,
+              "t": 3.56111216545105
+            }
+          },
+          {
+            "row_index": 77,
+            "split": "id_test",
+            "values": {
+              "P": 10.8546142578125,
+              "t": 19.19923973083496
+            }
+          },
+          {
+            "row_index": 90,
+            "split": "id_test",
+            "values": {
+              "P": 1.1815333366394043,
+              "t": 1.9559911489486694
+            }
+          },
+          {
+            "row_index": 114,
+            "split": "id_test",
+            "values": {
+              "P": 10.848145484924316,
+              "t": 53.697540283203125
+            }
+          },
+          {
+            "row_index": 138,
+            "split": "id_test",
+            "values": {
+              "P": 10.844289779663086,
+              "t": 32.00480270385742
+            }
+          },
+          {
+            "row_index": 346,
+            "split": "id_test",
+            "values": {
+              "P": 10.853983879089355,
+              "t": 13.274455070495605
+            }
+          },
+          {
+            "row_index": 350,
+            "split": "id_test",
+            "values": {
+              "P": 10.853178977966309,
+              "t": 53.437889099121094
+            }
+          },
+          {
+            "row_index": 484,
+            "split": "id_test",
+            "values": {
+              "P": 10.846429824829102,
+              "t": 16.272254943847656
+            }
+          },
+          {
+            "row_index": 174,
+            "split": "ood_test",
+            "values": {
+              "P": 10.851805686950684,
+              "t": 56.16423416137695
+            }
+          },
+          {
+            "row_index": 213,
+            "split": "ood_test",
+            "values": {
+              "P": 10.858327865600586,
+              "t": 56.6245231628418
+            }
+          },
+          {
+            "row_index": 238,
+            "split": "ood_test",
+            "values": {
+              "P": 10.8540620803833,
+              "t": 56.91958236694336
+            }
+          },
+          {
+            "row_index": 242,
+            "split": "ood_test",
+            "values": {
+              "P": 10.852890014648438,
+              "t": 56.966793060302734
+            }
+          },
+          {
+            "row_index": 312,
+            "split": "ood_test",
+            "values": {
+              "P": 10.849002838134766,
+              "t": 57.7929573059082
+            }
+          },
+          {
+            "row_index": 397,
+            "split": "ood_test",
+            "values": {
+              "P": 10.84879207611084,
+              "t": 58.79615783691406
+            }
+          },
+          {
+            "row_index": 429,
+            "split": "ood_test",
+            "values": {
+              "P": 10.846148490905762,
+              "t": 59.17383575439453
+            }
+          },
+          {
+            "row_index": 492,
+            "split": "ood_test",
+            "values": {
+              "P": 10.850808143615723,
+              "t": 59.91738510131836
+            }
+          }
+        ],
+        "sample_sha256": "141eab98d00a5e5d784ac19c03816b0c0e3c589ef4bdefff05b66693df75c674",
+        "schema_version": "dataset_probes_v1",
+        "source_sha256": {
+          "id_test_csv": "53d67152b6cc7acf186dbcad9bef19203e3491b7f105c86c33812da422a3bfa7",
+          "metadata_yaml": "d13f639dc29266ba93736a0dd4afa20471a6cc690de62f38269212545a529829",
+          "ood_test_csv": "768a5ed6b6fad88fb46a2fca4fadf0f218eb06159bd1b4cdeac10d9c68fbd825"
+        },
+        "target_name": "dP_dt",
+        "variables": [
+          "t",
+          "P"
+        ]
+      },
+      "domain_assumptions": {
+        "equivalence_domain": "Compare expressions on their common real-valued domain where both sides are defined and finite.",
+        "implicit_protected_operators": "none",
+        "literal_protected_operators": [],
+        "number_system": "real",
+        "operator_semantics": [
+          "Division is ordinary real division; zero denominators are outside the common domain.",
+          "log, sqrt, and non-integer powers use ordinary real-domain semantics.",
+          "maximum, minimum, clip, and where are literal functions only when written in the expression.",
+          "Do not infer hidden clipping, epsilon guards, or fitted constants beyond the frozen expression."
+        ]
+      },
+      "symbolic_artifact": {
+        "artifact_sha256": "ed9e568ccab2cc99d23dcf27f7d6dd12a49f96d66f48846c50e6f52fbf732404",
+        "canonical_expression": "P*(-0.016648357856371955*P + 0.1699888096710614) + P*(0.1699888096710614 - 0.1699888096710614*exp(-0.09709294493863778*P)) + P*(-0.097937963614119845*P + 1)*(0.16231389966592352*P - 0.1699888096710614)",
+        "canonical_tree": {
+          "args": [
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('P')"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Float",
+                      "value": "Float('0.1699888096710613986', precision=56)"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Float",
+                          "value": "Float('-0.1699888096710613986', precision=56)"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "type": "Float",
+                                  "value": "Float('-0.09709294493863778082', precision=56)"
+                                },
+                                {
+                                  "type": "Symbol",
+                                  "value": "Symbol('P')"
+                                }
+                              ],
+                              "type": "mul"
+                            }
+                          ],
+                          "type": "exp"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                }
+              ],
+              "type": "mul"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('P')"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Float",
+                      "value": "Float('0.1699888096710613986', precision=56)"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Float",
+                          "value": "Float('-0.016648357856371954924', precision=60)"
+                        },
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('P')"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                }
+              ],
+              "type": "mul"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('P')"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "One",
+                      "value": "Integer(1)"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Float",
+                          "value": "Float('-0.097937963614119845314', precision=60)"
+                        },
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('P')"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Float",
+                      "value": "Float('-0.1699888096710613986', precision=56)"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Float",
+                          "value": "Float('0.16231389966592351618', precision=60)"
+                        },
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('P')"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                }
+              ],
+              "type": "mul"
+            }
+          ],
+          "type": "add"
+        },
+        "constants_abstracted_canonical_tree": {
+          "args": [
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('P')"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Constant"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Constant"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "type": "Constant"
+                                },
+                                {
+                                  "type": "Symbol",
+                                  "value": "Symbol('P')"
+                                }
+                              ],
+                              "type": "mul"
+                            }
+                          ],
+                          "type": "exp"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                }
+              ],
+              "type": "mul"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('P')"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Constant"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Constant"
+                        },
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('P')"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                }
+              ],
+              "type": "mul"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('P')"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Constant"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Constant"
+                        },
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('P')"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Constant"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Constant"
+                        },
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('P')"
+                        }
+                      ],
+                      "type": "mul"
+                    }
+                  ],
+                  "type": "add"
+                }
+              ],
+              "type": "mul"
+            }
+          ],
+          "type": "add"
+        },
+        "constants_abstracted_tree_fingerprint": "e3f60d925abe6be753d8bf3e0d4aaacafcd533e5930335420bab23471d249928",
+        "construction_mode": "evaluated",
+        "function_set": [
+          "exp"
+        ],
+        "node_count": 30,
+        "operator_set": [
+          "add",
+          "exp",
+          "mul"
+        ],
+        "source_kind": "expression",
+        "source_text": "0.1699888096710614 * (-1 + P / 1.0472843670254641) * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - np.exp(-0.09709294493863778 * P)) * P",
+        "variables": [
+          "P"
+        ]
+      }
+    },
+    "domain_assumptions": {
+      "equivalence_domain": "Compare expressions on their common real-valued domain where both sides are defined and finite.",
+      "implicit_protected_operators": "none",
+      "literal_protected_operators": [],
+      "number_system": "real",
+      "operator_semantics": [
+        "Division is ordinary real division; zero denominators are outside the common domain.",
+        "log, sqrt, and non-integer powers use ordinary real-domain semantics.",
+        "maximum, minimum, clip, and where are literal functions only when written in the expression.",
+        "Do not infer hidden clipping, epsilon guards, or fitted constants beyond the frozen expression."
+      ]
+    },
+    "evidence_hash": "3e59e5f494dcfeae73813cc7c7b50cf2b00c9a81bd62bc5daadc163c851e1942",
+    "expression": "0.1699888096710614 * (-1 + P / 1.0472843670254641) * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - np.exp(-0.09709294493863778 * P)) * P",
+    "original_expression": "0.1699888096710614 * (-1 + P / 1.0472843670254641) * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - P / 10.210545156320043) * P + 0.1699888096710614 * (1 - np.exp(-0.09709294493863778 * P)) * P",
+    "probe_points": [
+      {
+        "row_index": 6,
+        "split": "id_test",
+        "values": {
+          "P": 1.6781361103057861,
+          "t": 3.56111216545105
+        }
+      },
+      {
+        "row_index": 77,
+        "split": "id_test",
+        "values": {
+          "P": 10.8546142578125,
+          "t": 19.19923973083496
+        }
+      },
+      {
+        "row_index": 90,
+        "split": "id_test",
+        "values": {
+          "P": 1.1815333366394043,
+          "t": 1.9559911489486694
+        }
+      },
+      {
+        "row_index": 114,
+        "split": "id_test",
+        "values": {
+          "P": 10.848145484924316,
+          "t": 53.697540283203125
+        }
+      },
+      {
+        "row_index": 138,
+        "split": "id_test",
+        "values": {
+          "P": 10.844289779663086,
+          "t": 32.00480270385742
+        }
+      },
+      {
+        "row_index": 346,
+        "split": "id_test",
+        "values": {
+          "P": 10.853983879089355,
+          "t": 13.274455070495605
+        }
+      },
+      {
+        "row_index": 350,
+        "split": "id_test",
+        "values": {
+          "P": 10.853178977966309,
+          "t": 53.437889099121094
+        }
+      },
+      {
+        "row_index": 484,
+        "split": "id_test",
+        "values": {
+          "P": 10.846429824829102,
+          "t": 16.272254943847656
+        }
+      },
+      {
+        "row_index": 174,
+        "split": "ood_test",
+        "values": {
+          "P": 10.851805686950684,
+          "t": 56.16423416137695
+        }
+      },
+      {
+        "row_index": 213,
+        "split": "ood_test",
+        "values": {
+          "P": 10.858327865600586,
+          "t": 56.6245231628418
+        }
+      },
+      {
+        "row_index": 238,
+        "split": "ood_test",
+        "values": {
+          "P": 10.8540620803833,
+          "t": 56.91958236694336
+        }
+      },
+      {
+        "row_index": 242,
+        "split": "ood_test",
+        "values": {
+          "P": 10.852890014648438,
+          "t": 56.966793060302734
+        }
+      },
+      {
+        "row_index": 312,
+        "split": "ood_test",
+        "values": {
+          "P": 10.849002838134766,
+          "t": 57.7929573059082
+        }
+      },
+      {
+        "row_index": 397,
+        "split": "ood_test",
+        "values": {
+          "P": 10.84879207611084,
+          "t": 58.79615783691406
+        }
+      },
+      {
+        "row_index": 429,
+        "split": "ood_test",
+        "values": {
+          "P": 10.846148490905762,
+          "t": 59.17383575439453
+        }
+      },
+      {
+        "row_index": 492,
+        "split": "ood_test",
+        "values": {
+          "P": 10.850808143615723,
+          "t": 59.91738510131836
+        }
+      }
+    ],
+    "probe_sample_sha256": "141eab98d00a5e5d784ac19c03816b0c0e3c589ef4bdefff05b66693df75c674",
+    "probe_source": "dataset_probes_v1",
+    "target_name": "dP_dt",
+    "variables": [
+      "t",
+      "P"
+    ]
+  },
+  "stderr": "",
+  "stdout": "{\"container\":null,\"content\":[{\"block_sha256\":\"9c61f11e6e46a92e0fc2294c16fae41220d71fb9d3424099f36b57ce57091cff\",\"original_type\":\"thinking\",\"redacted\":true,\"type\":\"redacted_thinking\"},{\"text\":\"{\\\"outcome\\\":\\\"simplified\\\",\\\"simplified_expression\\\":\\\"0.1699888096710614*P*(P*(1 - P/10.210545156320043)/1.0472843670254641 + 1 - exp(-0.09709294493863778*P))\\\",\\\"equivalence_assessment\\\":\\\"preserved\\\",\\\"assumptions\\\":[\\\"Real-domain semantics; P real so exp argument is real and all divisions have nonzero constant denominators.\\\"],\\\"confidence\\\":0.95,\\\"brief_reason\\\":\\\"The first two terms share the factor c*(1 - P/10.2105...)*P, and (-1 + P/1.0472...) + 1 = P/1.0472..., collapsing them into one term. Factoring the common c*P gives a compact exact form with all original numeric literals kept unevaluated.\\\"}\",\"type\":\"text\"}],\"id\":\"msg_bdrk_i6gro5qysrobditehxp3dhhxqf2v6hesoliwzfthq62aeti2akqq\",\"model\":\"claude-opus-5\",\"role\":\"assistant\",\"routify_response\":{\"ak_quota\":{\"api_key\":\"[REDACTED]\",\"current_rpm\":3,\"rpm_limit\":600,\"status\":\"NORMAL\"},\"is_fall_back_triggered\":false,\"model_name\":\"claude-opus-5\",\"provider_code_md5\":\"9ae6c0\",\"request_id\":\"bc61f5668d5f423cb6d3ab7ebfdc4a25\",\"status\":200,\"success\":true,\"trace_id\":\"2166686b17901657539702321e224c\"},\"stop_details\":null,\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"input_tokens\":4927,\"output_tokens\":793,\"output_tokens_details\":{\"thinking_tokens\":545},\"service_tier\":\"standard\"}}",
+  "structured_output": {
+    "assumptions": [
+      "Real-domain semantics; P real so exp argument is real and all divisions have nonzero constant denominators."
+    ],
+    "brief_reason": "The first two terms share the factor c*(1 - P/10.2105...)*P, and (-1 + P/1.0472...) + 1 = P/1.0472..., collapsing them into one term. Factoring the common c*P gives a compact exact form with all original numeric literals kept unevaluated.",
+    "confidence": 0.95,
+    "equivalence_assessment": "preserved",
+    "outcome": "simplified",
+    "simplified_expression": "0.1699888096710614*P*(P*(1 - P/10.210545156320043)/1.0472843670254641 + 1 - exp(-0.09709294493863778*P))"
+  },
+  "task_kind": "simplify",
+  "task_type": "gt_simplify",
+  "validation": {
+    "error_class": null,
+    "error_message": null,
+    "ok": true,
+    "semantic_evidence": {
+      "assumptions": [],
+      "decision": "equivalent",
+      "max_abs_error": "1.6479873021779667e-17",
+      "max_rel_error": "4.4874853396510355e-15",
+      "max_tolerance": "1.4248636934086706e-09",
+      "normalized_probe_points_sha256": "b62e4860b77ab4b9635cd4da56a4b5bca0c403b94bd413ff4a0072cb70edfb29",
+      "numeric_probes": [
+        {
+          "abs_error": "0",
+          "original": "0.42486369340867053",
+          "rel_error": "0",
+          "row_index": 6,
+          "simplified": "0.42486369340867053",
+          "split": "id_test",
+          "tolerance": "1.4248636934086706e-09",
+          "values": {
+            "P": "1.6781361103057861",
+            "t": "3.5611121654510498"
+          }
+        },
+        {
+          "abs_error": "1.6479873021779667e-17",
+          "original": "-0.0043470590323551588",
+          "rel_error": "3.7910396199177228e-15",
+          "row_index": 77,
+          "simplified": "-0.0043470590323551753",
+          "split": "id_test",
+          "tolerance": "1.0043470590323553e-09",
+          "values": {
+            "P": "10.8546142578125",
+            "t": "19.199239730834961"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "0.22214132818660326",
+          "rel_error": "0",
+          "row_index": 90,
+          "simplified": "0.22214132818660326",
+          "split": "id_test",
+          "tolerance": "1.2221413281866034e-09",
+          "values": {
+            "P": "1.1815333366394043",
+            "t": "1.9559911489486694"
+          }
+        },
+        {
+          "abs_error": "1.7347234759768071e-18",
+          "original": "0.0080716820359154201",
+          "rel_error": "2.149147437000186e-16",
+          "row_index": 114,
+          "simplified": "0.0080716820359154218",
+          "split": "id_test",
+          "tolerance": "1.0080716820359155e-09",
+          "values": {
+            "P": "10.848145484924316",
+            "t": "53.697540283203125"
+          }
+        },
+        {
+          "abs_error": "3.4694469519536142e-18",
+          "original": "0.01545983307891316",
+          "rel_error": "2.2441684423396881e-16",
+          "row_index": 138,
+          "simplified": "0.015459833078913163",
+          "split": "id_test",
+          "tolerance": "1.0154598330789133e-09",
+          "values": {
+            "P": "10.844289779663086",
+            "t": "32.004802703857422"
+          }
+        },
+        {
+          "abs_error": "8.6736173798840355e-19",
+          "original": "-0.0031355614788362938",
+          "rel_error": "2.766208680144613e-16",
+          "row_index": 346,
+          "simplified": "-0.0031355614788362929",
+          "split": "id_test",
+          "tolerance": "1.0031355614788364e-09",
+          "values": {
+            "P": "10.853983879089355",
+            "t": "13.274455070495605"
+          }
+        },
+        {
+          "abs_error": "2.3852447794681098e-18",
+          "original": "-0.001589064218220455",
+          "rel_error": "1.501037372888095e-15",
+          "row_index": 350,
+          "simplified": "-0.0015890642182204574",
+          "split": "id_test",
+          "tolerance": "1.0015890642182206e-09",
+          "values": {
+            "P": "10.853178977966309",
+            "t": "53.437889099121094"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "0.011360455760986016",
+          "rel_error": "0",
+          "row_index": 484,
+          "simplified": "0.011360455760986016",
+          "split": "id_test",
+          "tolerance": "1.0113604557609861e-09",
+          "values": {
+            "P": "10.846429824829102",
+            "t": "16.272254943847656"
+          }
+        },
+        {
+          "abs_error": "3.903127820947816e-18",
+          "original": "0.0010484547461099263",
+          "rel_error": "3.7227432423092621e-15",
+          "row_index": 174,
+          "simplified": "0.0010484547461099302",
+          "split": "ood_test",
+          "tolerance": "1.00104845474611e-09",
+          "values": {
+            "P": "10.851805686950684",
+            "t": "56.164234161376953"
+          }
+        },
+        {
+          "abs_error": "1.7347234759768071e-18",
+          "original": "-0.011489770178034981",
+          "rel_error": "1.5097982371249531e-16",
+          "row_index": 213,
+          "simplified": "-0.011489770178034979",
+          "split": "ood_test",
+          "tolerance": "1.0114897701780351e-09",
+          "values": {
+            "P": "10.858327865600586",
+            "t": "56.624523162841797"
+          }
+        },
+        {
+          "abs_error": "1.474514954580286e-17",
+          "original": "-0.0032858379314392224",
+          "rel_error": "4.4874853396510355e-15",
+          "row_index": 238,
+          "simplified": "-0.0032858379314392372",
+          "split": "ood_test",
+          "tolerance": "1.0032858379314393e-09",
+          "values": {
+            "P": "10.854062080383301",
+            "t": "56.919582366943359"
+          }
+        },
+        {
+          "abs_error": "4.3368086899420177e-19",
+          "original": "-0.0010339758121570893",
+          "rel_error": "4.1943038115123099e-16",
+          "row_index": 242,
+          "simplified": "-0.0010339758121570898",
+          "split": "ood_test",
+          "tolerance": "1.0010339758121572e-09",
+          "values": {
+            "P": "10.852890014648438",
+            "t": "56.966793060302734"
+          }
+        },
+        {
+          "abs_error": "1.7347234759768071e-18",
+          "original": "0.0064274320706343389",
+          "rel_error": "2.6989370823573754e-16",
+          "row_index": 312,
+          "simplified": "0.0064274320706343407",
+          "split": "ood_test",
+          "tolerance": "1.0064274320706344e-09",
+          "values": {
+            "P": "10.849002838134766",
+            "t": "57.792957305908203"
+          }
+        },
+        {
+          "abs_error": "8.6736173798840355e-19",
+          "original": "0.006831683914695524",
+          "rel_error": "1.2696163183466902e-16",
+          "row_index": 397,
+          "simplified": "0.0068316839146955249",
+          "split": "ood_test",
+          "tolerance": "1.0068316839146955e-09",
+          "values": {
+            "P": "10.84879207611084",
+            "t": "58.796157836914062"
+          }
+        },
+        {
+          "abs_error": "1.7347234759768071e-18",
+          "original": "0.011899550937829696",
+          "rel_error": "1.4578058323713477e-16",
+          "row_index": 429,
+          "simplified": "0.011899550937829694",
+          "split": "ood_test",
+          "tolerance": "1.0118995509378297e-09",
+          "values": {
+            "P": "10.846148490905762",
+            "t": "59.173835754394531"
+          }
+        },
+        {
+          "abs_error": "2.1684043449710089e-18",
+          "original": "0.0029634855675283039",
+          "rel_error": "7.3170740857684206e-16",
+          "row_index": 492,
+          "simplified": "0.0029634855675283061",
+          "split": "ood_test",
+          "tolerance": "1.0029634855675283e-09",
+          "values": {
+            "P": "10.850808143615723",
+            "t": "59.917385101318359"
+          }
+        }
+      ],
+      "original_sha256": "ed9e568ccab2cc99d23dcf27f7d6dd12a49f96d66f48846c50e6f52fbf732404",
+      "probe_count": 16,
+      "probe_hash": "8742976c417ab8944ae7d4aa171aaaca813e1dc1df28221b053ff2f12556de00",
+      "probe_sample_sha256": "141eab98d00a5e5d784ac19c03816b0c0e3c589ef4bdefff05b66693df75c674",
+      "probe_seed": 13361660859441929224,
+      "probe_source": "dataset_probes_v1",
+      "proof_basis": "symbolic_difference_zero",
+      "simplified_sha256": "af17e0dc8f729db112699e511cf039ace5a79f66af8addff1f633692d5ed63be",
+      "skipped_probe_count": 0,
+      "skipped_probe_reasons": {},
+      "skipped_probes": [],
+      "symbolic_decision": "equivalent"
+    },
+    "structured_output": {
+      "assumptions": [
+        "Real-domain semantics; P real so exp argument is real and all divisions have nonzero constant denominators."
+      ],
+      "brief_reason": "The first two terms share the factor c*(1 - P/10.2105...)*P, and (-1 + P/1.0472...) + 1 = P/1.0472..., collapsing them into one term. Factoring the common c*P gives a compact exact form with all original numeric literals kept unevaluated.",
+      "confidence": 0.95,
+      "equivalence_assessment": "preserved",
+      "outcome": "simplified",
+      "simplified_expression": "0.1699888096710614*P*(P*(1 - P/10.210545156320043)/1.0472843670254641 + 1 - exp(-0.09709294493863778*P))"
+    }
+  }
+}

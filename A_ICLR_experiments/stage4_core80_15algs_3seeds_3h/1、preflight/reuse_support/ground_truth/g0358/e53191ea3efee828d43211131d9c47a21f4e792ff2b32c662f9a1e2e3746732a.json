@@ -1,0 +1,1414 @@
+{
+  "attempt_id": "e53191ea3efee828d43211131d9c47a21f4e792ff2b32c662f9a1e2e3746732a.a01",
+  "command": [
+    "anthropic-messages-api",
+    "--model",
+    "claude-opus-5",
+    "--effort",
+    "xhigh",
+    "--stream",
+    "false"
+  ],
+  "envelope": {
+    "container": null,
+    "content": [
+      {
+        "block_sha256": "3321ffdd1bed2a5900bd8304f478732846447fa054f7ff6c5b9e114ffe6bbc82",
+        "original_type": "thinking",
+        "redacted": true,
+        "type": "redacted_thinking"
+      },
+      {
+        "text": "{\"outcome\":\"simplified\",\"simplified_expression\":\"7.83707760458308e-29*x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/(pi*x3**3)\",\"equivalence_assessment\":\"preserved\",\"assumptions\":[\"Real-domain division; comparison on the common domain where x2 != 0 and x3 != 0\",\"pi denotes the exact constant pi\",\"The decimal literal 7.83707760458308e-29 is kept exactly as given\"],\"confidence\":0.93,\"brief_reason\":\"Multiplied the inner sum by x2^2 exactly: x2**2*(x2/x3 - sin(x5)**2 + x3/x2) = x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/x3, then combined with the 1/(pi*x3**2) factor to give a single factored quotient with x3**3. No constants were folded or approximated, and the expression is identical on the common domain.\"}",
+        "type": "text"
+      }
+    ],
+    "id": "msg_bdrk_7zsx6uagpvsbkmscbowwj35dll73k27wdh4rdkjcdekxrvgxvzzq",
+    "model": "claude-opus-5",
+    "role": "assistant",
+    "routify_response": {
+      "ak_quota": {
+        "api_key": "[REDACTED]",
+        "current_rpm": 55,
+        "rpm_limit": 600,
+        "status": "NORMAL"
+      },
+      "is_fall_back_triggered": false,
+      "model_name": "claude-opus-5",
+      "provider_code_md5": "79be35",
+      "request_id": "83fa6af595254ac9ac55218d7f489471",
+      "status": 200,
+      "success": true,
+      "trace_id": "2166686b17901657650922828e22b0"
+    },
+    "stop_details": null,
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 5566,
+      "output_tokens": 988,
+      "output_tokens_details": {
+        "thinking_tokens": 661
+      },
+      "service_tier": "standard"
+    }
+  },
+  "evaluation_key": "e53191ea3efee828d43211131d9c47a21f4e792ff2b32c662f9a1e2e3746732a",
+  "logical_id": "gt_simplify::feynman-bonus.20::core80",
+  "metadata": {
+    "api_base_url": "https://routify-pub.alibaba-inc.com/protocol/anthropic",
+    "api_channel": "routify",
+    "api_endpoint": "https://routify-pub.alibaba-inc.com/protocol/anthropic/v1/messages",
+    "api_request_sha256": "1ba405bbc3875b2b7681fece5e6e79b1d5af88ac2da08e36cf4da3635c4ae84a",
+    "api_response_sha256": "fdc10e942295522d32ff1e4fa448e0543bcfe6048b001e9693cdaa5400a6b251",
+    "attempt_id": "e53191ea3efee828d43211131d9c47a21f4e792ff2b32c662f9a1e2e3746732a.a01",
+    "attempt_number": 1,
+    "error_class": null,
+    "estimated_cost_cny": 0.031518,
+    "evaluation_key": "e53191ea3efee828d43211131d9c47a21f4e792ff2b32c662f9a1e2e3746732a",
+    "finished_at": 1790166169.8016815,
+    "http_status": 200,
+    "lease_expires_at": 1790169353.6677055,
+    "logical_id": "gt_simplify::feynman-bonus.20::core80",
+    "persisted_api_response_sha256": "fcd858fc873a5b7441d1e5970eb8e8b67f1a9189e8acbd3465d620fdcaa944aa",
+    "prompt_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/prompts/simplify.v1.txt",
+    "prompt_sha256": "167d2e022a4dd0e2f9ad455e095b68e54bdb08c13d8349b33cc3f4c3a8020f02",
+    "raw_response_sha256": "d3bcfe2a8c986c1ee2ff22b765149b32d09541ba635251df48633768b765fdb6",
+    "rendered_prompt_sha256": "7ba4623a0335f9e104a4562fed3cd13150af7d789b949573a30db9d1a794daee",
+    "request_sha256": "641554797123dfafb7b1740ff333b15f669f4468324a528639138726530ee5f0",
+    "requested_effort": "xhigh",
+    "requested_model": "claude-opus-5",
+    "response_headers": {},
+    "response_metadata": {
+      "content_types": [
+        "thinking",
+        "text"
+      ],
+      "message_id": "msg_bdrk_7zsx6uagpvsbkmscbowwj35dll73k27wdh4rdkjcdekxrvgxvzzq",
+      "model": "claude-opus-5",
+      "stop_reason": "end_turn",
+      "stop_sequence": null
+    },
+    "response_model": "claude-opus-5",
+    "retryable": false,
+    "schema_path": "/home/family/workplace/scientific-intelligent-modelling/AAAI_experiments/stage5_metric_calculation_0831/config/schemas/simplify.v1.json",
+    "schema_sha256": "eb0957a945d11292bb16c8d00a2f47d347ae74269ddf02f7d8f962e4797ff5ba",
+    "semantic_validator_sha256": "d485c31798b406163175d5070e623296e604113f181bae08edf822ef4929ac12",
+    "started_at": 1790165765.0353677,
+    "stream": false,
+    "system_prompt_sha256": "50f2e4abbc10909ce926730b2eafe1b72b3485a838475424085a81fd374930e0",
+    "tariff_cny_per_million_tokens": {
+      "cache_read": 0.3,
+      "input": 3.0,
+      "output": 15.0
+    },
+    "task_kind": "simplify",
+    "task_type": "gt_simplify",
+    "timeout_seconds": 1800.0,
+    "transport_version": "anthropic_messages_nonstream_dual_channel.v1",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 5566,
+      "output_tokens": 988,
+      "output_tokens_details": {
+        "thinking_tokens": 661
+      },
+      "service_tier": "standard"
+    },
+    "wall_latency_seconds": 404.77162369701546
+  },
+  "prompt": "You are the mandatory single-turn symbolic simplification judge for SymbolicArena.\n\nSimplify exactly one mathematical expression while preserving its mathematical meaning under the supplied domain and protected-operator assumptions.\n\nRules:\n1. Use only variables and mathematical functions declared in the request.\n2. Do not fit new constants, rename variables, or introduce unstated assumptions.\n3. Prefer a concise ASCII infix expression compatible with SymPy notation.\n4. Preserve instantiated numeric constants unless an exact algebraic simplification removes them.\n5. Treat deterministic checks as evidence, not as a substitute for your own judgment.\n6. If safe simplification cannot be established, return outcome \"unable\".\n7. For outcome \"unable\", set simplified_expression to null and equivalence_assessment to \"undetermined\".\n8. For outcome \"simplified\" or \"unchanged\", equivalence_assessment must be \"preserved\".\n9. Return only the JSON object required by the supplied schema.\n10. Give only a brief reason; do not provide hidden reasoning or chain-of-thought.\n\nREQUEST_JSON:\n{\"allowed_functions\":[\"sin\"],\"ast_source_evidence\":{\"ground_truth_source_evidence_sha256\":\"8f04ca8e731120d4bdc5dacecdcae83b9d7f45ffdc3ce33c3c283e9dfaf723ea\",\"raw_return_source\":\"(7.83707760458308e-29 * x2**2 * (x2 / x3 - np.sin(x5)**2 + x3 / x2)) / (np.pi * x3**2)\",\"return_ast_dump\":\"BinOp(left=BinOp(left=BinOp(left=Constant(value=7.83707760458308e-29), op=Mult(), right=BinOp(left=Name(id='x2', ctx=Load()), op=Pow(), right=Constant(value=2))), op=Mult(), right=BinOp(left=BinOp(left=BinOp(left=Name(id='x2', ctx=Load()), op=Div(), right=Name(id='x3', ctx=Load())), op=Sub(), right=BinOp(left=Call(func=Attribute(value=Name(id='np', ctx=Load()), attr='sin', ctx=Load()), args=[Name(id='x5', ctx=Load())], keywords=[]), op=Pow(), right=Constant(value=2))), op=Add(), right=BinOp(left=Name(id='x3', ctx=Load()), op=Div(), right=Name(id='x2', ctx=Load())))), op=Div(), right=BinOp(left=Attribute(value=Name(id='np', ctx=Load()), attr='pi', ctx=Load()), op=Mult(), right=BinOp(left=Name(id='x3', ctx=Load()), op=Pow(), right=Constant(value=2))))\",\"return_source\":\"(7.83707760458308e-29 * x2**2 * (x2 / x3 - np.sin(x5)**2 + x3 / x2)) / (np.pi * x3**2)\",\"selection_reason\":\"metadata_target_name\",\"source_checksums\":{\"formula_py_sha256\":\"62f9eff3c369295e579a7844198ba88f1c7c389bfb5687c5e179c93cfde7c128\",\"id_test_csv_sha256\":\"bf5ea167f5d27f00f337253dabd1612a142584fd3e8d24d3284c8c57b7f10b5d\",\"metadata_yaml_sha256\":\"ffacbbb4f345a8a1e7f450a36055e3ca63e503592c8e053c676b97c4daa543a1\",\"ood_test_csv_sha256\":\"7f4e83e0f0672568b8685baf01705ce7028c1cd6cb117b17fb782ca9fc05b889\",\"train_csv_sha256\":\"2c3002475164cd84ce240ffa93795f1f72ffdd4785a91c0450b0ae89951eb306\",\"valid_csv_sha256\":\"f33c3a05b632dc3dedc9513cfa535cecca1853b916243c4230950021f94b1003\"}},\"dataset_id\":\"feynman-bonus.20\",\"dataset_probe_evidence\":{\"basename\":\"feynman-bonus.20\",\"core50_index\":358,\"dataset_dir\":\"sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20\",\"dataset_name\":\"feynman-bonus.20\",\"evidence_sha256\":\"cc77b9eb515de966c6958843a124a948584475e99985366af6120b0398211c03\",\"point_count\":16,\"sample_sha256\":\"d8a81d8e8513fbaf53a1e6001b17f3603b49ae6ba472246babc6c05ab764a1d7\",\"schema_version\":\"dataset_probes_v1\",\"source_sha256\":{\"id_test_csv\":\"bf5ea167f5d27f00f337253dabd1612a142584fd3e8d24d3284c8c57b7f10b5d\",\"metadata_yaml\":\"ffacbbb4f345a8a1e7f450a36055e3ca63e503592c8e053c676b97c4daa543a1\",\"ood_test_csv\":\"7f4e83e0f0672568b8685baf01705ce7028c1cd6cb117b17fb782ca9fc05b889\"},\"target_name\":\"y\",\"variables\":[\"x0\",\"x1\",\"x2\",\"x3\",\"x4\",\"x5\"]},\"deterministic_evidence\":{\"dataset_probe\":{\"basename\":\"feynman-bonus.20\",\"core50_index\":358,\"dataset_dir\":\"sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20\",\"dataset_name\":\"feynman-bonus.20\",\"evidence_sha256\":\"cc77b9eb515de966c6958843a124a948584475e99985366af6120b0398211c03\",\"point_count\":16,\"sample_sha256\":\"d8a81d8e8513fbaf53a1e6001b17f3603b49ae6ba472246babc6c05ab764a1d7\",\"schema_version\":\"dataset_probes_v1\",\"source_sha256\":{\"id_test_csv\":\"bf5ea167f5d27f00f337253dabd1612a142584fd3e8d24d3284c8c57b7f10b5d\",\"metadata_yaml\":\"ffacbbb4f345a8a1e7f450a36055e3ca63e503592c8e053c676b97c4daa543a1\",\"ood_test_csv\":\"7f4e83e0f0672568b8685baf01705ce7028c1cd6cb117b17fb782ca9fc05b889\"},\"target_name\":\"y\",\"variables\":[\"x0\",\"x1\",\"x2\",\"x3\",\"x4\",\"x5\"]},\"symbolic_artifact\":{\"artifact_sha256\":\"f17fb00134eb7247ef8d1deca935d845b2c677ab2c8822808a32dd2446061103\",\"canonical_expression\":\"7.83707760458308e-29*x2**2*(x2/x3 - sin(x5)**2 + x3/x2)/(pi*x3**2)\",\"constants_abstracted_tree_fingerprint\":\"f21bc0470bb9303b0d1bcc8e04ccd46515cf699a658490ad23839a6645fda935\",\"construction_mode\":\"evaluated\",\"function_set\":[\"sin\"],\"node_count\":28,\"operator_set\":[\"add\",\"mul\",\"pow\",\"sin\"],\"source_kind\":\"expression\",\"variables\":[\"x2\",\"x3\",\"x5\"]}},\"domain_assumptions\":{\"equivalence_domain\":\"Compare expressions on their common real-valued domain where both sides are defined and finite.\",\"implicit_protected_operators\":\"none\",\"literal_protected_operators\":[],\"number_system\":\"real\",\"operator_semantics\":[\"Division is ordinary real division; zero denominators are outside the common domain.\",\"log, sqrt, and non-integer powers use ordinary real-domain semantics.\",\"maximum, minimum, clip, and where are literal functions only when written in the expression.\",\"Do not infer hidden clipping, epsilon guards, or fitted constants beyond the frozen expression.\"]},\"evidence_hash\":\"9f92366e5ff23c12817b4bb6783beaf256afcfec928446ce8ea39bad8280a37c\",\"expression\":\"7.83707760458308e-29 * x2 ** 2 * (x2 / x3 - np.sin(x5) ** 2 + x3 / x2) / (np.pi * x3 ** 2)\",\"probe_points\":[{\"row_index\":86,\"split\":\"id_test\",\"values\":{\"x0\":9.636848449707031,\"x1\":-2.2785832572308947e+19,\"x2\":1106506112.0,\"x3\":1963433984.0,\"x4\":7.493301586774351e-32,\"x5\":4.2407331466674805}},{\"row_index\":218,\"split\":\"id_test\",\"values\":{\"x0\":27.428316116333008,\"x1\":-3.2333269718532096e+18,\"x2\":3228792576.0,\"x3\":11618511872.0,\"x4\":1.3660915762585056e-33,\"x5\":2.5962412357330322}},{\"row_index\":408,\"split\":\"id_test\",\"values\":{\"x0\":38.85679244995117,\"x1\":3.1966656807703675e+18,\"x2\":4088446464.0,\"x3\":1603301376.0,\"x4\":1.0661737435377994e-32,\"x5\":0.09778913110494614}},{\"row_index\":447,\"split\":\"id_test\",\"values\":{\"x0\":2.229914903640747,\"x1\":-7.155181319159284e+18,\"x2\":2726528768.0,\"x3\":79984148480.0,\"x4\":1.5619219556077907e-32,\"x5\":3.0804004669189453}},{\"row_index\":695,\"split\":\"id_test\",\"values\":{\"x0\":3.544672966003418,\"x1\":-1.8324875854154301e+18,\"x2\":45752590336.0,\"x3\":6357797376.0,\"x4\":1.168320455736013e-32,\"x5\":4.738278388977051}},{\"row_index\":706,\"split\":\"id_test\",\"values\":{\"x0\":3.262603521347046,\"x1\":4.471217085787144e+18,\"x2\":12369818624.0,\"x3\":5763182080.0,\"x4\":-6.258732326541108e-33,\"x5\":4.165268898010254}},{\"row_index\":717,\"split\":\"id_test\",\"values\":{\"x0\":15.85462760925293,\"x1\":-7.639371605415559e+19,\"x2\":6499622400.0,\"x3\":17039881216.0,\"x4\":-3.4517130894205216e-32,\"x5\":2.813814401626587}},{\"row_index\":915,\"split\":\"id_test\",\"values\":{\"x0\":1.0276966094970703,\"x1\":2.305916126736941e+18,\"x2\":11077357568.0,\"x3\":7728855040.0,\"x4\":-5.0883010502930024e-33,\"x5\":1.5609856843948364}},{\"row_index\":84,\"split\":\"ood_test\",\"values\":{\"x0\":116.09983298689758,\"x1\":-6.017042238998091e+21,\"x2\":115678968581.38393,\"x3\":115912091180.17776,\"x4\":9.667996538475703e-29,\"x5\":6.491496163845773}},{\"row_index\":606,\"split\":\"ood_test\",\"values\":{\"x0\":119.77305660268115,\"x1\":-8.212655143500423e+21,\"x2\":123627465078.81027,\"x3\":101610842469.6829,\"x4\":-3.6624490449451065e-29,\"x5\":-0.16574192806421323}},{\"row_index\":636,\"split\":\"ood_test\",\"values\":{\"x0\":110.69590953358401,\"x1\":-6.664893006833066e+20,\"x2\":104268082873.60553,\"x3\":102954230870.3664,\"x4\":1.597366986470254e-29,\"x5\":-0.05713284914039013}},{\"row_index\":836,\"split\":\"ood_test\",\"values\":{\"x0\":101.02634864397773,\"x1\":6.467295255730613e+21,\"x2\":115978026893.28409,\"x3\":112957727662.64993,\"x4\":-1.0503168390789197e-28,\"x5\":6.578046459907217}},{\"row_index\":902,\"split\":\"ood_test\",\"values\":{\"x0\":106.36576151875377,\"x1\":-3.286271832127941e+21,\"x2\":124401104177.15903,\"x3\":113347180975.5262,\"x4\":-1.1327651529286985e-28,\"x5\":6.335454950271352}},{\"row_index\":968,\"split\":\"ood_test\",\"values\":{\"x0\":101.68088225812215,\"x1\":2.478454134032502e+21,\"x2\":107875157924.65283,\"x3\":113852762566.05049,\"x4\":-1.0699949938943442e-29,\"x5\":-0.21183806215610598}},{\"row_index\":991,\"split\":\"ood_test\",\"values\":{\"x0\":120.83340201528878,\"x1\":-7.247656118380004e+21,\"x2\":112004068598.80124,\"x3\":113912470739.92007,\"x4\":-1.0478156272428217e-28,\"x5\":6.4770603226228545}},{\"row_index\":998,\"split\":\"ood_test\",\"values\":{\"x0\":100.56983582413795,\"x1\":8.707743461697462e+21,\"x2\":116668475359.86003,\"x3\":117903841425.41754,\"x4\":7.686680563299962e-29,\"x5\":6.2829897652609175}}],\"probe_sample_sha256\":\"d8a81d8e8513fbaf53a1e6001b17f3603b49ae6ba472246babc6c05ab764a1d7\",\"probe_source\":\"dataset_probes_v1\",\"target_name\":\"y\",\"variables\":[\"x0\",\"x1\",\"x2\",\"x3\",\"x4\",\"x5\"]}\n\nOUTPUT_JSON_SCHEMA_DRAFT_07:\n{\"$id\":\"symbolicarena.simplify.v1\",\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"additionalProperties\":false,\"properties\":{\"assumptions\":{\"items\":{\"type\":\"string\"},\"maxItems\":8,\"type\":\"array\"},\"brief_reason\":{\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"confidence\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"},\"equivalence_assessment\":{\"enum\":[\"preserved\",\"not_preserved\",\"undetermined\"],\"type\":\"string\"},\"outcome\":{\"enum\":[\"simplified\",\"unchanged\",\"unable\"],\"type\":\"string\"},\"simplified_expression\":{\"type\":[\"string\",\"null\"]}},\"required\":[\"outcome\",\"simplified_expression\",\"equivalence_assessment\",\"assumptions\",\"confidence\",\"brief_reason\"],\"type\":\"object\"}\n",
+  "request": {
+    "allowed_functions": [
+      "sin"
+    ],
+    "ast_source_evidence": {
+      "ground_truth_source_evidence_sha256": "8f04ca8e731120d4bdc5dacecdcae83b9d7f45ffdc3ce33c3c283e9dfaf723ea",
+      "normalized_expression_input": "7.83707760458308e-29 * x2 ** 2 * (x2 / x3 - np.sin(x5) ** 2 + x3 / x2) / (np.pi * x3 ** 2)",
+      "raw_return_source": "(7.83707760458308e-29 * x2**2 * (x2 / x3 - np.sin(x5)**2 + x3 / x2)) / (np.pi * x3**2)",
+      "return_ast_dump": "BinOp(left=BinOp(left=BinOp(left=Constant(value=7.83707760458308e-29), op=Mult(), right=BinOp(left=Name(id='x2', ctx=Load()), op=Pow(), right=Constant(value=2))), op=Mult(), right=BinOp(left=BinOp(left=BinOp(left=Name(id='x2', ctx=Load()), op=Div(), right=Name(id='x3', ctx=Load())), op=Sub(), right=BinOp(left=Call(func=Attribute(value=Name(id='np', ctx=Load()), attr='sin', ctx=Load()), args=[Name(id='x5', ctx=Load())], keywords=[]), op=Pow(), right=Constant(value=2))), op=Add(), right=BinOp(left=Name(id='x3', ctx=Load()), op=Div(), right=Name(id='x2', ctx=Load())))), op=Div(), right=BinOp(left=Attribute(value=Name(id='np', ctx=Load()), attr='pi', ctx=Load()), op=Mult(), right=BinOp(left=Name(id='x3', ctx=Load()), op=Pow(), right=Constant(value=2))))",
+      "return_source": "(7.83707760458308e-29 * x2**2 * (x2 / x3 - np.sin(x5)**2 + x3 / x2)) / (np.pi * x3**2)",
+      "selection_reason": "metadata_target_name",
+      "source_checksums": {
+        "formula_py_sha256": "62f9eff3c369295e579a7844198ba88f1c7c389bfb5687c5e179c93cfde7c128",
+        "id_test_csv_sha256": "bf5ea167f5d27f00f337253dabd1612a142584fd3e8d24d3284c8c57b7f10b5d",
+        "metadata_yaml_sha256": "ffacbbb4f345a8a1e7f450a36055e3ca63e503592c8e053c676b97c4daa543a1",
+        "ood_test_csv_sha256": "7f4e83e0f0672568b8685baf01705ce7028c1cd6cb117b17fb782ca9fc05b889",
+        "train_csv_sha256": "2c3002475164cd84ce240ffa93795f1f72ffdd4785a91c0450b0ae89951eb306",
+        "valid_csv_sha256": "f33c3a05b632dc3dedc9513cfa535cecca1853b916243c4230950021f94b1003"
+      }
+    },
+    "dataset_id": "feynman-bonus.20",
+    "dataset_probe_evidence": {
+      "basename": "feynman-bonus.20",
+      "core50_index": 358,
+      "dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+      "dataset_name": "feynman-bonus.20",
+      "evidence_sha256": "cc77b9eb515de966c6958843a124a948584475e99985366af6120b0398211c03",
+      "point_count": 16,
+      "points": [
+        {
+          "row_index": 86,
+          "split": "id_test",
+          "values": {
+            "x0": 9.636848449707031,
+            "x1": -2.2785832572308947e+19,
+            "x2": 1106506112.0,
+            "x3": 1963433984.0,
+            "x4": 7.493301586774351e-32,
+            "x5": 4.2407331466674805
+          }
+        },
+        {
+          "row_index": 218,
+          "split": "id_test",
+          "values": {
+            "x0": 27.428316116333008,
+            "x1": -3.2333269718532096e+18,
+            "x2": 3228792576.0,
+            "x3": 11618511872.0,
+            "x4": 1.3660915762585056e-33,
+            "x5": 2.5962412357330322
+          }
+        },
+        {
+          "row_index": 408,
+          "split": "id_test",
+          "values": {
+            "x0": 38.85679244995117,
+            "x1": 3.1966656807703675e+18,
+            "x2": 4088446464.0,
+            "x3": 1603301376.0,
+            "x4": 1.0661737435377994e-32,
+            "x5": 0.09778913110494614
+          }
+        },
+        {
+          "row_index": 447,
+          "split": "id_test",
+          "values": {
+            "x0": 2.229914903640747,
+            "x1": -7.155181319159284e+18,
+            "x2": 2726528768.0,
+            "x3": 79984148480.0,
+            "x4": 1.5619219556077907e-32,
+            "x5": 3.0804004669189453
+          }
+        },
+        {
+          "row_index": 695,
+          "split": "id_test",
+          "values": {
+            "x0": 3.544672966003418,
+            "x1": -1.8324875854154301e+18,
+            "x2": 45752590336.0,
+            "x3": 6357797376.0,
+            "x4": 1.168320455736013e-32,
+            "x5": 4.738278388977051
+          }
+        },
+        {
+          "row_index": 706,
+          "split": "id_test",
+          "values": {
+            "x0": 3.262603521347046,
+            "x1": 4.471217085787144e+18,
+            "x2": 12369818624.0,
+            "x3": 5763182080.0,
+            "x4": -6.258732326541108e-33,
+            "x5": 4.165268898010254
+          }
+        },
+        {
+          "row_index": 717,
+          "split": "id_test",
+          "values": {
+            "x0": 15.85462760925293,
+            "x1": -7.639371605415559e+19,
+            "x2": 6499622400.0,
+            "x3": 17039881216.0,
+            "x4": -3.4517130894205216e-32,
+            "x5": 2.813814401626587
+          }
+        },
+        {
+          "row_index": 915,
+          "split": "id_test",
+          "values": {
+            "x0": 1.0276966094970703,
+            "x1": 2.305916126736941e+18,
+            "x2": 11077357568.0,
+            "x3": 7728855040.0,
+            "x4": -5.0883010502930024e-33,
+            "x5": 1.5609856843948364
+          }
+        },
+        {
+          "row_index": 84,
+          "split": "ood_test",
+          "values": {
+            "x0": 116.09983298689758,
+            "x1": -6.017042238998091e+21,
+            "x2": 115678968581.38393,
+            "x3": 115912091180.17776,
+            "x4": 9.667996538475703e-29,
+            "x5": 6.491496163845773
+          }
+        },
+        {
+          "row_index": 606,
+          "split": "ood_test",
+          "values": {
+            "x0": 119.77305660268115,
+            "x1": -8.212655143500423e+21,
+            "x2": 123627465078.81027,
+            "x3": 101610842469.6829,
+            "x4": -3.6624490449451065e-29,
+            "x5": -0.16574192806421323
+          }
+        },
+        {
+          "row_index": 636,
+          "split": "ood_test",
+          "values": {
+            "x0": 110.69590953358401,
+            "x1": -6.664893006833066e+20,
+            "x2": 104268082873.60553,
+            "x3": 102954230870.3664,
+            "x4": 1.597366986470254e-29,
+            "x5": -0.05713284914039013
+          }
+        },
+        {
+          "row_index": 836,
+          "split": "ood_test",
+          "values": {
+            "x0": 101.02634864397773,
+            "x1": 6.467295255730613e+21,
+            "x2": 115978026893.28409,
+            "x3": 112957727662.64993,
+            "x4": -1.0503168390789197e-28,
+            "x5": 6.578046459907217
+          }
+        },
+        {
+          "row_index": 902,
+          "split": "ood_test",
+          "values": {
+            "x0": 106.36576151875377,
+            "x1": -3.286271832127941e+21,
+            "x2": 124401104177.15903,
+            "x3": 113347180975.5262,
+            "x4": -1.1327651529286985e-28,
+            "x5": 6.335454950271352
+          }
+        },
+        {
+          "row_index": 968,
+          "split": "ood_test",
+          "values": {
+            "x0": 101.68088225812215,
+            "x1": 2.478454134032502e+21,
+            "x2": 107875157924.65283,
+            "x3": 113852762566.05049,
+            "x4": -1.0699949938943442e-29,
+            "x5": -0.21183806215610598
+          }
+        },
+        {
+          "row_index": 991,
+          "split": "ood_test",
+          "values": {
+            "x0": 120.83340201528878,
+            "x1": -7.247656118380004e+21,
+            "x2": 112004068598.80124,
+            "x3": 113912470739.92007,
+            "x4": -1.0478156272428217e-28,
+            "x5": 6.4770603226228545
+          }
+        },
+        {
+          "row_index": 998,
+          "split": "ood_test",
+          "values": {
+            "x0": 100.56983582413795,
+            "x1": 8.707743461697462e+21,
+            "x2": 116668475359.86003,
+            "x3": 117903841425.41754,
+            "x4": 7.686680563299962e-29,
+            "x5": 6.2829897652609175
+          }
+        }
+      ],
+      "sample_sha256": "d8a81d8e8513fbaf53a1e6001b17f3603b49ae6ba472246babc6c05ab764a1d7",
+      "schema_version": "dataset_probes_v1",
+      "source_sha256": {
+        "id_test_csv": "bf5ea167f5d27f00f337253dabd1612a142584fd3e8d24d3284c8c57b7f10b5d",
+        "metadata_yaml": "ffacbbb4f345a8a1e7f450a36055e3ca63e503592c8e053c676b97c4daa543a1",
+        "ood_test_csv": "7f4e83e0f0672568b8685baf01705ce7028c1cd6cb117b17fb782ca9fc05b889"
+      },
+      "target_name": "y",
+      "variables": [
+        "x0",
+        "x1",
+        "x2",
+        "x3",
+        "x4",
+        "x5"
+      ]
+    },
+    "deterministic_evidence": {
+      "dataset_probe": {
+        "basename": "feynman-bonus.20",
+        "core50_index": 358,
+        "dataset_dir": "sim-datasets-data/srsd/srsd-feynman_hard_dummy/feynman-bonus.20",
+        "dataset_name": "feynman-bonus.20",
+        "evidence_sha256": "cc77b9eb515de966c6958843a124a948584475e99985366af6120b0398211c03",
+        "point_count": 16,
+        "points": [
+          {
+            "row_index": 86,
+            "split": "id_test",
+            "values": {
+              "x0": 9.636848449707031,
+              "x1": -2.2785832572308947e+19,
+              "x2": 1106506112.0,
+              "x3": 1963433984.0,
+              "x4": 7.493301586774351e-32,
+              "x5": 4.2407331466674805
+            }
+          },
+          {
+            "row_index": 218,
+            "split": "id_test",
+            "values": {
+              "x0": 27.428316116333008,
+              "x1": -3.2333269718532096e+18,
+              "x2": 3228792576.0,
+              "x3": 11618511872.0,
+              "x4": 1.3660915762585056e-33,
+              "x5": 2.5962412357330322
+            }
+          },
+          {
+            "row_index": 408,
+            "split": "id_test",
+            "values": {
+              "x0": 38.85679244995117,
+              "x1": 3.1966656807703675e+18,
+              "x2": 4088446464.0,
+              "x3": 1603301376.0,
+              "x4": 1.0661737435377994e-32,
+              "x5": 0.09778913110494614
+            }
+          },
+          {
+            "row_index": 447,
+            "split": "id_test",
+            "values": {
+              "x0": 2.229914903640747,
+              "x1": -7.155181319159284e+18,
+              "x2": 2726528768.0,
+              "x3": 79984148480.0,
+              "x4": 1.5619219556077907e-32,
+              "x5": 3.0804004669189453
+            }
+          },
+          {
+            "row_index": 695,
+            "split": "id_test",
+            "values": {
+              "x0": 3.544672966003418,
+              "x1": -1.8324875854154301e+18,
+              "x2": 45752590336.0,
+              "x3": 6357797376.0,
+              "x4": 1.168320455736013e-32,
+              "x5": 4.738278388977051
+            }
+          },
+          {
+            "row_index": 706,
+            "split": "id_test",
+            "values": {
+              "x0": 3.262603521347046,
+              "x1": 4.471217085787144e+18,
+              "x2": 12369818624.0,
+              "x3": 5763182080.0,
+              "x4": -6.258732326541108e-33,
+              "x5": 4.165268898010254
+            }
+          },
+          {
+            "row_index": 717,
+            "split": "id_test",
+            "values": {
+              "x0": 15.85462760925293,
+              "x1": -7.639371605415559e+19,
+              "x2": 6499622400.0,
+              "x3": 17039881216.0,
+              "x4": -3.4517130894205216e-32,
+              "x5": 2.813814401626587
+            }
+          },
+          {
+            "row_index": 915,
+            "split": "id_test",
+            "values": {
+              "x0": 1.0276966094970703,
+              "x1": 2.305916126736941e+18,
+              "x2": 11077357568.0,
+              "x3": 7728855040.0,
+              "x4": -5.0883010502930024e-33,
+              "x5": 1.5609856843948364
+            }
+          },
+          {
+            "row_index": 84,
+            "split": "ood_test",
+            "values": {
+              "x0": 116.09983298689758,
+              "x1": -6.017042238998091e+21,
+              "x2": 115678968581.38393,
+              "x3": 115912091180.17776,
+              "x4": 9.667996538475703e-29,
+              "x5": 6.491496163845773
+            }
+          },
+          {
+            "row_index": 606,
+            "split": "ood_test",
+            "values": {
+              "x0": 119.77305660268115,
+              "x1": -8.212655143500423e+21,
+              "x2": 123627465078.81027,
+              "x3": 101610842469.6829,
+              "x4": -3.6624490449451065e-29,
+              "x5": -0.16574192806421323
+            }
+          },
+          {
+            "row_index": 636,
+            "split": "ood_test",
+            "values": {
+              "x0": 110.69590953358401,
+              "x1": -6.664893006833066e+20,
+              "x2": 104268082873.60553,
+              "x3": 102954230870.3664,
+              "x4": 1.597366986470254e-29,
+              "x5": -0.05713284914039013
+            }
+          },
+          {
+            "row_index": 836,
+            "split": "ood_test",
+            "values": {
+              "x0": 101.02634864397773,
+              "x1": 6.467295255730613e+21,
+              "x2": 115978026893.28409,
+              "x3": 112957727662.64993,
+              "x4": -1.0503168390789197e-28,
+              "x5": 6.578046459907217
+            }
+          },
+          {
+            "row_index": 902,
+            "split": "ood_test",
+            "values": {
+              "x0": 106.36576151875377,
+              "x1": -3.286271832127941e+21,
+              "x2": 124401104177.15903,
+              "x3": 113347180975.5262,
+              "x4": -1.1327651529286985e-28,
+              "x5": 6.335454950271352
+            }
+          },
+          {
+            "row_index": 968,
+            "split": "ood_test",
+            "values": {
+              "x0": 101.68088225812215,
+              "x1": 2.478454134032502e+21,
+              "x2": 107875157924.65283,
+              "x3": 113852762566.05049,
+              "x4": -1.0699949938943442e-29,
+              "x5": -0.21183806215610598
+            }
+          },
+          {
+            "row_index": 991,
+            "split": "ood_test",
+            "values": {
+              "x0": 120.83340201528878,
+              "x1": -7.247656118380004e+21,
+              "x2": 112004068598.80124,
+              "x3": 113912470739.92007,
+              "x4": -1.0478156272428217e-28,
+              "x5": 6.4770603226228545
+            }
+          },
+          {
+            "row_index": 998,
+            "split": "ood_test",
+            "values": {
+              "x0": 100.56983582413795,
+              "x1": 8.707743461697462e+21,
+              "x2": 116668475359.86003,
+              "x3": 117903841425.41754,
+              "x4": 7.686680563299962e-29,
+              "x5": 6.2829897652609175
+            }
+          }
+        ],
+        "sample_sha256": "d8a81d8e8513fbaf53a1e6001b17f3603b49ae6ba472246babc6c05ab764a1d7",
+        "schema_version": "dataset_probes_v1",
+        "source_sha256": {
+          "id_test_csv": "bf5ea167f5d27f00f337253dabd1612a142584fd3e8d24d3284c8c57b7f10b5d",
+          "metadata_yaml": "ffacbbb4f345a8a1e7f450a36055e3ca63e503592c8e053c676b97c4daa543a1",
+          "ood_test_csv": "7f4e83e0f0672568b8685baf01705ce7028c1cd6cb117b17fb782ca9fc05b889"
+        },
+        "target_name": "y",
+        "variables": [
+          "x0",
+          "x1",
+          "x2",
+          "x3",
+          "x4",
+          "x5"
+        ]
+      },
+      "domain_assumptions": {
+        "equivalence_domain": "Compare expressions on their common real-valued domain where both sides are defined and finite.",
+        "implicit_protected_operators": "none",
+        "literal_protected_operators": [],
+        "number_system": "real",
+        "operator_semantics": [
+          "Division is ordinary real division; zero denominators are outside the common domain.",
+          "log, sqrt, and non-integer powers use ordinary real-domain semantics.",
+          "maximum, minimum, clip, and where are literal functions only when written in the expression.",
+          "Do not infer hidden clipping, epsilon guards, or fitted constants beyond the frozen expression."
+        ]
+      },
+      "symbolic_artifact": {
+        "artifact_sha256": "f17fb00134eb7247ef8d1deca935d845b2c677ab2c8822808a32dd2446061103",
+        "canonical_expression": "7.83707760458308e-29*x2**2*(x2/x3 - sin(x5)**2 + x3/x2)/(pi*x3**2)",
+        "canonical_tree": {
+          "args": [
+            {
+              "type": "Float",
+              "value": "Float('7.8370776045830801e-29', precision=53)"
+            },
+            {
+              "args": [
+                {
+                  "type": "pi",
+                  "value": "pi"
+                },
+                {
+                  "type": "NegativeOne",
+                  "value": "Integer(-1)"
+                }
+              ],
+              "type": "pow"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('x2')"
+                },
+                {
+                  "type": "Integer",
+                  "value": "Integer(2)"
+                }
+              ],
+              "type": "pow"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('x3')"
+                },
+                {
+                  "type": "Integer",
+                  "value": "Integer(-2)"
+                }
+              ],
+              "type": "pow"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "type": "NegativeOne",
+                      "value": "Integer(-1)"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "type": "Symbol",
+                              "value": "Symbol('x5')"
+                            }
+                          ],
+                          "type": "sin"
+                        },
+                        {
+                          "type": "Integer",
+                          "value": "Integer(2)"
+                        }
+                      ],
+                      "type": "pow"
+                    }
+                  ],
+                  "type": "mul"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Symbol",
+                      "value": "Symbol('x2')"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('x3')"
+                        },
+                        {
+                          "type": "NegativeOne",
+                          "value": "Integer(-1)"
+                        }
+                      ],
+                      "type": "pow"
+                    }
+                  ],
+                  "type": "mul"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Symbol",
+                      "value": "Symbol('x3')"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('x2')"
+                        },
+                        {
+                          "type": "NegativeOne",
+                          "value": "Integer(-1)"
+                        }
+                      ],
+                      "type": "pow"
+                    }
+                  ],
+                  "type": "mul"
+                }
+              ],
+              "type": "add"
+            }
+          ],
+          "type": "mul"
+        },
+        "constants_abstracted_canonical_tree": {
+          "args": [
+            {
+              "type": "Constant"
+            },
+            {
+              "args": [
+                {
+                  "type": "Constant"
+                },
+                {
+                  "type": "Constant"
+                }
+              ],
+              "type": "pow"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('x2')"
+                },
+                {
+                  "type": "Constant"
+                }
+              ],
+              "type": "pow"
+            },
+            {
+              "args": [
+                {
+                  "type": "Symbol",
+                  "value": "Symbol('x3')"
+                },
+                {
+                  "type": "Constant"
+                }
+              ],
+              "type": "pow"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "type": "Constant"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "type": "Symbol",
+                              "value": "Symbol('x5')"
+                            }
+                          ],
+                          "type": "sin"
+                        },
+                        {
+                          "type": "Constant"
+                        }
+                      ],
+                      "type": "pow"
+                    }
+                  ],
+                  "type": "mul"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Symbol",
+                      "value": "Symbol('x2')"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('x3')"
+                        },
+                        {
+                          "type": "Constant"
+                        }
+                      ],
+                      "type": "pow"
+                    }
+                  ],
+                  "type": "mul"
+                },
+                {
+                  "args": [
+                    {
+                      "type": "Symbol",
+                      "value": "Symbol('x3')"
+                    },
+                    {
+                      "args": [
+                        {
+                          "type": "Symbol",
+                          "value": "Symbol('x2')"
+                        },
+                        {
+                          "type": "Constant"
+                        }
+                      ],
+                      "type": "pow"
+                    }
+                  ],
+                  "type": "mul"
+                }
+              ],
+              "type": "add"
+            }
+          ],
+          "type": "mul"
+        },
+        "constants_abstracted_tree_fingerprint": "f21bc0470bb9303b0d1bcc8e04ccd46515cf699a658490ad23839a6645fda935",
+        "construction_mode": "evaluated",
+        "function_set": [
+          "sin"
+        ],
+        "node_count": 28,
+        "operator_set": [
+          "add",
+          "mul",
+          "pow",
+          "sin"
+        ],
+        "source_kind": "expression",
+        "source_text": "7.83707760458308e-29 * x2 ** 2 * (x2 / x3 - np.sin(x5) ** 2 + x3 / x2) / (np.pi * x3 ** 2)",
+        "variables": [
+          "x2",
+          "x3",
+          "x5"
+        ]
+      }
+    },
+    "domain_assumptions": {
+      "equivalence_domain": "Compare expressions on their common real-valued domain where both sides are defined and finite.",
+      "implicit_protected_operators": "none",
+      "literal_protected_operators": [],
+      "number_system": "real",
+      "operator_semantics": [
+        "Division is ordinary real division; zero denominators are outside the common domain.",
+        "log, sqrt, and non-integer powers use ordinary real-domain semantics.",
+        "maximum, minimum, clip, and where are literal functions only when written in the expression.",
+        "Do not infer hidden clipping, epsilon guards, or fitted constants beyond the frozen expression."
+      ]
+    },
+    "evidence_hash": "9f92366e5ff23c12817b4bb6783beaf256afcfec928446ce8ea39bad8280a37c",
+    "expression": "7.83707760458308e-29 * x2 ** 2 * (x2 / x3 - np.sin(x5) ** 2 + x3 / x2) / (np.pi * x3 ** 2)",
+    "original_expression": "7.83707760458308e-29 * x2 ** 2 * (x2 / x3 - np.sin(x5) ** 2 + x3 / x2) / (np.pi * x3 ** 2)",
+    "probe_points": [
+      {
+        "row_index": 86,
+        "split": "id_test",
+        "values": {
+          "x0": 9.636848449707031,
+          "x1": -2.2785832572308947e+19,
+          "x2": 1106506112.0,
+          "x3": 1963433984.0,
+          "x4": 7.493301586774351e-32,
+          "x5": 4.2407331466674805
+        }
+      },
+      {
+        "row_index": 218,
+        "split": "id_test",
+        "values": {
+          "x0": 27.428316116333008,
+          "x1": -3.2333269718532096e+18,
+          "x2": 3228792576.0,
+          "x3": 11618511872.0,
+          "x4": 1.3660915762585056e-33,
+          "x5": 2.5962412357330322
+        }
+      },
+      {
+        "row_index": 408,
+        "split": "id_test",
+        "values": {
+          "x0": 38.85679244995117,
+          "x1": 3.1966656807703675e+18,
+          "x2": 4088446464.0,
+          "x3": 1603301376.0,
+          "x4": 1.0661737435377994e-32,
+          "x5": 0.09778913110494614
+        }
+      },
+      {
+        "row_index": 447,
+        "split": "id_test",
+        "values": {
+          "x0": 2.229914903640747,
+          "x1": -7.155181319159284e+18,
+          "x2": 2726528768.0,
+          "x3": 79984148480.0,
+          "x4": 1.5619219556077907e-32,
+          "x5": 3.0804004669189453
+        }
+      },
+      {
+        "row_index": 695,
+        "split": "id_test",
+        "values": {
+          "x0": 3.544672966003418,
+          "x1": -1.8324875854154301e+18,
+          "x2": 45752590336.0,
+          "x3": 6357797376.0,
+          "x4": 1.168320455736013e-32,
+          "x5": 4.738278388977051
+        }
+      },
+      {
+        "row_index": 706,
+        "split": "id_test",
+        "values": {
+          "x0": 3.262603521347046,
+          "x1": 4.471217085787144e+18,
+          "x2": 12369818624.0,
+          "x3": 5763182080.0,
+          "x4": -6.258732326541108e-33,
+          "x5": 4.165268898010254
+        }
+      },
+      {
+        "row_index": 717,
+        "split": "id_test",
+        "values": {
+          "x0": 15.85462760925293,
+          "x1": -7.639371605415559e+19,
+          "x2": 6499622400.0,
+          "x3": 17039881216.0,
+          "x4": -3.4517130894205216e-32,
+          "x5": 2.813814401626587
+        }
+      },
+      {
+        "row_index": 915,
+        "split": "id_test",
+        "values": {
+          "x0": 1.0276966094970703,
+          "x1": 2.305916126736941e+18,
+          "x2": 11077357568.0,
+          "x3": 7728855040.0,
+          "x4": -5.0883010502930024e-33,
+          "x5": 1.5609856843948364
+        }
+      },
+      {
+        "row_index": 84,
+        "split": "ood_test",
+        "values": {
+          "x0": 116.09983298689758,
+          "x1": -6.017042238998091e+21,
+          "x2": 115678968581.38393,
+          "x3": 115912091180.17776,
+          "x4": 9.667996538475703e-29,
+          "x5": 6.491496163845773
+        }
+      },
+      {
+        "row_index": 606,
+        "split": "ood_test",
+        "values": {
+          "x0": 119.77305660268115,
+          "x1": -8.212655143500423e+21,
+          "x2": 123627465078.81027,
+          "x3": 101610842469.6829,
+          "x4": -3.6624490449451065e-29,
+          "x5": -0.16574192806421323
+        }
+      },
+      {
+        "row_index": 636,
+        "split": "ood_test",
+        "values": {
+          "x0": 110.69590953358401,
+          "x1": -6.664893006833066e+20,
+          "x2": 104268082873.60553,
+          "x3": 102954230870.3664,
+          "x4": 1.597366986470254e-29,
+          "x5": -0.05713284914039013
+        }
+      },
+      {
+        "row_index": 836,
+        "split": "ood_test",
+        "values": {
+          "x0": 101.02634864397773,
+          "x1": 6.467295255730613e+21,
+          "x2": 115978026893.28409,
+          "x3": 112957727662.64993,
+          "x4": -1.0503168390789197e-28,
+          "x5": 6.578046459907217
+        }
+      },
+      {
+        "row_index": 902,
+        "split": "ood_test",
+        "values": {
+          "x0": 106.36576151875377,
+          "x1": -3.286271832127941e+21,
+          "x2": 124401104177.15903,
+          "x3": 113347180975.5262,
+          "x4": -1.1327651529286985e-28,
+          "x5": 6.335454950271352
+        }
+      },
+      {
+        "row_index": 968,
+        "split": "ood_test",
+        "values": {
+          "x0": 101.68088225812215,
+          "x1": 2.478454134032502e+21,
+          "x2": 107875157924.65283,
+          "x3": 113852762566.05049,
+          "x4": -1.0699949938943442e-29,
+          "x5": -0.21183806215610598
+        }
+      },
+      {
+        "row_index": 991,
+        "split": "ood_test",
+        "values": {
+          "x0": 120.83340201528878,
+          "x1": -7.247656118380004e+21,
+          "x2": 112004068598.80124,
+          "x3": 113912470739.92007,
+          "x4": -1.0478156272428217e-28,
+          "x5": 6.4770603226228545
+        }
+      },
+      {
+        "row_index": 998,
+        "split": "ood_test",
+        "values": {
+          "x0": 100.56983582413795,
+          "x1": 8.707743461697462e+21,
+          "x2": 116668475359.86003,
+          "x3": 117903841425.41754,
+          "x4": 7.686680563299962e-29,
+          "x5": 6.2829897652609175
+        }
+      }
+    ],
+    "probe_sample_sha256": "d8a81d8e8513fbaf53a1e6001b17f3603b49ae6ba472246babc6c05ab764a1d7",
+    "probe_source": "dataset_probes_v1",
+    "target_name": "y",
+    "variables": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "stderr": "",
+  "stdout": "{\"container\":null,\"content\":[{\"block_sha256\":\"3321ffdd1bed2a5900bd8304f478732846447fa054f7ff6c5b9e114ffe6bbc82\",\"original_type\":\"thinking\",\"redacted\":true,\"type\":\"redacted_thinking\"},{\"text\":\"{\\\"outcome\\\":\\\"simplified\\\",\\\"simplified_expression\\\":\\\"7.83707760458308e-29*x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/(pi*x3**3)\\\",\\\"equivalence_assessment\\\":\\\"preserved\\\",\\\"assumptions\\\":[\\\"Real-domain division; comparison on the common domain where x2 != 0 and x3 != 0\\\",\\\"pi denotes the exact constant pi\\\",\\\"The decimal literal 7.83707760458308e-29 is kept exactly as given\\\"],\\\"confidence\\\":0.93,\\\"brief_reason\\\":\\\"Multiplied the inner sum by x2^2 exactly: x2**2*(x2/x3 - sin(x5)**2 + x3/x2) = x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/x3, then combined with the 1/(pi*x3**2) factor to give a single factored quotient with x3**3. No constants were folded or approximated, and the expression is identical on the common domain.\\\"}\",\"type\":\"text\"}],\"id\":\"msg_bdrk_7zsx6uagpvsbkmscbowwj35dll73k27wdh4rdkjcdekxrvgxvzzq\",\"model\":\"claude-opus-5\",\"role\":\"assistant\",\"routify_response\":{\"ak_quota\":{\"api_key\":\"[REDACTED]\",\"current_rpm\":55,\"rpm_limit\":600,\"status\":\"NORMAL\"},\"is_fall_back_triggered\":false,\"model_name\":\"claude-opus-5\",\"provider_code_md5\":\"79be35\",\"request_id\":\"83fa6af595254ac9ac55218d7f489471\",\"status\":200,\"success\":true,\"trace_id\":\"2166686b17901657650922828e22b0\"},\"stop_details\":null,\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"input_tokens\":5566,\"output_tokens\":988,\"output_tokens_details\":{\"thinking_tokens\":661},\"service_tier\":\"standard\"}}",
+  "structured_output": {
+    "assumptions": [
+      "Real-domain division; comparison on the common domain where x2 != 0 and x3 != 0",
+      "pi denotes the exact constant pi",
+      "The decimal literal 7.83707760458308e-29 is kept exactly as given"
+    ],
+    "brief_reason": "Multiplied the inner sum by x2^2 exactly: x2**2*(x2/x3 - sin(x5)**2 + x3/x2) = x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/x3, then combined with the 1/(pi*x3**2) factor to give a single factored quotient with x3**3. No constants were folded or approximated, and the expression is identical on the common domain.",
+    "confidence": 0.93,
+    "equivalence_assessment": "preserved",
+    "outcome": "simplified",
+    "simplified_expression": "7.83707760458308e-29*x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/(pi*x3**3)"
+  },
+  "task_kind": "simplify",
+  "task_type": "gt_simplify",
+  "validation": {
+    "error_class": null,
+    "error_message": null,
+    "ok": true,
+    "semantic_evidence": {
+      "assumptions": [],
+      "decision": "equivalent",
+      "max_abs_error": "1.4012984643248171e-45",
+      "max_rel_error": "2.0576957769112109e-16",
+      "max_tolerance": "1.0000000000000001e-09",
+      "normalized_probe_points_sha256": "522e0fa59ece265d85617fac33ccf707c2522e4edb5faec9020f71801e4c5529",
+      "numeric_probes": [
+        {
+          "abs_error": "1.4012984643248171e-45",
+          "original": "1.2236354866652689e-29",
+          "rel_error": "1.1451927306748244e-16",
+          "row_index": 86,
+          "simplified": "1.2236354866652688e-29",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "9.6368484497070312",
+            "x1": "-2.2785832572308947e+19",
+            "x2": "1106506112",
+            "x3": "1963433984",
+            "x4": "7.4933015867743507e-32",
+            "x5": "4.2407331466674805"
+          }
+        },
+        {
+          "abs_error": "1.4012984643248171e-45",
+          "original": "6.9495793637659691e-30",
+          "rel_error": "2.0163788208980968e-16",
+          "row_index": 218,
+          "simplified": "6.9495793637659677e-30",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "27.428316116333008",
+            "x1": "-3.2333269718532096e+18",
+            "x2": "3228792576",
+            "x3": "11618511872",
+            "x4": "1.3660915762585056e-33",
+            "x5": "2.5962412357330322"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "4.7571761357753132e-28",
+          "rel_error": "0",
+          "row_index": 408,
+          "simplified": "4.7571761357753132e-28",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "38.856792449951172",
+            "x1": "3.1966656807703675e+18",
+            "x2": "4088446464",
+            "x3": "1603301376",
+            "x4": "1.0661737435377994e-32",
+            "x5": "0.097789131104946136"
+          }
+        },
+        {
+          "abs_error": "1.7516230804060213e-46",
+          "original": "8.51254641264496e-31",
+          "rel_error": "2.0576957769112109e-16",
+          "row_index": 447,
+          "simplified": "8.5125464126449582e-31",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "2.2299149036407471",
+            "x1": "-7.1551813191592837e+18",
+            "x2": "2726528768",
+            "x3": "79984148480",
+            "x4": "1.5619219556077907e-32",
+            "x5": "3.0804004669189453"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "8.1852584609472999e-27",
+          "rel_error": "0",
+          "row_index": 695,
+          "simplified": "8.1852584609472999e-27",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "3.544672966003418",
+            "x1": "-1.8324875854154301e+18",
+            "x2": "45752590336",
+            "x3": "6357797376",
+            "x4": "1.1683204557360129e-32",
+            "x5": "4.7382783889770508"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "2.1638794873687344e-28",
+          "rel_error": "0",
+          "row_index": 706,
+          "simplified": "2.1638794873687344e-28",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "3.2626035213470459",
+            "x1": "4.4712170857871442e+18",
+            "x2": "12369818624",
+            "x3": "5763182080",
+            "x4": "-6.2587323265411075e-33",
+            "x5": "4.1652688980102539"
+          }
+        },
+        {
+          "abs_error": "1.4012984643248171e-45",
+          "original": "1.0523614757743257e-29",
+          "rel_error": "1.331575220666211e-16",
+          "row_index": 717,
+          "simplified": "1.0523614757743255e-29",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "15.85462760925293",
+            "x1": "-7.6393716054155592e+19",
+            "x2": "6499622400",
+            "x3": "17039881216",
+            "x4": "-3.4517130894205216e-32",
+            "x5": "2.8138144016265869"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "5.7960457649441307e-29",
+          "rel_error": "0",
+          "row_index": 915,
+          "simplified": "5.7960457649441307e-29",
+          "split": "id_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "1.0276966094970703",
+            "x1": "2.3059161267369411e+18",
+            "x2": "11077357568",
+            "x3": "7728855040",
+            "x4": "-5.0883010502930024e-33",
+            "x5": "1.5609856843948364"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "4.8629355171559916e-29",
+          "rel_error": "0",
+          "row_index": 84,
+          "simplified": "4.8629355171559916e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "116.09983298689758",
+            "x1": "-6.0170422389980906e+21",
+            "x2": "115678968581.38393",
+            "x3": "115912091180.17776",
+            "x4": "9.6679965384757033e-29",
+            "x5": "6.4914961638457731"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "7.427549810519233e-29",
+          "rel_error": "0",
+          "row_index": 606,
+          "simplified": "7.427549810519233e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "119.77305660268115",
+            "x1": "-8.2126551435004231e+21",
+            "x2": "123627465078.81027",
+            "x3": "101610842469.68291",
+            "x4": "-3.6624490449451065e-29",
+            "x5": "-0.16574192806421323"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "5.1094601126733109e-29",
+          "rel_error": "0",
+          "row_index": 636,
+          "simplified": "5.1094601126733109e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "110.69590953358401",
+            "x1": "-6.6648930068330657e+20",
+            "x2": "104268082873.60553",
+            "x3": "102954230870.36639",
+            "x4": "1.5973669864702541e-29",
+            "x5": "-0.05713284914039013"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "5.0393508455340948e-29",
+          "rel_error": "0",
+          "row_index": 836,
+          "simplified": "5.0393508455340948e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "101.02634864397773",
+            "x1": "6.4672952557306129e+21",
+            "x2": "115978026893.28409",
+            "x3": "112957727662.64993",
+            "x4": "-1.0503168390789197e-28",
+            "x5": "6.5780464599072168"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "6.0276546461580775e-29",
+          "rel_error": "0",
+          "row_index": 902,
+          "simplified": "6.0276546461580775e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "106.36576151875377",
+            "x1": "-3.2862718321279411e+21",
+            "x2": "124401104177.15903",
+            "x3": "113347180975.5262",
+            "x4": "-1.1327651529286985e-28",
+            "x5": "6.3354549502713517"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "4.3866017533952709e-29",
+          "rel_error": "0",
+          "row_index": 968,
+          "simplified": "4.3866017533952709e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "101.68088225812215",
+            "x1": "2.4784541340325018e+21",
+            "x2": "107875157924.65283",
+            "x3": "113852762566.05049",
+            "x4": "-1.0699949938943442e-29",
+            "x5": "-0.21183806215610598"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "4.7346345993964744e-29",
+          "rel_error": "0",
+          "row_index": 991,
+          "simplified": "4.7346345993964744e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "120.83340201528878",
+            "x1": "-7.2476561183800044e+21",
+            "x2": "112004068598.80124",
+            "x3": "113912470739.92007",
+            "x4": "-1.0478156272428217e-28",
+            "x5": "6.4770603226228545"
+          }
+        },
+        {
+          "abs_error": "0",
+          "original": "4.8855052870094902e-29",
+          "rel_error": "0",
+          "row_index": 998,
+          "simplified": "4.8855052870094902e-29",
+          "split": "ood_test",
+          "tolerance": "1.0000000000000001e-09",
+          "values": {
+            "x0": "100.56983582413795",
+            "x1": "8.7077434616974619e+21",
+            "x2": "116668475359.86003",
+            "x3": "117903841425.41754",
+            "x4": "7.6866805632999623e-29",
+            "x5": "6.2829897652609175"
+          }
+        }
+      ],
+      "original_sha256": "f17fb00134eb7247ef8d1deca935d845b2c677ab2c8822808a32dd2446061103",
+      "probe_count": 16,
+      "probe_hash": "c2a9fa3b85df50f2bb53aaf148aac04d73d8ab69e7b9ede7813ceee3357db92d",
+      "probe_sample_sha256": "d8a81d8e8513fbaf53a1e6001b17f3603b49ae6ba472246babc6c05ab764a1d7",
+      "probe_seed": 11727023159012850486,
+      "probe_source": "dataset_probes_v1",
+      "proof_basis": "symbolic_difference_zero",
+      "simplified_sha256": "3e4b046637b16134915605277a0e4850c7a1fff3ba9cbfc9afe857e282e6a546",
+      "skipped_probe_count": 0,
+      "skipped_probe_reasons": {},
+      "skipped_probes": [],
+      "symbolic_decision": "equivalent"
+    },
+    "structured_output": {
+      "assumptions": [
+        "Real-domain division; comparison on the common domain where x2 != 0 and x3 != 0",
+        "pi denotes the exact constant pi",
+        "The decimal literal 7.83707760458308e-29 is kept exactly as given"
+      ],
+      "brief_reason": "Multiplied the inner sum by x2^2 exactly: x2**2*(x2/x3 - sin(x5)**2 + x3/x2) = x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/x3, then combined with the 1/(pi*x3**2) factor to give a single factored quotient with x3**3. No constants were folded or approximated, and the expression is identical on the common domain.",
+      "confidence": 0.93,
+      "equivalence_assessment": "preserved",
+      "outcome": "simplified",
+      "simplified_expression": "7.83707760458308e-29*x2*(x2**2 - x2*x3*sin(x5)**2 + x3**2)/(pi*x3**3)"
+    }
+  }
+}
