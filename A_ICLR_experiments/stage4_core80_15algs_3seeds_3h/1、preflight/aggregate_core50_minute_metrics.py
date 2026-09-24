@@ -15,19 +15,24 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_evidence 
     build_symbolic_artifact, operator_f1, tree_similarity, variable_f1,
 )
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.symbolic_task_builder import _pair_allowed_functions
+from AAAI_experiments.stage5_metric_calculation_0831.pipeline.frozen_result_index import _resolve_simplify_effective_expression
 from run_core50_comparisons import canonical, sha, write_json
 from run_core50_minute_opus import digest, frozen_records, materialize, read_minutes, simplify_pair
 
 
-def symbolic_binding(record):
-    artifact = materialize(record)
+def symbolic_binding(record, *, artifact=None, recompute=True):
+    if artifact is None:
+        artifact = materialize(record)
     pair = artifact['request']['deterministic_evidence']['pair_evidence']
     lhs, rhs = pair['lhs_artifact'], pair['rhs_artifact']
-    tree, variables, operators = tree_similarity(lhs, rhs), variable_f1(lhs, rhs), operator_f1(lhs, rhs)
-    for actual, expected in ((tree, pair['tree']['tree_similarity']),
-                             (variables, pair['variable']['f1']), (operators, pair['operator']['f1'])):
-        if not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=1e-12):
-            raise ValueError(f"符号指标复算不一致: {record['task']['logical_id']}")
+    tree, variables, operators = pair['tree']['tree_similarity'], pair['variable']['f1'], pair['operator']['f1']
+    if any(not math.isfinite(value) or not 0 <= value <= 1 for value in (tree, variables, operators)):
+        raise ValueError('已验收的符号指标范围异常')
+    if recompute:
+        for actual, expected in ((tree_similarity(lhs, rhs), tree),
+                                 (variable_f1(lhs, rhs), variables), (operator_f1(lhs, rhs), operators)):
+            if not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=1e-12):
+                raise ValueError(f"符号指标复算不一致: {record['task']['logical_id']}")
     decision = artifact['structured_output']['decision']
     return {'evaluation_key': record['task']['evaluation_key'], 'result_path': record['frozen']['result_path'],
         'result_sha256': record['frozen']['result_sha256'], 'decision': decision,
@@ -51,19 +56,35 @@ def minimality_binding(prediction, ground_truth):
         'reference_complexity': left['node_count'], 'predicted_complexity': right['node_count']}
 
 
-def terminal_metrics(root, output, efficiencies):
+def terminal_metrics(root, output, efficiencies, *, export_sources=False):
     comparison_root = root.parent / 'core50_comparisons'
     records = frozen_records(comparison_root)
+    if export_sources:
+        write_json(output / 'opus_sources.json', {key: {
+            'task_type': record['task']['task_type'], 'logical_id': record['task']['logical_id'],
+            'result_path': record['frozen']['result_path'], 'result_sha256': record['frozen']['result_sha256'],
+            'source_plan': record['source_plan'], 'source_plan_sha256': record['source_plan_sha256']}
+            for key, record in records.items()})
     equivalences, structures = {}, {}
     predictions, ground_truth = {}, {}
+    formulas = {}
     for record in records.values():
         kind = record['task']['task_type']
         if kind in ('pred_simplify', 'gt_simplify'):
-            request = materialize(record)['request']
+            artifact = materialize(record)
+            request = artifact['request']
             if kind == 'gt_simplify':
                 ground_truth[request['dataset_id']] = record
             else:
-                predictions[request['noise_tag'], request['algorithm_slug'], request['dataset_id'], request['seed']] = record
+                key = (request['noise_tag'], request['algorithm_slug'], request['dataset_id'], request['seed'])
+                predictions[key] = record
+                effective, resolution = _resolve_simplify_effective_expression(
+                    request=request, structured_output=artifact['structured_output'], context=record['task']['logical_id'])
+                formulas[key] = {'original_expression': request['expression'], 'effective_expression': effective,
+                    'outcome': artifact['structured_output']['outcome'], 'resolution': resolution,
+                    'evaluation_key': record['task']['evaluation_key'], 'result_path': record['frozen']['result_path'],
+                    'result_sha256': record['frozen']['result_sha256'],
+                    'source_result_sha256': request['ast_source_evidence']['result_raw_sha256']}
             continue
         if kind not in ('equivalence', 'stab_structure'):
             continue
@@ -92,13 +113,17 @@ def terminal_metrics(root, output, efficiencies):
                 if eff['result_sha256'] != row['source_sha256']:
                     raise ValueError('最终结果与EFF输入版本不一致')
                 row['eff_score'] = eff['cumulative_eff']
+                row['eff_missing_minutes'] = eff.get('missing_minutes', [])
+                row['simplification'] = formulas.get(key)
+                if row['simplification'] and row['simplification']['source_result_sha256'] != row['source_sha256']:
+                    raise ValueError('最终化简来源不一致')
                 if row.get('reason') == 'missing_budget_expression':
                     row['sym_score'], row['min_score'] = 0.0, 0.0
                 elif key in equivalences:
                     record, artifact = equivalences[key]
                     if artifact['request']['prediction_result_sha256'] != row['source_sha256']:
                         raise ValueError('最终符号裁决来源不一致')
-                    row['symbolic_binding'] = symbolic_binding(record)
+                    row['symbolic_binding'] = symbolic_binding(record, artifact=artifact, recompute=False)
                     row.update(sym_score=row['symbolic_binding']['sym_score'], min_score=row['symbolic_binding']['min_score'])
                 if row['min_score'] is None and key in predictions:
                     row['minimality_binding'] = minimality_binding(predictions[key], ground_truth[row['dataset_id']])

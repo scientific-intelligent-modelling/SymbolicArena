@@ -35,6 +35,10 @@ case "${1:?mode is required}" in
   minute-continue)
     exec "$PYTHON" -u "$ROOT/bin/continue_core50_minutes.py" >> "$RUNTIME/core50_minutes/pipeline.log" 2>&1
     ;;
+  terminal-aggregate)
+    exec "$PYTHON" -u "$ROOT/bin/aggregate_core50_terminal_metrics.py" \
+      --root "$RUNTIME/core50_minutes" --output "$RUNTIME/core50_terminal_metrics" >> "$ROOT/terminal_aggregate.log" 2>&1
+    ;;
   *)
     exit 2
     ;;

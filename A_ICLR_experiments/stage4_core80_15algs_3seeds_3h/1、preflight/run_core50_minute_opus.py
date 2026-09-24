@@ -45,9 +45,14 @@ def frozen_records(root):
     records = json.loads((root / 'dependencies.json').read_text())
     for db in (root / 'execution').glob('*/state.sqlite3'):
         with closing(sqlite3.connect(f'file:{db}?mode=ro', uri=True)) as connection:
-            keys = [row[0] for row in connection.execute('SELECT evaluation_key FROM frozen_results')]
-        source_plans = {key: plan_paths[key] if key in plan_paths else Path(records[key]['source_plan']) for key in keys}
-        for record in read_frozen_rows(db, plan_by_key=source_plans):
+            frozen = dict(connection.execute('SELECT evaluation_key,result_sha256 FROM frozen_results'))
+        source_plans = {}
+        for key, result_sha in frozen.items():
+            if key in plan_paths:
+                source_plans[key] = plan_paths[key]
+            elif key not in records or records[key]['frozen']['result_sha256'] != result_sha:
+                raise ValueError(f'导入的公式依赖来源不一致: {key}')
+        for record in read_frozen_rows(db, plan_by_key=source_plans, evaluation_keys=set(source_plans)):
             records[record['task']['evaluation_key']] = record
     return records
 

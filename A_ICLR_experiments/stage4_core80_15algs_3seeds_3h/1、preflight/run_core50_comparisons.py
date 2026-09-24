@@ -76,13 +76,15 @@ def source_index(root):
     return result
 
 
-def read_frozen_rows(db, plan_path=None, plan_by_key=None):
+def read_frozen_rows(db, plan_path=None, plan_by_key=None, evaluation_keys=None):
     plan_hashes = {}
     with closing(sqlite3.connect(f'file:{db}?mode=ro', uri=True)) as connection:
         connection.row_factory = sqlite3.Row
         frozen_rows = connection.execute('SELECT * FROM frozen_results').fetchall()
         for frozen in frozen_rows:
             key = frozen['evaluation_key']
+            if evaluation_keys is not None and key not in evaluation_keys:
+                continue
             source_plan = plan_by_key[key] if plan_by_key is not None else plan_path
             if source_plan not in plan_hashes:
                 plan_hashes[source_plan] = sha(source_plan)
