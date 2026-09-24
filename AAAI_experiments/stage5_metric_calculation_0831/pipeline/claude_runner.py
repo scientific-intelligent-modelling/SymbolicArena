@@ -125,7 +125,7 @@ def _sha256_file(path: Path) -> str:
 def _atomic_write_json(path: Path, payload: Mapping[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(f".{path.name}.tmp")
-    raw = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n"
     tmp_path.write_text(raw, encoding="utf-8")
     tmp_path.replace(path)
 

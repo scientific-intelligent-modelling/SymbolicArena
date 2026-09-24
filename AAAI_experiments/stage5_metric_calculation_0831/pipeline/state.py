@@ -11,7 +11,7 @@ import re
 import sqlite3
 import threading
 import time
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterator, Sequence
@@ -129,7 +129,7 @@ class TaskStateStore:
 
     def _configure_database(self) -> None:
         """只在 store 初始化时设置持久 journal 模式，避免并发连接反复争锁。"""
-        with sqlite3.connect(self.path, timeout=60.0) as connection:
+        with closing(sqlite3.connect(self.path, timeout=60.0)) as connection:
             connection.execute("PRAGMA busy_timeout = 60000")
             connection.execute("PRAGMA journal_mode = WAL")
             connection.execute("PRAGMA synchronous = FULL")
@@ -1433,12 +1433,12 @@ class TaskStateStore:
                     )
 
     def attempts_reserved(self) -> int:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM attempts").fetchone()
         return self.attempt_offset + int(row["count"])
 
     def state_summary(self) -> dict[str, object]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             state_rows = connection.execute(
                 "SELECT state, COUNT(*) AS count FROM tasks GROUP BY state"
             ).fetchall()
@@ -1468,7 +1468,7 @@ class TaskStateStore:
         }
 
     def task_state(self, evaluation_key: str) -> str:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             row = connection.execute(
                 "SELECT state FROM tasks WHERE evaluation_key = ?", (evaluation_key,)
             ).fetchone()
@@ -1541,7 +1541,7 @@ class TaskStateStore:
     def next_ready_key(self, *, allowed_conditions: Sequence[str]) -> str | None:
         if not allowed_conditions:
             return None
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             unlocked_conditions = tuple(
                 condition
                 for condition in allowed_conditions
@@ -1983,7 +1983,7 @@ class TaskStateStore:
             )
 
     def frozen_result(self, evaluation_key: str) -> dict[str, str] | None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             row = connection.execute(
                 """SELECT result_path, result_sha256, attempt_id
                    FROM frozen_results WHERE evaluation_key = ?""",
@@ -2063,7 +2063,7 @@ class TaskStateStore:
             )
 
     def non_applicable_result(self, evaluation_key: str) -> dict[str, str] | None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             row = connection.execute(
                 """SELECT reason, evidence_path, evidence_sha256
                    FROM non_applicable_results WHERE evaluation_key = ?""",

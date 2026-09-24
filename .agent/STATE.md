@@ -2,8 +2,18 @@
 
 ## 当前任务
 
+- GOAL-CORE50续行（2026-09-25，执行中）：1432项补充化简及2项LLMSR参数恢复后的化简均已验收。剩余1441项中的6项PySR无公式、1项`np.linalg.norm`整批输入表达式保持原因记录。2项LLMSR在三个真实数据划分上通过预测一致性检查。终态已验收13443项比较，另外26项计算证据正在补齐；原2项空字段格式错误和2项序列化中断均通过已保存响应复核，未重新请求。未重跑训练，原始结果未覆盖。
+- 后续执行入口：preflight `prepare_core50_remaining.py`、`recover_core50_llmsr_parameters.py`、`continue_core50_terminal.py`；远端`core50_comparisons/terminal_continuation.json`记录阶段，`continuation.log`记录新比较计划，执行器保持300并发、64k输出、每项首次加最多5次重试。新任务生成后优先处理未完成计划；已完成计划继续保留原哈希绑定。
+- 全量分钟与数值处理已完成6750项、1215000个分钟记录的生成，生成器版本5：1187257个数值有效点、25327个明确无效点、2416个待核验点；真实来源检查未发现使用未来backfill的情况，证据`.agent/work/GOAL-CORE50/minute_causality_audit.json`。原生目标选式、canonical回放和早结束后的carry-forward均保留来源。输入位于`source_freezes_full/`、`source_trajectory_full/`，输出位于`minute_evidence_full/`。最终数值回放clean/noise001/noise005分别2218/2209/2207项有效、32/41/43项无效，见`terminal_numeric_full/`；数值无效不等于符号公式无效。
+- 逐分钟Opus已经在iaaccn22执行：新增56220项化简、复用4719项；等价性至多60939项、结构比较至多96689项，总请求上限213848，每项最多5次重试。费用与重试额度已向用户报告，预算通知哈希见`.agent/work/GOAL-CORE50/minute_budget_notified.json`。总并发上限300，终态剩余比较未结束时逐分钟阶段使用274个名额，为终态保留26个名额，输出上限65536。
+- 持续执行入口为preflight `continue_core50_minutes.py`、`run_core50_minute_opus.py`、`aggregate_core50_minute_metrics.py`；远端状态目录`/home/zhangziwen/sim-runtime/core50-opus-runtime/core50_minutes/`包含`pipeline_status.json`、`progress.json`、`budget.json`和逐任务状态库。后续比较、六维汇总、核验依次自动执行。正式clean榜单使用最终表达式，EFF使用180分钟轨迹，噪声和逐分钟结果独立输出；最终验收尚未完成，`formal_ready=false`。
+- 运行修复：准备队列最多同时提交24项并保存SQLite检查点；API审计JSON使用紧凑编码；状态库读连接显式关闭。精确十进制复核在数值代入前保持表达式不求值，修复QLattice/PyOperon预计算触发密集多项式运算的问题；真实QLattice g0542/s521比较在0.425秒完成，原先超过180秒。证据为远端`thread_profile.json`、`comparison_format_revalidation.json`、`serialization_recovery.json`及preflight对应脚本。
+- 本地`collect_core50_postprocess.py`持续等待远端核验结束，随后同步结果、Opus证据和输入版本到`A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/3、metrics/`；采集状态`.agent/work/GOAL-CORE50/postprocess_delivery.json`。当前没有完成交付，不得把启动或局部验收视为Goal完成。
+
+## 本轮较早快照
+
 - GOAL-CORE50（2026-09-24 19:54，执行中）：6750份训练结果已收集，完整输入SHA和任务身份核验通过；新增2025份训练中2016份有公式和数值指标，9份PySR g0270的HOF及备份仅含Loss=inf，保留不可用原因。输入与核验：`.agent/work/GOAL-CORE50/source_freezes_full/`、`sixaxis_input_audit_full.json`。
-- Opus执行：iaaccn22直接HTTP API，用户要求共享300并发，`start_core50_comparisons.sh`的run/extend入口均已修改并同步。`core50_compare_api300`会话等待原PID146805完成当前请求后自动以300并发继续；原进程已收到SIGINT，等待ThreadPool中的请求完成，未强制终止请求。切换脚本`.agent/work/GOAL-CORE50/restart_comparisons_300.sh`，实际300并发尚待进度文件确认。`max_tokens=65536`，无物理内存或单进程内存限制；首次请求加最多5次重试。远端根目录`/home/zhangziwen/sim-runtime/core50-opus-runtime/core50_comparisons/`，状态见`progress.json`、`execution/*/state.sqlite3`、`events.jsonl`。
+- Opus执行（已确认）：iaaccn22已采用300并发完成当前比较队列，`max_tokens=65536`；等价性5294项已验收、2项重试耗尽，结构4721项已验收，精确提示词重试81项已验收。远端进度时间戳1790257887.8188946，`registered=10098`、`in_flight=0`；执行器已退出。最后CPU 0.6%，可用内存约223 GiB。当前批次结束，全量后处理尚未完成。无物理内存或单进程内存限制；首次请求加最多5次重试。远端根目录`/home/zhangziwen/sim-runtime/core50-opus-runtime/core50_comparisons/`，证据为`progress.json`、`api.log`、`execution/*/state.sqlite3`、`events.jsonl`。运行入口仍为preflight `start_core50_comparisons.sh`。
 - 242项原失败已核查：159项symbolic artifact不一致、46项不等价、25项HTTP超时、10项JSON格式错误、2项JSON解析深度不足。隔离运行环境固定SymPy 1.13.1，159项原artifact哈希全部一致；重新验收161份历史响应，其中112份simplified、47份unchanged、2份unable。其余81项采用精确运算提示词并通过API重新请求，46份simplified、35份unchanged；2份unable继续保留未解决状态。旧请求和响应未改写。证据：远端`core50_new15_opus_v5/failure_audit/`、比较目录`retry_exact_manifest.json`及`execution/pred_simplify__*/`。
 - 当前正式脚本：preflight中的`prepare_core50_opus_dependencies.py`、`run_core50_comparisons.py`、`revalidate_core50_opus.py`、`build_core50_exact_retry.py`、`start_core50_comparisons.sh`、`core50_opus_requirements.txt`；提示词：`AAAI_experiments/stage5_metric_calculation_0831/config/prompts/simplify_core50_exact.v1.txt`。历史有效依赖1995份保留来源绑定，比较采用当前核验的数据探针；初始比较范围为5222项等价性和4622项结构任务，81项重试完成后自动补充可用比较。
 - 验证：8项针对性测试通过，Python编译及Shell语法检查通过，远端实际API已返回等价性、结构及81份新提示词结果。尚未完成：另1441份新增训练输入的预测化简计划、完整逐分钟SYM/MIN/STAB及最终六维汇总。`formal_ready=false`。下一步持续完成已提交比较并补齐全部6750项后处理；过程目录`.agent/work/GOAL-CORE50/`保持活动。

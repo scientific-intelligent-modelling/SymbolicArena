@@ -1,5 +1,6 @@
 import argparse
 from collections import Counter, defaultdict, deque
+from contextlib import closing
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
 import fcntl
 import gzip
@@ -75,19 +76,23 @@ def source_index(root):
     return result
 
 
-def read_frozen_rows(db, plan_path):
-    plan_sha = sha(plan_path)
-    with sqlite3.connect(f'file:{db}?mode=ro', uri=True) as connection:
+def read_frozen_rows(db, plan_path=None, plan_by_key=None):
+    plan_hashes = {}
+    with closing(sqlite3.connect(f'file:{db}?mode=ro', uri=True)) as connection:
         connection.row_factory = sqlite3.Row
         frozen_rows = connection.execute('SELECT * FROM frozen_results').fetchall()
         for frozen in frozen_rows:
             key = frozen['evaluation_key']
+            source_plan = plan_by_key[key] if plan_by_key is not None else plan_path
+            if source_plan not in plan_hashes:
+                plan_hashes[source_plan] = sha(source_plan)
+            plan_sha = plan_hashes[source_plan]
             task = connection.execute('SELECT * FROM tasks WHERE evaluation_key=?', (key,)).fetchone()
             attempt = connection.execute('SELECT * FROM attempts WHERE attempt_id=?', (frozen['attempt_id'],)).fetchone()
             if task['state'] != 'frozen' or attempt['status'] != 'accepted':
                 raise ValueError(f'已接受结果状态异常: {key}')
             yield {'task': dict(task), 'attempt': dict(attempt), 'frozen': dict(frozen),
-                   'source_db': str(db), 'source_plan': str(plan_path), 'source_plan_sha256': plan_sha}
+                   'source_db': str(db), 'source_plan': str(source_plan), 'source_plan_sha256': plan_sha}
 
 
 def dependencies(root, prior, numeric):
@@ -100,10 +105,12 @@ def dependencies(root, prior, numeric):
                 'gt_pending_api_iaaccn22.jsonl' if condition == 'gt' else f'{condition}_pred_pending_api_iaaccn22.jsonl')
             for record in read_frozen_rows(db, location / 'plans' / name):
                 all_records[record['task']['evaluation_key']] = record
-    retry_plan = root / 'plans/retry_exact.jsonl'
-    if retry_plan.exists():
+    prediction_plans = {row['evaluation_key']: path
+                        for path in (root / 'plans').glob('*.jsonl')
+                        for row in rows(path) if row.get('task_type') == 'pred_simplify'}
+    if prediction_plans:
         for db in (root / 'execution').glob('pred_simplify__*/state.sqlite3'):
-            for record in read_frozen_rows(db, retry_plan):
+            for record in read_frozen_rows(db, plan_by_key=prediction_plans):
                 all_records[record['task']['evaluation_key']] = record
     plans = {}
     predictions = {}
@@ -180,8 +187,9 @@ def evidence_job(job):
     process.start()
     sender.close()
     try:
-        if not receiver.poll(180):
-            return {'error': 'pair_evidence_timeout_180s'}
+        timeout_seconds = job.get('timeout_seconds', 180)
+        if not receiver.poll(timeout_seconds):
+            return {'error': f'pair_evidence_timeout_{timeout_seconds}s'}
         if process.exitcode is not None and process.exitcode != 0:
             return {'error': f'pair_evidence_exit_{process.exitcode}'}
         try:
@@ -258,6 +266,8 @@ def prepare(args):
                              'dependencies': (left.evaluation_key, right.evaluation_key),
                              'arguments': ('structure', logical_id, left, lf, right, rf, a*1000+b, probes[source['dataset_id']])})
     jobs.sort(key=lambda j: len(j['arguments'][3].effective_expression)+len(j['arguments'][5].effective_expression))
+    for job in jobs:
+        job['timeout_seconds'] = getattr(args, 'evidence_timeout_seconds', 180)
     counts = dict(Counter(j['kind'] for j in jobs))
     write_json(root / 'preparation.json', {'status': 'running', 'ready_pairs': counts, 'unresolved_count': len(unresolved),
                                          'max_tokens': 65536, 'max_attempts_per_task': 6, 'new_attempt_cap': 6*len(jobs)})
@@ -320,7 +330,7 @@ def import_dependency(store, record):
     frozen = record['frozen']
     if sha(frozen['result_path']) != frozen['result_sha256']:
         raise ValueError(f'依赖响应哈希不一致: {key}')
-    with sqlite3.connect(store.path, timeout=60) as connection:
+    with closing(sqlite3.connect(store.path, timeout=60)) as connection, connection:
         existing = connection.execute('SELECT state FROM tasks WHERE evaluation_key=?', (key,)).fetchone()
         if existing:
             if existing[0] != 'frozen':
@@ -347,12 +357,27 @@ def run(args):
     loaded = set()
     completed = set()
     futures = {}
+    plan_keys = {}
+    def admission_limit():
+        if root.name == 'core50_minutes':
+            terminal = args.runtime / 'core50_comparisons/terminal_continuation.json'
+            if not json.loads(terminal.read_text()).get('complete'):
+                return max(0, args.workers - 26)
+        return args.workers
     def runner_for(spec):
         group = (spec.task_type, spec.condition)
         if group not in runners:
             directory = root / 'execution' / '__'.join(group)
-            store = TaskStateStore(directory / 'state.sqlite3', attempt_cap=20300,
-                                   logical_task_cap=20000, max_attempts_per_task=6)
+            cap = getattr(args, 'logical_task_cap', 20000)
+            attempt_cap = cap * 6
+            db = directory / 'state.sqlite3'
+            if db.exists():
+                with closing(sqlite3.connect(f'file:{db}?mode=ro', uri=True)) as connection:
+                    limits = dict(connection.execute('SELECT key,value FROM meta'))
+                cap = int(limits['logical_task_cap'])
+                attempt_cap = int(limits['attempt_cap'])
+            store = TaskStateStore(db, attempt_cap=attempt_cap,
+                                   logical_task_cap=cap, max_attempts_per_task=6)
             store.recover_expired_leases()
             runner = AnthropicApiRunner(store, attempts_dir=directory/'attempts', frozen_dir=directory/'frozen',
                 channels=channels, transport=transport, timeout_seconds=1800, lease_seconds=2100,
@@ -364,7 +389,15 @@ def run(args):
         return runners[group]
     def refresh():
         new_paths = [p for p in sorted((root/'plans').glob('*.jsonl')) if p not in loaded]
-        new_paths.sort(key=lambda p: (not p.name.startswith('retry_'), p.name))
+        terminal_keys = set()
+        for db in (root / 'execution').glob('*/state.sqlite3'):
+            with closing(sqlite3.connect(f'file:{db}?mode=ro', uri=True)) as connection:
+                terminal_keys.update(row[0] for row in connection.execute(
+                    "SELECT evaluation_key FROM tasks WHERE state IN ('frozen','exhausted')"))
+        for path in new_paths:
+            if path not in plan_keys:
+                plan_keys[path] = tuple(row['evaluation_key'] for row in rows(path))
+        new_paths.sort(key=lambda p: (all(key in terminal_keys for key in plan_keys[p]), p.name))
         new_paths = new_paths[:10]
         if not new_paths:
             return
@@ -393,6 +426,7 @@ def run(args):
             counts[spec.task_type][runners[spec.task_type,spec.condition].store.task_state(key)] += 1
         memory = psutil.virtual_memory()
         data = {'time': time.time(), 'workers': args.workers, 'max_tokens': 65536,
+                'admission_limit': admission_limit(),
                 'registered': len(entries), 'in_flight': len(futures), 'by_type': {k:dict(v) for k,v in counts.items()},
                 'cpu_percent': psutil.cpu_percent(), 'memory_total': memory.total, 'memory_available': memory.available,
                 'preparation_complete': (root/'preparation.complete.json').exists()}
@@ -402,15 +436,16 @@ def run(args):
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         while True:
             refresh()
+            limit = admission_limit()
             active = {e.evaluation_key for e in futures.values()}
             candidates = defaultdict(deque)
             for key, entry in entries.items():
                 if key in completed or key in active:
                     continue
                 candidates[entry.definition.task_spec.task_type].append(entry)
-            while len(futures) < args.workers and any(candidates.values()):
+            while len(futures) < limit and any(candidates.values()):
                 for kind in sorted(candidates):
-                    if len(futures) >= args.workers:
+                    if len(futures) >= limit:
                         break
                     if not candidates[kind]:
                         continue
@@ -447,7 +482,7 @@ def extend(args):
     while True:
         terminal = 0
         for db in (root / 'execution').glob('pred_simplify__*/state.sqlite3'):
-            with sqlite3.connect(f'file:{db}?mode=ro', uri=True) as connection:
+            with closing(sqlite3.connect(f'file:{db}?mode=ro', uri=True)) as connection:
                 terminal += connection.execute("SELECT count(*) FROM tasks WHERE task_type='pred_simplify' AND state IN ('frozen','exhausted')").fetchone()[0]
         if (root / 'preparation.complete.json').exists() and terminal == expected:
             break
@@ -461,7 +496,7 @@ def extend(args):
     while added_keys:
         registered = set()
         for db in (root / 'execution').glob('*/state.sqlite3'):
-            with sqlite3.connect(f'file:{db}?mode=ro', uri=True) as connection:
+            with closing(sqlite3.connect(f'file:{db}?mode=ro', uri=True)) as connection:
                 registered.update(r[0] for r in connection.execute('SELECT evaluation_key FROM tasks'))
         if added_keys <= registered:
             return

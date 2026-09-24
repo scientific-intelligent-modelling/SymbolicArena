@@ -1467,10 +1467,12 @@ def _build_exact_decimal_pair(
         exact_original, _, _ = _build_sympy_expression(
             original_source,
             exact_numeric_literals=True,
+            evaluate_expressions=False,
         )
         exact_simplified, _, _ = _build_sympy_expression(
             simplified_source,
             exact_numeric_literals=True,
+            evaluate_expressions=False,
         )
     except (SymbolicEvidenceError, SyntaxError, ValueError):
         return None
@@ -1753,12 +1755,14 @@ def _equivalence_core(
                             digits=100,
                         )
                     else:
-                        # 从原始十进制文本重建，避免复用浮点表达式中的精度损失。
+                        # 保留精确十进制，代入数值后再求值，避免构建时展开多变量多项式。
                         exact_original_expr, _, _ = _build_sympy_expression(
                             str(original_artifact['source_text']), exact_numeric_literals=True,
+                            evaluate_expressions=False,
                         )
                         exact_simplified_expr, _, _ = _build_sympy_expression(
                             str(simplified_artifact['source_text']), exact_numeric_literals=True,
+                            evaluate_expressions=False,
                         )
                         rebuilt_record = _rebuild_probe_record(
                             expr_lhs=exact_original_expr,

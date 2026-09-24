@@ -20,6 +20,21 @@ case "${1:?mode is required}" in
   extend)
     exec "$PYTHON" -u "$ROOT/bin/run_core50_comparisons.py" extend --prepare-workers 12 --workers 300 >> "$ROOT/extension.log" 2>&1
     ;;
+  continue)
+    exec "$PYTHON" -u "$ROOT/bin/continue_core50_terminal.py" >> "$ROOT/continuation.log" 2>&1
+    ;;
+  revalidate-comparisons)
+    exec "$PYTHON" -u "$ROOT/bin/revalidate_core50_comparison_format.py"
+    ;;
+  resume-serialization)
+    exec "$PYTHON" -u "$ROOT/bin/resume_core50_serialization.py"
+    ;;
+  minute-prepare)
+    exec "$PYTHON" -u "$ROOT/bin/run_core50_minute_opus.py" prepare >> "$RUNTIME/core50_minutes/prepare.log" 2>&1
+    ;;
+  minute-continue)
+    exec "$PYTHON" -u "$ROOT/bin/continue_core50_minutes.py" >> "$RUNTIME/core50_minutes/pipeline.log" 2>&1
+    ;;
   *)
     exit 2
     ;;

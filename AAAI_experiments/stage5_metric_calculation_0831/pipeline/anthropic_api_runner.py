@@ -322,8 +322,15 @@ class AnthropicApiRunner(ClaudeRunner):
         if not text_blocks or not "".join(text_blocks).strip():
             raise StructuredOutputViolation("API 未返回非空 text block")
         output_text = "\n".join(text_blocks)
+        normalizations: set[str] = set()
 
         def validate_parsed(parsed_candidate: Mapping[str, object]) -> Mapping[str, object]:
+            normalization = None
+            if (task_kind == "equivalence"
+                    and set(parsed_candidate) == set(schema.get("properties", {})) | {"assumptions_note"}
+                    and parsed_candidate["assumptions_note"] is None):
+                parsed_candidate = {key: value for key, value in parsed_candidate.items() if key != "assumptions_note"}
+                normalization = "equivalence_null_assumptions_note.v1"
             try:
                 Draft7Validator(schema).validate(parsed_candidate)
             except ValidationError as exc:
@@ -331,7 +338,10 @@ class AnthropicApiRunner(ClaudeRunner):
                     f"API result 未通过 Draft-07 schema: {exc.message}"
                 ) from exc
             try:
-                return validate_structured_output(task_kind, parsed_candidate)
+                validated = validate_structured_output(task_kind, parsed_candidate)
+                if normalization is not None:
+                    normalizations.add(normalization)
+                return validated
             except ContractViolation as exc:
                 raise StructuredOutputViolation(str(exc)) from exc
 
@@ -385,6 +395,8 @@ class AnthropicApiRunner(ClaudeRunner):
         }
         if recovery is not None:
             response_metadata["structured_output_recovery"] = recovery
+        if normalizations:
+            response_metadata["schema_normalizations"] = sorted(normalizations)
         return (
             dict(structured),
             dict(usage),
