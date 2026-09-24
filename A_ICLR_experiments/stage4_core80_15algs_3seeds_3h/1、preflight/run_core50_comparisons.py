@@ -351,7 +351,7 @@ def run(args):
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     channels = load_api_channels([args.channel_settings], allow_single_channel=True)
     transport = HttpxAnthropicTransport(channels, max_connections=args.workers)
-    semaphore = threading.BoundedSemaphore(8)
+    semaphore = threading.BoundedSemaphore(50)
     runners = {}
     entries = {}
     loaded = set()
@@ -381,7 +381,7 @@ def run(args):
             store.recover_expired_leases()
             runner = AnthropicApiRunner(store, attempts_dir=directory/'attempts', frozen_dir=directory/'frozen',
                 channels=channels, transport=transport, timeout_seconds=1800, lease_seconds=2100,
-                max_tokens=65536, per_channel_concurrency=args.workers, semantic_validation_concurrency=8,
+                max_tokens=65536, per_channel_concurrency=args.workers, semantic_validation_concurrency=50,
                 allow_single_channel=True)
             runner._semantic_semaphore = semaphore
             runner.semantic_validator_timeout_seconds = 180
@@ -426,6 +426,7 @@ def run(args):
             counts[spec.task_type][runners[spec.task_type,spec.condition].store.task_state(key)] += 1
         memory = psutil.virtual_memory()
         data = {'time': time.time(), 'workers': args.workers, 'max_tokens': 65536,
+                'semantic_validation_concurrency': 50,
                 'admission_limit': admission_limit(),
                 'registered': len(entries), 'in_flight': len(futures), 'by_type': {k:dict(v) for k,v in counts.items()},
                 'cpu_percent': psutil.cpu_percent(), 'memory_total': memory.total, 'memory_available': memory.available,
@@ -521,7 +522,7 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=Path, default=Path('/home/zhangziwen/sim-runtime/core50-opus-runtime/core50_comparisons'))
     parser.add_argument('--prior', type=Path, default=Path('/home/zhangziwen/sim-runtime/core50-opus-runtime/core50_new15_opus_v5'))
     parser.add_argument('--workers', type=int, default=150)
-    parser.add_argument('--prepare-workers', type=int, default=8)
+    parser.add_argument('--prepare-workers', type=int, default=50)
     parser.add_argument('--channel-settings', default='routify=/home/zhangziwen/.config/core50-opus/routify.json')
     arguments = parser.parse_args()
     if arguments.mode == 'prepare':

@@ -19,7 +19,7 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     lock = (root / 'pipeline.lock').open('a+')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    args = argparse.Namespace(runtime=runtime, root=root, workers=300, prepare_workers=12,
+    args = argparse.Namespace(runtime=runtime, root=root, workers=300, prepare_workers=50,
         logical_task_cap=1000000, channel_settings='routify=/home/zhangziwen/.config/core50-opus/routify.json')
     status_path = root / 'pipeline_status.json'
     receipt = root / 'inputs.complete.json'

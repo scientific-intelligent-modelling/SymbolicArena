@@ -40,7 +40,7 @@ def main():
     with (root / 'controller.lock').open('a+') as controller_lock:
         fcntl.flock(controller_lock, fcntl.LOCK_EX)
     args = argparse.Namespace(root=root, runtime=runtime, prior=runtime / 'core50_new15_opus_v5',
-        prepare_workers=6, workers=300, evidence_timeout_seconds=600,
+        prepare_workers=50, workers=300, evidence_timeout_seconds=600,
         channel_settings='routify=/home/zhangziwen/.config/core50-opus/routify.json')
     write_json(root / 'terminal_continuation.json', {'time': time.time(), 'phase': 'prepare_comparisons',
         'simplification_states': dict(states), 'complete': False})

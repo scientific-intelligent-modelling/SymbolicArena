@@ -314,7 +314,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.root = args.runtime / 'core50_minutes'
     args.workers = 300
-    args.prepare_workers = 12
+    args.prepare_workers = 50
     args.logical_task_cap = 1000000
     args.channel_settings = 'routify=/home/zhangziwen/.config/core50-opus/routify.json'
     if args.mode == 'prepare':
