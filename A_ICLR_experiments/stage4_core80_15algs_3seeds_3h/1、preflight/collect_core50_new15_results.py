@@ -31,6 +31,7 @@ HOST_ROOTS = {"iaaccn48": "/data1/zhangziwen/sim-runtime/code",
               "iaaccn53": "/data1/zhangziwen/sim-runtime/code",
               "iaaccn55": "/data1/zhangziwen/sim-runtime/code"}
 REMOTE_ROOT = "/home/zhangziwen/workplace/scientific-intelligent-modelling"
+REMOTE_TOOL_DIRS = {"imcts": "iMCTS", "qlattice": "QLattice"}
 
 
 def digest(path):
@@ -87,11 +88,11 @@ def sync_one(task, record, remote_root, batch):
                   controller_state=task["state"])
     dataset = str(record["dataset_name"])
     index = int(record["dataset_id"][1:])
+    inner_tool = REMOTE_TOOL_DIRS.get(task["tool"].lower(), task["tool"])
     source_dir = (Path(remote_root) / "experiments" / batch / task["tool"]
-                  / f"seed{task['seed']}" / "tasks" / task_id / host / task["tool"]
+                  / f"seed{task['seed']}" / "tasks" / task_id / host / inner_tool
                   / f"g{index:04d}_{dataset}")
-    destination = (STAGE / "2、experiments" / task["noise_tag"] / task["tool"]
-                  / dataset / str(task["seed"]))
+    destination = Path(record["destination"])
     record["source_run_dir"] = str(source_dir)
     destination.mkdir(parents=True, exist_ok=True)
     target, jump = host_target(host)
@@ -110,10 +111,30 @@ def sync_one(task, record, remote_root, batch):
         if existing_binding.exists():
             old_binding = json.loads(existing_binding.read_text())
             if old_binding.get("result_sha256") == remote_sha:
+                result = json.loads(existing_result.read_text())
+                assert int(result["task_global_index"]) == index
+                assert result["expected_dataset_rel"] == record["dataset_rel"]
+                assert str(result["tool"]).lower() == task["tool"].lower()
+                assert int(result["seed"]) == int(task["seed"])
+                assert result["dataset_identity_check"]["match"] is True
+                equation = result.get("equation") or (result.get("canonical_artifact") or {}).get("instantiated_expression")
+                numeric = all(isinstance(result.get(split), dict)
+                              and isinstance(result[split].get("nmse"), (float, int))
+                              and not isinstance(result[split].get("nmse"), bool)
+                              and math.isfinite(result[split]["nmse"])
+                              for split in ["id_test", "ood_test"])
+                old_binding.update(result_status=result.get("status", ""),
+                                   equation_available=bool(equation),
+                                   numeric_available=numeric)
+                existing_binding.write_text(json.dumps(old_binding, ensure_ascii=False, indent=2) + "\n",
+                                            encoding="utf-8")
                 record.update(collection_state="collected", result_sha256=remote_sha,
-                              result_status=old_binding.get("result_status", ""),
-                              equation_available=bool(old_binding.get("equation_available")),
-                              numeric_available=bool(old_binding.get("numeric_available")))
+                              result_status=result.get("status", ""),
+                              equation_available=bool(equation), numeric_available=numeric,
+                              progress_file_count=int(old_binding.get("progress_files", 0)),
+                              imported_file_count=int(old_binding.get("file_count", 0)),
+                              imported_bytes=int(old_binding.get("total_bytes", 0)),
+                              collection_error="")
                 return record
     transport = "ssh -o BatchMode=yes -o ConnectTimeout=10 -o LogLevel=ERROR"
     if jump:
@@ -212,8 +233,19 @@ def one_cycle(records, states, workers, max_per_poll):
                 record.update(collection_state="terminal_without_host",
                               collection_error="controller ended without an assigned host")
                 continue
-            if record["collection_state"] in {"collected", "terminal_no_result", "result_conflict", "terminal_without_host"}:
+            if record["collection_state"] in {"terminal_no_result", "terminal_without_host"}:
                 continue
+            if record["collection_state"] == "collected":
+                destination_result = Path(record["destination"]) / "result.json"
+                destination_binding = destination_result.parent / "import_binding.json"
+                if (destination_result.is_file() and destination_binding.is_file()
+                        and digest(destination_result) == record["result_sha256"]):
+                    binding = json.loads(destination_binding.read_text())
+                    if (binding.get("result_sha256") == record["result_sha256"]
+                            and binding.get("result_status", "") == record["result_status"]
+                            and binding.get("equation_available") == record["equation_available"]
+                            and binding.get("numeric_available") == record["numeric_available"]):
+                        continue
             by_task_id[(batch, task_id)] = (task, record, key)
     selected = list(by_task_id.items())[:max_per_poll]
     with ThreadPoolExecutor(max_workers=workers) as pool:

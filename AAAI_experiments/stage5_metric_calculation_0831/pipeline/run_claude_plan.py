@@ -564,6 +564,7 @@ def _row_to_definition(row: Mapping[str, Any], *, line_number: int) -> PlannedDe
 
 
 def load_plan_jsonl(path: str | Path) -> LoadedPlan:
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), 20000))
     plan_path = Path(path)
     try:
         raw = plan_path.read_bytes()

@@ -309,6 +309,7 @@ def _domain_assumptions(expression: str) -> dict[str, Any]:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), 20000))
     rows: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
