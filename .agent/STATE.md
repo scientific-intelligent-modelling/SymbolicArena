@@ -2,9 +2,9 @@
 
 ## 当前任务
 
-- 当前进度：用户已授权本Goal产生DeepInfra和Opus API费用，无须逐批确认。`core50_new15_nonllm_v2`已在15台机器启动1352/1755项训练，403项等待可用资源；全机预检15/15通过，源码、75份数据文件及参数哈希匹配，10个运行环境导入通过。当前尚无新训练终态结果；采集器`core50_new15_collection`每60秒检查远端任务。`core50_new15_llm_v1`的14台机器预检仍在传送任务输入，iaaccn25暂时排除；270项LLM训练尚未启动，Core50批次尚未发出DeepInfra或Opus请求。
+- 当前进度：用户已授权本Goal产生DeepInfra和Opus API费用，无须逐批确认。`core50_new15_nonllm_v2`在15台机器运行1352/1755项，403项等待资源；源码、75份数据文件、参数哈希及10个运行环境预检均通过。`core50_new15_llm_v1`的14台预检全部通过，DeepInfra Turbo配置与密钥存在性检查通过；100/270项已运行，170项等待资源，iaaccn25因连线不稳排除。iaaccn22的LLMSR真实任务已生成minute_0008，状态ok且公式可用，API请求结果仍需从任务记录核验。当前没有新训练终态结果；采集器`core50_new15_collection`每60秒检查远端任务。
 - 复用范围未变：原Core50/Core80重叠35项的4725份运行已复制并核验，共859349个文件、8,147,741,253字节，保留849876个逐分钟progress文件。Opus输入SHA256绑定核验通过：1960项有效结果已复制，2762项缺少化简，3项无可用表达式；GT化简覆盖36个数据集。证据为preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。
-- 后续按`EXECUTION_PLAN.md`和指标定义执行六轴评测。每个失败任务最多5次重试，全局重试额度不超过待处理任务数×5。iaaccn22已核验物理内存264010832 kB、可用内存158634480 kB；Opus专用进程组的物理内存90%上限尚未配置，也尚未在该机发出Opus API请求。
+- 后续按`EXECUTION_PLAN.md`和指标定义执行六轴评测。每个失败任务最多5次重试，全局重试额度不超过待处理任务数×5。Stage5直接API代码已同步至iaaccn22的独立运行目录，依赖导入通过。该机物理内存为264010832 kB；用户级systemd实际报告MemoryMax=infinity，创建受限scope因cgroup权限失败，sudo需要密码。Opus请求暂停，等待管理员启用memory cgroup委派或建立物理内存90%上限的系统服务。
 
 - IMPORT-002（并入GOAL-CORE50，复制已完成）：新Stage4目录`2、experiments/{noise}/{algorithm}/{dataset_name}/{seed}`。35个重叠数据集的4725份运行已复制，15个新数据集对应2025项待训练；保存859349个文件及849876个逐分钟progress文件。4721项有可用数值指标，Opus SHA256绑定有效1960项、缺失2762项、无可用表达式3项；GT已覆盖36个数据集。全部统计、pending清单和来源哈希见preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。源实验未修改。
 
