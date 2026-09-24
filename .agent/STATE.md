@@ -2,6 +2,7 @@
 
 ## 当前任务
 
+- 最新进度（2026-09-24 17:00）：Opus 直接 HTTP API 已在 iaaccn22 发起，4个独立计划总并发150（clean 32、noise001 59、noise005 44、GT 15），每项最多6次请求，合计尝试上限20148。当前计划3358项中276项已成功冻结、139项运行中、2943项待处理；API失败数为0，累计费用¥8.678465。机器256核，load average为4.65，可用内存约230 GiB，4个API进程合计RSS约1.23 GiB；没有设置物理内存限制。远端报告、状态库、请求记录和冻结结果位于`/home/zhangziwen/sim-runtime/core50-opus-runtime/core50_new15_opus_v5/`；本地启动脚本及路径镜像清单分别为`.agent/work/GOAL-CORE50/run_core50_opus_v5.sh`、`.agent/work/GOAL-CORE50/opus_plan_iaaccn22_v5/manifest.json`。初始预检没有调用模型：系统Python 3.12无法加载Python 3.10扩展；原计划引用本机绝对路径。现已改用`sim_base` Python 3.10，远端逐项加载并核验4份计划的prompt/schema哈希。后续每隔一段时间检查请求状态、CPU和内存；资源持续较低时维持150并发，出现错误或资源压力时调整。
 - 当前进度（2026-09-24 16:00）：DeepInfra和Opus API费用已获授权。新增训练队列中非LLM `1755/1755 done`，LLM `199/270 done、71 running、0 pending`；合计1954项终止、71项运行。采集器已导入1470项终态结果，其中1462项有公式和ID/OOD指标。8项PySR `g0270`任务（clean种子520/521/522，noise001种子520/521/522，noise005种子520/521）均在HOF和备份中只有`Loss=inf`，保留预算终止原因且不重跑；当前采集没有SHA冲突或同步错误。
 - 复用范围未变：原Core50/Core80重叠35项的4725份运行已复制并核验，共859349个文件、8,147,741,253字节，保留849876个逐分钟progress文件。Opus输入SHA256绑定核验通过：1960项有效结果已复制，2762项缺少化简，3项无可用表达式；GT化简覆盖36个数据集。证据为preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。
 - 六轴输入预审：4725份复用结果及新增结果的SHA256、任务身份和50个数据集输入哈希通过。v5 source freeze覆盖5309/6750项，剩余1441项；采集清单现为1470项，完整覆盖审计待刷新。报告`.agent/work/GOAL-CORE50/sixaxis_input_audit_collected_v5.json`，文件位于`.agent/work/GOAL-CORE50/source_freezes_collected_v5/`。
