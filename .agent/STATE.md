@@ -2,9 +2,9 @@
 
 ## 当前任务
 
-- 当前进度（2026-09-24 13:13）：DeepInfra和Opus API费用已获授权。新增训练队列：非LLM `1352/1755 done、403 running`；LLM `100/270 done、100 running、70 pending`。15台非LLM与14台LLM机器已派发，iaaccn25排除。采集器已导入394项终态结果，393项有公式和ID/OOD指标；另有2项PySR `g0270/520`（clean、noise001）在10800秒内没有有限候选，HOF与备份均只有`Loss=inf`，保留超时证据且不重跑。一个TPSR导入冲突经远端SHA256复核已与本地一致，采集器正在重新核验。
+- 当前进度（2026-09-24 13:20）：DeepInfra和Opus API费用已获授权。新增训练队列：非LLM `1352/1755 done、403 running`；LLM `100/270 done、100 running、70 pending`。15台非LLM与14台LLM机器已派发，iaaccn25排除。采集器最近一次保存为521项终态结果、520项有公式和ID/OOD指标，另有2项SHA冲突。TPSR与E2ESR两项本地/远端result SHA已复核一致；修正版采集器会恢复这两条状态，当前传输批次完成后重启。PySR `g0270/520`的clean与noise001目录中HOF和备份均只有`Loss=inf`，没有预算内有效候选，保留超时证据。
 - 复用范围未变：原Core50/Core80重叠35项的4725份运行已复制并核验，共859349个文件、8,147,741,253字节，保留849876个逐分钟progress文件。Opus输入SHA256绑定核验通过：1960项有效结果已复制，2762项缺少化简，3项无可用表达式；GT化简覆盖36个数据集。证据为preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。
-- 六轴输入预审：4725份复用结果及新增结果的SHA256、任务身份和50个数据集输入哈希通过。13:00快照source freeze覆盖5112/6750项，剩余1638项；报告`.agent/work/GOAL-CORE50/sixaxis_input_audit_collected_v4.json`，文件位于`.agent/work/GOAL-CORE50/source_freezes_collected_v4/`。采集清单实时计数为394项，完整覆盖审计待刷新。
+- 六轴输入预审：4725份复用结果及新增结果的SHA256、任务身份和50个数据集输入哈希通过。13:00快照source freeze覆盖5112/6750项，剩余1638项；报告`.agent/work/GOAL-CORE50/sixaxis_input_audit_collected_v4.json`，文件位于`.agent/work/GOAL-CORE50/source_freezes_collected_v4/`。采集清单最新保存为521项，完整覆盖审计待刷新。
 - 有效执行入口：`1、preflight/run_core50_queue.py`、`run_core50_nonllm_queue.sh`、`run_core50_llm_queue.sh`、`collect_core50_new15_results.py`、`build_core50_sixaxis_inputs.py`；持久队列状态位于`.agent/work/GOAL-CORE50/queue_{nonllm_v2,llm_v1}/`。
 - 采集器已修正`iMCTS`、`QLattice`远端子目录大小写及本地规范目标路径，并对已有绑定重新核验result SHA和指标字段。旧代码产生的小写`imcts/qlattice`额外副本仍保留，未获用户确认前不删除；六轴输入按冻结清单中的规范路径读取。
 - 复用Opus核验：1960份预测化简缓存均通过原result SHA、公式、prompt/schema和历史响应验收；其中1327份来自Claude Code历史通道，633份来自直接API。所有缓存与当前evaluation_key不同，差异集中于探针和裁决证据字段，需用独立缓存重绑记录保留历史来源。36份GT缓存中35份与当前Ground Truth证据一致，`feynman-i.11.19`一项SHA不一致；目前需要15项GT直接API处理。审计报告`.agent/work/GOAL-CORE50/opus_cache_audit.json`，审计脚本`1、preflight/audit_core50_opus_reuse.py`。
