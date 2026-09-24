@@ -2,8 +2,9 @@
 
 ## 当前任务
 
-- GOAL-CORE50（2026-09-24，active）：Goal ID `01a0c369-4097-7a23-becd-0c28659d2627`，目标已创建。工作范围为复用Core50/Core80重叠35项共4725份运行目录及绑定有效的Opus结果，完成新增15项×15算法×3条件×3seed共2025项训练（每项10800秒），再在iaaccn22通过直接API完成缺失Opus化简。保留逐分钟数据及六维计算所需证据；用户要求Opus整组内存上限为物理内存90%，根据可用内存控制并发，不设置过低的单进程上限。付费API开始前先报告请求量、费用估算和重试上限；每个任务最多重试5次，全局额度不超过待处理任务数×5。
-- 当前进度：复制已完成，4725/4725项已放入目标目录，共859349个文件、8,147,741,253字节；849876个逐分钟progress文件保留，4213项含180个分钟文件，4721项有可用数值指标。Opus输入SHA256绑定已核验，1960项现成有效结果已复制，2762项尚无Opus结果，3项没有可用表达式；GT化简结果已覆盖36个数据集。15项新增数据集的2025项训练待执行。证据为preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。源文件保持不变；训练与API均未启动。
+- 当前进度：用户已授权本Goal产生DeepInfra和Opus API费用，无须逐批确认。运行`core50_new15_nonllm_v2`的本地控制器已在tmux中启动，当前仍在同步15台机器的参数及任务切片；已开始新批次且仍处于pending阶段的1755项尚未开始训练。非LLM全机预检结果15/15通过，wrapper、75个数据文件及参数哈希全部匹配，10个运行环境导入均通过。另一个仅预检的`core50_new15_llm_v1`队列同步仍在进行，270项LLM训练的Turbo运行配置待核验；无训练LLM或Opus API请求已发出。结果采集tmux`core50_new15_collection`正在每60秒监视任务状态。
+- 复用范围未变：原Core50/Core80重叠35项的4725份运行已复制并核验，共859349个文件、8,147,741,253字节，保留849876个逐分钟progress文件。Opus输入SHA256绑定核验通过：1960项有效结果已复制，2762项缺少化简，3项无可用表达式；GT化简覆盖36个数据集。证据为preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。
+- 后续按`EXECUTION_PLAN.md`现有六轴口径，不需要逐批费用确认。每个失败任务最多5次重试，全局额度不超过待处理任务数×5。Opus内存90%设置当前尚未部署。
 
 - IMPORT-002（并入GOAL-CORE50，复制已完成）：新Stage4目录`2、experiments/{noise}/{algorithm}/{dataset_name}/{seed}`。35个重叠数据集的4725份运行已复制，15个新数据集对应2025项待训练；保存859349个文件及849876个逐分钟progress文件。4721项有可用数值指标，Opus SHA256绑定有效1960项、缺失2762项、无可用表达式3项；GT已覆盖36个数据集。全部统计、pending清单和来源哈希见preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。源实验未修改。
 
