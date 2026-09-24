@@ -2,14 +2,19 @@
 
 ## 当前任务
 
-- 当前进度（2026-09-24 13:20）：DeepInfra和Opus API费用已获授权。新增训练队列：非LLM `1352/1755 done、403 running`；LLM `100/270 done、100 running、70 pending`。15台非LLM与14台LLM机器已派发，iaaccn25排除。采集器最近一次保存为521项终态结果、520项有公式和ID/OOD指标，另有2项SHA冲突。TPSR与E2ESR两项本地/远端result SHA已复核一致；修正版采集器会恢复这两条状态，当前传输批次完成后重启。PySR `g0270/520`的clean与noise001目录中HOF和备份均只有`Loss=inf`，没有预算内有效候选，保留超时证据。
+- 当前进度（2026-09-24 16:00）：DeepInfra和Opus API费用已获授权。新增训练队列中非LLM `1755/1755 done`，LLM `199/270 done、71 running、0 pending`；合计1954项终止、71项运行。采集器已导入1470项终态结果，其中1462项有公式和ID/OOD指标。8项PySR `g0270`任务（clean种子520/521/522，noise001种子520/521/522，noise005种子520/521）均在HOF和备份中只有`Loss=inf`，保留预算终止原因且不重跑；当前采集没有SHA冲突或同步错误。
 - 复用范围未变：原Core50/Core80重叠35项的4725份运行已复制并核验，共859349个文件、8,147,741,253字节，保留849876个逐分钟progress文件。Opus输入SHA256绑定核验通过：1960项有效结果已复制，2762项缺少化简，3项无可用表达式；GT化简覆盖36个数据集。证据为preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。
-- 六轴输入预审：4725份复用结果及新增结果的SHA256、任务身份和50个数据集输入哈希通过。13:00快照source freeze覆盖5112/6750项，剩余1638项；报告`.agent/work/GOAL-CORE50/sixaxis_input_audit_collected_v4.json`，文件位于`.agent/work/GOAL-CORE50/source_freezes_collected_v4/`。采集清单最新保存为521项，完整覆盖审计待刷新。
+- 六轴输入预审：4725份复用结果及新增结果的SHA256、任务身份和50个数据集输入哈希通过。v5 source freeze覆盖5309/6750项，剩余1441项；采集清单现为1470项，完整覆盖审计待刷新。报告`.agent/work/GOAL-CORE50/sixaxis_input_audit_collected_v5.json`，文件位于`.agent/work/GOAL-CORE50/source_freezes_collected_v5/`。
 - 有效执行入口：`1、preflight/run_core50_queue.py`、`run_core50_nonllm_queue.sh`、`run_core50_llm_queue.sh`、`collect_core50_new15_results.py`、`build_core50_sixaxis_inputs.py`；持久队列状态位于`.agent/work/GOAL-CORE50/queue_{nonllm_v2,llm_v1}/`。
 - 采集器已修正`iMCTS`、`QLattice`远端子目录大小写及本地规范目标路径，并对已有绑定重新核验result SHA和指标字段。旧代码产生的小写`imcts/qlattice`额外副本仍保留，未获用户确认前不删除；六轴输入按冻结清单中的规范路径读取。
+- 三条件v5逐分钟来源各覆盖全部当前可用run，inventory/freeze绑定均`contract_ok=true`、`drift_count=0`。SHA绑定轨迹点数为clean 319271/320040、noise001 318680/319320、noise005 315549/316260；缺失分钟分别769、640、711，冲突和解析错误为0。4725项复用记录只有本地outer进度副本，584项新增结果还含inner目录；来源扫描核验inner副本可用情况，冻结文件按选中路径重新读取并核验SHA。inventory、freeze及绑定报告位于`.agent/work/GOAL-CORE50/source_trajectory_freeze_v5/`。
+- v5逐分钟数值表按同一分钟的ID/OOD值生成，未用未来或最终公式填补缺失点。clean/noise001/noise005分别有315180/312849/311716个可用run-minute数值点，其余记录保持空值；明细及SHA见`.agent/work/GOAL-CORE50/dynamic_numeric_v5/`。
+- v5逐分钟来源已扫描5309项运行，保留所选公式、ID/OOD原始指标、路径和SHA256。inventory/freeze绑定三条件均通过，`drift_count=0`；clean/noise001/noise005分别有769/640/711个缺失分钟，冲突和解析错误均为0。结果与报告位于`.agent/work/GOAL-CORE50/source_trajectory_freeze_v5/`。clean EFF确定性回放进程PID2733006仍运行，采用v5 source binding及无修复清单；缺失分钟按unresolved保留。
 - 复用Opus核验：1960份预测化简缓存均通过原result SHA、公式、prompt/schema和历史响应验收；其中1327份来自Claude Code历史通道，633份来自直接API。所有缓存与当前evaluation_key不同，差异集中于探针和裁决证据字段，需用独立缓存重绑记录保留历史来源。36份GT缓存中35份与当前Ground Truth证据一致，`feynman-i.11.19`一项SHA不一致；目前需要15项GT直接API处理。审计报告`.agent/work/GOAL-CORE50/opus_cache_audit.json`，审计脚本`1、preflight/audit_core50_opus_reuse.py`。
-- Stage5候选预测化简计划基于5112项输入：可调用clean 1775、noise001 1757、noise005 1575；5项无公式任务记为no-call。复用缓存1995项通过来源、表达式及prompt/schema核验；当前直接API待处理3162项（clean238、noise0011546、noise0051363、GT15），重试上限15810、总尝试上限18972。该快照未包括后续采集结果，也未计分钟级化简、等价及结构裁决。计划与哈希见`.agent/work/GOAL-CORE50/opus_plan_merge_collected_v4/merge_report.json`。
+- Stage5候选预测化简计划基于5309项输入：可调用clean 1777、noise001 1771、noise005 1755；6项无公式任务记为no-call。复用缓存1995项通过来源、表达式及prompt/schema核验；v5直接API待处理3358项（clean240、noise0011560、noise0051543、GT15），单任务重试上限16790、总尝试上限20148。该快照未包括后续采集结果，也未计等价、结构及逐分钟任务。计划与哈希见`.agent/work/GOAL-CORE50/opus_plan_merge_collected_v5/merge_report.json`。
+- Stage5逐分钟选择已修正为使用同一分钟的算法原生incumbent，不按ID/OOD质量选择历史快照。动态噪声真实数据核验：DSO/Keijzer-11三个seed共540个run-minute点通过，seed522的`q(t)`从0.2551降至0.1871时仍使用minute 50公式及其SHA；证据`.agent/work/GOAL-CORE50/dynamic_real_smoke_v5b/`。定向测试4项通过；代码提交`daca57c1`。
 - Opus直接API代码和密钥配置已在iaaccn22准备，未发送本Goal的API请求。物理内存264010832 kB，90%目标上限约237.9 GB；`systemd-run --user --scope --property=MemoryMax=237907890000`仍因委派权限失败，实际限制不可用。待管理员启用memory cgroup委派或提供系统级受限服务后再启动Opus；训练、采集和离线计划继续运行。
+- clean EFF确定性计算正在运行，进程PID `2733006`；输入为v5 clean绑定、Stage5原生incumbent adapters及`trajectory_repairs_none_v5.json`。原`trajectory_repairs.v1.json`所绑定的wrapper SHA与当前源码不符，已拒绝沿用；当前不应用任何历史修复，769个缺失分钟保持unresolved。
 
 - IMPORT-002（并入GOAL-CORE50，复制已完成）：新Stage4目录`2、experiments/{noise}/{algorithm}/{dataset_name}/{seed}`。35个重叠数据集的4725份运行已复制，15个新数据集对应2025项待训练；保存859349个文件及849876个逐分钟progress文件。4721项有可用数值指标，Opus SHA256绑定有效1960项、缺失2762项、无可用表达式3项；GT已覆盖36个数据集。全部统计、pending清单和来源哈希见preflight `reuse_summary.json`、`reuse_manifest.csv`、`pending_training.csv`、`pending_opus.csv`及`reuse_support/opus_bindings.json`。源实验未修改。
 
