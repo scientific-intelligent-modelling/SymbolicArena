@@ -314,7 +314,13 @@ def atomic_json(path: Path, payload: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
-def build_report(*, write_freezes: bool, output_root: Path, report_path: Path) -> dict[str, Any]:
+def build_report(
+    *,
+    write_freezes: bool,
+    write_available_freezes: bool,
+    output_root: Path,
+    report_path: Path,
+) -> dict[str, Any]:
     datasets, contract = load_dataset_contract()
     dataset_checks = verify_dataset_sources(datasets)
     expected = contract["expected_keys"]
@@ -336,13 +342,17 @@ def build_report(*, write_freezes: bool, output_root: Path, report_path: Path) -
             available[key] = frozen
             statuses[str(json.loads(frozen["result"]["raw_text"]).get("status"))] += 1
     missing = sorted(expected - set(available))
+    available_by_condition = Counter(key[0] for key in available)
+    missing_by_condition = Counter(key[0] for key in missing)
 
     report: dict[str, Any] = {
         "schema": "core50.sixaxis_input_audit.v1",
         "status": "ready" if not missing else "incomplete",
         "expected_runs": len(expected),
         "available_runs": len(available),
+        "available_runs_by_condition": dict(sorted(available_by_condition.items())),
         "missing_runs": len(missing),
+        "missing_runs_by_condition": dict(sorted(missing_by_condition.items())),
         "reuse_runs": len(reuse_keys),
         "new_core50_runs": len(collection_keys),
         "new_collection_states": dict(collection_states),
@@ -369,10 +379,11 @@ def build_report(*, write_freezes: bool, output_root: Path, report_path: Path) -
         },
     }
 
-    if write_freezes:
-        if missing:
+    if write_freezes or write_available_freezes:
+        if write_freezes and missing:
             raise ValueError(f"仍缺少 {len(missing)} 项训练结果，拒绝生成完整 source freeze")
-        if any(path.exists() for path in output_root.glob("*_runs.jsonl.gz")):
+        suffix = "_runs.jsonl.gz" if write_freezes else "_runs_available.jsonl.gz"
+        if any(path.exists() for path in output_root.glob(f"*{suffix}")):
             raise FileExistsError(f"source freeze 已存在，拒绝覆盖: {output_root}")
         output_root.mkdir(parents=True, exist_ok=True)
         outputs = {}
@@ -382,12 +393,15 @@ def build_report(*, write_freezes: bool, output_root: Path, report_path: Path) -
                 for key in sorted(available)
                 if key[0] == condition
             )
-            path = output_root / f"{condition}_runs.jsonl.gz"
+            path = output_root / f"{condition}{suffix}"
             count, digest, size = write_gzip_jsonl(path, rows)
-            if count != 2250:
+            if count == 0:
+                raise ValueError(f"{condition}: source freeze 没有可用任务")
+            if write_freezes and count != 2250:
                 raise ValueError(f"{condition}: source freeze 行数必须为2250，实际为{count}")
             outputs[condition] = {"path": str(path), "rows": count, "sha256": digest, "size_bytes": size}
         report["source_freezes"] = outputs
+        report["source_freeze_kind"] = "full" if write_freezes else "available_partial_candidate"
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_json(report_path, report)
@@ -396,11 +410,18 @@ def build_report(*, write_freezes: bool, output_root: Path, report_path: Path) -
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--write-freezes", action="store_true")
+    output_mode = parser.add_mutually_exclusive_group()
+    output_mode.add_argument("--write-freezes", action="store_true")
+    output_mode.add_argument("--write-available-freezes", action="store_true")
     parser.add_argument("--output-root", type=Path, default=WORK / "source_freezes")
     parser.add_argument("--report", type=Path, default=WORK / "sixaxis_input_audit.json")
     args = parser.parse_args()
-    report = build_report(write_freezes=args.write_freezes, output_root=args.output_root, report_path=args.report)
+    report = build_report(
+        write_freezes=args.write_freezes,
+        write_available_freezes=args.write_available_freezes,
+        output_root=args.output_root,
+        report_path=args.report,
+    )
     print(json.dumps({key: report[key] for key in ("status", "expected_runs", "available_runs", "missing_runs", "reuse_runs", "new_core50_runs")}, ensure_ascii=False))
 
 

@@ -90,6 +90,7 @@ NUMPY_ATTRIBUTE_WHITELIST = {
     "abs",
     "arccos",
     "arcsin",
+    "arctan2",
     "cbrt",
     "clip",
     "cos",
@@ -340,6 +341,7 @@ def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
         "mean",
         "norm",
         "nan_to_num",
+        "arctan2",
         "where",
         "divide",
         "div",
@@ -349,9 +351,10 @@ def _resolve_identifier(name: str, ctx: _BuildContext) -> sp.Basic:
         "mul",
         "maximum",
         "minimum",
-            "arctan",
-            "arccos",
-            "arcsin",
+        "arctan",
+        "arccos",
+        "arcsin",
+        "arctan2",
         "gradient",
         "compare",
     }:
@@ -425,6 +428,11 @@ def _call_handler(name: str, ctx: _BuildContext):
         return lambda args: sp.log(
             _require_arity(name, args, 1)[0],
             sp.Integer(10),
+            evaluate=ctx.evaluate_expressions,
+        )
+    if name == "arctan2":
+        return lambda args: sp.atan2(
+            *_require_arity(name, args, 2),
             evaluate=ctx.evaluate_expressions,
         )
     if name == "clip":

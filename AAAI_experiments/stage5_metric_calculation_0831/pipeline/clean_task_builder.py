@@ -13,6 +13,7 @@ import json
 import keyword
 import math
 import re
+import sys
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -734,6 +735,143 @@ def _resolve_prediction_formula(
     )
 
 
+def _resolve_parameter_sum_comprehension(
+    *,
+    task_id: str,
+    selected_expression: str,
+    frozen_result_sha256: str,
+    payload: Mapping[str, Any],
+    feature_names: Sequence[str],
+) -> FormulaResolution | None:
+    expression_body = extract_expression_body(selected_expression)
+    if (
+        re.match(r"\s*sum\s*\(", expression_body) is None
+        or re.search(r"\benumerate\s*\(\s*params\s*\)", expression_body) is None
+    ):
+        return None
+    parsed = ast.parse(expression_body, mode="eval")
+    comprehensions = [
+        node for node in ast.walk(parsed)
+        if isinstance(node, (ast.ListComp, ast.GeneratorExp))
+    ]
+    if not comprehensions:
+        return None
+    if len(comprehensions) != 1 or not isinstance(parsed.body, ast.Call):
+        raise CleanTaskBuilderError(f"{task_id}: 参数 comprehension 结构不支持")
+
+    call = parsed.body
+    if not isinstance(call.func, ast.Name) or call.func.id != "sum" or len(call.args) != 1 or call.keywords:
+        raise CleanTaskBuilderError(f"{task_id}: 参数 comprehension 必须是单一 sum 调用")
+    comprehension = call.args[0]
+    if not isinstance(comprehension, (ast.ListComp, ast.GeneratorExp)) or len(comprehension.generators) != 1:
+        raise CleanTaskBuilderError(f"{task_id}: sum 参数必须包含一个 comprehension generator")
+
+    generator = comprehension.generators[0]
+    target = generator.target
+    if not isinstance(target, (ast.Tuple, ast.List)) or len(target.elts) != 2:
+        raise CleanTaskBuilderError(f"{task_id}: enumerate target 必须包含 index 和 parameter")
+    index_target, parameter_target = target.elts
+    if not isinstance(index_target, ast.Name) or not isinstance(parameter_target, ast.Name):
+        raise CleanTaskBuilderError(f"{task_id}: enumerate target 必须使用名称")
+    if (
+        not isinstance(generator.iter, ast.Call)
+        or not isinstance(generator.iter.func, ast.Name)
+        or generator.iter.func.id != "enumerate"
+        or len(generator.iter.args) != 1
+        or not isinstance(generator.iter.args[0], ast.Name)
+        or generator.iter.args[0].id != "params"
+        or generator.iter.keywords
+    ):
+        raise CleanTaskBuilderError(f"{task_id}: comprehension 必须遍历 enumerate(params)")
+
+    if generator.ifs:
+        if len(generator.ifs) != 1:
+            raise CleanTaskBuilderError(f"{task_id}: comprehension filter 数量不支持")
+        predicate = generator.ifs[0]
+        if not (
+            isinstance(predicate, ast.Compare)
+            and isinstance(predicate.left, ast.Name)
+            and predicate.left.id == parameter_target.id
+            and len(predicate.ops) == 1
+            and isinstance(predicate.ops[0], ast.NotEq)
+            and len(predicate.comparators) == 1
+            and isinstance(predicate.comparators[0], ast.Constant)
+            and predicate.comparators[0].value == 0
+        ):
+            raise CleanTaskBuilderError(f"{task_id}: comprehension filter 必须为 parameter != 0")
+
+    element = comprehension.elt
+    if not isinstance(element, ast.BinOp) or not isinstance(element.op, ast.Mult):
+        raise CleanTaskBuilderError(f"{task_id}: comprehension element 必须为 parameter * variable ** index")
+    power = element.right if isinstance(element.left, ast.Name) and element.left.id == parameter_target.id else element.left
+    parameter = element.left if power is element.right else element.right
+    if (
+        not isinstance(parameter, ast.Name)
+        or parameter.id != parameter_target.id
+        or not isinstance(power, ast.BinOp)
+        or not isinstance(power.op, ast.Pow)
+        or not isinstance(power.left, ast.Name)
+        or not isinstance(power.right, ast.Name)
+        or power.right.id != index_target.id
+        or CANONICAL_VARIABLE_PATTERN.fullmatch(power.left.id) is None
+    ):
+        raise CleanTaskBuilderError(f"{task_id}: comprehension element 必须为 parameter * xN ** index")
+
+    artifact = payload.get("canonical_artifact")
+    equation = payload.get("equation")
+    if not isinstance(artifact, Mapping) or not isinstance(equation, str):
+        raise CleanTaskBuilderError(f"{task_id}: 参数 comprehension 缺少冻结 canonical artifact")
+    if artifact.get("raw_equation") != equation or artifact.get("instantiated_expression") != selected_expression:
+        raise CleanTaskBuilderError(f"{task_id}: 参数 comprehension 与冻结 canonical artifact 不一致")
+    if artifact.get("artifact_valid") is not True or artifact.get("validation_errors"):
+        raise CleanTaskBuilderError(f"{task_id}: 参数 comprehension canonical artifact 未通过验证")
+    if artifact.get("expected_n_features") != len(feature_names):
+        raise CleanTaskBuilderError(f"{task_id}: canonical artifact 特征数与数据输入不一致")
+
+    raw_parameters = artifact.get("parameter_values")
+    if not isinstance(raw_parameters, list) or not raw_parameters:
+        raise CleanTaskBuilderError(f"{task_id}: canonical artifact 缺少参数数组")
+    parameters: list[float] = []
+    for raw_value in raw_parameters:
+        if isinstance(raw_value, bool):
+            raise CleanTaskBuilderError(f"{task_id}: canonical artifact 参数含布尔值")
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise CleanTaskBuilderError(f"{task_id}: canonical artifact 参数含非数值") from exc
+        if not math.isfinite(value):
+            raise CleanTaskBuilderError(f"{task_id}: canonical artifact 参数含非有限值")
+        parameters.append(value)
+
+    variable = power.left.id
+    terms = [
+        f"({value!r}) * ({variable} ** {index})"
+        for index, value in enumerate(parameters)
+        if value != 0
+    ]
+    expanded_expression = " + ".join(terms) if terms else "0"
+    semantic_expression, variable_mapping = map_indexed_variables(expanded_expression, feature_names)
+    manifest_entry = {
+        "resolution": "canonical_parameter_sum_comprehension",
+        "source_result_sha256": frozen_result_sha256,
+        "source_equation_sha256": _sha256_text(equation),
+        "canonical_artifact_sha256": _sha256_json(dict(artifact)),
+        "parameter_values_sha256": _sha256_json(parameters),
+        "parameter_count": len(parameters),
+        "expanded_term_count": len(terms),
+        "skipped_zero_indices": [index for index, value in enumerate(parameters) if value == 0],
+        "expanded_expression_sha256": _sha256_text(expanded_expression),
+        "rule": "sum(enumerate(params)) over parameter * xN ** index",
+    }
+    return FormulaResolution(
+        semantic_expression=semantic_expression,
+        expression_body=expanded_expression,
+        variable_mapping=variable_mapping,
+        status="canonical_parameter_sum_comprehension",
+        manifest_entry=manifest_entry,
+    )
+
+
 def _resolve_request_variables(
     *,
     expression: str,
@@ -1227,19 +1365,29 @@ def _build_pred_task(
             f"{identity['task_id']}: target_name 与 Ground Truth 不一致: "
             f"{target_name!r} != {ground_truth_targets[dataset_id]!r}"
         )
-    formula_resolution = _resolve_prediction_formula(
+    formula_resolution = _resolve_parameter_sum_comprehension(
         task_id=identity["task_id"],
         selected_expression=selected_expression,
         frozen_result_sha256=raw_sha256,
-        frozen_equation_sha256=(
-            _sha256_text(payload["equation"])
-            if isinstance(payload.get("equation"), str)
-            else None
-        ),
+        payload=payload,
         feature_names=feature_names,
-        recovery_entries=recovery_entries,
-        allow_missing_parameter_recovery=condition != CONDITION,
     )
+    if formula_resolution is not None:
+        expression_source = "canonical_artifact.parameter_values_sum_comprehension"
+    else:
+        formula_resolution = _resolve_prediction_formula(
+            task_id=identity["task_id"],
+            selected_expression=selected_expression,
+            frozen_result_sha256=raw_sha256,
+            frozen_equation_sha256=(
+                _sha256_text(payload["equation"])
+                if isinstance(payload.get("equation"), str)
+                else None
+            ),
+            feature_names=feature_names,
+            recovery_entries=recovery_entries,
+            allow_missing_parameter_recovery=condition != CONDITION,
+        )
     expression = formula_resolution.semantic_expression
     variable_mapping = formula_resolution.variable_mapping
     variables = feature_names
@@ -1253,15 +1401,20 @@ def _build_pred_task(
     domain_assumptions: dict[str, Any] = {}
     deterministic_symbolic_evidence: dict[str, Any] = {"dataset_probe": probe}
     if expression:
-        (
-            allowed_functions,
-            domain_assumptions,
-            deterministic_symbolic_evidence,
-        ) = _build_symbolic_request_evidence(
-            expression=expression,
-            variables=variables,
-            probe=probe,
-        )
+        try:
+            (
+                allowed_functions,
+                domain_assumptions,
+                deterministic_symbolic_evidence,
+            ) = _build_symbolic_request_evidence(
+                expression=expression,
+                variables=variables,
+                probe=probe,
+            )
+        except (CleanTaskBuilderError, SymbolicEvidenceError) as exc:
+            raise CleanTaskBuilderError(
+                f"{identity['task_id']}: deterministic symbolic evidence failed: {exc}"
+            ) from exc
     evidence_payload = {
         "source": {
             "algorithm": source.get("algorithm"),
@@ -1857,6 +2010,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_argument_parser()
     args = parser.parse_args(argv)
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), 20000))
     if args.report == "-" and not args.dry_run:
         raise CleanTaskBuilderError("非 dry-run 模式下 --report 输出到 stdout 会污染 JSONL")
     if args.non_applicable_evidence_dir is not None:
