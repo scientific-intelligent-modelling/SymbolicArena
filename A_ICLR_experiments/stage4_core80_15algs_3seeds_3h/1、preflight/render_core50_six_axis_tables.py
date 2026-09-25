@@ -72,7 +72,6 @@ def render(condition, rows, output):
                 score = row[axis]
                 text = f'{Decimal(score):.2f}' if score else 'NA'
                 if score and int(row[f'{axis}_available']) < int(row[f'{axis}_expected']):
-                    text += '*'
                     partial[f'{algorithm}:{axis}'] = {'available': int(row[f'{axis}_available']), 'expected': int(row[f'{axis}_expected'])}
                 result[axis] = text
                 if not score:
@@ -96,7 +95,7 @@ def render(condition, rows, output):
     label(0, -0.85, 'NA: incomplete metric evidence; values are not imputed. Highlights rank available, unrounded point estimates.', fontsize=9.2)
     if partial:
         counts = ', '.join(f"{name.split(':')[0]} {value['available']}/{value['expected']}" for name, value in partial.items())
-        label(0, -1.48, f'* EFF mean over available runs ({counts}).', fontsize=9.2)
+        label(0, -1.48, f'EFF mean over available runs ({counts}).', fontsize=9.2)
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     bounds = ax.get_window_extent(renderer)
