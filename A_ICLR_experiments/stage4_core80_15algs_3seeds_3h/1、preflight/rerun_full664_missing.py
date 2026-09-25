@@ -127,7 +127,16 @@ def run():
     bulk.dump(CONFIG / "active_hosts.json", HOSTS)
     module = original.queue_module()
     sys.argv = queue_args()
-    module.main()
+    try:
+        module.main()
+    except SystemExit:
+        state = json.loads((QUEUE / "state" / f"{BATCH}.state.json").read_text())
+        if len(state["tasks"]) != 236 or any(task["state"] not in {"done", "failed"} for task in state["tasks"].values()):
+            raise
+    finish()
+
+
+def finish():
     state_path = QUEUE / "state" / f"{BATCH}.state.json"
     state = json.loads(state_path.read_text())
     assert len(state["tasks"]) == 236 and all(task["state"] in {"done", "failed"} for task in state["tasks"].values())
@@ -149,10 +158,10 @@ def run():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("prepare", "deploy", "install", "run"))
+    parser.add_argument("mode", choices=("prepare", "deploy", "install", "run", "collect"))
     parser.add_argument("--host")
     args = parser.parse_args()
     if args.mode == "install":
         install(args.host)
     else:
-        {"prepare": prepare, "deploy": deploy, "run": run}[args.mode]()
+        {"prepare": prepare, "deploy": deploy, "run": run, "collect": finish}[args.mode]()

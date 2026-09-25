@@ -102,7 +102,7 @@ def transfer(host, tasks):
         assert all(saved.get(task["task_id"]) == task for task in tasks)
     else:
         dump(plan, tasks)
-    remote = roots(host) + "/.agent/work/FULL664-10M/bulk"
+    remote = str(Path(roots(host)) / WORK.relative_to(ROOT))
     options, target = transport(host)
     with (local / "transfer.log").open("a") as log:
         commands = [
