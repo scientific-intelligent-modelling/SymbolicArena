@@ -2,6 +2,7 @@
 
 ## 当前任务
 
+- REPORT-LLM-001（2026-09-26，已完成）：报告`3、metrics/opus_llama_protocol_report.md`说明Opus5对SYM/MIN/STAB的作用、Nguyen-9真实例子、LLM-SR/DrSR的Llama生成与BFGS评估、早期探针和Core50背景策略；附24个完整模板/spec/Schema区块。脚本preflight `build_llm_protocol_report.py`，输入来源及SHA256在报告末尾。已核验两算法900份参数、Stage2语义实验400条模型分组和iaaccn22当前非敏感API配置；原生buffer成功重新渲染两份真实spec的初始消息。历史逐请求报文未恢复，报告明确证据范围；未改训练、指标或Overleaf，未新增付费请求。无新增过程目录，下一步等待具体任务。
 - CI-CORE50-001（2026-09-26，已完成）：clean六轴95% task bootstrap CI已重算。输入2250份运行及750个algorithm-task级STAB完整，固定seed20260926统一抽样50个task、有放回重复1000次，每个task保留3个seed；STAB按task聚合，使用2.5%/97.5%线性分位数。输出`3、metrics/clean_six_axis_task_bootstrap_ci.csv`共90行，字段`algorithm,axis,mean,ci_lower,ci_upper`，采用0至100尺度；mean与当前clean汇总一致。脚本preflight `compute_clean_task_bootstrap_ci.py`；2250行输入、750行STAB、1000×50抽样索引及输入/输出SHA256保存在`3、metrics/clean_task_bootstrap/`。完整覆盖、逐run抽样与task重复计数复算一致性检查通过；未修改实验、图表或Overleaf。
 - TABLE-TEX-001（2026-09-25，已完成）：新增clean表格组件`3、metrics/tables/six_axis_clean_typeset.tex`及同名PDF预览；等宽指标列、统一行距、独立淡红/淡蓝高亮、局部分组样式，使用最新90个数值。预览入口preflight `preview_clean_typeset.tex`，按5.5英寸正文宽度通过XeLaTeX编译，一页、字体嵌入，无警告或溢出；PDF实际文本90个数值、列等距及横向位置核验通过。未修改原表或Overleaf；验证记录`.agent/work/TABLE-TEX-001/`已归档并原位保留。
 - FORMULA-OVERRIDE-001（2026-09-25，已完成）：按用户明确要求，LLM-SR/g0436/noise005/seed522采用上一个可处理的原生候选sample196（第116分钟仍被选用），仅此一份采用该选式例外。原始result.json保持原SHA，所选候选、参数、训练目标及预算内快照逐项核验；新结果与证据位于`3、metrics/formula_override_g0436_s522/`，脚本preflight `use_core50_previous_formula.py`。4项Opus处理均首次验收，费用0.132294元；最终ID/OOD/SYM/MIN采用所选公式，该数据集STAB三个seed联合重算，EFF保持原生训练轨迹。
