@@ -44,13 +44,15 @@ def queue_args():
 
 
 def prepare():
+    from experiment_paths import relocated_path
+
     CONFIG.mkdir(parents=True, exist_ok=True)
     WORK.mkdir(parents=True, exist_ok=True)
     with (original.CONFIG / "collection.csv").open(newline="") as handle:
         rows = list(csv.DictReader(handle))
     missing = [row for row in rows if row["collection_state"] != "collected"]
     assert len(missing) == 236 and all(row["assigned_host"] == "iaaccn49" for row in missing)
-    assert all(not list(Path(row["destination"]).glob("*")) for row in missing)
+    assert all(not list(relocated_path(row["destination"]).glob("*")) for row in missing)
     selected = [{"task_id": f"{row['algorithm']}_s1314_clean_{row['dataset_id']}"} for row in missing]
     with (CONFIG / "tasks.csv").open("x", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["task_id"], lineterminator="\n")
@@ -137,6 +139,8 @@ def run():
 
 
 def finish():
+    from experiment_paths import relocated_path
+
     state_path = QUEUE / "state" / f"{BATCH}.state.json"
     state = json.loads(state_path.read_text())
     assert len(state["tasks"]) == 236 and all(task["state"] in {"done", "failed"} for task in state["tasks"].values())
@@ -150,7 +154,7 @@ def finish():
     preserved = json.loads((CONFIG / "preserved_results.json").read_text())
     assert len(preserved) == 9724
     for directory, digest in preserved.items():
-        assert bulk.sha(Path(directory) / "result.json") == digest, directory
+        assert bulk.sha(relocated_path(directory) / "result.json") == digest, directory
     bulk.dump(CONFIG / "completion.json", {"time": time.time(), "rerun_states": dict(Counter(task["state"] for task in state["tasks"].values())),
         "collection_counts": counts, "preserved_result_hashes_verified": len(preserved)})
     print(json.dumps({"complete": counts.get("collected") == 9960, "counts": counts}), flush=True)

@@ -12,7 +12,7 @@ from typing import Any, Iterable
 ROOT = Path(__file__).resolve().parents[3]
 STAGE = ROOT / "A_ICLR_experiments/stage4_core80_15algs_3seeds_3h"
 PREFLIGHT = STAGE / "1、preflight"
-EXPERIMENTS = STAGE / "2、experiments"
+EXPERIMENTS = STAGE / "2.2 core50 experiments"
 WORK = ROOT / ".agent/work/GOAL-CORE50"
 CORE50 = PREFLIGHT / "reuse_support/core50.csv"
 FROZEN_CONFIG = PREFLIGHT / "reuse_support/source_core80_config.json"

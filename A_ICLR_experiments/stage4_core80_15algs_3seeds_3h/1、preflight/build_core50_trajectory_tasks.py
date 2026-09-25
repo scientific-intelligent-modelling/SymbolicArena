@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import re
 
+from experiment_paths import relocated_path
+
 
 CONDITIONS = ("clean", "noise001", "noise005")
 
@@ -52,7 +54,7 @@ def build_tasks(freeze_root, output_root):
                 raise ValueError(f"duplicate logical key: {key}")
             seen.add(key)
 
-            result_path = Path(source["path"])
+            result_path = relocated_path(source["path"])
             expected_sha = str(source["result_file_sha256"])
             if sha256_file(result_path) != expected_sha or row["result"]["sha256"] != expected_sha:
                 raise ValueError(f"{key}: result SHA256 mismatch")

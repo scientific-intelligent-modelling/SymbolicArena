@@ -7,6 +7,8 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+from experiment_paths import relocated_path
+
 
 @lru_cache(maxsize=None)
 def digest(path):
@@ -36,7 +38,7 @@ def main():
     for cache in audit['cache_rows']:
         key = cache['historical_evaluation_key']
         binding = by_key[key]
-        source_file = Path(binding['destination'])
+        source_file = relocated_path(binding['destination'])
         file_sha = digest(source_file)
         if file_sha != cache['cached_artifact_sha256']:
             raise ValueError(f'缓存文件哈希改变: {key}')

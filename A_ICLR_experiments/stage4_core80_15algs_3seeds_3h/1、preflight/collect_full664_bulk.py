@@ -148,8 +148,10 @@ def result_fields(result):
 
 
 def publish_task(task, record, host):
+    from experiment_paths import relocated_path
+
     source = WORK / host / "extracted" / task["task_id"]
-    destination = Path(record["destination"])
+    destination = relocated_path(record["destination"])
     conflicts = [item["path"] for item in task["files"] if (destination / item["path"]).exists()
                  and sha(destination / item["path"]) != item["sha256"]]
     if conflicts:
@@ -186,6 +188,8 @@ def publish_task(task, record, host):
 
 
 def collect():
+    from experiment_paths import relocated_path
+
     WORK.mkdir(parents=True, exist_ok=True)
     state = json.loads((ROOT / ".agent/work/FULL664-10M/queue/state" / f"{BATCH}.state.json").read_text())
     overrides_path = CONFIG / "delivery_overrides.json"
@@ -215,7 +219,7 @@ def collect():
         row.update(controller_state=task["state"], controller_task_id=task_id, assigned_host=task["assigned_host"], controller_attempts=task["attempts"])
         row["queue_batch"] = task.get("source_batch", BATCH)
         records[task_id] = row
-        destination = Path(row["destination"])
+        destination = relocated_path(row["destination"])
         result, binding = destination / "result.json", destination / "import_binding.json"
         if result.is_file() and binding.is_file():
             saved = json.loads(binding.read_text())

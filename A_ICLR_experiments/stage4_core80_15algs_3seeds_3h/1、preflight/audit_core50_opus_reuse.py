@@ -8,6 +8,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from experiment_paths import relocated_path
+
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.anthropic_api_runner import (
     API_TRANSPORT_VERSION,
     CONTRACT_CANONICAL_MODEL,
@@ -138,7 +140,7 @@ def audit(
         task_type = str(binding["task_type"])
         if task_type not in {"pred_simplify", "gt_simplify"}:
             continue
-        artifact_path = Path(str(binding["destination"]))
+        artifact_path = relocated_path(str(binding["destination"]))
         artifact_bytes = artifact_path.read_bytes()
         artifact_sha = digest_bytes(artifact_bytes)
         if artifact_sha != binding["sha256"]:

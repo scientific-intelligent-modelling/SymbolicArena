@@ -112,7 +112,7 @@ def main():
             row, trace = runs[key], points[key]
             if [point['minute'] for point in trace] != list(range(1, 181)):
                 raise ValueError('分钟网格不完整')
-            algorithm_roots = {p.name.lower(): p for p in (STAGE / '2、experiments' / row['condition']).iterdir() if p.is_dir()}
+            algorithm_roots = {p.name.lower(): p for p in (STAGE / '2.2 core50 experiments' / row['condition']).iterdir() if p.is_dir()}
             directory = algorithm_roots[row['algorithm']] / row['dataset_id'] / str(row['seed'])
             result_path = directory / 'result.json'
             if sha(result_path) != row['source_sha256']:

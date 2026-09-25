@@ -16,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 STAGE = HERE.parent
 OLD = ROOT / "A_ICLR_experiments/pre_exp_26.09.23/stage4_core80_15algs_3seeds_3h"
-EXPERIMENTS = STAGE / "2、experiments"
+EXPERIMENTS = STAGE / "2.2 core50 experiments"
 HISTORY = ROOT / ".agent/work/EXP-001"
 SUPPORT = HERE / "reuse_support"
 
@@ -71,7 +71,9 @@ def opus_index():
 
 
 def copy_run(row):
-    destination = Path(row["destination"])
+    from experiment_paths import relocated_path
+
+    destination = relocated_path(row["destination"])
     destination.mkdir(parents=True, exist_ok=True)
     if row["training_state"] == "pending":
         return row
@@ -80,7 +82,7 @@ def copy_run(row):
     if binding_path.exists():
         binding = json.loads(binding_path.read_text())
         assert binding["source_directory"] == str(source)
-        assert binding["destination_directory"] == str(destination)
+        assert relocated_path(binding["destination_directory"]) == destination
         assert binding["result_sha256"] == row["result_sha256"]
         assert sha_bytes((destination / "result.json").read_bytes()) == row["result_sha256"]
         paths = [Path(current) / name for current, _, names in os.walk(source) for name in names]

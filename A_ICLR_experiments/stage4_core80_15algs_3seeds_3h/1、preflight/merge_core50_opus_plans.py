@@ -7,6 +7,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
+from experiment_paths import relocated_path
+
 from AAAI_experiments.stage5_metric_calculation_0831.pipeline.clean_task_builder import (
     _build_task_definition,
     _load_prompt_schema,
@@ -138,7 +140,7 @@ def merge_plans(
         binding = bindings_by_key.get(str(cache["historical_evaluation_key"]))
         if binding is None:
             raise ValueError(f"cache binding 缺少 evaluation_key: {cache['logical_id']}")
-        artifact_path = Path(str(binding["destination"]))
+        artifact_path = relocated_path(str(binding["destination"]))
         if sha256_file(artifact_path) != cache["cached_artifact_sha256"]:
             raise ValueError(f"cached artifact SHA256 在 plan merge 前漂移: {artifact_path}")
         artifact = json.loads(artifact_path.read_text(encoding="utf-8"))

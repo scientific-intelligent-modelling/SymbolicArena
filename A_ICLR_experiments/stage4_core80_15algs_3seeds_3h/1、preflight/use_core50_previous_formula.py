@@ -29,7 +29,7 @@ KEY = 'llmsr::feynman-i.11.19::s522::noise005'
 
 def prepare():
     LOCAL.mkdir(parents=True, exist_ok=True)
-    directory = STAGE / '2、experiments/noise005/llmsr/feynman-i.11.19/522'
+    directory = STAGE / '2.2 core50 experiments/noise005/llmsr/feynman-i.11.19/522'
     original = json.loads((directory / 'result.json').read_text())
     history = directory / 'experiments' / Path(original['experiment_dir']).name / 'best_history'
     rejected = set()

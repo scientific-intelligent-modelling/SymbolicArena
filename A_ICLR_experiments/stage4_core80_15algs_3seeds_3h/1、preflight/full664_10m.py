@@ -78,7 +78,7 @@ def prepare():
         dump(params_root / f"{tool}__clean.json", params)
     dump(CONFIG / "experiment.json", {"batch": BATCH, "tasks": 9960, "datasets": 664, "algorithms": TOOLS,
         "seed": 1314, "condition": "clean", "budget_seconds": 600, "source": str(source.relative_to(ROOT)),
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "destination_root": str(HERE.parent / "2、experiments"),
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "destination_root": str(HERE.parent / "2.1 full set experimets"),
         "smoke_tests": False, "opus": False, "retry_limit": 1})
     print(json.dumps({"prepared": 9960, "dataset_names_disambiguated": sum(r["destination_name"] != r["dataset_name"] for r in datasets)}), flush=True)
 
@@ -222,7 +222,7 @@ def collect():
     for tool in TOOLS:
         for row in datasets:
             name = {"imcts": "iMCTS", "qlattice": "QLattice"}.get(tool, tool)
-            destination = HERE.parent / "2、experiments/clean" / name / row["destination_name"] / "1314"
+            destination = HERE.parent / "2.1 full set experimets/clean" / name / row["destination_name"] / "1314"
             pending.append({"noise": "clean", "algorithm": tool, "dataset_id": row["dataset_id"],
                 "dataset_name": row["dataset_name"], "dataset_rel": row["dataset_rel"],
                 "seed": "1314", "training_budget_seconds": "600", "destination": str(destination)})

@@ -138,7 +138,7 @@ def build_initial_message(algorithm):
     buffer = importlib.import_module(f"{package}.buffer")
     source_text(Path(buffer.__file__))
     source_text(Path(manipulation.__file__))
-    result_root = STAGE / f"2、experiments/clean/{algorithm}/Nguyen-6/520"
+    result_root = STAGE / f"2.2 core50 experiments/clean/{algorithm}/Nguyen-6/520"
     pattern = "experiments/*/spec_dynamic.txt" if algorithm == "llmsr" else "experiments/*/specs/generated_spec.txt"
     paths = list(result_root.glob(pattern))
     assert len(paths) == 1, paths
@@ -199,7 +199,7 @@ def main():
     counts = Counter()
     for condition in ("clean", "noise001", "noise005"):
         for algorithm in ("llmsr", "drsr"):
-            paths = list((STAGE / f"2、experiments/{condition}/{algorithm}").glob("*/*/result.json"))
+            paths = list((STAGE / f"2.2 core50 experiments/{condition}/{algorithm}").glob("*/*/result.json"))
             assert len(paths) == 150, (condition, algorithm, len(paths))
             for path in paths:
                 parameters = json.loads(path.read_text())["params"]

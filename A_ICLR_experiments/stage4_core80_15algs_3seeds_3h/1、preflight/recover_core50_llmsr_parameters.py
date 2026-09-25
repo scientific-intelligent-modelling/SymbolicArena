@@ -72,7 +72,7 @@ def main():
     output = WORK / 'remaining_terminal/recovered_parameters'
     output.mkdir(parents=True, exist_ok=True)
     for seed in (520, 522):
-        directory = ROOT / f'A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2、experiments/noise005/llmsr/Nguyen-6/{seed}'
+        directory = ROOT / f'A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2.2 core50 experiments/noise005/llmsr/Nguyen-6/{seed}'
         result = json.loads((directory / 'result.json').read_text())
         experiment = directory / 'experiments' / Path(result['experiment_dir']).name
         progress = json.loads((experiment / 'progress.json').read_text())[-1]
