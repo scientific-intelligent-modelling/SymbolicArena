@@ -2,6 +2,7 @@
 
 ## 当前任务
 
+- CI-CORE50-001（2026-09-26，已完成）：clean六轴95% task bootstrap CI已重算。输入2250份运行及750个algorithm-task级STAB完整，固定seed20260926统一抽样50个task、有放回重复1000次，每个task保留3个seed；STAB按task聚合，使用2.5%/97.5%线性分位数。输出`3、metrics/clean_six_axis_task_bootstrap_ci.csv`共90行，字段`algorithm,axis,mean,ci_lower,ci_upper`，采用0至100尺度；mean与当前clean汇总一致。脚本preflight `compute_clean_task_bootstrap_ci.py`；2250行输入、750行STAB、1000×50抽样索引及输入/输出SHA256保存在`3、metrics/clean_task_bootstrap/`。完整覆盖、逐run抽样与task重复计数复算一致性检查通过；未修改实验、图表或Overleaf。
 - TABLE-TEX-001（2026-09-25，已完成）：新增clean表格组件`3、metrics/tables/six_axis_clean_typeset.tex`及同名PDF预览；等宽指标列、统一行距、独立淡红/淡蓝高亮、局部分组样式，使用最新90个数值。预览入口preflight `preview_clean_typeset.tex`，按5.5英寸正文宽度通过XeLaTeX编译，一页、字体嵌入，无警告或溢出；PDF实际文本90个数值、列等距及横向位置核验通过。未修改原表或Overleaf；验证记录`.agent/work/TABLE-TEX-001/`已归档并原位保留。
 - FORMULA-OVERRIDE-001（2026-09-25，已完成）：按用户明确要求，LLM-SR/g0436/noise005/seed522采用上一个可处理的原生候选sample196（第116分钟仍被选用），仅此一份采用该选式例外。原始result.json保持原SHA，所选候选、参数、训练目标及预算内快照逐项核验；新结果与证据位于`3、metrics/formula_override_g0436_s522/`，脚本preflight `use_core50_previous_formula.py`。4项Opus处理均首次验收，费用0.132294元；最终ID/OOD/SYM/MIN采用所选公式，该数据集STAB三个seed联合重算，EFF保持原生训练轨迹。
 - LLM-SR/noise005最新六维均值为ID 33.35351、OOD 23.00112、SYM 31.26407、MIN 51.32484、EFF 80.96271、STAB 4.05176；各运行轴150/150、STAB 50/50，三个条件汇总表均无NA。已更新本地CSV、运行明细、Opus索引及PNG/PDF表格。仅目标运行的最终公式和同一数据集的STAB受影响，其他运行及所有EFF通过不变性核验。原始输入及前一汇总保留；Overleaf本轮未同步。过程`.agent/work/FORMULA-OVERRIDE-001/`已归档并原位保留。
