@@ -178,7 +178,11 @@ def terminal_metrics(root, output, efficiencies, *, export_sources=False):
             if len(values) != expected:
                 raise ValueError('最终指标分母错误')
             valid = [v for v in values if v is not None]
-            row[axis] = 100 * sum(valid) / expected if len(valid) == expected else None
+            if axis == 'EFF':
+                row[axis] = 100 * sum(valid) / len(valid) if valid else None
+                row['EFF_aggregation'] = 'mean_all_runs' if len(valid) == expected else 'mean_available_runs'
+            else:
+                row[axis] = 100 * sum(valid) / expected if len(valid) == expected else None
             row[f'{axis}_available'] = len(valid)
             row[f'{axis}_expected'] = expected
         summaries.append(row)

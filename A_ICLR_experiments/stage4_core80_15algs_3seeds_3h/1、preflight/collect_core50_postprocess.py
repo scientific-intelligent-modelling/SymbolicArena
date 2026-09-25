@@ -72,8 +72,10 @@ def collect_terminal():
                     available = [value for value in values if value is not None]
                     if len(values) != expected or int(row[f'{axis}_available']) != len(available):
                         raise ValueError('汇总分母或可用数量不符')
-                    if len(available) == expected:
-                        if not math.isclose(float(row[axis]), 100 * sum(available) / expected, abs_tol=1e-10):
+                    partial_eff = axis == 'EFF' and row.get('EFF_aggregation') == 'mean_available_runs' and bool(available)
+                    if len(available) == expected or partial_eff:
+                        denominator = len(available) if partial_eff else expected
+                        if not math.isclose(float(row[axis]), 100 * sum(available) / denominator, abs_tol=1e-10):
                             raise ValueError('算法汇总复算不一致')
                     elif row[axis] != '':
                         raise ValueError('缺失指标未保留空值')

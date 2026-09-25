@@ -90,6 +90,7 @@ def aggregate(root, output):
     report = {'scope': 'terminal_formulas_only', 'run_count': 6750, 'task_count': 2250,
         'numeric_run_minute_count': sum(counts.values()), 'terminal_unresolved': unresolved,
         'formal_ready': not unresolved, 'new_api_requests': 0,
+        'eff_aggregation': 'available_runs_with_explicit_denominator',
         'score_scale': {'run': '0..1', 'algorithm': '0..100'},
         'files': {path.name: {'sha256': sha(path), 'path': str(path)} for path in sorted(output.iterdir()) if path.is_file()}}
     write_json(output / 'verification.json', report)

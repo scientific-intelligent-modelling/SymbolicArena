@@ -31,6 +31,19 @@ def expression_key(dataset, variables, expression):
         'expression': expression, 'semantics': 'canonical_replay.v1'}).encode()).hexdigest()
 
 
+def completed_snapshot_horizon(final, payloads):
+    last = max(payloads, default=0)
+    if not 0 < last < 180 or payloads[last].get('record_type') != 'budget_end_internal_best':
+        return 180
+    seconds = _finite_number(final.get('seconds'))
+    observed = _finite_number(payloads[last].get('elapsed_seconds'))
+    if seconds is None or observed is None or not 0 < seconds <= observed <= (last + 1) * 60:
+        return 180
+    if builder.select_formula_with_source(final)[0] != builder.select_formula_with_source(payloads[last])[0]:
+        return 180
+    return last
+
+
 def process_shard(arguments):
     sys.setrecursionlimit(20000)
     source_path, output, expected_runs = arguments
@@ -70,13 +83,7 @@ def process_shard(arguments):
                     endpoint_audit.append({'minute': minute, 'original_index': payload['checkpoint_index'],
                         'elapsed_seconds': elapsed, 'source_sha256': snapshots[minute]['selected_sha256']})
                     payload['checkpoint_index'] = minute
-            native_horizon = 180
-            last = max(payloads, default=0)
-            if (last and last < 180 and payloads[last].get('record_type') == 'budget_end_internal_best'
-                    and isinstance(final.get('seconds'), (int, float)) and 0 < final['seconds'] <= last * 60
-                    and final['seconds'] <= payloads[last].get('elapsed_seconds', -1)
-                    and builder.select_formula_with_source(final)[0] == builder.select_formula_with_source(payloads[last])[0]):
-                native_horizon = last
+            native_horizon = completed_snapshot_horizon(final, payloads)
             issue = None
             try:
                 payloads, _ = _normalize_checkpoint_drift(payloads, raw_snapshots=record['snapshots'], logical_key=logical_key)

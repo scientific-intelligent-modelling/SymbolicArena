@@ -28,7 +28,7 @@ def sha(path):
 
 
 def render(condition, rows, output):
-    ranks, highlights, missing = {}, {}, {}
+    ranks, highlights, missing, partial = {}, {}, {}, {}
     for axis in AXES:
         values = sorted({Decimal(row[axis]) for row in rows.values() if row[axis]}, reverse=True)
         highlights[axis] = {}
@@ -71,6 +71,9 @@ def render(condition, rows, output):
             for x, axis in zip(centers, AXES):
                 score = row[axis]
                 text = f'{Decimal(score):.2f}' if score else 'NA'
+                if score and int(row[f'{axis}_available']) < int(row[f'{axis}_expected']):
+                    text += '*'
+                    partial[f'{algorithm}:{axis}'] = {'available': int(row[f'{axis}_available']), 'expected': int(row[f'{axis}_expected'])}
                 result[axis] = text
                 if not score:
                     missing[f'{algorithm}:{axis}'] = {'available': int(row[f'{axis}_available']), 'expected': int(row[f'{axis}_expected'])}
@@ -91,6 +94,9 @@ def render(condition, rows, output):
         ax.add_patch(Rectangle((x, -0.27), 0.27, 0.42, facecolor=background, edgecolor='none'))
         label(x + 0.38, -0.05, caption, fontsize=9.5, color=foreground)
     label(0, -0.85, 'NA: incomplete metric evidence; values are not imputed. Highlights rank available, unrounded point estimates.', fontsize=9.2)
+    if partial:
+        counts = ', '.join(f"{name.split(':')[0]} {value['available']}/{value['expected']}" for name, value in partial.items())
+        label(0, -1.48, f'* EFF mean over available runs ({counts}).', fontsize=9.2)
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     bounds = ax.get_window_extent(renderer)
@@ -109,7 +115,7 @@ def render(condition, rows, output):
         writer = csv.DictWriter(handle, fieldnames=['Paradigm', 'Algorithm', *AXES])
         writer.writeheader()
         writer.writerows(export)
-    return {'algorithms': len(export), 'highlights': highlights, 'missing': missing,
+    return {'algorithms': len(export), 'highlights': highlights, 'missing': missing, 'partial': partial,
             'text_bounds_and_overlap_check': 'passed'}
 
 
@@ -131,7 +137,8 @@ def main():
                     raise ValueError(f'重复算法: {key}')
                 for axis in AXES:
                     available, expected = int(row[f'{axis}_available']), int(row[f'{axis}_expected'])
-                    if bool(row[axis]) != (available == expected):
+                    allowed = available == expected or (axis == 'EFF' and available > 0 and row.get('EFF_aggregation') == 'mean_available_runs')
+                    if bool(row[axis]) != allowed:
                         raise ValueError(f'缺失标记与覆盖不符: {key}, {axis}')
                     if row[axis] and not 0 <= Decimal(row[axis]) <= 100:
                         raise ValueError(f'指标范围异常: {key}, {axis}')
