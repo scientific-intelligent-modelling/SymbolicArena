@@ -1,0 +1,250 @@
+{
+  "condition": "clean",
+  "seed": 1314,
+  "budget_seconds": 600,
+  "scale": "0-100",
+  "higher_is_better": true,
+  "metric": "100 * phi_nmse(result.id_test.nmse or result.ood_test.nmse)",
+  "formula": "100 * (1 - (clip(log10(max(nmse, 1e-12)), -12, 2) + 12) / 14)",
+  "aggregation": "equal-weight arithmetic mean of per-task scores; invalid numeric results score zero",
+  "denominators": {
+    "full664": 664,
+    "core50": 50
+  },
+  "core50_from_same_runs": true,
+  "core50_ids": [
+    "g0018",
+    "g0020",
+    "g0024",
+    "g0025",
+    "g0027",
+    "g0028",
+    "g0052",
+    "g0053",
+    "g0066",
+    "g0105",
+    "g0130",
+    "g0151",
+    "g0168",
+    "g0184",
+    "g0208",
+    "g0233",
+    "g0266",
+    "g0270",
+    "g0277",
+    "g0290",
+    "g0292",
+    "g0320",
+    "g0358",
+    "g0365",
+    "g0371",
+    "g0390",
+    "g0399",
+    "g0406",
+    "g0413",
+    "g0436",
+    "g0461",
+    "g0496",
+    "g0524",
+    "g0542",
+    "g0578",
+    "g0594",
+    "g0595",
+    "g0601",
+    "g0602",
+    "g0604",
+    "g0608",
+    "g0611",
+    "g0620",
+    "g0625",
+    "g0636",
+    "g0641",
+    "g0644",
+    "g0649",
+    "g0651",
+    "g0660"
+  ],
+  "algorithms": [
+    "drsr",
+    "dso",
+    "e2esr",
+    "fepysr",
+    "gplearn",
+    "imcts",
+    "jaxsr",
+    "llmsr",
+    "pyoperon",
+    "pysr",
+    "qlattice",
+    "ragsr",
+    "symbolfit",
+    "tpsr",
+    "udsr"
+  ],
+  "verified_run_count": 9960,
+  "invalid_nmse_counts": {
+    "drsr": {
+      "ID": {
+        "full664": 2,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 2,
+        "core50": 0
+      }
+    },
+    "dso": {
+      "ID": {
+        "full664": 0,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 0,
+        "core50": 0
+      }
+    },
+    "e2esr": {
+      "ID": {
+        "full664": 28,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 28,
+        "core50": 0
+      }
+    },
+    "fepysr": {
+      "ID": {
+        "full664": 12,
+        "core50": 1
+      },
+      "OOD": {
+        "full664": 12,
+        "core50": 1
+      }
+    },
+    "gplearn": {
+      "ID": {
+        "full664": 0,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 0,
+        "core50": 0
+      }
+    },
+    "imcts": {
+      "ID": {
+        "full664": 0,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 0,
+        "core50": 0
+      }
+    },
+    "jaxsr": {
+      "ID": {
+        "full664": 2,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 2,
+        "core50": 0
+      }
+    },
+    "llmsr": {
+      "ID": {
+        "full664": 1,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 1,
+        "core50": 0
+      }
+    },
+    "pyoperon": {
+      "ID": {
+        "full664": 3,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 3,
+        "core50": 0
+      }
+    },
+    "pysr": {
+      "ID": {
+        "full664": 69,
+        "core50": 3
+      },
+      "OOD": {
+        "full664": 69,
+        "core50": 3
+      }
+    },
+    "qlattice": {
+      "ID": {
+        "full664": 0,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 0,
+        "core50": 0
+      }
+    },
+    "ragsr": {
+      "ID": {
+        "full664": 16,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 16,
+        "core50": 0
+      }
+    },
+    "symbolfit": {
+      "ID": {
+        "full664": 40,
+        "core50": 2
+      },
+      "OOD": {
+        "full664": 40,
+        "core50": 2
+      }
+    },
+    "tpsr": {
+      "ID": {
+        "full664": 19,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 19,
+        "core50": 0
+      }
+    },
+    "udsr": {
+      "ID": {
+        "full664": 7,
+        "core50": 0
+      },
+      "OOD": {
+        "full664": 7,
+        "core50": 0
+      }
+    }
+  },
+  "input_sha256": {
+    "A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/full664_10m/collection.csv": "df07dbec5dcef2325afd000e8729809fa81af66d294717a6c4fefda19178987b",
+    "A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/full664_10m/datasets.csv": "923c39663a4322aa5c185e366419b8ab25cdfd155df022fa3d8566cca2539ea5",
+    "A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/core50_selection_outputs.zip": "f88e38a7039cf5f70fa923ddfc5c9a2718ff3accb9e5357ff22c971b966f2856",
+    "AAAI_experiments/stage5_metric_calculation_0831/pipeline/metrics.py": "093f17abd1ed589e8f6be18b0ccf4a12744ab465100224f53d1d3c166b23a630"
+  },
+  "core50_csv_inside_zip_sha256": "164eb3f863a07cf989e5c1ea3b437b0485ebb39312c7ebdea45a988db57837ba",
+  "script_sha256": "d1f996d044bc05f43d04da36d761a6024523adfe68e15ff1823520dff48d8b9b",
+  "output_sha256": {
+    "score_inputs.csv": "1d264a1ac160d0647735e466205d99c3d0862373c15f1b32db532ebb224fc36b",
+    "ood_mean.csv": "8350596c43b750039c1322b80cb891c47a2c19ee140be29ce786de418bde42f4",
+    "id_mean.csv": "55e7116c26d9f95c93f3baf05631861fe07efe85479c50752f6a7d9f1594ac29"
+  }
+}

@@ -2,6 +2,7 @@
 
 ## 当前任务
 
+- IDOOD-FULL664-001（2026-09-26，已完成）：生成`3、metrics/full664_core50_10m/id_mean.csv`与`ood_mean.csv`，各15行，字段`algorithm,full664_mean,core50_mean`。使用本轮clean/seed1314/600秒的9960项；Core50按当前选择ZIP的完整数据集路径从同批结果取子集。逐任务使用既有phi_nmse转换到0至100，无有效数值计0，分母固定664/50。脚本preflight `aggregate_full664_core50_id_ood.py`；逐任务输入与来源SHA为同目录`score_inputs.csv`，输入版本、名单、无效数量及输出SHA见`manifest.json`。9960份来源哈希、完整覆盖、均值复算及两表15算法一致性核验通过；原实验与三小时汇总未修改。
 - FULL664-RECOVERY49（2026-09-26 05:12，已完成）：用户授权的236项已在13台机器重跑并收集，clean、seed1314、每项600秒及原算法参数保持不变；235项done、DrSR/g0378一项failed，候选池为空触发softmax错误，已保留原始结果和日志。全部9960项现已收集到对应seed1314目录，原9724份result SHA256逐项核验未改变，无同步错误或结果冲突。入口preflight `rerun_full664_missing.py`，任务、参数及原结果哈希位于`full664_10m/recovery49/`；完成核验`completion.json`，训练终态`terminal_queue.json`，数据来源选择`delivery_overrides.json`，逐文件SHA256证据`recovery49/bulk_manifests/`。本轮队列及采集进程均已结束，`.agent/work/FULL664-10M/recovery49/`原位归档，未删除旧输出；下一步等待指标任务。
 - FULL664-10M（2026-09-26，训练记录已交付）：按用户紧急要求重跑664×15=9960项，clean、seed1314、每项600秒，保留60秒快照及原生训练目标选出的预算内最佳结果；未运行冒烟测试、未启动Opus。iaaccn22~29、48~53、55的数据文件存在、非空及LFS检查通过，共15台、每台664任务；54不可达。调度按现有CPU权重使用100%容量、内存使用92%停止新增、保留8GiB，不设置单进程内存上限；每台最多256项，每轮最多64项，LLM不另设全局任务数量上限。
 - 有效入口：preflight `full664_10m.py`及`full664_10m/`中的664项清单、15份600秒参数、`experiment.json`、`host_data_audit.json`、`support_sync.json`；训练使用`run_core50_queue.py`，队列及日志位于`.agent/work/FULL664-10M/`。同步目标`2、experiments/clean/{algorithm}/{dataset}/1314/`，215个非Core50同名任务用g编号区分，已有Core50目录和旧seed保留。
