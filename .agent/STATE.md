@@ -2,6 +2,8 @@
 
 ## 当前任务
 
+- FORMULA-OVERRIDE-001（2026-09-25，已完成）：按用户明确要求，LLM-SR/g0436/noise005/seed522采用上一个可处理的原生候选sample196（第116分钟仍被选用），仅此一份采用该选式例外。原始result.json保持原SHA，所选候选、参数、训练目标及预算内快照逐项核验；新结果与证据位于`3、metrics/formula_override_g0436_s522/`，脚本preflight `use_core50_previous_formula.py`。4项Opus处理均首次验收，费用0.132294元；最终ID/OOD/SYM/MIN采用所选公式，该数据集STAB三个seed联合重算，EFF保持原生训练轨迹。
+- LLM-SR/noise005最新六维均值为ID 33.35351、OOD 23.00112、SYM 31.26407、MIN 51.32484、EFF 80.96271、STAB 4.05176；各运行轴150/150、STAB 50/50，三个条件汇总表均无NA。已更新本地CSV、运行明细、Opus索引及PNG/PDF表格。仅目标运行的最终公式和同一数据集的STAB受影响，其他运行及所有EFF通过不变性核验。原始输入及前一汇总保留；Overleaf本轮未同步。过程`.agent/work/FORMULA-OVERRIDE-001/`已归档并原位保留。
 - EFF-RECOVER-001（2026-09-25，已完成）：恢复154/158份缺失EFF，其中E2ESR148份、LLM-SR正常结束后延续1份、QLattice结束后延续1份、原生参数绑定恢复4份。DrSR、LLM-SR、E2ESR在clean/noise001/noise005均为150/150份，EFF均值依次为DrSR 83.92644/84.73846/83.42825，LLM-SR 80.54579/81.68784/80.96271，E2ESR 90.95185/89.44074/89.17778。JAXSR两种噪声仍有3/1份不可恢复，分别按147/149份求均值并标注数量；其余指标口径不变。
 - 当前有效EFF输入为`3、metrics/eff_recovery/recovered_run_minutes.jsonl.gz`覆盖对应logical_key/minute，原始分钟记录保留在`inputs/minute_evidence_full/`。恢复前汇总保存在`eff_recovery/input_snapshot/`；脚本preflight `recover_core50_eff.py`及`--publish`，证据`eff_recovery/verification.json`，45组均值`eff_recovery/eff_means.csv`。已更新本地六维CSV、运行明细、缺失清单、SHA256及三张PNG/PDF表格；原生历史函数、参数和训练目标逐项绑定，其他五轴未改变。新增训练及API请求均为0。Overleaf本轮未修改，待明确同步要求；过程`.agent/work/EFF-RECOVER-001/`已归档并原位保留。
 - EFF-DIAG-001（2026-09-25，已由EFF-RECOVER-001更正）：148份E2ESR轨迹因结束分钟取整条件被阻止延续。全部最终公式与末次快照一致，候选实际发现时间均早于末次记录对应分钟。原始诊断证据`.agent/work/EFF-DIAG-001/e2esr_tail_audit.json`及`inspect_e2esr.py`原位保留。
@@ -10,7 +12,7 @@
 - TABLE-CORE50（2026-09-25，已完成）：按用户给定的六组范式及15算法顺序，生成clean、noise001、noise005三张六轴表格图；0至100分、两位小数，按完整精度在可用数值中标注第一和第二，缺失显示NA。有效输出为`3、metrics/tables/six_axis_{condition}.{png,pdf,csv}`及`manifest.json`；生成脚本为preflight `render_core50_six_axis_tables.py`。输入沿用`algorithm_six_axis.csv`和`noise_supplement.csv`，SHA256、算法覆盖、数值范围、缺失状态及文字边界与重叠检查通过。未更改指标口径或填补缺失；过程目录`.agent/work/TABLE-CORE50/`已归档并原位保留。
 - GOAL-CORE50最终汇总（2026-09-25，已交付）：仅使用最终公式裁决计算SYM/MIN/STAB，EFF使用既有180分钟数值轨迹，新增API请求为0。6750份运行、2250组任务、45个算法条件组合覆盖核验通过；本地六维表复算、输出SHA256及全部已复制裁决与输入哈希核验通过。
 - 有效文件：`A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/3、metrics/`中的`algorithm_six_axis.csv`（clean 15行）、`noise_supplement.csv`（30行）、`terminal_run_metrics.csv`、`terminal_run_metrics.jsonl.gz`、`unresolved.json`、`verification.json`。生成脚本为preflight `aggregate_core50_terminal_metrics.py`，本地采集入口`collect_core50_postprocess.py --terminal-only`；原始裁决保存在`opus/`，数值轨迹、训练结果冻结输入及50个数据集的输入版本保存在`inputs/`，来源映射见`storage_map.json`。
-- 未解决：EFF剩余4份JAXSR轨迹缺失，均值注明可用分母；SYM/MIN各缺失1份、STAB缺失1组，仍保留空值，`formal_ready=false`。不自动训练或请求Opus。当前证据以`3、metrics/verification.json`和EFF恢复清单为准；`.agent/work/GOAL-CORE50/`原始采集记录已归档并原位保留。
+- 未解决：EFF剩余4份JAXSR轨迹缺失，均值注明可用分母，`formal_ready=false`。最终SYM/MIN/STAB已完整。当前证据以`3、metrics/verification.json`、EFF恢复清单及单公式选择例外清单为准；`.agent/work/GOAL-CORE50/`原始采集记录已归档并原位保留。
 
 ## 已替代执行快照
 
