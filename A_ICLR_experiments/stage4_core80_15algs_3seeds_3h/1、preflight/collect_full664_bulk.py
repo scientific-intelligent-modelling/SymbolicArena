@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 CONFIG = HERE / "full664_10m"
+EVIDENCE = CONFIG
 WORK = ROOT / ".agent/work/FULL664-10M/bulk"
 BATCH = "full664_15alg_clean_s1314_600s_20260926"
 
@@ -124,7 +125,7 @@ def transfer(host, tasks):
         for item in task["files"]:
             path = extracted / task["task_id"] / item["path"]
             assert path.stat().st_size == item["size"] and sha(path) == item["sha256"], path
-    dump(CONFIG / "bulk_manifests" / f"{host}.json", manifest)
+    dump(EVIDENCE / "bulk_manifests" / f"{host}.json", manifest)
     return manifest
 
 
@@ -176,7 +177,7 @@ def publish_task(task, record, host):
                "source_run_dir": record["source_run_dir"], "result_sha256": record["result_sha256"],
                "file_count": record["imported_file_count"], "total_bytes": record["imported_bytes"],
                "progress_files": record["progress_file_count"], "controller_task_id": task["task_id"],
-               "manifest_path": str(CONFIG / "bulk_manifests" / f"{host}.json"), **{k: record[k] for k in ("result_status", "equation_available", "numeric_available")}}
+               "manifest_path": str(EVIDENCE / "bulk_manifests" / f"{host}.json"), **{k: record[k] for k in ("result_status", "equation_available", "numeric_available")}}
     binding_path = destination / "import_binding.json"
     if not binding_path.exists():
         dump(binding_path, binding)
@@ -187,6 +188,14 @@ def publish_task(task, record, host):
 def collect():
     WORK.mkdir(parents=True, exist_ok=True)
     state = json.loads((ROOT / ".agent/work/FULL664-10M/queue/state" / f"{BATCH}.state.json").read_text())
+    overrides_path = CONFIG / "delivery_overrides.json"
+    if overrides_path.exists():
+        overrides = json.loads(overrides_path.read_text())
+        assert overrides["original_batch"] == BATCH
+        for task_id, task in overrides["tasks"].items():
+            assert task_id in state["tasks"] and task["state"] in {"done", "failed"}
+            assert task["seed"] == 1314 and task["noise_tag"] == "clean"
+            state["tasks"][task_id] = dict(task, source_batch=overrides["rerun_batch"])
     assert all(task["state"] in {"done", "failed"} for task in state["tasks"].values())
     original = WORK / "input_collection.csv"
     if not original.exists():
@@ -204,6 +213,7 @@ def collect():
         task_id = f"{row['algorithm']}_s1314_clean_{row['dataset_id']}"
         task = state["tasks"][task_id]
         row.update(controller_state=task["state"], controller_task_id=task_id, assigned_host=task["assigned_host"], controller_attempts=task["attempts"])
+        row["queue_batch"] = task.get("source_batch", BATCH)
         records[task_id] = row
         destination = Path(row["destination"])
         result, binding = destination / "result.json", destination / "import_binding.json"
@@ -215,9 +225,11 @@ def collect():
                 continue
         row["collection_state"] = "awaiting_bulk_sync"
         tool_dir = {"imcts": "iMCTS", "qlattice": "QLattice"}.get(task["tool"], task["tool"])
-        base = f"experiments/{BATCH}/{task['tool']}/seed1314/tasks/{task_id}/{task['assigned_host']}"
+        source_batch = task.get("source_batch", BATCH)
+        base = f"experiments/{source_batch}/{task['tool']}/seed1314/tasks/{task_id}/{task['assigned_host']}"
         grouped[task["assigned_host"]].append({"task_id": task_id, "controller_state": task["state"],
-            "source_rel": base + f"/{tool_dir}/{row['dataset_id']}_{row['dataset_name']}", "launcher_rel": base + "/__launcher__"})
+            "source_rel": base + f"/{tool_dir}/{row['dataset_id']}_{row['dataset_name']}", "launcher_rel": base + "/__launcher__",
+            **({"source_batch": source_batch} if source_batch != BATCH else {})})
     spec = importlib.util.spec_from_file_location("bulk_existing_collector", HERE / "collect_core50_new15_results.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -226,7 +238,7 @@ def collect():
     module.QUEUES = {BATCH: None}
     module.persist(records)
     print(json.dumps({"remaining_by_host": {host: len(tasks) for host, tasks in grouped.items()}}), flush=True)
-    report_path = CONFIG / "bulk_sync_status.json"
+    report_path = EVIDENCE / "bulk_sync_status.json"
     report = json.loads(report_path.read_text()) if report_path.exists() else {}
     with ThreadPoolExecutor(max_workers=4) as pool:
         futures = {pool.submit(transfer, host, tasks): host for host, tasks in sorted(grouped.items(), key=lambda item: item[0] == "iaaccn49")}
@@ -243,7 +255,7 @@ def collect():
                     publish_task(task, records[task["task_id"]], host)
                 report[host] = {"state": "verified", "runs": len(manifest["runs"]), "archive_bytes": manifest["archive_bytes"]}
             module.persist(records)
-            dump(CONFIG / "bulk_sync_status.json", report)
+            dump(report_path, report)
             print(json.dumps({"host": host, **report[host], "counts": dict(Counter(row["collection_state"] for row in records.values()))}), flush=True)
     return dict(Counter(row["collection_state"] for row in records.values()))
 
@@ -252,9 +264,9 @@ def seal():
     for path in WORK.glob("iaaccn*/manifest.json"):
         manifest = json.loads(path.read_text())
         assert sha(path.parent / "runs.tar.gz") == manifest["archive_sha256"]
-        dump(CONFIG / "bulk_manifests" / (path.parent.name + ".json"), manifest)
-    for source, target in ((WORK / "input_queue.json", CONFIG / "bulk_input_queue.json"),
-                           (WORK / "input_collection.csv", CONFIG / "bulk_input_collection.csv")):
+        dump(EVIDENCE / "bulk_manifests" / (path.parent.name + ".json"), manifest)
+    for source, target in ((WORK / "input_queue.json", EVIDENCE / "bulk_input_queue.json"),
+                           (WORK / "input_collection.csv", EVIDENCE / "bulk_input_collection.csv")):
         if target.exists():
             assert sha(source) == sha(target)
         else:

@@ -2,6 +2,7 @@
 
 ## 当前任务
 
+- FULL664-RECOVERY49（2026-09-26，执行中）：用户授权只重跑49未取回的236项，保持clean、seed1314、每项600秒及原15算法参数；原9724份result SHA256已冻结，不重跑、不覆盖。失联机器自动续传已停止；本轮13台完成任务切片部署，23部署调用超时，49/54不参与。入口preflight `rerun_full664_missing.py run`，任务及参数哈希位于`full664_10m/recovery49/{tasks.csv,request.json,preserved_results.json}`；tmux `full664_recovery49`，队列与日志`.agent/work/FULL664-10M/recovery49/`，批次`full664_missing49_s1314_600s_20260926`。训练结束自动生成`delivery_overrides.json`并调用批量采集，重跑证据独立保存在`recovery49/bulk_manifests/`；最终核验原9724份哈希及9960项覆盖。当前已开始派发，尚未完成训练与收集。
 - FULL664-10M（2026-09-26，执行中）：按用户紧急要求重跑664×15=9960项，clean、seed1314、每项600秒，保留60秒快照及原生训练目标选出的预算内最佳结果；未运行冒烟测试、未启动Opus。iaaccn22~29、48~53、55的数据文件存在、非空及LFS检查通过，共15台、每台664任务；54不可达。调度按现有CPU权重使用100%容量、内存使用92%停止新增、保留8GiB，不设置单进程内存上限；每台最多256项，每轮最多64项，LLM不另设全局任务数量上限。
 - 有效入口：preflight `full664_10m.py`及`full664_10m/`中的664项清单、15份600秒参数、`experiment.json`、`host_data_audit.json`、`support_sync.json`；训练使用`run_core50_queue.py`，队列及日志位于`.agent/work/FULL664-10M/`。同步目标`2、experiments/clean/{algorithm}/{dataset}/1314/`，215个非Core50同名任务用g编号区分，已有Core50目录和旧seed保留。
 - 训练状态：队列于04:13:40结束，done9956/failed4，无running或pending；失败为DrSR/g0378、JaxSR/g0338及g0383、RAG-SR/g0268，各已尝试2次。调度器已退出，未追加训练或Opus请求。
