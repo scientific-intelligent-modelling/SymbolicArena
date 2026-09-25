@@ -2,6 +2,7 @@
 
 ## 当前任务
 
+- TABLE-CORE50（2026-09-25，已完成）：按用户给定的六组范式及15算法顺序，生成clean、noise001、noise005三张六轴表格图；0至100分、两位小数，按完整精度在可用数值中标注第一和第二，缺失显示NA。有效输出为`3、metrics/tables/six_axis_{condition}.{png,pdf,csv}`及`manifest.json`；生成脚本为preflight `render_core50_six_axis_tables.py`。输入沿用`algorithm_six_axis.csv`和`noise_supplement.csv`，SHA256、算法覆盖、数值范围、缺失状态及文字边界与重叠检查通过。未更改指标口径或填补缺失；过程目录`.agent/work/TABLE-CORE50/`已归档并原位保留。
 - GOAL-CORE50最终汇总（2026-09-25，已交付）：仅使用最终公式裁决计算SYM/MIN/STAB，EFF使用既有180分钟数值轨迹，新增API请求为0。6750份运行、2250组任务、45个算法条件组合覆盖核验通过；本地六维表复算、输出SHA256及全部已复制裁决与输入哈希核验通过。
 - 有效文件：`A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/3、metrics/`中的`algorithm_six_axis.csv`（clean 15行）、`noise_supplement.csv`（30行）、`terminal_run_metrics.csv`、`terminal_run_metrics.jsonl.gz`、`unresolved.json`、`verification.json`。生成脚本为preflight `aggregate_core50_terminal_metrics.py`，本地采集入口`collect_core50_postprocess.py --terminal-only`；原始裁决保存在`opus/`，数值轨迹、训练结果冻结输入及50个数据集的输入版本保存在`inputs/`，来源映射见`storage_map.json`。
 - 未解决：EFF缺失158份，SYM/MIN各缺失1份，STAB缺失1组，保持空值及固定分母，`formal_ready=false`。用户已同意按缺失说明交付，不自动训练或请求Opus。后续处理以该缺失清单为准；本次过程目录`.agent/work/GOAL-CORE50/`标记已归档并原位保留，采集状态`postprocess_delivery.json`为`delivered`。
