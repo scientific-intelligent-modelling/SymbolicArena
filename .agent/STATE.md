@@ -2,6 +2,7 @@
 
 ## 当前任务
 
+- TABLE-TEX-001（2026-09-25，已完成）：新增clean表格组件`3、metrics/tables/six_axis_clean_typeset.tex`及同名PDF预览；等宽指标列、统一行距、独立淡红/淡蓝高亮、局部分组样式，使用最新90个数值。预览入口preflight `preview_clean_typeset.tex`，按5.5英寸正文宽度通过XeLaTeX编译，一页、字体嵌入，无警告或溢出；PDF实际文本90个数值、列等距及横向位置核验通过。未修改原表或Overleaf；验证记录`.agent/work/TABLE-TEX-001/`已归档并原位保留。
 - FORMULA-OVERRIDE-001（2026-09-25，已完成）：按用户明确要求，LLM-SR/g0436/noise005/seed522采用上一个可处理的原生候选sample196（第116分钟仍被选用），仅此一份采用该选式例外。原始result.json保持原SHA，所选候选、参数、训练目标及预算内快照逐项核验；新结果与证据位于`3、metrics/formula_override_g0436_s522/`，脚本preflight `use_core50_previous_formula.py`。4项Opus处理均首次验收，费用0.132294元；最终ID/OOD/SYM/MIN采用所选公式，该数据集STAB三个seed联合重算，EFF保持原生训练轨迹。
 - LLM-SR/noise005最新六维均值为ID 33.35351、OOD 23.00112、SYM 31.26407、MIN 51.32484、EFF 80.96271、STAB 4.05176；各运行轴150/150、STAB 50/50，三个条件汇总表均无NA。已更新本地CSV、运行明细、Opus索引及PNG/PDF表格。仅目标运行的最终公式和同一数据集的STAB受影响，其他运行及所有EFF通过不变性核验。原始输入及前一汇总保留；Overleaf本轮未同步。过程`.agent/work/FORMULA-OVERRIDE-001/`已归档并原位保留。
 - EFF-RECOVER-001（2026-09-25，已完成）：恢复154/158份缺失EFF，其中E2ESR148份、LLM-SR正常结束后延续1份、QLattice结束后延续1份、原生参数绑定恢复4份。DrSR、LLM-SR、E2ESR在clean/noise001/noise005均为150/150份，EFF均值依次为DrSR 83.92644/84.73846/83.42825，LLM-SR 80.54579/81.68784/80.96271，E2ESR 90.95185/89.44074/89.17778。JAXSR两种噪声仍有3/1份不可恢复，分别按147/149份求均值并标注数量；其余指标口径不变。

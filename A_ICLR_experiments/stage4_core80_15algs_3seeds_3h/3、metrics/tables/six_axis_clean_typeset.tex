@@ -1,0 +1,118 @@
+% 导言区需要 booktabs、array、multirow、xcolor、colortbl。
+% 沿用论文的字体和 core 命令；所有样式设置仅作用于本表。
+\begin{table*}[t]
+\centering
+\begingroup
+
+\definecolor{SATableInk}{HTML}{292D32}
+\definecolor{SATableMuted}{HTML}{626973}
+\definecolor{SATableRule}{HTML}{CED2D7}
+\definecolor{SABestBackground}{HTML}{F6DDDD}
+\definecolor{SABestInk}{HTML}{882A2A}
+\definecolor{SASecondBackground}{HTML}{E2EDF8}
+\definecolor{SASecondInk}{HTML}{244C78}
+
+\setlength{\abovecaptionskip}{5pt}
+\setlength{\belowcaptionskip}{7pt}
+\caption{Six-axis profiles of 15 symbolic regression methods on \core{} (clean).
+Methods are grouped by primary search paradigm.
+Scores are displayed on a 0--100 scale. Higher values indicate better performance.}
+\label{tab:six_axis_profiles}
+
+\fontsize{9}{11.5}\selectfont
+\color{SATableInk}
+\renewcommand{\arraystretch}{1.35}
+\setlength{\tabcolsep}{0pt}
+\setlength{\heavyrulewidth}{0.8pt}
+\setlength{\lightrulewidth}{0.3pt}
+\setlength{\cmidrulewidth}{0.3pt}
+\setlength{\aboverulesep}{2.2pt}
+\setlength{\belowrulesep}{2.2pt}
+
+\edef\SAParadigmWidth{\the\dimexpr 0.19\linewidth\relax}
+\edef\SAAlgorithmWidth{\the\dimexpr 0.14\linewidth\relax}
+\edef\SAScoreWidth{\the\dimexpr(\linewidth-\SAParadigmWidth-\SAAlgorithmWidth)/6\relax}
+\edef\SAHighlightWidth{\the\dimexpr\SAScoreWidth-11pt\relax}
+
+\newcommand{\SAHighlight}[3]{%
+  \begingroup
+  \setlength{\fboxsep}{1.4pt}%
+  \colorbox{#1}{\makebox[\SAHighlightWidth][c]{\textcolor{#2}{\bfseries\strut #3}}}%
+  \endgroup
+}
+\newcommand{\SABest}[1]{\SAHighlight{SABestBackground}{SABestInk}{#1}}
+\newcommand{\SASecond}[1]{\SAHighlight{SASecondBackground}{SASecondInk}{#1}}
+\newcommand{\SAGroup}[2]{%
+  \multirow{#1}{\SAParadigmWidth}{%
+    \color{SATableMuted}\fontsize{8.5}{10.8}\selectfont\raggedright #2}%
+}
+\newcommand{\SASeparator}{\arrayrulecolor{SATableRule}\midrule\arrayrulecolor{SATableInk}}
+
+\begin{tabular}{@{}
+  >{\raggedright\arraybackslash}m{\SAParadigmWidth}
+  >{\raggedright\arraybackslash}m{\SAAlgorithmWidth}
+  *{6}{>{\centering\arraybackslash}m{\SAScoreWidth}}
+@{}}
+\arrayrulecolor{SATableInk}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Numerical}}
+    & \multicolumn{2}{c}{\textbf{Symbolic}}
+    & \multicolumn{2}{c}{\textbf{Search}} \\
+\arrayrulecolor{SATableRule}
+\cmidrule(l{3pt}r{3pt}){3-4}
+\cmidrule(l{3pt}r{3pt}){5-6}
+\cmidrule(l{3pt}r{3pt}){7-8}
+\textbf{Paradigm} & \textbf{Algorithm}
+  & \textbf{ID} & \textbf{OOD} & \textbf{SYM}
+  & \textbf{MIN} & \textbf{EFF} & \textbf{STAB} \\
+\midrule
+\arrayrulecolor{SATableInk}
+
+\SAGroup{3}{Structured\\Search}
+ & iMCTS    & \SABest{77.91} & \SABest{73.35} & 42.15 & 80.37 & 91.66 & 23.31 \\
+ & QLattice & 34.79 & 25.37 & 29.82 & 55.12 & 87.81 & 31.12 \\
+ & JAXSR    & 37.99 & 30.21 & 32.00 & 75.03 & \SABest{99.99} & \SABest{97.43} \\
+\SASeparator
+
+\SAGroup{2}{Neural Policy\\Search}
+ & uDSR & 64.84 & 55.94 & 41.25 & 51.41 & 85.83 & 20.20 \\
+ & DSO  & 38.56 & 34.14 & 43.19 & 79.90 & 89.60 & 31.92 \\
+\SASeparator
+
+\SAGroup{4}{Evolutionary\\Search}
+ & PySR & \SASecond{70.34} & \SASecond{66.28} & \SASecond{44.60} & \SASecond{82.62} & 91.94 & 31.03 \\
+ & PyOperon & 38.89 & 30.64 & 25.06 & 44.88 & 97.28 & 15.34 \\
+ & gplearn & 31.37 & 24.96 & 28.25 & 53.55 & 94.67 & 5.86 \\
+ & SymbolFit & 59.04 & 48.46 & 29.96 & 38.92 & 87.30 & 5.38 \\
+\SASeparator
+
+\SAGroup{2}{LLM Assisted\\Search}
+ & DrSR & 41.86 & 32.82 & 39.51 & 63.94 & 83.93 & 10.92 \\
+ & LLM-SR & 42.59 & 32.78 & 35.89 & 59.06 & 80.55 & 17.72 \\
+\SASeparator
+
+\SAGroup{2}{Hybrid\\Search}
+ & FePySR & 59.84 & 55.45 & \SABest{48.13} & \SABest{89.55} & 93.56 & 46.53 \\
+ & RAG-SR & 48.58 & 35.45 & 20.66 & 11.25 & \SASecond{99.74} & 1.37 \\
+\SASeparator
+
+\SAGroup{2}{Transformer\\Methods}
+ & E2ESR & 57.09 & 42.40 & 29.96 & 31.50 & 90.95 & 55.70 \\
+ & TPSR & 27.60 & 20.84 & 29.60 & 42.46 & 87.33 & \SASecond{84.20} \\
+\arrayrulecolor{SATableInk}
+\bottomrule
+\end{tabular}
+
+\par\vspace{5pt}
+{\fontsize{7.7}{9.5}\selectfont\color{SATableMuted}
+\makebox[\linewidth][l]{%
+  Display scale 0--100, higher is better.\hfill
+  {\setlength{\fboxsep}{0pt}\colorbox{SABestBackground}{\rule{0pt}{5pt}\hspace{8pt}}}%
+  \hspace{3pt}\textcolor{SABestInk}{Best (1st)}\hspace{13pt}%
+  {\setlength{\fboxsep}{0pt}\colorbox{SASecondBackground}{\rule{0pt}{5pt}\hspace{8pt}}}%
+  \hspace{3pt}\textcolor{SASecondInk}{Second-best (2nd)}%
+}\par
+}
+
+\endgroup
+\end{table*}
