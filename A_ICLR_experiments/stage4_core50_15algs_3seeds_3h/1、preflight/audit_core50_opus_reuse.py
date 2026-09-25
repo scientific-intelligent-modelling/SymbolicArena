@@ -24,7 +24,7 @@ from AAAI_experiments.stage5_metric_calculation_0831.pipeline.clean_task_builder
 
 sys.setrecursionlimit(max(sys.getrecursionlimit(), 20000))
 ROOT = Path(__file__).resolve().parents[3]
-PREFLIGHT = ROOT / "A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight"
+PREFLIGHT = Path(__file__).resolve().parent
 WORK = ROOT / ".agent/work/GOAL-CORE50"
 CONDITIONS = ("clean", "noise001", "noise005")
 PRED_ID = re.compile(r"^pred_simplify::([a-z0-9]+)::(g\d{4})::s(520|521|522)::(clean|noise001|noise005)$")

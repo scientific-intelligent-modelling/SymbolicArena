@@ -15,7 +15,7 @@ from run_core50_comparisons import sha, write_json
 ROOT = Path(__file__).resolve().parents[3]
 WORK = ROOT / '.agent/work/GOAL-CORE50'
 REMOTE = '/home/zhangziwen/sim-runtime/core50-opus-runtime'
-DESTINATION = ROOT / 'A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/3、metrics'
+DESTINATION = Path(__file__).resolve().parent.parent / '3、metrics'
 
 
 def transfer(source, destination):
@@ -224,7 +224,7 @@ if __name__ == '__main__':
                 raise ValueError(f'数据集输入复制校验失败: {source}')
         mappings[str(original)] = str(preserved)
     write_json(DESTINATION / 'storage_map.json', {'prefix_mappings': mappings,
-        'source_result_root': str(ROOT / 'A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/2.2 core50 experiments')})
+        'source_result_root': str(DESTINATION.parent / '2.2 core50 experiments')})
     write_json(WORK / 'postprocess_delivery.json', {'phase': 'delivered', 'time': time.time(),
         'destination': str(DESTINATION), 'formal_ready': report['formal_ready'],
         'verification_sha256': sha(DESTINATION / 'verification.json')})

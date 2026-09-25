@@ -3,6 +3,7 @@ from pathlib import Path
 
 STAGE = Path(__file__).resolve().parent.parent
 REPO = STAGE.parents[1]
+PREVIOUS_STAGE = STAGE.with_name("stage4_core80_15algs_3seeds_3h")
 LEGACY_ROOT = STAGE / "2、experiments"
 FULL_ROOT = STAGE / "2.1 full set experimets"
 CORE_ROOT = STAGE / "2.2 core50 experiments"
@@ -27,6 +28,9 @@ def run_directory(algorithm, dataset, seed, condition):
 def relocated_path(value):
     path = Path(value)
     absolute = path if path.is_absolute() else REPO / path
+    if absolute.is_relative_to(PREVIOUS_STAGE):
+        absolute = STAGE / absolute.relative_to(PREVIOUS_STAGE)
+        path = absolute
     if not absolute.is_relative_to(LEGACY_ROOT):
         return path
     parts = absolute.relative_to(LEGACY_ROOT).parts

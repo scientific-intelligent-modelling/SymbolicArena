@@ -19,7 +19,7 @@ from run_core50_minute_opus import materialize, simplify_pair
 
 
 REPO = Path(__file__).resolve().parents[3]
-STAGE = REPO / 'A_ICLR_experiments/stage4_core80_15algs_3seeds_3h'
+STAGE = Path(__file__).resolve().parent.parent
 METRICS = STAGE / '3、metrics'
 LOCAL = METRICS / 'formula_override_g0436_s522'
 RUNTIME = Path('/home/zhangziwen/sim-runtime/core50-opus-runtime')

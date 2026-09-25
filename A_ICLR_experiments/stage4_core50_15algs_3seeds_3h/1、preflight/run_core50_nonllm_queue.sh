@@ -4,9 +4,9 @@ set -uo pipefail
 ROOT="/home/family/workplace/scientific-intelligent-modelling"
 cd "$ROOT"
 exec /home/family/anaconda3/bin/python -u \
-  A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/run_core50_queue.py \
+  A_ICLR_experiments/stage4_core50_15algs_3seeds_3h/1、preflight/run_core50_queue.py \
   --batch-name core50_new15_nonllm_v2 \
-  --source-csv A_ICLR_experiments/stage4_core80_15algs_3seeds_3h/1、preflight/core50_new15_training_source.csv \
+  --source-csv A_ICLR_experiments/stage4_core50_15algs_3seeds_3h/1、preflight/core50_new15_training_source.csv \
   --expected-rows 15 \
   --queue-root .agent/work/GOAL-CORE50/queue_nonllm_v2 \
   --params-root .agent/work/EXP-001/controller/params \

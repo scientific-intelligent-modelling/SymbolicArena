@@ -18,7 +18,7 @@ from run_core50_comparisons import canonical, sha, write_json
 
 
 ROOT = Path(__file__).resolve().parents[3]
-STAGE = ROOT / 'A_ICLR_experiments/stage4_core80_15algs_3seeds_3h'
+STAGE = Path(__file__).resolve().parent.parent
 METRICS = STAGE / '3、metrics'
 OUTPUT = METRICS / 'eff_recovery'
 SNAPSHOT = OUTPUT / 'input_snapshot'
