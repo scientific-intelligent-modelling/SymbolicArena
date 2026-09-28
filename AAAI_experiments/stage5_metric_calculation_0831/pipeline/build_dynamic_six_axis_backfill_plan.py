@@ -31,7 +31,8 @@ FORBIDDEN_SOURCE_TOKENS = ("all_15alg_fullcpu_v1",)
 SCHEMA_VERSION = "stage5.dynamic_six_axis_backfill_plan.v1"
 FLOAT_TOLERANCE = 1.0e-12
 SOURCE_MINUTE_RE = re.compile(
-    r"(?:snapshot|final|carry_forward|internal_best_carry_forward|"
+    r"(?:native_endpoint_carry_forward|native_carry_forward|native_incumbent|"
+    r"snapshot|final|carry_forward|internal_best_carry_forward|"
     r"budget_end_internal_best|audited_repair):(\d+)"
 )
 
@@ -521,10 +522,20 @@ def _resolve_clean_points(run: CompactRun, numeric: Mapping[str, str], evidence:
     id_qualities = evidence["id_quality_trajectory"]
     ood_qualities = evidence["ood_quality_trajectory"]
     valid_outputs = evidence["valid_output_trajectory"]
+    explicit_source_minutes = evidence.get("incumbent_source_minute_trajectory")
+    if not isinstance(explicit_source_minutes, list) or len(explicit_source_minutes) != horizon:
+        explicit_source_minutes = None
     points: list[dict[str, Any]] = []
     for minute in range(1, horizon + 1):
         source_label = str(evidence_sources[minute - 1])
-        source_minute = _source_minute(source_label)
+        if explicit_source_minutes is None:
+            source_minute = _source_minute(source_label)
+        else:
+            raw_source_minute = explicit_source_minutes[minute - 1]
+            try:
+                source_minute = int(raw_source_minute) if raw_source_minute is not None else None
+            except (TypeError, ValueError):
+                source_minute = None
         snapshot = run.snapshots.get(source_minute) if source_minute is not None else None
         q = _finite_quality(numeric.get(f"q_{minute:04d}"))
         if q is None:
