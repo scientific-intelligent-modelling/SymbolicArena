@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 import numpy as np
 import time
 import torch
-from functorch import grad
+from torch.func import grad
 from functools import partial
 import traceback
 from timeout import timeout 

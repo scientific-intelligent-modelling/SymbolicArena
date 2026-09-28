@@ -35,7 +35,7 @@ Extract the datasets to this directory, Feynman datasets should be in `datasets/
 To run the code with deafult [E2E](https://arxiv.org/pdf/2204.10532.pdf) backbone model, create a conda environment and install the dependencies by running the following command.
 
 ```
-conda create --name tpsr
+conda create --name tpsr python=3.10 pytorch=2.13.0 -c conda-forge
 conda activate tpsr
 pip install -r requirements.txt
 ```
@@ -43,12 +43,12 @@ pip install -r requirements.txt
 If you're interested to run experiments with [NeSymReS](https://arxiv.org/pdf/2106.06427.pdf) backbone, install its additional dependencies from [here](https://github.com/SymposiumOrganization/NeuralSymbolicRegressionThatScales). You can follow these steps:
 
 ```
-conda create --name tpsr
+conda create --name tpsr python=3.10 pytorch=2.13.0 -c conda-forge
 conda activate tpsr
 cd nesymres
 pip install -e src/
+cd ..
 pip install -r requirements.txt
-pip install lightning==1.9
 ```
 
 
