@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#102a29" />
+    <meta
+      name="description"
+      content="SymbolicArena：用统一接口运行和评测符号回归算法，并在浏览器中体验一个轻量的方程发现示例。"
+    />
+    <title>SymbolicArena · 让方程发现更清晰</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳转到主要内容</a>
+
+    <header class="site-header">
+      <nav class="container nav" aria-label="主导航">
+        <a class="brand" href="#top" aria-label="SymbolicArena 首页">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Symbolic<span class="brand-accent">Arena</span></span>
+        </a>
+        <div class="nav-links">
+          <a href="#why">项目能力</a>
+          <a href="#demo">交互示例</a>
+          <a href="#start">开始使用</a>
+        </div>
+        <a
+          class="nav-github"
+          href="https://github.com/scientific-intelligent-modelling/SymbolicArena"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GitHub <span aria-hidden="true">↗</span>
+        </a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero container" id="top" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-dot"></span> 开源符号回归工具箱</p>
+          <h1 id="hero-title">从数据里<br />找到<span>可解释的公式。</span></h1>
+          <p class="hero-description">
+            SymbolicArena 把不同符号回归算法接到同一套接口，
+            让训练、方程导出与评测可以用一致的方式进行。
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#demo">体验交互示例 <span aria-hidden="true">↗</span></a>
+            <a class="button button-secondary" href="#start">查看 Python 用法 <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="hero-facts" aria-label="项目特点">
+            <span>统一 Python API</span>
+            <span>独立环境运行</span>
+            <span>标准评测流程</span>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-label="从数据点拟合出曲线的示意图">
+          <div class="visual-topline">
+            <span class="visual-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>DISCOVER / COMPARE / EXPLAIN</span>
+          </div>
+          <div class="visual-heading">
+            <div>
+              <span class="tiny-label">EQUATION PREVIEW</span>
+              <p>把趋势写成公式</p>
+            </div>
+            <span class="visual-chip">f(x)</span>
+          </div>
+          <svg class="hero-chart" viewBox="0 0 540 260" role="img" aria-label="散点与二次曲线示意图">
+            <g class="hero-grid">
+              <path d="M34 24V226M124 24V226M214 24V226M304 24V226M394 24V226M484 24V226" />
+              <path d="M34 24H504M34 74H504M34 124H504M34 174H504M34 224H504" />
+            </g>
+            <path class="hero-curve-shadow" d="M34 42 C120 140 175 205 245 209 C319 213 383 169 504 37" />
+            <path class="hero-curve" d="M34 42 C120 140 175 205 245 209 C319 213 383 169 504 37" />
+            <g class="hero-points">
+              <circle cx="60" cy="76" r="5" /><circle cx="91" cy="109" r="5" />
+              <circle cx="126" cy="158" r="5" /><circle cx="162" cy="175" r="5" />
+              <circle cx="205" cy="203" r="5" /><circle cx="240" cy="213" r="5" />
+              <circle cx="274" cy="206" r="5" /><circle cx="316" cy="192" r="5" />
+              <circle cx="351" cy="179" r="5" /><circle cx="393" cy="144" r="5" />
+              <circle cx="429" cy="113" r="5" /><circle cx="469" cy="69" r="5" />
+            </g>
+          </svg>
+          <div class="visual-footer">
+            <span class="formula-label">CANDIDATE FORMULA</span>
+            <strong>y ≈ ax² + bx + c</strong>
+            <span class="visual-status"><i aria-hidden="true"></i> 可解释</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-features" id="why" aria-labelledby="why-title">
+        <div class="container">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">01 / WHY SYMBOLICARENA</p>
+              <h2 id="why-title">把算法放进同一个评测场</h2>
+            </div>
+            <p>从调用方式到结果记录，尽量减少比较不同算法时的重复工作。</p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <span class="feature-icon" aria-hidden="true">{ }</span>
+              <span class="feature-index">01</span>
+              <h3>统一调用</h3>
+              <p>通过 <code>SymbolicRegressor</code> 使用一致的训练、预测和方程获取接口。</p>
+            </article>
+            <article class="feature-card">
+              <span class="feature-icon" aria-hidden="true">≋</span>
+              <span class="feature-index">02</span>
+              <h3>环境隔离</h3>
+              <p>不同算法可以使用各自的 Conda 环境，由主程序协调调用。</p>
+            </article>
+            <article class="feature-card">
+              <span class="feature-icon" aria-hidden="true">↗</span>
+              <span class="feature-index">03</span>
+              <h3>统一评测</h3>
+              <p>标准数据集进入同一条 benchmark 流程，输出方程、指标与运行记录。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-demo" id="demo" aria-labelledby="demo-title">
+        <div class="container">
+          <div class="section-heading demo-heading">
+            <div>
+              <p class="section-kicker">02 / INTERACTIVE DEMO</p>
+              <h2 id="demo-title">亲手试一次“找公式”</h2>
+            </div>
+            <p>切换数据形状与噪声，观察有限候选结构如何拟合数据并在留出样本上比较。</p>
+          </div>
+
+          <div class="demo-notice" role="note">
+            <span class="notice-icon" aria-hidden="true">i</span>
+            <p>这是浏览器端的教学示例：只拟合页面内置的候选结构，不运行 SymbolicArena 的正式算法，也不代表 benchmark 成绩。</p>
+          </div>
+
+          <div class="demo-layout">
+            <div class="controls-card">
+              <div class="card-heading">
+                <span class="card-eyebrow">CONFIGURE</span>
+                <h3>生成一组数据</h3>
+              </div>
+
+              <fieldset class="preset-fieldset">
+                <legend>真实关系</legend>
+                <button class="dataset-button" type="button" data-preset="quadratic" aria-pressed="true">
+                  <span class="dataset-glyph" aria-hidden="true">∪</span>
+                  <span><strong>二次关系</strong><small>弯曲的抛物线</small></span>
+                  <span class="dataset-check" aria-hidden="true">✓</span>
+                </button>
+                <button class="dataset-button" type="button" data-preset="sine" aria-pressed="false">
+                  <span class="dataset-glyph" aria-hidden="true">∿</span>
+                  <span><strong>周期关系</strong><small>起伏的正弦波</small></span>
+                  <span class="dataset-check" aria-hidden="true">✓</span>
+                </button>
+                <button class="dataset-button" type="button" data-preset="rational" aria-pressed="false">
+                  <span class="dataset-glyph" aria-hidden="true">⌒</span>
+                  <span><strong>有理关系</strong><small>中心凸起的曲线</small></span>
+                  <span class="dataset-check" aria-hidden="true">✓</span>
+                </button>
+              </fieldset>
+
+              <div class="noise-control">
+                <div class="control-label-row">
+                  <label for="noise">观测噪声</label>
+                  <output id="noise-value" for="noise">0.10</output>
+                </div>
+                <input id="noise" type="range" min="0" max="0.5" step="0.05" value="0.1" />
+                <div class="range-ends" aria-hidden="true"><span>清晰</span><span>嘈杂</span></div>
+              </div>
+
+              <button id="resample" class="resample-button" type="button">
+                <span aria-hidden="true">↻</span> 重新采样
+              </button>
+              <p class="control-footnote">固定生成 40 个样本：30 个用于拟合，10 个用于验证。</p>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-heading">
+                <div>
+                  <span class="card-eyebrow">MODEL FIT</span>
+                  <h3>数据与候选曲线</h3>
+                </div>
+                <div class="legend" aria-label="图例">
+                  <span><i class="legend-train"></i> 拟合样本</span>
+                  <span><i class="legend-valid"></i> 验证样本</span>
+                  <span><i class="legend-curve"></i> 当前曲线</span>
+                </div>
+              </div>
+              <svg id="fit-chart" viewBox="0 0 760 380" role="img" aria-label="数据点和拟合曲线"></svg>
+              <div class="fit-summary" aria-live="polite">
+                <div class="fit-equation">
+                  <span id="selected-model-name" class="card-eyebrow">当前候选</span>
+                  <strong id="selected-equation">正在计算…</strong>
+                </div>
+                <div class="fit-metrics">
+                  <div><span>训练 RMSE</span><strong id="train-rmse">—</strong></div>
+                  <div><span>验证 RMSE</span><strong id="valid-rmse">—</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ranking-card">
+            <div class="ranking-heading">
+              <div>
+                <span class="card-eyebrow">CANDIDATE COMPARISON</span>
+                <h3>候选结构</h3>
+              </div>
+              <p>按「验证 RMSE + 0.02 × 参数个数」排序；点击一行查看曲线。</p>
+            </div>
+            <div id="candidate-list" class="candidate-list" aria-label="候选结构排序"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-start" id="start" aria-labelledby="start-title">
+        <div class="container start-layout">
+          <div class="start-copy">
+            <p class="section-kicker">03 / TAKE IT FURTHER</p>
+            <h2 id="start-title">真实搜索，回到 Python。</h2>
+            <p>浏览器示例帮助理解流程。要运行已接入的符号回归算法，请在项目环境中使用统一接口。</p>
+            <ol class="workflow-list">
+              <li><span>01</span><div><strong>准备数据</strong><p>构造特征矩阵 X 与目标 y。</p></div></li>
+              <li><span>02</span><div><strong>选择算法</strong><p>例如用 <code>gplearn</code> 创建回归器。</p></div></li>
+              <li><span>03</span><div><strong>获取方程</strong><p>训练后读取最佳表达式与预测。</p></div></li>
+            </ol>
+            <a
+              class="text-link"
+              href="https://github.com/scientific-intelligent-modelling/SymbolicArena#readme"
+              target="_blank"
+              rel="noopener noreferrer"
+            >查看安装与完整用法 <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="code-card">
+            <div class="code-header"><span class="visual-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>quickstart.py</span><span>PYTHON</span></div>
+            <pre><code>import numpy as np
+from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor
+
+rng = np.random.RandomState(0)
+X = rng.rand(100, 2)
+y = X[:, 0] ** 2 + X[:, 1] + 0.01 * rng.randn(100)
+
+regressor = SymbolicRegressor(
+    "gplearn",
+    problem_name="quickstart",
+    seed=42,
+    population_size=500,
+    generations=10,
+)
+regressor.fit(X, y)
+print(regressor.get_optimal_equation())</code></pre>
+            <div class="code-footer"><span>与仓库 README 中的 Python API 示例一致</span><span aria-hidden="true">↗</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div><span class="footer-brand">SymbolicArena</span><p>让方程发现更清晰。</p></div>
+        <div><span>开源项目 · GitHub Pages 静态演示</span><a href="https://github.com/scientific-intelligent-modelling/SymbolicArena" target="_blank" rel="noopener noreferrer">查看源代码 ↗</a></div>
+      </div>
+    </footer>
+  </body>
+</html>
