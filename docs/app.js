@@ -1,313 +1,393 @@
 "use strict";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-const PLOT = { left: 48, top: 20, width: 686, height: 312 };
+const DATA_BASE = "https://symbolicarena-pages-1988054973082523.oss-cn-hongkong.aliyuncs.com/web/releases/release-20260930-v1/";
+const SCHEMA = "symbolicarena-pages-v1";
+const SPLITS = ["train", "valid", "id_test", "ood_test"];
+const SPLIT_LABELS = { train: "训练", valid: "验证", id_test: "ID 测试", ood_test: "OOD 测试" };
+const SPLIT_COLORS = { train: "#1c8f88", valid: "#db8656", id_test: "#4779b8", ood_test: "#865db3" };
+const ALGORITHM_LABELS = { imcts: "iMCTS", qlattice: "QLattice", llmsr: "LLM-SR", drsr: "DrSR", e2esr: "E2ESR", tpsr: "TPSR" };
 
-const PRESETS = {
-  quadratic: { seedOffset: 11, value: (x) => 0.55 * x * x - 0.45 * x + 0.8 },
-  sine: { seedOffset: 29, value: (x) => 1.4 * Math.sin(x) + 0.2 * x - 0.2 },
-  rational: { seedOffset: 47, value: (x) => 2.2 / (1 + x * x) + 0.12 * x - 0.7 },
+const elements = {
+  algorithm: document.querySelector("#algorithm-select"),
+  dataset: document.querySelector("#dataset-select"),
+  seed: document.querySelector("#seed-select"),
+  status: document.querySelector("#selection-status"),
+  datasetInfo: document.querySelector("#dataset-info"),
+  chart: document.querySelector("#run-chart"),
+  chartTitle: document.querySelector("#chart-title"),
+  dimension: document.querySelector("#chart-dimension"),
+  plotNote: document.querySelector("#plot-note"),
+  minute: document.querySelector("#minute-range"),
+  minuteValue: document.querySelector("#minute-value"),
+  minuteStatus: document.querySelector("#minute-status"),
+  play: document.querySelector("#play-button"),
+  speed: document.querySelector("#playback-speed"),
+  equation: document.querySelector("#equation-text"),
+  runSummary: document.querySelector("#run-summary"),
+  metrics: {
+    train: document.querySelector("#metric-train"),
+    valid: document.querySelector("#metric-valid"),
+    id_test: document.querySelector("#metric-id"),
+    ood_test: document.querySelector("#metric-ood"),
+  },
 };
-
-const MODELS = [
-  {
-    id: "linear",
-    name: "线性",
-    basis: [(x) => x, () => 1],
-    terms: ["x", ""],
-  },
-  {
-    id: "quadratic",
-    name: "二次多项式",
-    basis: [(x) => x * x, (x) => x, () => 1],
-    terms: ["x²", "x", ""],
-  },
-  {
-    id: "cubic",
-    name: "三次多项式",
-    basis: [(x) => x * x * x, (x) => x * x, (x) => x, () => 1],
-    terms: ["x³", "x²", "x", ""],
-  },
-  {
-    id: "sine",
-    name: "正弦组合",
-    basis: [(x) => Math.sin(x), (x) => x, () => 1],
-    terms: ["sin(x)", "x", ""],
-  },
-  {
-    id: "rational",
-    name: "有理组合",
-    basis: [(x) => 1 / (1 + x * x), (x) => x, () => 1],
-    terms: ["/(1+x²)", "x", ""],
-  },
-];
 
 const state = {
-  preset: "quadratic",
-  noise: 0.1,
-  seed: 1,
-  samples: [],
-  candidates: [],
-  selectedId: null,
+  catalog: null,
+  datasets: new Map(),
+  runs: new Map(),
+  dataset: null,
+  run: null,
+  condition: "clean",
+  minute: 1,
+  requestId: 0,
+  controller: null,
+  playing: false,
+  playbackTimer: null,
+  plotRunning: false,
+  plotRequested: false,
 };
 
-const chart = document.querySelector("#fit-chart");
-const ranking = document.querySelector("#candidate-list");
-const noiseInput = document.querySelector("#noise");
-
-function randomGenerator(seed) {
-  let value = seed >>> 0;
-  return () => {
-    value = (Math.imul(1664525, value) + 1013904223) >>> 0;
-    return value / 4294967296;
-  };
+function showStatus(message, isError = false) {
+  elements.status.textContent = message;
+  elements.status.classList.toggle("error", isError);
 }
 
-function standardNormal(random) {
-  const u = Math.max(random(), Number.EPSILON);
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
+function reportError(error) {
+  if (error.name === "AbortError") return;
+  stopPlayback();
+  showStatus(`读取失败：${error.message}`, true);
+  console.error(error);
 }
 
-function generateSamples() {
-  const preset = PRESETS[state.preset];
-  const random = randomGenerator(20260929 + preset.seedOffset + state.seed * 101);
-
-  return Array.from({ length: 40 }, (_, index) => {
-    const x = -3 + (6 * index) / 39;
-    return {
-      x,
-      y: preset.value(x) + state.noise * standardNormal(random),
-      split: index % 4 === 3 ? "valid" : "train",
-    };
-  });
-}
-
-// 候选结构固定，仅对每个结构的系数做最小二乘拟合。
-function fitCoefficients(samples, basis) {
-  const size = basis.length;
-  const matrix = Array.from({ length: size }, () => Array(size).fill(0));
-  const result = Array(size).fill(0);
-
-  for (const sample of samples) {
-    const values = basis.map((term) => term(sample.x));
-    for (let row = 0; row < size; row += 1) {
-      result[row] += values[row] * sample.y;
-      for (let column = 0; column < size; column += 1) {
-        matrix[row][column] += values[row] * values[column];
-      }
-    }
+async function readJson(path, signal) {
+  const response = await fetch(DATA_BASE + path, { signal });
+  if (!response.ok) throw new Error(`${path} 返回 HTTP ${response.status}`);
+  if (!path.endsWith(".gz")) return response.json();
+  if (!window.DecompressionStream || !response.body) {
+    throw new Error("当前浏览器无法读取压缩的实验资源");
   }
-
-  // 微小正则项与主元交换让浏览器端示例在退化数据上也能稳定返回。
-  for (let index = 0; index < size; index += 1) matrix[index][index] += 1e-9;
-  for (let column = 0; column < size; column += 1) {
-    let pivot = column;
-    for (let row = column + 1; row < size; row += 1) {
-      if (Math.abs(matrix[row][column]) > Math.abs(matrix[pivot][column])) pivot = row;
-    }
-    if (Math.abs(matrix[pivot][column]) < 1e-12) return null;
-    [matrix[column], matrix[pivot]] = [matrix[pivot], matrix[column]];
-    [result[column], result[pivot]] = [result[pivot], result[column]];
-
-    const divisor = matrix[column][column];
-    for (let index = column; index < size; index += 1) matrix[column][index] /= divisor;
-    result[column] /= divisor;
-
-    for (let row = 0; row < size; row += 1) {
-      if (row === column) continue;
-      const factor = matrix[row][column];
-      for (let index = column; index < size; index += 1) {
-        matrix[row][index] -= factor * matrix[column][index];
-      }
-      result[row] -= factor * result[column];
-    }
-  }
-  return result;
+  const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).json();
 }
 
-function predict(candidate, x) {
-  return candidate.coefficients.reduce(
-    (sum, coefficient, index) => sum + coefficient * candidate.basis[index](x),
-    0,
+async function cachedJson(cache, path, signal) {
+  if (cache.has(path)) return cache.get(path);
+  const value = await readJson(path, signal);
+  if (value.schema !== SCHEMA) throw new Error(`${path} 的数据版本不一致`);
+  cache.set(path, value);
+  return value;
+}
+
+function selectedKey(algorithm, dataset, condition, seed) {
+  return `${algorithm}:${dataset}:${condition}:${seed}`;
+}
+
+function availableDatasets(algorithm) {
+  const indexes = new Set(
+    state.catalog.runs.filter((run) => run.algorithm === algorithm).map((run) => run.dataset_index),
   );
+  return state.catalog.datasets.filter((dataset) => indexes.has(dataset.index));
 }
 
-function rmse(candidate, samples) {
-  const error = samples.reduce((sum, sample) => {
-    const residual = predict(candidate, sample.x) - sample.y;
-    return sum + residual * residual;
-  }, 0);
-  return Math.sqrt(error / samples.length);
-}
-
-function formatEquation(candidate) {
-  return candidate.coefficients.map((coefficient, index) => {
-    const sign = index === 0 ? (coefficient < 0 ? "−" : "") : (coefficient < 0 ? " − " : " + ");
-    const magnitude = Math.abs(coefficient).toFixed(2);
-    return `${sign}${magnitude}${candidate.terms[index]}`;
-  }).join("");
-}
-
-function buildCandidates() {
-  const training = state.samples.filter((sample) => sample.split === "train");
-  const validation = state.samples.filter((sample) => sample.split === "valid");
-
-  return MODELS.map((model) => {
-    const coefficients = fitCoefficients(training, model.basis);
-    if (!coefficients) return null;
-    const candidate = { ...model, coefficients };
-    candidate.trainRmse = rmse(candidate, training);
-    candidate.validRmse = rmse(candidate, validation);
-    candidate.score = candidate.validRmse + 0.02 * coefficients.length;
-    candidate.equation = formatEquation(candidate);
-    return candidate;
-  }).filter(Boolean).sort((left, right) => left.score - right.score);
-}
-
-function svgElement(tag, attributes = {}) {
-  const element = document.createElementNS(SVG_NS, tag);
-  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, String(value));
-  return element;
-}
-
-function drawChart(candidate) {
-  chart.replaceChildren();
-  const title = svgElement("title");
-  title.textContent = `${candidate.name}：${candidate.equation}；训练与验证样本及拟合曲线`;
-  chart.append(title);
-
-  const curveSamples = Array.from({ length: 141 }, (_, index) => {
-    const x = -3 + (6 * index) / 140;
-    return { x, y: predict(candidate, x) };
-  });
-  const values = [...state.samples.map((sample) => sample.y), ...curveSamples.map((sample) => sample.y)];
-  const bottom = Math.min(...values);
-  const top = Math.max(...values);
-  const padding = Math.max((top - bottom) * 0.14, 0.3);
-  const minimum = bottom - padding;
-  const maximum = top + padding;
-  const mapX = (x) => PLOT.left + ((x + 3) / 6) * PLOT.width;
-  const mapY = (y) => PLOT.top + ((maximum - y) / (maximum - minimum)) * PLOT.height;
-
-  for (let step = 0; step <= 4; step += 1) {
-    const y = PLOT.top + (PLOT.height * step) / 4;
-    const value = maximum - ((maximum - minimum) * step) / 4;
-    chart.append(svgElement("line", { x1: PLOT.left, y1: y, x2: PLOT.left + PLOT.width, y2: y, class: "chart-grid" }));
-    const label = svgElement("text", { x: PLOT.left - 10, y: y + 4, "text-anchor": "end", class: "chart-label" });
-    label.textContent = value.toFixed(1);
-    chart.append(label);
+function setOptions(select, items, selected) {
+  select.replaceChildren();
+  for (const item of items) {
+    const option = document.createElement("option");
+    option.value = String(item.value);
+    option.textContent = item.label;
+    select.append(option);
   }
-  for (const x of [-3, -2, -1, 0, 1, 2, 3]) {
-    chart.append(svgElement("line", {
-      x1: mapX(x), y1: PLOT.top, x2: mapX(x), y2: PLOT.top + PLOT.height,
-      class: x === 0 ? "chart-zero" : "chart-grid",
-    }));
-    if (x % 3 === 0) {
-      const label = svgElement("text", {
-        x: mapX(x), y: PLOT.top + PLOT.height + 21,
-        "text-anchor": "middle", class: "chart-label",
-      });
-      label.textContent = String(x);
-      chart.append(label);
+  if (items.some((item) => String(item.value) === String(selected))) select.value = String(selected);
+}
+
+function setDatasetOptions(selected) {
+  const algorithm = elements.algorithm.value;
+  const datasets = availableDatasets(algorithm);
+  setOptions(elements.dataset, datasets.map((dataset) => {
+    const run = state.catalog.runs.find((item) => item.algorithm === algorithm && item.dataset_index === dataset.index);
+    return { value: dataset.index, label: `${run.dataset_id} · ${dataset.name}` };
+  }), selected);
+}
+
+function setSeedOptions(selected) {
+  const seeds = state.catalog.runs
+    .filter((run) => run.algorithm === elements.algorithm.value && run.dataset_index === elements.dataset.value && run.condition === state.condition)
+    .map((run) => run.seed)
+    .sort((left, right) => left - right);
+  setOptions(elements.seed, seeds.map((seed) => ({ value: seed, label: String(seed) })), selected);
+}
+
+function selectedRunEntry() {
+  const key = selectedKey(elements.algorithm.value, elements.dataset.value, state.condition, Number(elements.seed.value));
+  const run = state.catalog.runs.find((entry) => selectedKey(entry.algorithm, entry.dataset_index, entry.condition, entry.seed) === key);
+  if (!run) throw new Error(`实验记录不存在：${key}`);
+  return run;
+}
+
+function stopPlayback() {
+  state.playing = false;
+  clearTimeout(state.playbackTimer);
+  elements.play.textContent = "▶ 播放";
+}
+
+async function loadSelection() {
+  stopPlayback();
+  state.requestId += 1;
+  const requestId = state.requestId;
+  state.controller?.abort();
+  state.controller = new AbortController();
+  const entry = selectedRunEntry();
+  const datasetEntry = state.catalog.datasets.find((item) => item.index === entry.dataset_index);
+  if (!datasetEntry) throw new Error(`数据集记录不存在：${entry.dataset_index}`);
+  showStatus(`正在读取 ${entry.algorithm} / ${entry.dataset_id} / ${entry.condition} / ${entry.seed}…`);
+  const [dataset, run] = await Promise.all([
+    cachedJson(state.datasets, datasetEntry.path, state.controller.signal),
+    cachedJson(state.runs, entry.path, state.controller.signal),
+  ]);
+  if (requestId !== state.requestId) return;
+  if (
+    run.identity.algorithm !== entry.algorithm
+    || run.identity.dataset_index !== entry.dataset_index
+    || run.identity.condition !== entry.condition
+    || run.identity.seed !== entry.seed
+  ) throw new Error("运行文件与目录索引不一致");
+  if (dataset.dataset_index !== entry.dataset_index || run.timeline.length !== 180) {
+    throw new Error("数据集或训练时间线格式不正确");
+  }
+  state.dataset = dataset;
+  state.run = run;
+  while (state.runs.size > 8) state.runs.delete(state.runs.keys().next().value);
+  updateDatasetInfo();
+  showStatus(`${entry.dataset_id} · ${entry.available_snapshots}/180 分钟记录 · ${entry.candidate_count} 个候选`);
+  await renderMinute();
+}
+
+function updateDatasetInfo() {
+  const dataset = state.dataset;
+  const parts = [
+    `数据集：${dataset.name}`,
+    `特征：${dataset.feature_names.join("、")}`,
+    `展示样本：${dataset.samples.split.length} 个`,
+    `许可证：${dataset.license}`,
+  ];
+  if (dataset.citation?.title) parts.push(`数据来源：${dataset.citation.title}`);
+  if (dataset.plot.pca) {
+    const variance = dataset.plot.pca.explained_variance_ratio.map((value) => `${(value * 100).toFixed(1)}%`);
+    parts.push(`PCA 解释方差：PC1 ${variance[0]}，PC2 ${variance[1]}`);
+  }
+  if (state.catalog.source_summary.formal_ready === false) {
+    parts.push("归档的指标核验状态尚未标记完成");
+  }
+  elements.datasetInfo.replaceChildren(...parts.map((content) => {
+    const line = document.createElement("span");
+    line.textContent = content;
+    return line;
+  }));
+  elements.chartTitle.textContent = `${state.run.identity.dataset_id} 的拟合结果`;
+  elements.dimension.textContent = {
+    line: "一维曲线",
+    surface: "二维曲面",
+    projection: "PCA 投影",
+  }[dataset.plot.kind];
+  elements.runSummary.textContent = `结束状态：${state.run.terminal.status} · 候选数量：${state.run.candidates.length} · 噪声系数：${state.run.noise.sigma}`;
+}
+
+function formatMetric(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : "—";
+}
+
+function observedTraces(dataset, run, is3d) {
+  const coordinates = dataset.plot.coordinates;
+  const traces = [];
+  for (const split of SPLITS) {
+    const indexes = dataset.samples.split.flatMap((name, index) => name === split ? [index] : []);
+    if (indexes.length === 0) continue;
+    const trace = {
+      type: is3d ? "scatter3d" : "scatter",
+      mode: "markers",
+      name: `${SPLIT_LABELS[split]}样本`,
+      x: indexes.map((index) => coordinates[index][0]),
+      marker: { size: is3d ? 3 : 6, color: SPLIT_COLORS[split], opacity: 0.78 },
+    };
+    if (is3d) {
+      trace.y = indexes.map((index) => coordinates[index][1]);
+      trace.z = indexes.map((index) => run.observed_y[index]);
+    } else {
+      trace.y = indexes.map((index) => run.observed_y[index]);
     }
+    traces.push(trace);
   }
-
-  const path = curveSamples.map((point, index) => `${index === 0 ? "M" : "L"}${mapX(point.x).toFixed(2)} ${mapY(point.y).toFixed(2)}`).join(" ");
-  chart.append(svgElement("path", { d: path, class: "chart-curve" }));
-  for (const sample of state.samples) {
-    chart.append(svgElement("circle", {
-      cx: mapX(sample.x), cy: mapY(sample.y), r: sample.split === "train" ? 5 : 6,
-      class: sample.split === "train" ? "chart-train" : "chart-valid",
-    }));
-  }
+  return traces;
 }
 
-function renderSelected() {
-  const candidate = state.candidates.find((item) => item.id === state.selectedId);
-  if (!candidate) return;
-  document.querySelector("#selected-model-name").textContent = `${candidate.name}${candidate === state.candidates[0] ? " · 当前推荐" : " · 手动查看"}`;
-  document.querySelector("#selected-equation").textContent = candidate.equation;
-  document.querySelector("#train-rmse").textContent = candidate.trainRmse.toFixed(3);
-  document.querySelector("#valid-rmse").textContent = candidate.validRmse.toFixed(3);
-  for (const row of ranking.querySelectorAll(".candidate-row")) {
-    row.setAttribute("aria-pressed", String(row.dataset.model === state.selectedId));
+function plotLayout(dataset, is3d) {
+  const base = {
+    autosize: true,
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+    font: { family: "Inter, system-ui, sans-serif", color: "#31524b", size: 11 },
+    showlegend: true,
+    legend: { orientation: "h", x: 0, y: -0.08 },
+    uirevision: dataset.dataset_index,
+  };
+  if (is3d) {
+    base.margin = { l: 0, r: 0, t: 0, b: 0 };
+    base.scene = {
+      xaxis: { title: dataset.plot.axis_labels[0] },
+      yaxis: { title: dataset.plot.axis_labels[1] },
+      zaxis: { title: dataset.plot.axis_labels[2] },
+      bgcolor: "rgba(0,0,0,0)",
+    };
+  } else {
+    base.margin = { l: 58, r: 20, t: 12, b: 56 };
+    base.xaxis = { title: dataset.plot.axis_labels[0], gridcolor: "#e2eae3" };
+    base.yaxis = { title: dataset.plot.axis_labels[1], gridcolor: "#e2eae3" };
   }
-  drawChart(candidate);
+  return base;
 }
 
-function renderRanking() {
-  ranking.replaceChildren();
-  const columns = document.createElement("div");
-  columns.className = "candidate-column-head";
-  for (const label of ["排名", "结构", "拟合后的公式", "验证 RMSE", "选择分数"]) {
-    const cell = document.createElement("span");
-    cell.textContent = label;
-    columns.append(cell);
+function plotTraces(dataset, run, candidate) {
+  const kind = dataset.plot.kind;
+  const is3d = kind !== "line";
+  const traces = observedTraces(dataset, run, is3d);
+  const predictions = candidate?.plot;
+  if (!predictions || !["ok", "partial"].includes(predictions.status)) return traces;
+  if (predictions.sample_y.length !== dataset.samples.split.length) {
+    throw new Error("候选预测数量与展示样本数量不一致");
   }
-  ranking.append(columns);
-
-  state.candidates.forEach((candidate, index) => {
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className = "candidate-row";
-    row.dataset.model = candidate.id;
-    row.setAttribute("aria-pressed", String(candidate.id === state.selectedId));
-    row.setAttribute("aria-label", `${candidate.name}，验证 RMSE ${candidate.validRmse.toFixed(3)}，选择分数 ${candidate.score.toFixed(3)}，查看曲线`);
-
-    const rank = document.createElement("span");
-    rank.className = "candidate-rank";
-    rank.textContent = String(index + 1).padStart(2, "0");
-    const name = document.createElement("span");
-    name.className = "candidate-name";
-    name.textContent = candidate.name;
-    if (index === 0) {
-      const badge = document.createElement("em");
-      badge.textContent = "推荐";
-      name.append(badge);
-    }
-    const equation = document.createElement("span");
-    equation.className = "candidate-equation";
-    equation.textContent = candidate.equation;
-    const error = document.createElement("span");
-    error.className = "candidate-value";
-    error.textContent = candidate.validRmse.toFixed(3);
-    const score = document.createElement("span");
-    score.className = "candidate-score";
-    score.textContent = candidate.score.toFixed(3);
-    row.append(rank, name, equation, error, score);
-    row.addEventListener("click", () => {
-      state.selectedId = candidate.id;
-      renderSelected();
+  if (kind === "line") {
+    traces.unshift({
+      type: "scatter", mode: "lines", name: "候选曲线",
+      x: dataset.plot.grid.x, y: predictions.grid_y,
+      line: { color: "#123f3b", width: 3 },
     });
-    ranking.append(row);
-  });
-}
-
-function renderAll() {
-  state.samples = generateSamples();
-  state.candidates = buildCandidates();
-  state.selectedId = state.candidates[0]?.id ?? null;
-  document.querySelector("#noise-value").textContent = state.noise.toFixed(2);
-  for (const button of document.querySelectorAll(".dataset-button")) {
-    button.setAttribute("aria-pressed", String(button.dataset.preset === state.preset));
+  } else {
+    if (kind === "surface") {
+      const grid = dataset.plot.grid;
+      const side = grid.x.length;
+      if (predictions.grid_y.length !== side * grid.y.length) throw new Error("曲面网格数量不一致");
+      const surface = [];
+      for (let row = 0; row < grid.y.length; row += 1) {
+        surface.push(predictions.grid_y.slice(row * side, (row + 1) * side));
+      }
+      traces.unshift({
+        type: "surface", name: "候选曲面", x: grid.x, y: grid.y, z: surface,
+        colorscale: [[0, "#cee8db"], [1, "#168981"]], opacity: 0.68, showscale: false,
+      });
+    }
+    traces.push({
+      type: "scatter3d", mode: "markers", name: "候选预测点",
+      x: dataset.plot.coordinates.map((row) => row[0]),
+      y: dataset.plot.coordinates.map((row) => row[1]),
+      z: predictions.sample_y,
+      marker: { color: "#173c39", size: 2.5, symbol: "diamond", opacity: 0.65 },
+    });
   }
-  renderRanking();
-  renderSelected();
+  return traces;
 }
 
-for (const button of document.querySelectorAll(".dataset-button")) {
+async function requestPlot() {
+  state.plotRequested = true;
+  if (state.plotRunning) return;
+  state.plotRunning = true;
+  try {
+    while (state.plotRequested) {
+      state.plotRequested = false;
+      const dataset = state.dataset;
+      const run = state.run;
+      const frame = run.timeline[state.minute - 1];
+      const candidate = frame.candidate === null ? null : run.candidates[frame.candidate];
+      await Plotly.react(
+        elements.chart,
+        plotTraces(dataset, run, candidate),
+        plotLayout(dataset, dataset.plot.kind !== "line"),
+        { responsive: true, displaylogo: false, scrollZoom: false },
+      );
+    }
+  } finally {
+    state.plotRunning = false;
+  }
+}
+
+async function renderMinute() {
+  if (!state.dataset || !state.run) return;
+  const frame = state.run.timeline[state.minute - 1];
+  const candidate = frame.candidate === null ? null : state.run.candidates[frame.candidate];
+  elements.minute.value = String(state.minute);
+  elements.minuteValue.textContent = `第 ${state.minute} / 180 分钟`;
+  elements.minuteStatus.textContent = frame.status === "missing" ? "该分钟缺少记录" : `记录状态：${frame.status}`;
+  elements.equation.textContent = candidate?.equation || "当前分钟没有可用公式";
+  for (const split of SPLITS) {
+    elements.metrics[split].textContent = formatMetric(frame.metrics?.[split]?.r2);
+  }
+  const plot = candidate?.plot;
+  elements.plotNote.textContent = !candidate
+    ? "当前分钟没有可用候选。"
+    : plot.status === "ok" ? "图形数值已预计算；训练样本显示本次运行实际使用的噪声标签。"
+      : plot.status === "partial" ? "部分预测点无有限数值，图形中保留空缺。"
+        : `当前候选无法绘图：${plot.reason}`;
+  await requestPlot();
+}
+
+async function playbackStep() {
+  if (!state.playing) return;
+  if (state.minute >= 180) {
+    stopPlayback();
+    return;
+  }
+  state.minute += 1;
+  await renderMinute();
+  if (state.playing) state.playbackTimer = setTimeout(() => playbackStep().catch(reportError), Number(elements.speed.value));
+}
+
+for (const button of document.querySelectorAll(".noise-choice")) {
   button.addEventListener("click", () => {
-    state.preset = button.dataset.preset;
-    renderAll();
+    state.condition = button.dataset.condition;
+    for (const option of document.querySelectorAll(".noise-choice")) {
+      option.setAttribute("aria-pressed", String(option === button));
+    }
+    setSeedOptions(elements.seed.value);
+    loadSelection().catch(reportError);
   });
 }
-noiseInput.addEventListener("input", () => {
-  state.noise = Number(noiseInput.value);
-  renderAll();
+elements.algorithm.addEventListener("change", () => {
+  setDatasetOptions();
+  setSeedOptions();
+  loadSelection().catch(reportError);
 });
-document.querySelector("#resample").addEventListener("click", () => {
-  state.seed += 1;
-  renderAll();
+elements.dataset.addEventListener("change", () => {
+  setSeedOptions();
+  loadSelection().catch(reportError);
+});
+elements.seed.addEventListener("change", () => loadSelection().catch(reportError));
+elements.minute.addEventListener("input", () => {
+  state.minute = Number(elements.minute.value);
+  renderMinute().catch(reportError);
+});
+elements.play.addEventListener("click", () => {
+  if (state.playing) {
+    stopPlayback();
+    return;
+  }
+  if (!state.run) return;
+  if (state.minute >= 180) state.minute = 1;
+  state.playing = true;
+  elements.play.textContent = "Ⅱ 暂停";
+  playbackStep().catch(reportError);
 });
 
-renderAll();
+async function initialize() {
+  if (!window.Plotly) throw new Error("图形组件未能加载");
+  const catalog = await readJson("catalog.json");
+  if (catalog.schema !== SCHEMA || catalog.runs.length !== 6750 || catalog.datasets.length !== 50) {
+    throw new Error("实验目录数量或版本不正确");
+  }
+  state.catalog = catalog;
+  setOptions(elements.algorithm, catalog.algorithms.map((id) => ({ value: id, label: ALGORITHM_LABELS[id] || id })));
+  setDatasetOptions();
+  setSeedOptions();
+  await loadSelection();
+}
+
+initialize().catch(reportError);

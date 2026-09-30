@@ -6,11 +6,12 @@
     <meta name="theme-color" content="#102a29" />
     <meta
       name="description"
-      content="SymbolicArena：用统一接口运行和评测符号回归算法，并在浏览器中体验一个轻量的方程发现示例。"
+      content="浏览 SymbolicArena 的真实符号回归实验，比较算法、数据集、噪声和随机种子，并播放完整训练轨迹。"
     />
     <title>SymbolicArena · 让方程发现更清晰</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.plot.ly/plotly-4.1.1.min.js" charset="utf-8" integrity="sha384-AFNp2MtSm5/oZbEs/J19F/Ah57MEiVsoed8nE3fq2Wnccdl1u/EkyJ9XKKU8rt7+" crossorigin="anonymous" defer></script>
     <script src="./app.js" defer></script>
   </head>
   <body>
@@ -24,7 +25,7 @@
         </a>
         <div class="nav-links">
           <a href="#why">项目能力</a>
-          <a href="#demo">交互示例</a>
+          <a href="#demo">实验轨迹</a>
           <a href="#start">开始使用</a>
         </div>
         <a
@@ -48,7 +49,7 @@
             让训练、方程导出与评测可以用一致的方式进行。
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#demo">体验交互示例 <span aria-hidden="true">↗</span></a>
+            <a class="button button-primary" href="#demo">浏览实验轨迹 <span aria-hidden="true">↗</span></a>
             <a class="button button-secondary" href="#start">查看 Python 用法 <span aria-hidden="true">→</span></a>
           </div>
           <div class="hero-facts" aria-label="项目特点">
@@ -130,93 +131,88 @@
         <div class="container">
           <div class="section-heading demo-heading">
             <div>
-              <p class="section-kicker">02 / INTERACTIVE DEMO</p>
-              <h2 id="demo-title">亲手试一次“找公式”</h2>
+              <p class="section-kicker">02 / EXPERIMENT EXPLORER</p>
+              <h2 id="demo-title">播放真实实验轨迹</h2>
             </div>
-            <p>切换数据形状与噪声，观察有限候选结构如何拟合数据并在留出样本上比较。</p>
+            <p>选择算法、数据集、噪声和随机种子，查看三小时内每分钟的公式与预测结果。</p>
           </div>
 
           <div class="demo-notice" role="note">
             <span class="notice-icon" aria-hidden="true">i</span>
-            <p>这是浏览器端的教学示例：只拟合页面内置的候选结构，不运行 SymbolicArena 的正式算法，也不代表 benchmark 成绩。</p>
+            <p>图形数值在发布前根据实验工件计算。原始记录中的缺失时间点和无法绘图的候选会显示状态；网页不执行公式。</p>
           </div>
 
-          <div class="demo-layout">
-            <div class="controls-card">
-              <div class="card-heading">
-                <span class="card-eyebrow">CONFIGURE</span>
-                <h3>生成一组数据</h3>
-              </div>
-
-              <fieldset class="preset-fieldset">
-                <legend>真实关系</legend>
-                <button class="dataset-button" type="button" data-preset="quadratic" aria-pressed="true">
-                  <span class="dataset-glyph" aria-hidden="true">∪</span>
-                  <span><strong>二次关系</strong><small>弯曲的抛物线</small></span>
-                  <span class="dataset-check" aria-hidden="true">✓</span>
-                </button>
-                <button class="dataset-button" type="button" data-preset="sine" aria-pressed="false">
-                  <span class="dataset-glyph" aria-hidden="true">∿</span>
-                  <span><strong>周期关系</strong><small>起伏的正弦波</small></span>
-                  <span class="dataset-check" aria-hidden="true">✓</span>
-                </button>
-                <button class="dataset-button" type="button" data-preset="rational" aria-pressed="false">
-                  <span class="dataset-glyph" aria-hidden="true">⌒</span>
-                  <span><strong>有理关系</strong><small>中心凸起的曲线</small></span>
-                  <span class="dataset-check" aria-hidden="true">✓</span>
-                </button>
+          <div class="explorer-layout">
+            <div class="explorer-controls">
+              <span class="card-eyebrow">SELECT A RUN</span>
+              <h3>选择实验</h3>
+              <label for="algorithm-select">算法</label>
+              <select id="algorithm-select" aria-label="选择算法"></select>
+              <label for="dataset-select">数据集</label>
+              <select id="dataset-select" aria-label="选择数据集"></select>
+              <fieldset class="noise-options">
+                <legend>训练噪声</legend>
+                <button type="button" class="noise-choice" data-condition="clean" aria-pressed="true">无噪声</button>
+                <button type="button" class="noise-choice" data-condition="noise001" aria-pressed="false">1%</button>
+                <button type="button" class="noise-choice" data-condition="noise005" aria-pressed="false">5%</button>
               </fieldset>
-
-              <div class="noise-control">
-                <div class="control-label-row">
-                  <label for="noise">观测噪声</label>
-                  <output id="noise-value" for="noise">0.10</output>
-                </div>
-                <input id="noise" type="range" min="0" max="0.5" step="0.05" value="0.1" />
-                <div class="range-ends" aria-hidden="true"><span>清晰</span><span>嘈杂</span></div>
-              </div>
-
-              <button id="resample" class="resample-button" type="button">
-                <span aria-hidden="true">↻</span> 重新采样
-              </button>
-              <p class="control-footnote">固定生成 40 个样本：30 个用于拟合，10 个用于验证。</p>
+              <label for="seed-select">随机种子</label>
+              <select id="seed-select" aria-label="选择随机种子"></select>
+              <p id="selection-status" class="selection-status" role="status">正在读取实验目录…</p>
+              <div id="dataset-info" class="dataset-info"></div>
             </div>
 
-            <div class="chart-card">
-              <div class="chart-heading">
-                <div>
-                  <span class="card-eyebrow">MODEL FIT</span>
-                  <h3>数据与候选曲线</h3>
+            <div class="explorer-main">
+              <div class="chart-card explorer-chart-card">
+                <div class="chart-heading">
+                  <div>
+                    <span class="card-eyebrow">PRECOMPUTED PREDICTIONS</span>
+                    <h3 id="chart-title">实验图形</h3>
+                  </div>
+                  <span id="chart-dimension" class="dimension-pill">读取中</span>
                 </div>
-                <div class="legend" aria-label="图例">
-                  <span><i class="legend-train"></i> 拟合样本</span>
-                  <span><i class="legend-valid"></i> 验证样本</span>
-                  <span><i class="legend-curve"></i> 当前曲线</span>
-                </div>
+                <div id="run-chart" role="img" aria-label="实验样本和候选预测结果"></div>
+                <p id="plot-note" class="plot-note"></p>
               </div>
-              <svg id="fit-chart" viewBox="0 0 760 380" role="img" aria-label="数据点和拟合曲线"></svg>
-              <div class="fit-summary" aria-live="polite">
-                <div class="fit-equation">
-                  <span id="selected-model-name" class="card-eyebrow">当前候选</span>
-                  <strong id="selected-equation">正在计算…</strong>
+
+              <div class="timeline-card">
+                <div class="timeline-heading">
+                  <div><span class="card-eyebrow">FULL TRAJECTORY</span><h3>训练时间线</h3></div>
+                  <strong id="minute-value">第 1 / 180 分钟</strong>
                 </div>
-                <div class="fit-metrics">
-                  <div><span>训练 RMSE</span><strong id="train-rmse">—</strong></div>
-                  <div><span>验证 RMSE</span><strong id="valid-rmse">—</strong></div>
+                <input id="minute-range" type="range" min="1" max="180" value="1" aria-label="选择训练分钟" />
+                <div class="timeline-footer">
+                  <button id="play-button" type="button">▶ 播放</button>
+                  <label for="playback-speed">速度</label>
+                  <select id="playback-speed" aria-label="播放速度">
+                    <option value="700">1×</option>
+                    <option value="350" selected>2×</option>
+                    <option value="175">4×</option>
+                  </select>
+                  <span id="minute-status">等待轨迹</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="ranking-card">
-            <div class="ranking-heading">
-              <div>
-                <span class="card-eyebrow">CANDIDATE COMPARISON</span>
-                <h3>候选结构</h3>
-              </div>
-              <p>按「验证 RMSE + 0.02 × 参数个数」排序；点击一行查看曲线。</p>
+          <div class="run-details">
+            <div class="equation-panel">
+              <span class="card-eyebrow">EQUATION AT SELECTED MINUTE</span>
+              <h3>当前公式</h3>
+              <pre id="equation-text">等待实验数据</pre>
+              <p id="run-summary"></p>
             </div>
-            <div id="candidate-list" class="candidate-list" aria-label="候选结构排序"></div>
+            <div class="metrics-panel">
+              <span class="card-eyebrow">ACCURACY</span>
+              <h3>当前拟合精度</h3>
+              <div class="metric-grid">
+                <div><span>训练 R²</span><strong id="metric-train">—</strong></div>
+                <div><span>验证 R²</span><strong id="metric-valid">—</strong></div>
+                <div><span>ID 测试 R²</span><strong id="metric-id">—</strong></div>
+                <div><span>OOD 测试 R²</span><strong id="metric-ood">—</strong></div>
+              </div>
+              <p>指标来自原始分钟记录；训练噪声只作用于训练标签，指标使用原始标签计算。</p>
+            </div>
           </div>
         </div>
       </section>
@@ -226,7 +222,7 @@
           <div class="start-copy">
             <p class="section-kicker">03 / TAKE IT FURTHER</p>
             <h2 id="start-title">真实搜索，回到 Python。</h2>
-            <p>浏览器示例帮助理解流程。要运行已接入的符号回归算法，请在项目环境中使用统一接口。</p>
+            <p>网页展示离线生成的实验记录。要运行新的符号回归搜索，请在项目环境中使用统一接口。</p>
             <ol class="workflow-list">
               <li><span>01</span><div><strong>准备数据</strong><p>构造特征矩阵 X 与目标 y。</p></div></li>
               <li><span>02</span><div><strong>选择算法</strong><p>例如用 <code>gplearn</code> 创建回归器。</p></div></li>
@@ -266,7 +262,7 @@ print(regressor.get_optimal_equation())</code></pre>
     <footer class="site-footer">
       <div class="container footer-inner">
         <div><span class="footer-brand">SymbolicArena</span><p>让方程发现更清晰。</p></div>
-        <div><span>开源项目 · GitHub Pages 静态演示</span><a href="https://github.com/scientific-intelligent-modelling/SymbolicArena" target="_blank" rel="noopener noreferrer">查看源代码 ↗</a></div>
+        <div><span>开源项目 · GitHub Pages 实验展示</span><a href="https://github.com/scientific-intelligent-modelling/SymbolicArena" target="_blank" rel="noopener noreferrer">查看源代码 ↗</a></div>
       </div>
     </footer>
   </body>
