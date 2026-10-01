@@ -1,6 +1,7 @@
 "use strict";
 
 const DATA_BASE = "https://symbolicarena-pages-1988054973082523.oss-cn-hongkong.aliyuncs.com/web/releases/release-20260930-v1/";
+const CATALOG_BYTES = 2298027;
 const SCHEMA = "symbolicarena-pages-v1";
 const SPLITS = ["train", "valid", "id_test", "ood_test"];
 const SPLIT_LABELS = { train: "Train", valid: "Validation", id_test: "ID test", ood_test: "OOD test" };
@@ -89,21 +90,21 @@ function reportError(error) {
   console.error(error);
 }
 
-async function readJson(path, signal, onBytes, expectedBytes = null) {
+async function readJson(path, signal, onBytes, expectedBytes) {
   const response = await fetch(DATA_BASE + path, { signal });
   if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
-  const total = Number(response.headers.get("Content-Length"));
-  if (!Number.isInteger(total) || total <= 0 || !response.body) {
-    throw new Error(`Missing transfer length for ${path}`);
+  if (!Number.isInteger(expectedBytes) || expectedBytes <= 0 || !response.body) {
+    throw new Error(`Missing expected transfer size for ${path}`);
   }
-  if (expectedBytes !== null && total !== expectedBytes) {
+  const declaredBytes = response.headers.get("Content-Length");
+  if (declaredBytes !== null && Number(declaredBytes) !== expectedBytes) {
     throw new Error(`Transfer length differs from the catalog for ${path}`);
   }
   let received = 0;
   const countedStream = response.body.pipeThrough(new TransformStream({
     transform(chunk, controller) {
       received += chunk.byteLength;
-      onBytes?.(chunk.byteLength, total, received);
+      onBytes?.(chunk.byteLength, expectedBytes, received);
       controller.enqueue(chunk);
     },
   }), { signal });
@@ -112,7 +113,7 @@ async function readJson(path, signal, onBytes, expectedBytes = null) {
   }
   const stream = path.endsWith(".gz") ? countedStream.pipeThrough(new DecompressionStream("gzip"), { signal }) : countedStream;
   const value = await new Response(stream).json();
-  if (received !== total) throw new Error(`Incomplete transfer for ${path}`);
+  if (received !== expectedBytes) throw new Error(`Incomplete transfer for ${path}`);
   return value;
 }
 
@@ -527,7 +528,7 @@ async function initialize() {
   if (!window.Plotly) throw new Error("The chart library did not load");
   showProgress("Loading experiment catalog", 0, 1);
   const [catalog, paperResults] = await Promise.all([
-    readJson("catalog.json", undefined, (_bytes, total, received) => showProgress("Loading experiment catalog", received, total)),
+    readJson("catalog.json", undefined, (_bytes, total, received) => showProgress("Loading experiment catalog", received, total), CATALOG_BYTES),
     fetch("./paper-results.json").then((response) => {
       if (!response.ok) throw new Error(`Paper results returned HTTP ${response.status}`);
       return response.json();
