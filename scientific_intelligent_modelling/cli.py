@@ -388,12 +388,6 @@ def main(argv: Optional[List[str]] = None) -> None:
     # 来自未知长选项的参数（例如 --llm_config_path xxx），全部交给对应 wrapper 自行解析
     extra_kwargs = _parse_unknown_to_kwargs(unknown)
     extra_params.update(extra_kwargs)
-    # 将 -a/-t 也作为显式参数传入，便于在 meta.json 中完整记录 CLI 调用
-    extra_params.setdefault("algorithm", algorithm)
-    extra_params.setdefault("train_path", train_path)
-    # 显式传入数据集名称，便于下游记录到 WandB
-    if getattr(args, "dataset_name", None):
-        extra_params.setdefault("dataset_name", args.dataset_name)
     # 显式传入 seed，保证下游包装器与 LLMSRRegressor 能够拿到与 manifest 一致的种子
     if getattr(args, "seed", None) is not None:
         extra_params.setdefault("seed", args.seed)
@@ -445,6 +439,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     # 先构造回归器以创建实验目录，便于重定向日志到实验目录
     reg = SymbolicRegressor(
         tool_name=algorithm,
+        problem_name=args.dataset_name,
         **extra_params,
     )
 

@@ -1,120 +1,72 @@
-# Scientific Intelligent Modelling（科学智能建模）
+# SymbolicArena
 
-![Scientific Intelligent Modelling](./images/cover.png)
+[Paper: arXiv:2609.35113](https://arxiv.org/abs/2609.35113) · [Interactive demo](http://symbolicarena.top/) · [License](./LICENSE)
 
-Scientific Intelligent Modelling 是一个统一接入、运行和评测符号回归算法的工具箱。项目通过 `SymbolicRegressor` 提供一致的 Python API，并使用独立 Conda 环境和子进程隔离不同算法的依赖。
+SymbolicArena is a benchmark and evaluation toolkit for symbolic regression. It standardizes heterogeneous datasets, runs algorithms through a common Python interface and execution protocol, and records both final expressions and search trajectories. The repository contains the execution code, example datasets, experiment records, and the static demo in [`docs/`](./docs/).
 
-## 功能概览
+## From 664 tasks to Core50
 
-- **统一接口**：不同算法共享 `fit`、`predict`、`get_optimal_equation` 和 `get_total_equations`。
-- **环境隔离**：每类算法映射到独立或可复用的 Conda 环境，减少依赖冲突。
-- **命令行入口**：通过 `sim-cli` 直接运行 CSV、NumPy 文件或标准数据集目录。
-- **标准评测**：标准数据集目录会自动进入统一 benchmark runner，产出方程、指标和运行记录。
-- **可扩展接入**：提供 manifest、脚手架生成器、结构校验和离线 smoke check。
+The paper standardizes 664 executable symbolic regression tasks and selects 50 tasks for Core50. The selection considers task coverage, algorithm responses, and distributional balance; the smaller benchmark reduces the evaluation workload by **92.5%**.
 
-当前已注册的算法包括：
+![Figure 1 from the SymbolicArena paper: benchmark distillation, unified execution, and six evaluation axes](./docs/figures/figure-1-overview.svg)
 
-| 算法 ID | Conda 环境 | 说明 |
-| --- | --- | --- |
-| `gplearn`、`pysr`、`pyoperon` | `sim_base` | 经典符号回归算法 |
-| `fepysr` | `sim_fepysr` | 神经特征提取与 PySR |
-| `jaxsr` | `sim_jaxsr` | 基于 JAX 的符号回归 |
-| `symbolfit` | `sim_symbolfit` | 方程搜索与参数重优化 |
-| `dso`、`udsr` | `sim_dso` | Deep Symbolic Optimization 系列 |
-| `llmsr`、`drsr` | `sim_llm` | 大模型驱动的符号回归 |
-| `tpsr` | `sim_tpsr` | Transformer 规划式符号回归 |
-| `e2esr` | `sim_e2esr` | 端到端符号回归 |
-| `ragsr` | `sim_ragsr` | 检索增强符号回归 |
-| `QLattice` | `sim_qLattice` | QLattice 符号建模 |
-| `iMCTS` | `sim_iMCTS` | 蒙特卡洛树搜索符号回归 |
+*Figure 1. The benchmark distillation and evaluation workflow.*
 
-算法 ID 区分大小写，应以
-[`toolbox_config.json`](./scientific_intelligent_modelling/config/toolbox_config.json)
-中的注册值为准。
+In the paper's comparison against six other 50-task selectors, Core50 obtains the lowest aggregate score mean absolute error to the full task set (**0.1388**), reducing this error by **72.6%–86.7%**. Across the nine algorithms evaluated on both scales, Spearman rank correlation is **0.9833 for ID** and **0.9667 for OOD**. These fidelity results use the paper's separate one-hour evaluation records.
 
-## 安装
+![Figure 2b from the SymbolicArena paper: information versus aggregate score fidelity](./docs/figures/figure-2b-tradeoff.svg)
 
-### 1. 前置条件
+*Figure 2b. Mean task information and aggregate score error for Core50 and six alternative selectors.*
 
-- Linux 或 macOS
-- Git
-- Conda（推荐 Miniconda 或 Miniforge）
-- 能够访问所选算法需要的软件源、模型权重或 API
+![Figure 3b from the SymbolicArena paper: OOD score and rank agreement](./docs/figures/figure-3b-ood.svg)
 
-主控环境使用 Python 3.10。部分算法环境使用其他 Python 版本，具体配置见
-[`envs_config.json`](./scientific_intelligent_modelling/config/envs_config.json)。
+*Figure 3b. OOD agreement between Core50 and the full task set; three validation algorithms were excluded from benchmark construction.*
 
-### 2. 克隆仓库及数据子仓库
+## What the six evaluation axes reveal
 
-```bash
-git clone \
-  https://github.com/scientific-intelligent-modelling/scientific-intelligent-modelling.git
-cd scientific-intelligent-modelling
+The formal evaluation compares **15 algorithms** on Core50 with a three-hour budget and three random seeds. ID and OOD measure numerical quality; SYM and MIN measure symbolic fidelity and expression minimality; EFF and STAB describe search progress and consistency across seeds. The paper reports that no evaluated method leads on every axis. Strong numerical fitting can coexist with limited symbolic recovery, while repeatable or rapid progress alone does not establish high final quality.
 
-# 算法源码已经内置；这里只初始化数据集 Python 包。
-git submodule update --init --recursive -- sim-datasets-py
-```
+![Figure 4 from the SymbolicArena paper: six-axis profiles for 15 algorithms](./docs/figures/figure-4-six-axis.svg)
 
-`sim-datasets-data/` 继续作为独立数据仓库使用，不纳入主仓库历史。
-论文源码子模块不是运行工具箱的必需项，无需为正常安装初始化。
+*Figure 4. Clean-condition scores on the six axes, displayed on a 0–100 scale.*
 
-### 3. 安装主控环境
+Figures are reproduced from [SymbolicArena (arXiv:2609.35113v1)](https://arxiv.org/abs/2609.35113v1), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The findings above describe the paper's reported experiments and their evaluated task distribution and configurations.
+
+## Repository structure
+
+- [`scientific_intelligent_modelling/algorithms/`](./scientific_intelligent_modelling/algorithms/): algorithm wrappers and bundled upstream sources.
+- [`scientific_intelligent_modelling/benchmarks/`](./scientific_intelligent_modelling/benchmarks/): shared benchmark runner, metrics, and result processing.
+- [`scientific_intelligent_modelling/srkit/`](./scientific_intelligent_modelling/srkit/): `SymbolicRegressor`, subprocess execution, and Conda environment management.
+- [`scientific_intelligent_modelling/config/`](./scientific_intelligent_modelling/config/): case-sensitive algorithm IDs, environment specifications, and evaluation settings.
+- [`scientific_intelligent_modelling/cli.py`](./scientific_intelligent_modelling/cli.py): the `sim-cli` command-line entry point.
+- [`examples/`](./examples/): small, complete example datasets with training, validation, ID, and OOD splits.
+- [`A_ICLR_experiments/`](./A_ICLR_experiments/), [`AAAI_experiments/`](./AAAI_experiments/), [`A_Neurips_experiments/`](./A_Neurips_experiments/): recorded experiment and benchmark preparation artifacts.
+- [`docs/`](./docs/): GitHub Pages source, paper figures, and published aggregate results. The browser fetches individual preprocessed trajectories from OSS as needed.
+- [`tools/`](./tools/): figure export and static data publication scripts.
+- [`tests/`](./tests/): automated checks; [`sim-datasets-py/`](./sim-datasets-py/) is a separate dataset Python package submodule.
+
+Registered algorithm IDs include `gplearn`, `pysr`, `pyoperon`, `fepysr`, `jaxsr`, `symbolfit`, `dso`, `udsr`, `llmsr`, `drsr`, `tpsr`, `e2esr`, `ragsr`, `QLattice`, and `iMCTS`. Names are case-sensitive; the authoritative registry is [`toolbox_config.json`](./scientific_intelligent_modelling/config/toolbox_config.json).
+
+## Installation
+
+Install Git and Conda on Linux or macOS. The main environment uses Python 3.10; algorithms may require separate environments and additional model weights or API access. See [`envs_config.json`](./scientific_intelligent_modelling/config/envs_config.json) for their dependencies.
 
 ```bash
+git clone https://github.com/scientific-intelligent-modelling/SymbolicArena.git
+cd SymbolicArena
 conda env create -f environment.yml
 conda activate sim
 python -m pip install -e .
-```
-
-安装完成后可确认命令行入口：
-
-```bash
 sim-cli --help
 ```
 
-### 4. 创建算法环境
+To use the separate dataset Python package, initialize its submodule with `git submodule update --init --recursive -- sim-datasets-py`. The small datasets under [`examples/`](./examples/) are already in this repository. The full task data are distributed separately and are not included in the Git checkout. When an algorithm environment is missing, the toolkit attempts to create the environment specified for that algorithm in `envs_config.json`.
 
-首次实例化某个算法时，框架会根据配置尝试自动创建对应环境。为了让安装过程更可控，也可以提前创建需要的环境：
-
-```python
-from scientific_intelligent_modelling.srkit.conda_env_manager import env_manager
-
-# 按实际需要选择，不必一次安装所有算法。
-for env_name in ["sim_base", "sim_dso"]:
-    if not env_manager.create_environment(env_name):
-        raise RuntimeError(f"环境创建失败: {env_name}")
-```
-
-将上面代码保存为脚本后，在仓库根目录和 `sim` 环境中运行。也可以进入交互式环境管理器：
-
-```bash
-python -m scientific_intelligent_modelling.srkit.conda_env_manager
-```
-
-> 部分环境体积较大，且可能需要下载模型。建议只创建当前任务需要的环境。
-
-### 5. 准备数据集（可选）
-
-仓库约定：
-
-- `sim-datasets-py/`：数据集 Python 包源码；
-- `sim-datasets-data/`：标准数据集文件目录。
-
-数据文件通常不随主仓库 Git 历史完整分发。需要完整 benchmark 数据时，可按
-[`sim-datasets-data/README.md`](./sim-datasets-data/README.md)
-从 Hugging Face 或 ModelScope 获取，并安装 Git LFS。
-
-若 CLI 使用相对于数据集根目录的路径，设置：
-
-```bash
-export SIM_DATASETS_PATH="$(pwd)/sim-datasets-data"
-```
-
-## 快速使用
+## Quick start
 
 ### Python API
 
-下面以安装较轻量的 `gplearn` 为例：
+This example uses `gplearn` (provided by the `sim_base` algorithm environment):
 
 ```python
 import numpy as np
@@ -134,289 +86,84 @@ regressor = SymbolicRegressor(
 )
 regressor.fit(X, y)
 
-print("最优方程:", regressor.get_optimal_equation())
-print("候选方程:", regressor.get_total_equations()[:3])
-print("预测结果:", regressor.predict(X[:5]))
+print("Best equation:", regressor.get_optimal_equation())
+print("First candidates:", regressor.get_total_equations()[:3])
+print("Predictions:", regressor.predict(X[:5]))
 ```
 
-不同算法的参数通过 `SymbolicRegressor(..., **kwargs)` 传入包装器。已有的参数和依赖说明可查阅
-[`docs/`](./docs/) 下对应的 `工具_<算法>.md`，其余算法以包装器实现和配置文件为准。
+`SymbolicRegressor(..., **kwargs)` passes algorithm options to the registered wrapper. Each wrapper has its own dependencies and parameter names; consult its code and `envs_config.json` before changing algorithms.
 
-### 命令行运行单个文件
+### Run a single CSV file
 
-CSV 默认第一行为表头、最后一列为目标列：
+By default, the CLI expects a CSV header and uses the last column as the target:
 
 ```bash
 sim-cli \
   --algorithm gplearn \
-  --train-path /path/to/train.csv \
+  --train-path examples/BPG0/train.csv \
   --dataset-name demo \
   --seed 42 \
   --population-size 500 \
   --generations 10
 ```
 
-除通用参数外，其余 `--key value` 或 `--key=value` 参数会转成下划线命名并传给算法包装器。例如 `--population-size` 会作为 `population_size` 传入。
+Additional `--key value` or `--key=value` options are converted to Python names (`--population-size` becomes `population_size`) and passed to the wrapper. The loader also accepts NumPy `.npy` arrays and `.npz` files containing `arr_0`.
 
-CLI 还支持：
+### Run a benchmark dataset
 
-- 带表头或不带表头的 CSV/文本数据；
-- `.npy`；
-- 包含 `arr_0` 的 `.npz`；
-- 标准数据集目录。
-
-### 运行标准数据集
-
-标准数据集目录至少包含：
-
-```text
-dataset_name/
-├── metadata.yaml
-├── train.csv
-├── valid.csv
-├── id_test.csv
-└── ood_test.csv
-```
-
-将目录直接传给 `--train-path`，CLI 会自动切换到统一 benchmark runner：
+Each example dataset under `examples/` contains `metadata.yaml`, `train.csv`, `valid.csv`, `id_test.csv`, and `ood_test.csv`. Point `--train-path` at the **directory** to run the shared benchmark protocol:
 
 ```bash
 sim-cli \
-  --algorithm pysr \
-  --train-path sim-datasets-data/srbench1.0/black-box/dataset_name \
+  --algorithm gplearn \
+  --train-path examples/BPG0 \
   --seed 42 \
   --timeout-in-seconds 600 \
   --output-root bench_results/quickstart
 ```
 
-标准 runner 会读取 `metadata.yaml` 中的特征名和目标列，并显式向包装器注入 `n_features`、`feature_names` 和 `target_name` 数据契约。
+The runner reads feature and target names from `metadata.yaml` and writes its results below `--output-root`. The default output directory is `bench_results/sim_cli/`. Direct Python API runs create `experiments/<problem>_<algorithm>_seed<seed>_<timestamp>/`.
 
-### 运行算法自检
+### Explore the published trajectories
 
-先运行目标算法的 check 脚本，不建议一开始就执行所有算法：
-
-```bash
-python check/check_gplearn.py
-python check/check_pysr.py
-python check/check_dso.py
-```
-
-其他算法使用同名脚本，例如 `check/check_llmsr.py`、`check/check_tpsr.py`。涉及大模型、外部服务或权重的算法，还需按对应工具文档配置 API key、网关或模型路径。
-
-## 输出位置
-
-直接使用 `SymbolicRegressor` 时，默认输出到：
-
-```text
-experiments/<problem>_<tool>_seed<seed>_<timestamp>/
-```
-
-使用标准数据集目录时，结果写入 `--output-root`；未指定时默认为：
-
-```text
-bench_results/sim_cli/
-```
-
-不同算法还可能在实验目录中保存日志、进度快照、候选方程或检查点。排查失败时，应先查看该任务的实验目录和单任务日志，不要只根据上层异常判断根因。
-
-## 扩展新算法
-
-推荐使用仓库内置的 `sr-tool-onboarder` 流程，而不是手工复制旧包装器。一次完整接入包含四层：
-
-1. **包装层**：实现统一 API，并适配底层工具的输入、输出和序列化。
-2. **注册层**：注册算法 ID、包装器类和 Conda 环境。
-3. **验收层**：提供可离线运行的 `check/check_<tool>.py`。
-4. **Manifest 层**：用机器可读文件记录接入方式、依赖和 smoke 参数。
-
-### 1. 验证上游算法
-
-先在独立环境中确认上游仓库能够完成最小训练和预测，再接入工具箱。若上游依赖与现有环境冲突，为新算法创建独立环境，不要直接污染 `sim` 主控环境。
-
-外部算法源码必须以内置第三方源码的方式放在包装器目录下，不再使用算法子模块：
-
-```text
-scientific_intelligent_modelling/algorithms/mytool_wrapper/
-├── wrapper.py
-└── mytool/
-    ├── LICENSE
-    └── <上游源码>
-```
-
-同步上游源码时，只复制目标提交跟踪的文件，保留许可证，并在
-`scientific_intelligent_modelling/algorithms/VENDORED_SOURCES.md` 中记录来源 URL
-和提交号。不要复制上游 `.git/`、缓存、构建产物或本地实验结果。
-如果上游包可稳定从 PyPI 安装，也可以仅在环境配置中声明依赖。
-
-### 2. 创建 Manifest
-
-复制示例：
+The [interactive demo](http://symbolicarena.top/) lets you select an algorithm, Core50 dataset, training noise level (clean, 1%, or 5%), and seed. Its timeline covers 180 minutes and updates the expression, fitted points, and ID/OOD curves. The aggregate six-axis chart uses the paper's published results; individual trajectories are fetched from a versioned OSS release. To serve the same site locally:
 
 ```bash
-cp tools/sr_onboarder/manifests/example_external_sr.json \
-  tools/sr_onboarder/manifests/mytool.json
+python -m http.server 8000 --directory docs
 ```
 
-至少修改以下字段：
+Open `http://localhost:8000/`. The local HTML still retrieves public trajectory data from OSS; it does not require a local copy of the complete experiment archive.
 
-- `tool_name`：小写、稳定的算法 ID；
-- `wrapper_class_name`：包装器类名；
-- `integration_mode`：`python_api` 或 `cli_only`；
-- `vendor_repo_relpath`：上游源码在仓库中的相对路径；
-- `entrypoint`：上游 Python 模块和入口对象；
-- `env`：环境名、Python 版本、依赖和安装命令；
-- `adapter`：输入形状、预测能力、序列化方式和参数白名单；
-- `smoke_test`：离线验收参数。
+## Extending the toolkit
 
-API key 只能在运行时通过环境变量注入，不能写入 manifest 或仓库。
+To integrate an additional algorithm, implement the shared interface in a wrapper under [`algorithms/`](./scientific_intelligent_modelling/algorithms/), register its case-sensitive name and environment in [`toolbox_config.json`](./scientific_intelligent_modelling/config/toolbox_config.json) and [`envs_config.json`](./scientific_intelligent_modelling/config/envs_config.json), and verify training, prediction, expression output, and serialization with the actual dependency. Wrappers that receive `n_features`, `feature_names`, and `target_name` must check these values against the input at the start of `fit`. Record any bundled upstream source and license in [`VENDORED_SOURCES.md`](./scientific_intelligent_modelling/algorithms/VENDORED_SOURCES.md). Pass credentials through runtime environment variables.
 
-### 3. 生成接入骨架
+## Troubleshooting
 
-```bash
-python3 tools/sr_onboarder/scripts/create_sr_tool.py \
-  --manifest tools/sr_onboarder/manifests/mytool.json
-```
-
-生成器会创建或更新：
-
-```text
-scientific_intelligent_modelling/algorithms/mytool_wrapper/
-├── __init__.py
-└── wrapper.py
-check/check_mytool.py
-scientific_intelligent_modelling/config/toolbox_config.json
-scientific_intelligent_modelling/config/envs_config.json
-```
-
-生成器不会猜测上游的真实训练入口，也不会自动解决依赖冲突；`wrapper.py` 中的 TODO 需要手工完成。
-
-### 4. 实现包装器契约
-
-包装器继承
-[`BaseWrapper`](./scientific_intelligent_modelling/algorithms/base_wrapper.py)，
-必须实现：
-
-```python
-from scientific_intelligent_modelling.algorithms.base_wrapper import BaseWrapper
-
-
-class MyToolRegressor(BaseWrapper):
-    def __init__(self, **kwargs):
-        self.params = kwargs
-        self.model = None
-
-    def fit(self, X, y):
-        self._validate_explicit_dataset_contract(
-            X,
-            n_features=self.params.pop("n_features", None),
-            feature_names=self.params.pop("feature_names", None),
-            target_name=self.params.pop("target_name", None),
-            context=self.__class__.__name__,
-        )
-        # 延迟导入上游工具，构造模型并训练。
-        return self
-
-    def predict(self, X):
-        raise NotImplementedError
-
-    def get_optimal_equation(self):
-        raise NotImplementedError
-
-    def get_total_equations(self):
-        raise NotImplementedError
-```
-
-实现时还要处理：
-
-- 框架元参数与上游模型参数的分离；
-- `X.shape == (n_samples, n_features)` 的输入约定；
-- 最优方程和候选方程的统一提取；
-- 模型状态跨子进程序列化；
-- 上游不支持 `predict` 或仅提供 CLI 时的明确降级行为；
-- 标准 runner 注入的数据契约，避免元参数误传给第三方库。
-
-如果底层模型不能可靠 pickle，应覆盖 `serialize()` 和 `deserialize()`，只保存恢复预测和方程所需的最小状态。
-
-### 5. 注册与验收
-
-确认两个配置文件中的名称完全一致：
-
-- `toolbox_config.json`：`tool_name -> env + regressor`；
-- `envs_config.json`：环境版本、依赖和安装后命令。
-
-然后依次运行：
-
-```bash
-# 结构与导入检查
-python3 tools/sr_onboarder/scripts/validate_sr_tool.py \
-  --manifest tools/sr_onboarder/manifests/mytool.json
-
-# 创建或准备好算法环境后，运行真实 smoke check
-python3 tools/sr_onboarder/scripts/validate_sr_tool.py \
-  --manifest tools/sr_onboarder/manifests/mytool.json \
-  --runtime-check
-
-# 直接执行算法自检
-python check/check_mytool.py
-```
-
-最低验收标准：
-
-- manifest 可解析，目录、配置和类名相互一致；
-- 包装器模块能在目标环境中导入；
-- `SymbolicRegressor("mytool")` 能实例化；
-- 离线小数据能完成 `fit`；
-- 最优方程非空；
-- 若声明支持预测，`predict` 返回行数正确且数值有效；
-- 新增测试通过后，再进行在线、GPU 或远程批量实验。
-
-DSO 的历史接入过程可参考
-[`docs/如何集成dso.md`](./docs/如何集成dso.md)，
-当前统一接入契约和脚手架流程以
-[`sr-tool-onboarder`](./.codex/skills/sr-tool-onboarder/SKILL.md)
-为准。
-
-## 常见问题
-
-### 数据集 Python 包目录为空
+### The dataset Python package directory is empty
 
 ```bash
 git submodule update --init --recursive -- sim-datasets-py
 ```
 
-算法源码随主仓库直接分发，不需要再执行算法子模块初始化。
+Algorithm sources are included in the main repository; only the dataset Python package is a submodule.
 
-### 找不到算法环境
+### The algorithm environment is unavailable
 
-在 `sim` 环境和仓库根目录中运行环境管理器，创建 `toolbox_config.json` 为该算法映射的环境。
+Run the environment manager from the repository root with the `sim` environment active, and create the Conda environment specified for the algorithm in `toolbox_config.json`:
 
-### TPSR/E2ESR 缺少权重
+```bash
+python -m scientific_intelligent_modelling.srkit.conda_env_manager
+```
 
-按对应工具文档设置模型路径或执行环境配置中的下载步骤：
+### An algorithm requires model weights or API access
 
-- [`docs/工具_tpsr.md`](./docs/工具_tpsr.md)
-- [`docs/工具_e2esr.md`](./docs/工具_e2esr.md)
+Follow that wrapper's bundled upstream instructions and its entry in `envs_config.json`. Supply API credentials at runtime; do not commit credentials.
 
-### LLM 算法调用失败
+### A dataset directory is loaded as a single file
 
-确认模型名、provider、API key 和网关地址都与运行配置一致。密钥应通过环境变量或本地配置注入，不要提交到 Git。
+Pass the directory itself to `--train-path`. The CLI recognizes a benchmark directory when both `metadata.yaml` and `train.csv` exist.
 
-### PySR 首次运行很慢
+## Citation and license
 
-首次启动可能需要准备 Julia 环境和编译依赖。重复运行前先确认当前任务仍在初始化，而不是直接中断。
-
-### 标准数据集被识别为普通 CSV
-
-确保传入的是目录本身，并至少存在 `metadata.yaml` 和 `train.csv`。完整评测还需要 `valid.csv`、`id_test.csv` 和 `ood_test.csv`。
-
-## 进一步阅读
-
-- [快速使用教程](./docs/使用教程.md)
-- [工具参数目录](./docs/tool_parameters_catalog.md)
-- [统一 benchmark 指标](./docs/benchmark_metrics.md)
-- [DSO 使用说明](./docs/工具_dso.md)
-- [DSO 历史接入记录](./docs/如何集成dso.md)
-- [数据集 Python 包](./sim-datasets-py/README.md)
-
-## 许可证
-
-本项目采用 [GPL-3.0-or-later](./LICENSE) 许可证。
+If you use SymbolicArena in research, cite [Zhang et al., *SymbolicArena: A Unified Infrastructure for Benchmark Distillation and Dynamic Evaluation in Symbolic Regression* (2026)](https://arxiv.org/abs/2609.35113). The repository code is licensed under [GPL-3.0-or-later](./LICENSE); reproduced paper figures are attributed above under CC BY 4.0.
