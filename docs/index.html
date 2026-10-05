@@ -26,6 +26,7 @@
         <div class="nav-links">
           <a href="#why">Framework</a>
           <a href="#demo">Explorer</a>
+          <a href="#leaderboard">Leaderboard</a>
           <a href="#paper">Research</a>
           <a href="#start">Get started</a>
         </div>
@@ -51,6 +52,7 @@
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#demo">Explore real runs <span aria-hidden="true">↗</span></a>
+            <a class="button button-secondary" href="#leaderboard">Compare methods <span aria-hidden="true">↗</span></a>
             <a class="button button-secondary" href="https://arxiv.org/abs/2609.35113" target="_blank" rel="noopener noreferrer">Read the paper <span aria-hidden="true">→</span></a>
           </div>
           <div class="hero-facts" aria-label="Project facts">
@@ -246,6 +248,57 @@
             <div><strong>92.5%</strong><span>fewer tasks per benchmark run</span></div>
             <div><strong>15</strong><span>methods evaluated across six axes</span></div>
           </div>
+
+          <section class="leaderboard-card" id="leaderboard" aria-labelledby="leaderboard-title">
+            <div class="leaderboard-heading">
+              <div>
+                <span class="card-eyebrow">CORE50 / PUBLISHED SCORES</span>
+                <h3 id="leaderboard-title">Algorithm leaderboard</h3>
+                <p>Compare all 15 methods across six evaluation axes. Select an axis to rank the table.</p>
+              </div>
+              <span class="leaderboard-count">15 methods · 6 axes</span>
+            </div>
+
+            <div class="leaderboard-toolbar">
+              <fieldset class="leaderboard-switches" aria-label="Published training-label noise">
+                <legend>Training-label noise</legend>
+                <button type="button" class="leaderboard-noise" data-condition="clean" aria-pressed="true" disabled>Clean</button>
+                <button type="button" class="leaderboard-noise" data-condition="noise001" aria-pressed="false" disabled>1%</button>
+                <button type="button" class="leaderboard-noise" data-condition="noise005" aria-pressed="false" disabled>5%</button>
+              </fieldset>
+              <fieldset class="leaderboard-switches leaderboard-axis-switches" aria-label="Leaderboard ranking axis">
+                <legend>Rank by axis</legend>
+                <button type="button" class="leaderboard-axis" data-axis="ID" aria-pressed="true" title="In-distribution numerical quality" disabled>ID</button>
+                <button type="button" class="leaderboard-axis" data-axis="OOD" aria-pressed="false" title="Out-of-distribution numerical quality" disabled>OOD</button>
+                <button type="button" class="leaderboard-axis" data-axis="SYM" aria-pressed="false" title="Symbolic recovery" disabled>SYM</button>
+                <button type="button" class="leaderboard-axis" data-axis="MIN" aria-pressed="false" title="Expression minimality" disabled>MIN</button>
+                <button type="button" class="leaderboard-axis" data-axis="EFF" aria-pressed="false" title="Search progress" disabled>EFF</button>
+                <button type="button" class="leaderboard-axis" data-axis="STAB" aria-pressed="false" title="Stability across seeds" disabled>STAB</button>
+              </fieldset>
+            </div>
+
+            <p id="leaderboard-summary" class="leaderboard-summary" role="status">Loading published scores…</p>
+            <div class="leaderboard-table-wrap" role="region" aria-label="Scrollable algorithm leaderboard" tabindex="0">
+              <table class="leaderboard-table">
+                <caption>Published Core50 scores, ranked by the selected evaluation axis</caption>
+                <thead><tr id="leaderboard-head"></tr></thead>
+                <tbody id="leaderboard-body"></tbody>
+              </table>
+            </div>
+            <p class="leaderboard-footnote">Scores are published Core50 averages on a 0–100 scale from Tables 2, 14, and 15. Ranks apply to the selected axis. The noise buttons here update published results; the Explorer has its own run controls.</p>
+
+            <div class="comparison-panel">
+              <div class="comparison-heading">
+                <div>
+                  <span class="card-eyebrow">SIDE-BY-SIDE COMPARISON</span>
+                  <h4>Compare method profiles</h4>
+                  <p id="comparison-summary">Select up to four algorithms in the table.</p>
+                </div>
+                <button id="comparison-clear" type="button" disabled>Clear selection</button>
+              </div>
+              <div id="comparison-chart" role="img" aria-label="Published six-axis profiles of the selected algorithms"></div>
+            </div>
+          </section>
 
           <article class="paper-chart-card">
             <div class="chart-heading">

@@ -12,6 +12,9 @@ const ALGORITHM_LABELS = {
   pysr: "PySR", qlattice: "QLattice", ragsr: "RAG-SR", symbolfit: "SymbolFit",
   tpsr: "TPSR", udsr: "uDSR",
 };
+const BENCHMARK_CONDITIONS = { clean: "Clean", noise001: "1% noise", noise005: "5% noise" };
+const COMPARISON_COLORS = ["#1c8f88", "#4779b8", "#db8656", "#865db3"];
+const COMPARISON_FILLS = ["rgba(28,143,136,0.12)", "rgba(71,121,184,0.12)", "rgba(219,134,86,0.12)", "rgba(134,93,179,0.12)"];
 
 const elements = {
   algorithm: document.querySelector("#algorithm-select"),
@@ -29,6 +32,12 @@ const elements = {
   paperChart: document.querySelector("#paper-chart"),
   paperChartTitle: document.querySelector("#paper-chart-title"),
   paperCondition: document.querySelector("#paper-condition"),
+  leaderboardHead: document.querySelector("#leaderboard-head"),
+  leaderboardBody: document.querySelector("#leaderboard-body"),
+  leaderboardSummary: document.querySelector("#leaderboard-summary"),
+  comparisonChart: document.querySelector("#comparison-chart"),
+  comparisonSummary: document.querySelector("#comparison-summary"),
+  comparisonClear: document.querySelector("#comparison-clear"),
   chartTitle: document.querySelector("#chart-title"),
   dimension: document.querySelector("#chart-dimension"),
   plotNote: document.querySelector("#plot-note"),
@@ -56,6 +65,11 @@ const state = {
   run: null,
   quality: null,
   condition: "clean",
+  leaderboardCondition: "clean",
+  leaderboardAxis: "ID",
+  comparison: new Set(),
+  comparisonPlotRunning: false,
+  comparisonPlotRequested: false,
   minute: 180,
   requestId: 0,
   controller: null,
@@ -400,6 +414,169 @@ function qualityLayout(minute) {
   };
 }
 
+function rankedAlgorithms() {
+  const axisIndex = state.paperResults.axes.indexOf(state.leaderboardAxis);
+  if (axisIndex < 0) throw new Error("Unknown leaderboard axis");
+  return [...state.paperResults.algorithms].sort((left, right) => {
+    const difference = right[state.leaderboardCondition][axisIndex] - left[state.leaderboardCondition][axisIndex];
+    return difference || left.name.localeCompare(right.name);
+  });
+}
+
+function updateLeaderboardExplorerHighlight() {
+  for (const row of elements.leaderboardBody.rows) {
+    row.classList.toggle("is-explorer", row.dataset.algorithm === elements.algorithm.value);
+  }
+}
+
+async function renderComparisonChart() {
+  const algorithms = [...state.comparison].map((id) => state.paperResults.algorithms.find((item) => item.id === id));
+  if (algorithms.some((item) => !item)) throw new Error("Unknown method in comparison");
+  elements.comparisonClear.disabled = algorithms.length === 0;
+  elements.comparisonChart.hidden = algorithms.length === 0;
+  if (algorithms.length === 0) {
+    elements.comparisonSummary.textContent = "Select up to four algorithms using the Compare buttons in the table.";
+    Plotly.purge(elements.comparisonChart);
+    return;
+  }
+  elements.comparisonSummary.textContent = algorithms.map((item) => item.name).join(" · ") + " · " + BENCHMARK_CONDITIONS[state.leaderboardCondition];
+  elements.comparisonChart.setAttribute("aria-label", "Published six-axis comparison of " + algorithms.map((item) => item.name).join(", "));
+  const axes = state.paperResults.axes;
+  const traces = algorithms.map((algorithm, index) => {
+    const values = algorithm[state.leaderboardCondition];
+    return {
+      type: "scatterpolar",
+      mode: "lines+markers",
+      name: algorithm.name,
+      r: [...values, values[0]],
+      theta: [...axes, axes[0]],
+      fill: "toself",
+      fillcolor: COMPARISON_FILLS[index],
+      line: { color: COMPARISON_COLORS[index], width: 3 },
+      marker: { color: COMPARISON_COLORS[index], size: 7 },
+      hovertemplate: "%{theta}: %{r:.2f}<extra>%{fullData.name}</extra>",
+    };
+  });
+  await Plotly.react(elements.comparisonChart, traces, {
+    autosize: true,
+    paper_bgcolor: "rgba(0,0,0,0)",
+    font: { family: "Inter, system-ui, sans-serif", color: "#31524b", size: 11 },
+    margin: { l: 35, r: 35, t: 20, b: 70 },
+    polar: {
+      bgcolor: "rgba(0,0,0,0)",
+      radialaxis: { range: [0, 100], tickvals: [0, 25, 50, 75, 100], gridcolor: "#dfe9e1", linecolor: "#c9d9cd" },
+      angularaxis: { gridcolor: "#dfe9e1", linecolor: "#c9d9cd", direction: "clockwise" },
+    },
+    legend: { orientation: "h", x: 0, y: -0.04 },
+    showlegend: true,
+  }, { responsive: true, displaylogo: false });
+}
+
+async function requestComparisonPlot() {
+  state.comparisonPlotRequested = true;
+  if (state.comparisonPlotRunning) return;
+  state.comparisonPlotRunning = true;
+  try {
+    while (state.comparisonPlotRequested) {
+      state.comparisonPlotRequested = false;
+      await renderComparisonChart();
+    }
+  } finally {
+    state.comparisonPlotRunning = false;
+  }
+}
+
+async function renderLeaderboard() {
+  const axes = state.paperResults.axes;
+  const focusIndex = axes.indexOf(state.leaderboardAxis);
+  if (focusIndex < 0) throw new Error("Unknown leaderboard axis");
+  const condition = state.leaderboardCondition;
+  const ranked = rankedAlgorithms();
+  for (const button of document.querySelectorAll(".leaderboard-noise")) {
+    button.setAttribute("aria-pressed", String(button.dataset.condition === condition));
+  }
+  for (const button of document.querySelectorAll(".leaderboard-axis")) {
+    button.setAttribute("aria-pressed", String(button.dataset.axis === state.leaderboardAxis));
+  }
+  const focusOrder = [focusIndex, ...axes.map((_axis, index) => index).filter((index) => index !== focusIndex)];
+  const headings = [];
+  for (const label of ["Rank", "Algorithm", ...focusOrder.map((index) => axes[index]), "Compare", "Run"]) {
+    const heading = document.createElement("th");
+    heading.scope = "col";
+    heading.textContent = label;
+    if (label === "Algorithm") heading.className = "method-heading";
+    if (label === state.leaderboardAxis) {
+      heading.className = "score-heading is-focus";
+      heading.setAttribute("aria-sort", "descending");
+    } else if (axes.includes(label)) {
+      heading.className = "score-heading";
+    }
+    headings.push(heading);
+  }
+  elements.leaderboardHead.replaceChildren(...headings);
+  const rows = [];
+  let rank = 0;
+  ranked.forEach((algorithm, index) => {
+    const focusedValue = algorithm[condition][focusIndex];
+    if (index === 0 || focusedValue !== ranked[index - 1][condition][focusIndex]) rank = index + 1;
+    const row = document.createElement("tr");
+    row.dataset.algorithm = algorithm.id;
+    if (rank === 1) row.classList.add("rank-first");
+    const rankCell = document.createElement("td");
+    rankCell.className = "rank-cell";
+    rankCell.textContent = "#" + rank;
+    row.append(rankCell);
+    const nameCell = document.createElement("th");
+    nameCell.scope = "row";
+    nameCell.className = "method-name";
+    nameCell.textContent = algorithm.name;
+    row.append(nameCell);
+    for (const axisIndex of focusOrder) {
+      const value = algorithm[condition][axisIndex];
+      const cell = document.createElement("td");
+      cell.className = "score-cell" + (axisIndex === focusIndex ? " is-focus" : "");
+      cell.setAttribute("aria-label", axes[axisIndex] + " " + value.toFixed(2) + " out of 100");
+      const number = document.createElement("strong");
+      number.textContent = value.toFixed(2);
+      const track = document.createElement("span");
+      track.className = "score-track";
+      track.setAttribute("aria-hidden", "true");
+      const fill = document.createElement("span");
+      fill.className = "score-fill";
+      fill.style.width = value + "%";
+      track.append(fill);
+      cell.append(number, track);
+      row.append(cell);
+    }
+    const compareCell = document.createElement("td");
+    const compare = document.createElement("button");
+    compare.type = "button";
+    compare.className = "compare-toggle";
+    compare.dataset.action = "compare";
+    compare.dataset.algorithm = algorithm.id;
+    compare.setAttribute("aria-pressed", String(state.comparison.has(algorithm.id)));
+    compare.setAttribute("aria-label", "Compare " + algorithm.name);
+    compare.textContent = state.comparison.has(algorithm.id) ? "✓ Added" : "+ Compare";
+    compareCell.append(compare);
+    row.append(compareCell);
+    const exploreCell = document.createElement("td");
+    const explore = document.createElement("button");
+    explore.type = "button";
+    explore.className = "explore-link";
+    explore.dataset.action = "explore";
+    explore.dataset.algorithm = algorithm.id;
+    explore.setAttribute("aria-label", "Open " + algorithm.name + " in the experiment explorer");
+    explore.textContent = "Open ↗";
+    exploreCell.append(explore);
+    row.append(exploreCell);
+    rows.push(row);
+  });
+  elements.leaderboardBody.replaceChildren(...rows);
+  updateLeaderboardExplorerHighlight();
+  elements.leaderboardSummary.textContent = "Ranked by " + state.leaderboardAxis + " · " + BENCHMARK_CONDITIONS[condition] + " · leader: " + ranked[0].name + " (" + ranked[0][condition][focusIndex].toFixed(2) + ")";
+  await requestComparisonPlot();
+}
+
 async function renderPaperChart() {
   const algorithm = state.paperResults.algorithms.find((item) => item.id === elements.algorithm.value);
   if (!algorithm) throw new Error(`The paper has no profile for ${elements.algorithm.value}`);
@@ -498,9 +675,48 @@ for (const button of document.querySelectorAll(".noise-choice")) {
     loadSelection().catch(reportError);
   });
 }
+for (const button of document.querySelectorAll(".leaderboard-noise")) {
+  button.addEventListener("click", () => {
+    state.leaderboardCondition = button.dataset.condition;
+    renderLeaderboard().catch(reportError);
+  });
+}
+for (const button of document.querySelectorAll(".leaderboard-axis")) {
+  button.addEventListener("click", () => {
+    state.leaderboardAxis = button.dataset.axis;
+    renderLeaderboard().catch(reportError);
+  });
+}
+elements.leaderboardBody.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const id = button.dataset.algorithm;
+  if (button.dataset.action === "explore") {
+    elements.algorithm.value = id;
+    elements.algorithm.dispatchEvent(new Event("change", { bubbles: true }));
+    document.querySelector("#demo").scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  if (state.comparison.has(id)) {
+    state.comparison.delete(id);
+  } else if (state.comparison.size < 4) {
+    state.comparison.add(id);
+  } else {
+    elements.comparisonSummary.textContent = "Compare up to four algorithms. Remove one to add another.";
+    return;
+  }
+  renderLeaderboard().then(() => {
+    elements.leaderboardBody.querySelector('button[data-action="compare"][data-algorithm="' + id + '"]')?.focus();
+  }).catch(reportError);
+});
+elements.comparisonClear.addEventListener("click", () => {
+  state.comparison.clear();
+  renderLeaderboard().catch(reportError);
+});
 elements.algorithm.addEventListener("change", () => {
   setDatasetOptions();
   setSeedOptions();
+  updateLeaderboardExplorerHighlight();
   loadSelection().catch(reportError);
 });
 elements.dataset.addEventListener("change", () => {
@@ -537,7 +753,7 @@ async function initialize() {
   if (catalog.schema !== SCHEMA || catalog.runs.length !== 6750 || catalog.datasets.length !== 50) {
     throw new Error("The experiment catalog has an invalid size or version");
   }
-  if (paperResults.schema !== "symbolicarena-paper-v1" || paperResults.algorithms.length !== 15 || paperResults.axes.length !== 6) {
+  if (paperResults.schema !== "symbolicarena-paper-v1" || paperResults.algorithms.length !== 15 || paperResults.axes.join(",") !== "ID,OOD,SYM,MIN,EFF,STAB") {
     throw new Error("The paper results have an invalid size or version");
   }
   const paperIds = new Set(paperResults.algorithms.map((algorithm) => algorithm.id));
@@ -557,6 +773,9 @@ async function initialize() {
   setDatasetOptions();
   setSeedOptions();
   for (const button of document.querySelectorAll(".noise-choice")) button.disabled = false;
+  state.comparison = new Set(rankedAlgorithms().slice(0, 3).map((item) => item.id));
+  for (const button of document.querySelectorAll(".leaderboard-noise, .leaderboard-axis")) button.disabled = false;
+  await renderLeaderboard();
   await loadSelection();
 }
 

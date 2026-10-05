@@ -34,7 +34,7 @@ button { cursor: pointer; }
 
 a { color: inherit; text-decoration: none; }
 
-a:focus-visible, button:focus-visible, input:focus-visible {
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .leaderboard-table-wrap:focus-visible {
   outline: 3px solid var(--teal);
   outline-offset: 3px;
 }
@@ -229,6 +229,55 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .paper-highlights > div { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 17px; padding: 22px 25px; background: var(--white); }
 .paper-highlights strong { color: var(--teal-dark); font-size: 28px; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
 .paper-highlights span { color: var(--muted); font-size: 12px; }
+.leaderboard-card { overflow: hidden; margin-bottom: 24px; border: 1px solid #cfdfd3; border-radius: 22px; background: var(--white); box-shadow: 0 20px 55px rgba(25, 76, 64, .07); }
+.leaderboard-heading { display: flex; justify-content: space-between; align-items: start; gap: 24px; padding: 28px 29px 22px; }
+.leaderboard-heading h3 { margin: 7px 0 7px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.045em; }
+.leaderboard-heading p, .comparison-heading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.leaderboard-count { flex: 0 0 auto; border-radius: 100px; padding: 9px 13px; background: #eaf5ec; color: var(--teal-dark); font-size: 11px; font-weight: 800; }
+.leaderboard-toolbar { display: flex; flex-wrap: wrap; gap: 25px 40px; border-block: 1px solid var(--line); padding: 17px 29px 20px; background: #f7faf7; }
+.leaderboard-switches { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; margin: 0; border: 0; padding: 0; }
+.leaderboard-switches legend { width: 100%; margin-bottom: 9px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .035em; }
+.leaderboard-switches button { min-width: 54px; min-height: 37px; border: 1px solid #d3e2d7; border-radius: 9px; padding: 0 12px; background: var(--white); color: var(--ink-soft); font-size: 12px; font-weight: 800; transition: background .15s, transform .15s; }
+.leaderboard-switches button:hover, .compare-toggle:hover, .explore-link:hover { transform: translateY(-2px); }
+.leaderboard-switches button:disabled, #comparison-clear:disabled { cursor: wait; opacity: .5; transform: none; }
+.leaderboard-switches button[aria-pressed="true"] { border-color: var(--teal-dark); background: var(--ink); color: var(--white); }
+.leaderboard-axis-switches button[aria-pressed="true"] { border-color: var(--teal); background: #dff3ec; color: var(--teal-dark); }
+.leaderboard-summary { margin: 0; padding: 19px 29px 13px; color: var(--ink-soft); font-size: 13px; font-weight: 700; }
+.leaderboard-table-wrap { max-width: 100%; overflow: auto; margin: 0 17px; border: 1px solid var(--line); border-radius: 13px; }
+.leaderboard-table { width: 100%; min-width: 870px; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.leaderboard-table caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.leaderboard-table th, .leaderboard-table td { border-bottom: 1px solid #edf1ed; padding: 11px 12px; text-align: left; white-space: nowrap; }
+.leaderboard-table thead th { background: #eaf2ec; color: #4a625a; font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.leaderboard-table tbody tr:last-child th, .leaderboard-table tbody tr:last-child td { border-bottom: 0; }
+.leaderboard-table tbody tr:hover { background: #f5faf6; }
+.leaderboard-table tbody tr.rank-first { background: #f3faf5; }
+.leaderboard-table tbody tr.is-explorer .method-name::after { content: "CURRENT RUN"; display: block; margin-top: 2px; color: var(--teal-dark); font-size: 8px; letter-spacing: .08em; }
+.leaderboard-table .method-heading, .leaderboard-table .method-name { position: sticky; left: 0; z-index: 1; min-width: 146px; background: var(--white); box-shadow: 1px 0 0 var(--line); }
+.leaderboard-table .method-heading { z-index: 2; background: #eaf2ec; }
+.leaderboard-table .method-name { color: var(--ink); font-size: 13px; font-weight: 800; }
+.leaderboard-table tr.rank-first .method-name { background: #f3faf5; }
+.leaderboard-table tbody tr:hover .method-name { background: #f5faf6; }
+.leaderboard-table .rank-cell { width: 46px; color: #708782; font-variant-numeric: tabular-nums; font-weight: 850; }
+.leaderboard-table .rank-first .rank-cell { color: var(--teal-dark); }
+.leaderboard-table .score-heading.is-focus { background: #d4ece0; color: var(--teal-dark); }
+.leaderboard-table .score-cell { position: relative; min-width: 82px; text-align: right; font-variant-numeric: tabular-nums; }
+.leaderboard-table .score-cell.is-focus { background: rgba(202, 237, 217, .32); }
+.score-track { position: absolute; inset: auto 10px 8px; height: 4px; border-radius: 5px; background: #e5ede6; }
+.score-fill { display: block; height: 100%; border-radius: inherit; background: #a7c8bd; }
+.score-cell.is-focus .score-fill { background: var(--teal); }
+.score-cell strong { position: relative; color: var(--ink-soft); font-size: 12px; }
+.score-cell.is-focus strong { color: var(--teal-dark); }
+.compare-toggle, .explore-link { min-height: 32px; border: 1px solid #d4e4d8; border-radius: 8px; padding: 0 10px; background: #f7faf7; color: var(--ink-soft); font-size: 11px; font-weight: 800; transition: transform .15s, background .15s; }
+.compare-toggle[aria-pressed="true"] { border-color: var(--teal-dark); background: #e0f1e9; color: var(--teal-dark); }
+.explore-link { border-color: transparent; background: transparent; color: var(--teal-dark); }
+.leaderboard-footnote { margin: 0; padding: 12px 29px 24px; color: var(--muted); font-size: 11px; line-height: 1.65; }
+.comparison-panel { border-top: 1px solid var(--line); padding: 25px 29px 20px; background: linear-gradient(180deg, #fcfefb, #fff); }
+.comparison-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.comparison-heading h4 { margin: 7px 0 5px; font-size: 20px; letter-spacing: -.035em; }
+#comparison-clear { flex: 0 0 auto; min-height: 35px; border: 1px solid #d1e1d6; border-radius: 9px; padding: 0 12px; background: var(--white); color: var(--teal-dark); font-size: 11px; font-weight: 800; }
+#comparison-clear:hover { background: #eaf5ec; }
+#comparison-chart { width: 100%; min-height: 380px; }
+#comparison-chart[hidden] { display: none; }
 .paper-chart-card { margin-bottom: 24px; border: 1px solid var(--line); border-radius: 20px; padding: 25px 28px 15px; background: var(--white); }
 .paper-chart-card h3 { margin: 8px 0 0; font-size: 21px; }
 #paper-chart { width: 100%; min-height: 360px; }
@@ -277,10 +326,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .run-details { grid-template-columns: 1fr 1fr; }
 }
 
+@media (max-width: 960px) {
+  .nav-links { display: none; }
+}
+
 @media (max-width: 760px) {
   .container { width: min(100% - 32px, 620px); }
   .nav { min-height: 68px; }
-  .nav-links { display: none; }
   .nav-github { padding: 8px 12px; }
   .hero { grid-template-columns: 1fr; padding-top: 60px; padding-bottom: 85px; }
   .hero h1 { font-size: clamp(47px, 11vw, 68px); }
@@ -318,6 +370,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   #quality-chart { min-height: 270px; }
   .timeline-card, .equation-panel, .metrics-panel { padding: 20px 17px; }
   .paper-highlights, .paper-figure-grid-three, .paper-figure-grid-two { grid-template-columns: 1fr; }
+  .leaderboard-heading, .comparison-heading { align-items: start; flex-direction: column; }
+  .leaderboard-heading, .leaderboard-toolbar, .comparison-panel { padding-inline: 17px; }
+  .leaderboard-toolbar { gap: 20px; }
+  .leaderboard-summary { padding-inline: 17px; }
+  .leaderboard-table-wrap { margin-inline: 10px; }
+  .leaderboard-footnote { padding-inline: 17px; }
+  #comparison-chart { min-height: 340px; }
   .paper-chart-card { padding: 20px 17px 10px; }
   .paper-figure { padding: 10px; }
   .timeline-footer { flex-wrap: wrap; }
