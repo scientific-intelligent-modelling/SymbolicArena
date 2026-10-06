@@ -5,6 +5,7 @@ import csv
 import importlib
 import json
 import math
+import os
 import platform
 import shlex
 import subprocess
@@ -140,6 +141,12 @@ def core50_inputs(manifest, datasets_root, output_root):
         path = datasets_root.joinpath(*relative.parts[1:])
         files = {name: sha256_file(path / name) for name in ("metadata.yaml", "train.csv", "valid.csv", "id_test.csv", "ood_test.csv")}
         dataset = load_canonical_dataset(path)
+        formula = dataset.metadata.get("ground_truth_formula") or {}
+        formula_file = formula.get("file") if isinstance(formula, dict) else None
+        if formula_file is not None:
+            formula_path = path / formula_file
+            if formula_path.is_file():
+                files[formula_file] = sha256_file(formula_path)
         inputs.append({"dataset_id": row["dataset_id"], "dataset_dir": str(path), "n_features": len(dataset.feature_names), "files": files})
     write_json(Path(output_root) / "input_manifest.json", {"selection_sha256": manifest["core50"]["sha256"], "datasets": inputs})
     return inputs
@@ -162,6 +169,12 @@ def accept_tmux_benchmark(manifest_path, dataset_dir, output_root, parameters, s
     request_path = output / "request.json"
     write_json(request_path, {"manifest": str(Path(manifest_path).resolve()), "dataset_dir": str(dataset_dir), "output_root": str(output / "results"), "parameters": parameters, "seed": seed})
     session = "onboard_" + manifest["tool_name"] + "_" + uuid.uuid4().hex[:12]
+    socket = os.environ.get("SIM_ONBOARD_TMUX_SOCKET")
+    if socket is None:
+        task_root = next(path for path in (output, *output.parents) if path.parent.name == "work")
+        socket = str(task_root / "t.sock")
+    if len(os.fsencode(socket)) >= 108:
+        raise ValueError("The task tmux socket path exceeds the Unix socket length limit")
     source = verify_source(manifest)
     command = [
         "env", manifest["source"]["environment_variable"] + "=" + str(source),
@@ -169,12 +182,12 @@ def accept_tmux_benchmark(manifest_path, dataset_dir, output_root, parameters, s
         "bash", str(repository_root() / "tools/sr_onboarder/run_task.sh"),
         sys.executable, str(request_path), str(output / "task.log"),
     ]
-    subprocess.run(["tmux", "new-session", "-d", "-s", session, shlex.join(command)], check=True)
+    subprocess.run(["tmux", "-S", socket, "new-session", "-d", "-s", session, shlex.join(command)], check=True)
     started = time.monotonic()
     allowance = float(parameters["timeout_in_seconds"]) + 180
-    while subprocess.run(["tmux", "has-session", "-t", session], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    while subprocess.run(["tmux", "-S", socket, "has-session", "-t", session], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
         if time.monotonic() - started > allowance:
-            subprocess.run(["tmux", "kill-session", "-t", session], check=True)
+            subprocess.run(["tmux", "-S", socket, "kill-session", "-t", session], check=True)
             raise TimeoutError("Integration task exceeded its allowance: " + str(output / "task.log"))
         time.sleep(0.5)
     completion_path = output / "completion.json"
@@ -190,6 +203,8 @@ def accept_tmux_benchmark(manifest_path, dataset_dir, output_root, parameters, s
 
 def run_acceptance(manifest_path, output_root, stage, dataset_dir=None, datasets_root=None, workers=1, use_tmux=False):
     manifest = load_manifest(manifest_path)
+    if not platform.python_version().startswith(manifest["environment"]["python_version"] + "."):
+        raise ValueError("Acceptance is running in a different Python version")
     output = Path(output_root).resolve()
     output.mkdir(parents=True, exist_ok=True)
     report = {
@@ -198,6 +213,8 @@ def run_acceptance(manifest_path, output_root, stage, dataset_dir=None, datasets
         "stage": stage,
         "started_at_unix": time.time(),
         "python": platform.python_version(),
+        "code_revision": subprocess.check_output(["git", "-C", str(repository_root()), "rev-parse", "HEAD"], text=True).strip(),
+        "code_dirty": bool(subprocess.check_output(["git", "-C", str(repository_root()), "status", "--porcelain", "--untracked-files=no"], text=True).strip()),
         "manifest_sha256": sha256_file(Path(manifest_path)),
         "passed": False,
         "gates": [],
@@ -253,12 +270,21 @@ def run_acceptance(manifest_path, output_root, stage, dataset_dir=None, datasets
                 executor.submit(
                     task_function, task_manifest, item["dataset_dir"],
                     output / "core50" / item["dataset_id"] / ("seed" + str(seed)),
-                    manifest["parameters"]["core50"], seed,
+                    {
+                        **manifest["parameters"]["core50"],
+                        "task_label": item["dataset_id"] + "__" + Path(item["dataset_dir"]).name,
+                        "task_global_index": int(item["dataset_id"][1:]),
+                        "expected_dataset_dir": item["dataset_dir"],
+                    }, seed,
                 ): (item, seed)
                 for item in inputs for seed in manifest["core50"]["seeds"]
             }
             for future in as_completed(futures):
                 item, seed = futures[future]
+                if future.exception() is not None:
+                    report["failed_task"] = {"dataset_id": item["dataset_id"], "seed": seed, "error": str(future.exception())}
+                    write_json(output / "acceptance.json", report)
+                    executor.shutdown(wait=False, cancel_futures=True)
                 result = future.result()
                 result["dataset_id"] = item["dataset_id"]
                 report["core50_runs"].append(result)

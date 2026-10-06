@@ -98,10 +98,10 @@ class DGPRegressor(BaseWrapper):
         for individual in hall:
             function = gp_model.toolbox.compile(expr=individual)
             predictions = np.broadcast_to(np.asarray(function(*X.T), dtype=float), (len(y),))
-            score = float(r2_score(y, predictions)) if np.isfinite(predictions).all() else -999.0
+            score = float(r2_score(y, predictions)) if np.isfinite(predictions).all() else float("-inf")
             if selected is None or score > selected[0]:
                 selected = (score, individual)
-        if selected is None or (self.best is not None and selected[0] <= self.best["internal_objective_value"]):
+        if selected is None or not np.isfinite(selected[0]) or (self.best is not None and selected[0] <= self.best["internal_objective_value"]):
             return
         if deadline is not None and time.monotonic() >= deadline:
             return

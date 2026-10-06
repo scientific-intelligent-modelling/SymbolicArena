@@ -56,6 +56,7 @@ def main():
     env = [
         "env", manifest["source"]["environment_variable"] + "=" + remote_source,
         "TMPDIR=" + remote_root + "/temporary", "PYTHONPATH=" + checkout,
+        "SIM_ONBOARD_TMUX_SOCKET=" + remote_root + "/t.sock",
     ]
     remote(env + [python, "-m", "pip", "install", "--no-build-isolation", "-e", checkout])
     remote(env + [python, "-m", "pip", "check"])
@@ -71,7 +72,7 @@ def main():
         "bash", checkout + "/tools/sr_onboarder/run_core50.sh", python, remote_manifest,
         args.datasets_root, result_root, str(args.workers), remote_root + "/core50.log",
     ]
-    remote(["tmux", "new-session", "-d", "-s", session, shlex.join(launcher)])
+    remote(["tmux", "-S", remote_root + "/t.sock", "new-session", "-d", "-s", session, shlex.join(launcher)])
     report = {
         "host": args.host,
         "remote_root": remote_root,

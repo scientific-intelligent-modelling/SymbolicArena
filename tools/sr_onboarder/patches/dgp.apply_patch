@@ -7,13 +7,34 @@
 -def optimize_with_gradient(current_set, epochs, train_data, train_target, n_arity, primitive_lst, exprs_num):
 +def optimize_with_gradient(current_set, epochs, train_data, train_target, n_arity, primitive_lst, exprs_num, deadline=None):
 @@
+-    train_data = torch.FloatTensor(train_data).to(DEVICE)
+-    train_target = torch.FloatTensor(train_target).to(DEVICE)
+-    best_r2_all = -999.0
++    train_data = torch.tensor(train_data, dtype=torch.float64, device=DEVICE)
++    train_target = torch.tensor(train_target, dtype=torch.float64, device=DEVICE)
++    best_r2_all = float("-inf")
+@@
      for expr in current_set:
 +        if deadline is not None and time.monotonic() >= deadline:
 +            return []
 @@
+-        node_mat = torch.FloatTensor(node_mat)
+-        adj_mat = torch.FloatTensor(adj_mat)
++        node_mat = torch.tensor(node_mat, dtype=torch.float64)
++        adj_mat = torch.tensor(adj_mat, dtype=torch.float64)
+@@
+-        best_r2_score = -999.0
++        best_r2_score = float("-inf")
+@@
          for epoch in range(epochs):
 +            if deadline is not None and time.monotonic() >= deadline:
 +                return []
+@@
+-            loss2 = -loss_func(aux_input, torch.tensor(0.5, requires_grad=False, device=DEVICE))
++            loss2 = -loss_func(aux_input, torch.full_like(aux_input, 0.5))
+@@
+-            if r2_score > best_r2_score:
++            if torch.isfinite(r2_score) and r2_score > best_r2_score:
 @@
 -        new_expr = [extract_symbolic_expression_tree_string(best_model, n_arity)
 +        if best_model is None:
@@ -30,13 +51,13 @@
          one = torch.ones_like(in1)
 *** Update File: const_parallelgp.py
 @@
+ import random
++import time
+@@
  def protectedDiv(x1, x2, theta=1e-4):
      x2_safe = np.where(np.abs(x2) > theta, x2, theta)
 -    return np.divide(x1, x2)
 +    return np.divide(x1, x2_safe)
-@@
- import random
-+import time
 @@
 -    def __init__(self, n_arity):
 +    def __init__(self, n_arity, n_jobs=None, diversification_steps=20, on_step=None, deadline=None):
@@ -55,4 +76,15 @@
              self.algorithm(hof=self.hof, last_pop_hof=self.last_pop, iter=i, train_data=train_data, train_target=train_target)
 +            if self.on_step is not None:
 +                self.on_step(self.hof, i)
+@@
+-            return -999.0
++            return float("-inf")
+*** Update File: const_gpbase.py
+@@
+-        return 100.,
++        return float("inf"),
+*** Update File: const_model.py
+@@
+-                p = nn.Parameter(torch.tensor(float(node.op)))
++                p = nn.Parameter(torch.tensor(float(node.op), dtype=node_matrix.dtype))
 *** End Patch

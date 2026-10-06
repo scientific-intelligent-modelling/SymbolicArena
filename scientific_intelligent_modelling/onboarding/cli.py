@@ -35,6 +35,9 @@ def setup_environment(manifest_path, output_root):
         python = env_manager.get_env_python(name)
     if python is None:
         raise RuntimeError("The new algorithm environment could not be located")
+    version = subprocess.check_output([python, "--version"], text=True).strip().split()[1]
+    if not version.startswith(config["python_version"] + "."):
+        raise ValueError("The existing algorithm environment has a different Python version")
     requirements = config.get("pip_packages", [])
     if requirements:
         subprocess.run([python, "-m", "pip", "install", *requirements], check=True, env=environment)

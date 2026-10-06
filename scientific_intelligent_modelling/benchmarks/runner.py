@@ -117,6 +117,33 @@ def _extract_registered_candidate(tool_name, experiment_dir, snapshot_minute, sn
     return candidate
 
 
+def _attach_registered_evaluation(payload, tool_name, dataset, seed, minute, task_global_index, train_label_noise):
+    if not _registered_progress(tool_name):
+        return payload
+    condition = _condition_from_train_label_noise(_freeze_train_label_noise_evidence(train_label_noise))
+    dataset_id = "g" + format(int(task_global_index), "04d") if task_global_index is not None else dataset.dataset_name
+    payload["logical_key"] = "|".join((condition, tool_name, dataset_id, str(seed), str(minute)))
+    payload["task_identity"] = {"condition": condition, "algorithm": tool_name, "dataset_id": dataset_id, "seed": seed, "minute": minute}
+    payload["evaluation_protocol"] = "symbolicarena-clipped-log-nmse-v1"
+    payload["symbolic_judgment_version"] = None
+    evidence = {}
+    for axis, split in (("ID", "id_test"), ("OOD", "ood_test")):
+        metrics = payload.get(split) or {}
+        nmse = _safe_float(metrics.get("nmse"))
+        score = None if nmse is None or nmse < 0 else ((2 - min(2, max(-12, math.log10(max(nmse, 1e-12))))) / 14) * 100
+        evidence[axis] = {"status": "available" if score is not None else "unresolved", "nmse": nmse, "score": score, "raw_metrics": metrics}
+    artifact = payload.get("canonical_artifact") or {}
+    evidence["SYM"] = {"status": "unresolved", "score": None, "judge_version": None, "raw_equation": payload.get("equation"), "canonical_expression": artifact.get("normalized_expression")}
+    evidence["MIN"] = {"status": "unresolved", "score": None, "judge_version": None, "ast_node_count": artifact.get("ast_node_count"), "tree_depth": artifact.get("tree_depth")}
+    evidence["EFF"] = {"status": "unresolved", "relative_progress": None, "cumulative": None, "native_objective": payload.get("internal_objective_value"), "reason": "requires finalized run-minute aggregation"}
+    evidence["STAB"] = {"status": "unresolved", "score": None, "seed": seed, "candidate_sha256": payload.get("candidate_sha256"), "reason": "requires cross-seed evaluation"}
+    payload["six_axis_evidence"] = evidence
+    payload["unresolved_axes"] = [axis for axis, value in evidence.items() if value["status"] == "unresolved"]
+    metadata_path = dataset.dataset_dir / "metadata.yaml"
+    payload["dataset_metadata_sha256"] = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
+    return payload
+
+
 _RUNNER_TASK_IDENTITY_PARAM_KEYS = {
     "task_label",
     "task_global_index",
@@ -2101,6 +2128,7 @@ def _build_periodic_snapshot_payload(
             payload["internal_objective_direction"] = native_contract[1]
             payload["internal_objective_value"] = None
             payload["native_objective_unavailable"] = True
+        payload = _attach_registered_evaluation(payload, tool_name, dataset, seed, checkpoint_index, task_global_index, train_label_noise)
         return _attach_progress_run_context(
             payload,
             train_label_noise=train_label_noise,
@@ -2222,6 +2250,7 @@ def _build_periodic_snapshot_payload(
     payload["candidate_available"] = True
     if candidate_fidelity is not None:
         payload["candidate_fidelity"] = dict(candidate_fidelity)
+    payload = _attach_registered_evaluation(payload, tool_name, dataset, seed, checkpoint_index, task_global_index, train_label_noise)
     return _attach_progress_run_context(
         payload,
         train_label_noise=train_label_noise,
@@ -3038,6 +3067,13 @@ def run_benchmark_task(
         result["termination_reason"] = "no_valid_output"
     else:
         result["termination_reason"] = "completed" if status == "ok" else status
+    if _registered_progress(tool_name):
+        candidate = _extract_periodic_candidate(tool_name, experiment_dir) if experiment_dir else None
+        if candidate is not None and candidate.get("equation") == equation:
+            result["native_evidence"] = candidate["native_evidence"]
+            result["candidate_sha256"] = candidate["candidate_sha256"]
+            result["internal_objective_value"] = candidate["internal_objective_value"]
+        result = _attach_registered_evaluation(result, tool_name, dataset, seed, int(result["seconds"] // 60), task_global_index, train_label_noise)
 
     _write_final_progress_payload_if_requested(
         result=result,
