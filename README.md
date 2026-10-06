@@ -45,7 +45,7 @@ Figures are reproduced from [SymbolicArena (arXiv:2609.35113v1)](https://arxiv.o
 - [`tools/`](./tools/): figure export and static data publication scripts.
 - [`tests/`](./tests/): automated checks; [`sim-datasets-py/`](./sim-datasets-py/) is a separate dataset Python package submodule.
 
-Registered algorithm IDs include `gplearn`, `pysr`, `pyoperon`, `fepysr`, `jaxsr`, `symbolfit`, `dso`, `udsr`, `llmsr`, `drsr`, `tpsr`, `e2esr`, `ragsr`, `QLattice`, and `iMCTS`. Names are case-sensitive; the authoritative registry is [`toolbox_config.json`](./scientific_intelligent_modelling/config/toolbox_config.json).
+Registered algorithm IDs include `dgp`, `gplearn`, `pysr`, `pyoperon`, `fepysr`, `jaxsr`, `symbolfit`, `dso`, `udsr`, `llmsr`, `drsr`, `tpsr`, `e2esr`, `ragsr`, `QLattice`, and `iMCTS`. Names are case-sensitive; the authoritative registry is [`toolbox_config.json`](./scientific_intelligent_modelling/config/toolbox_config.json).
 
 ## Installation
 
@@ -135,6 +135,8 @@ python -m http.server 8000 --directory docs
 Open `http://localhost:8000/`. The local HTML still retrieves public trajectory data from OSS; it does not require a local copy of the complete experiment archive.
 
 ## Extending the toolkit
+
+The [agent integration workflow](./docs/algorithm-integration.md) provides pinned source inspection, isolated environment setup, native prediction and recovery checks, minute-level budget checks, and acceptance on frozen Core50. Use the repository's `sr-tool-onboarder` skill with an author repository URL; the `sim-onboard` CLI produces source and acceptance reports. DGP is integrated through its pinned author source and the `SIM_DGP_SOURCE` environment variable.
 
 To integrate an additional algorithm, implement the shared interface in a wrapper under [`algorithms/`](./scientific_intelligent_modelling/algorithms/), register its case-sensitive name and environment in [`toolbox_config.json`](./scientific_intelligent_modelling/config/toolbox_config.json) and [`envs_config.json`](./scientific_intelligent_modelling/config/envs_config.json), and verify training, prediction, expression output, and serialization with the actual dependency. Wrappers that receive `n_features`, `feature_names`, and `target_name` must check these values against the input at the start of `fit`. Record any bundled upstream source and license in [`VENDORED_SOURCES.md`](./scientific_intelligent_modelling/algorithms/VENDORED_SOURCES.md). Pass credentials through runtime environment variables.
 

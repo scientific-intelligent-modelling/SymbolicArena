@@ -1,0 +1,36 @@
+{
+  "schema": "symbolicarena-integration-v1",
+  "tool_name": "dgp",
+  "wrapper_class": "DGPRegressor",
+  "source": {
+    "url": "https://github.com/songxt3/DGP",
+    "revision": "dc8a8634363399270291576ec575c379dff1f9bf",
+    "mode": "external",
+    "environment_variable": "SIM_DGP_SOURCE",
+    "license": "not-provided",
+    "patch": "tools/sr_onboarder/patches/dgp.apply_patch",
+    "files": {
+      "const_inference_utils.py": "d718df3a5432476e576c734a5161adf5df873fa4d5ae967505379ec5775ff203",
+      "const_parallelgp.py": "d0c4852a69fdde94b3031fe297d6b36d6d51c969551742f88c10dc49bb8ad44d",
+      "const_model.py": "bcf0af66175aa853d13bc3dba3cd78ed0bdd3623f39506ffb1d15c3ff7591af5",
+      "const_operations.py": "8a6d1d35757e9f69f0139e9848017d32bd0612aee68d3f24c8513d84838809d7",
+      "const_gpbase.py": "168d85dd39380505e9a7c11dc8d10e2b99ee0d1824f88473afb27ee218e93f9f",
+      "const_utils.py": "08a1d33af7331797786542b27d7351aa36e85e5c84670cb68719f4974609e377",
+      "const_TreefromExpr.py": "30bb80d4b087fb99b83831cbe91867ee21ff81590baee1baf8e0f640e486fd51",
+      "constant_optimizer.py": "1f337a90f86d41f28896544539adedb605de60d4735ce8ff75e606b2d832115a"
+    }
+  },
+  "environment": {"name": "sim_dgp", "python_version": "3.10"},
+  "parameters": {
+    "defaults": {"niterations": 10, "epochs": 1000, "initial_expressions": 20, "samples_first": 500, "samples_next": 400, "diversification_steps": 20, "n_jobs": 1},
+    "smoke": {"niterations": 1, "epochs": 2, "initial_expressions": 1, "samples_first": 8, "samples_next": 8, "diversification_steps": 2, "n_jobs": 1, "timeout_in_seconds": 90},
+    "budget": {"niterations": 1000000, "epochs": 2, "initial_expressions": 1, "samples_first": 8, "samples_next": 8, "diversification_steps": 2, "n_jobs": 1, "timeout_in_seconds": 65},
+    "core50": {"niterations": 1, "epochs": 2, "initial_expressions": 1, "samples_first": 8, "samples_next": 8, "diversification_steps": 2, "n_jobs": 1, "timeout_in_seconds": 120}
+  },
+  "core50": {
+    "selection": "A_ICLR_experiments/stage4_core50_15algs_3seeds_3h/1、preflight/reuse_support/core50.csv",
+    "sha256": "164eb3f863a07cf989e5c1ea3b437b0485ebb39312c7ebdea45a988db57837ba",
+    "count": 50,
+    "seeds": [520]
+  }
+}

@@ -27,6 +27,7 @@ from scientific_intelligent_modelling.benchmarks.result_artifacts import (
 )
 from scientific_intelligent_modelling.srkit.exceptions import NoValidOutputError
 from scientific_intelligent_modelling.srkit.regressor import SymbolicRegressor
+from scientific_intelligent_modelling.srkit.config_manager import config_manager
 
 
 _HIDDEN_PARAM_KEYS = {"api_key", "apikey", "token", "password", "secret"}
@@ -55,7 +56,65 @@ _E2ESR_SELECTION_POLICY = "e2esr_training_mse_v1"
 
 
 def _is_snapshot_capable_tool(tool_name: str) -> bool:
-    return str(tool_name).strip().lower() in _SNAPSHOT_CAPABLE_TOOL_KEYS
+    return str(tool_name).strip().lower() in _SNAPSHOT_CAPABLE_TOOL_KEYS or bool(_registered_progress(tool_name))
+
+
+def _registered_progress(tool_name: str) -> dict[str, Any]:
+    registration = config_manager.get_config("toolbox_config").get("tool_mapping", {}).get(tool_name, {})
+    if not registration.get("progress_file"):
+        return {}
+    for key in ("progress_file", "progress_history_file"):
+        name = registration.get(key)
+        if not isinstance(name, str) or Path(name).name != name:
+            raise ValueError("Registered progress paths must be filenames")
+    return registration
+
+
+def _extract_registered_candidate(tool_name, experiment_dir, snapshot_minute, snapshot_elapsed_seconds):
+    registration = _registered_progress(tool_name)
+    if not registration:
+        return None
+    current_path = Path(experiment_dir) / registration["progress_file"]
+    if not current_path.is_file():
+        return None
+    candidate = json.loads(current_path.read_text(encoding="utf-8"))
+    cutoff = time.time()
+    if snapshot_minute is not None and snapshot_elapsed_seconds is not None:
+        cutoff = min(cutoff, time.time() - snapshot_elapsed_seconds + snapshot_minute * 60)
+    history_path = Path(experiment_dir) / registration["progress_history_file"]
+    source_path = current_path
+    if candidate["created_at_unix"] > cutoff:
+        if not history_path.is_file():
+            raise ValueError("Native candidate history is missing")
+        records = [json.loads(line) for line in history_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        eligible = [record for record in records if record["created_at_unix"] <= cutoff]
+        if not eligible:
+            return None
+        candidate = eligible[-1]
+        source_path = history_path
+    if candidate.get("schema") != "symbolicarena-native-best-v1" or not candidate.get("equation"):
+        raise ValueError("Invalid registered native candidate")
+    candidate["objective_direction"] = candidate["internal_objective_direction"]
+    candidate["native_model_score"] = candidate["internal_objective_value"]
+    candidate["score"] = candidate["internal_objective_value"]
+    candidate["source_timestamp_unix"] = candidate["created_at_unix"]
+    candidate["candidate_sha256"] = hashlib.sha256(json.dumps(candidate, sort_keys=True, allow_nan=False).encode()).hexdigest()
+    source_path = Path(candidate["native_candidate_path"])
+    source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    if source_hash != candidate["native_candidate_sha256"]:
+        raise ValueError("The immutable native candidate checksum differs")
+    candidate["native_evidence"] = {
+        "source_path": str(source_path),
+        "source_sha256": source_hash,
+        "upstream_revision": candidate["source_revision"],
+        "upstream_files": candidate["source_files"],
+        "native_fitness": candidate["native_fitness"],
+        "evaluated_before_unix": cutoff,
+        "carry_forward": candidate["created_at_unix"] <= cutoff - 60,
+        "carry_forward_source": str(source_path) if candidate["created_at_unix"] <= cutoff - 60 else None,
+        "unresolved_axes": ["SYM", "MIN", "EFF", "STAB"],
+    }
+    return candidate
 
 
 _RUNNER_TASK_IDENTITY_PARAM_KEYS = {
@@ -518,6 +577,7 @@ _EXECUTABLE_NUMPY_CALLS = {
     "np.cbrt",
     "np.clip",
     "np.cos",
+    "np.divide",
     "np.exp",
     "np.gradient",
     "np.log",
@@ -1815,6 +1875,8 @@ def _extract_periodic_candidate(
     snapshot_minute: int | None = None,
     snapshot_elapsed_seconds: float | None = None,
 ) -> dict[str, Any] | None:
+    if _registered_progress(tool_name):
+        return _extract_registered_candidate(tool_name, experiment_dir, snapshot_minute, snapshot_elapsed_seconds)
     tool = str(tool_name).strip().lower()
     if tool == "llmsr":
         return _extract_llmsr_periodic_candidate(experiment_dir)
@@ -2142,6 +2204,8 @@ def _build_periodic_snapshot_payload(
     payload["expression_vector"] = candidate.get("expression_vector")
     payload["candidate_source_timestamp_unix"] = candidate.get("source_timestamp_unix")
     payload["candidate_sha256"] = candidate.get("candidate_sha256")
+    if candidate.get("native_evidence") is not None:
+        payload["native_evidence"] = candidate["native_evidence"]
     payload["candidate_original_equation"] = candidate.get("original_equation")
     payload["candidate_rank"] = candidate.get("candidate_rank")
     payload["candidate_bag_index"] = candidate.get("bag_index")
@@ -2817,6 +2881,9 @@ def run_benchmark_task(
         experiment_dir = getattr(reg, "experiment_dir", experiment_dir)
         equation = reg.get_optimal_equation()
         canonical_artifact, canonical_artifact_error = safe_export_canonical_artifact(reg)
+        if canonical_artifact is not None and canonical_artifact.get("native_budget_exhausted") is True:
+            budget_exhausted = True
+            timeout_type = "budget_exhausted_with_output"
         try:
             equations = reg.get_total_equations()
             equation_count = len(equations) if isinstance(equations, list) else None

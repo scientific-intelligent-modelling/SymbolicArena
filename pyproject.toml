@@ -20,7 +20,7 @@ classifiers = [
 ]
 requires-python = ">=3.6" # 基解释器版本无所谓
 
-dependencies = ["numpy>=1.18.0", "networkx>=2.5", "pyyaml>=5.1"]
+dependencies = ["numpy>=1.18.0", "networkx>=2.5", "pyyaml>=5.1", "jsonschema>=4.21,<5"]
 
 
 [tool.setuptools]
@@ -31,6 +31,7 @@ include = ["scientific_intelligent_modelling*"]
 
 [project.scripts]
 sim-cli = "scientific_intelligent_modelling.cli:main"
+sim-onboard = "scientific_intelligent_modelling.onboarding.cli:main"
 
 [tool.mypy]
 warn_return_any = true          #当函数返回Any类型时发出警告

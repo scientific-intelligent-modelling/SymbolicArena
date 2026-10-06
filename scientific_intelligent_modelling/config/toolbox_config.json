@@ -3,6 +3,13 @@
   "subprocess_timeout": 3600,
   "memory_limit": 16000,
   "tool_mapping": {
+    "dgp": {
+      "env": "sim_dgp",
+      "regressor": "DGPRegressor",
+      "normalizer": "scientific_intelligent_modelling.algorithms.dgp_wrapper.artifacts:normalize_dgp_artifact",
+      "progress_file": ".symbolicarena_current_best.json",
+      "progress_history_file": ".symbolicarena_history.jsonl"
+    },
     "gplearn": {
       "env": "sim_base",
       "regressor": "GPLearnRegressor"

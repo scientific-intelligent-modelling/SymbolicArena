@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from typing import Any
+import importlib
 
 from .artifact_schema import validate_canonical_symbolic_program
+from scientific_intelligent_modelling.srkit.config_manager import config_manager
 from .normalizers import (
     normalize_dso_artifact,
     normalize_drsr_artifact,
@@ -107,7 +109,12 @@ def safe_build_canonical_artifact(
                 shift_one_based=False,
             )
         else:
-            raise ValueError(f"暂不支持的工具名: {tool_name!r}")
+            registration = config_manager.get_config("toolbox_config").get("tool_mapping", {}).get(tool_name)
+            if not registration or not registration.get("normalizer"):
+                raise ValueError(f"暂不支持的工具名: {tool_name!r}")
+            module_name, callable_name = registration["normalizer"].split(":")
+            normalize = getattr(importlib.import_module(module_name), callable_name)
+            artifact = normalize(text, expected_n_features=expected_n_features)
         artifact = validate_canonical_symbolic_program(artifact)
         return artifact, None
     except Exception as exc:

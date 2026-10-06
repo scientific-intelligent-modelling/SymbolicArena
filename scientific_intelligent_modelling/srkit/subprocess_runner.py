@@ -340,6 +340,8 @@ def handle_recover_from_timeout(regressor_class, command):
     regressor = regressor_class(**params)
 
     # 部分 wrapper 仅在 fit 中实现“从已有实验目录恢复”的逻辑。
+    if hasattr(regressor, "mark_budget_exhausted"):
+        regressor.mark_budget_exhausted()
     if command.get('tool_name') == 'drsr':
         regressor.fit(X, y)
 

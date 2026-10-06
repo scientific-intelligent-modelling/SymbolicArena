@@ -1,5 +1,15 @@
 {
   "env_list": {
+    "sim_dgp": {
+      "python_version": "3.10",
+      "channels": ["conda-forge"],
+      "conda_packages": ["pip"],
+      "pip_packages": ["numpy==1.24.4", "pandas==1.5.3", "scipy==1.10.1", "scikit-learn==1.2.2", "sympy==1.12", "deap==1.4.3", "pmlb==1.0.1.post3", "jsonschema>=4.21,<5", "pytest>=8,<9"],
+      "post_install_commands": [
+        "python -m pip install torch==1.13.1+cpu --index-url https://download.pytorch.org/whl/cpu",
+        "python -m pip install -e ."
+      ]
+    },
     "sim_base": {
       "python_version": "3.10",
       "conda_packages": [
