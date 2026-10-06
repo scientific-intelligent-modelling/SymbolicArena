@@ -15,6 +15,7 @@ def main():
     parser.add_argument("--repository-url", default="https://github.com/scientific-intelligent-modelling/SymbolicArena.git")
     parser.add_argument("--repository-bundle")
     parser.add_argument("--remote-base-checkout")
+    parser.add_argument("--resume", action="store_true")
     parser.add_argument("--remote-root", required=True)
     parser.add_argument("--remote-conda-prefix", required=True)
     parser.add_argument("--source", required=True)
@@ -39,10 +40,15 @@ def main():
         result = subprocess.run(ssh + [shlex.join(command)], check=True, text=True, stdout=subprocess.PIPE if capture else None, timeout=180)
         return result.stdout.strip() if capture else None
 
-    if subprocess.run(ssh + [shlex.join(["test", "-e", remote_root])], timeout=30).returncode == 0:
+    exists = subprocess.run(ssh + [shlex.join(["test", "-e", remote_root])], timeout=30).returncode == 0
+    if exists and not args.resume:
         raise ValueError("Remote task directory already exists; select a new isolated task directory")
+    if args.resume and subprocess.run(ssh + [shlex.join(["test", "-e", remote_root + "/core50/acceptance.json"])], timeout=30).returncode == 0:
+        raise ValueError("Acceptance already started in this directory; retain its existing results")
     remote(["mkdir", "-p", remote_root, remote_root + "/temporary"])
-    if args.repository_bundle:
+    if exists and args.resume:
+        pass
+    elif args.repository_bundle:
         if not args.remote_base_checkout:
             raise ValueError("Git bundle deployment requires an existing base checkout")
         bundle = Path(args.repository_bundle).resolve()
@@ -50,7 +56,7 @@ def main():
         subprocess.run(["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", str(bundle), args.host + ":" + remote_bundle], check=True, timeout=180)
         remote(["git", "clone", "--no-hardlinks", "--no-checkout", args.remote_base_checkout, checkout])
         remote(["git", "-C", checkout, "fetch", remote_bundle, "refs/heads/" + args.branch])
-        remote(["git", "-C", checkout, "switch", "--detach", args.revision])
+        remote(["git", "-C", checkout, "checkout", "--detach", args.revision])
     else:
         remote(["git", "clone", "--depth", "1", "--branch", args.branch, args.repository_url, checkout])
     revision = remote(["git", "-C", checkout, "rev-parse", "HEAD"], capture=True)
