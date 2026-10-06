@@ -13,6 +13,8 @@ def main():
     parser.add_argument("--branch", required=True)
     parser.add_argument("--revision", required=True)
     parser.add_argument("--repository-url", default="https://github.com/scientific-intelligent-modelling/SymbolicArena.git")
+    parser.add_argument("--repository-bundle")
+    parser.add_argument("--remote-base-checkout")
     parser.add_argument("--remote-root", required=True)
     parser.add_argument("--remote-conda-prefix", required=True)
     parser.add_argument("--source", required=True)
@@ -40,7 +42,17 @@ def main():
     if subprocess.run(ssh + [shlex.join(["test", "-e", remote_root])], timeout=30).returncode == 0:
         raise ValueError("Remote task directory already exists; select a new isolated task directory")
     remote(["mkdir", "-p", remote_root, remote_root + "/temporary"])
-    remote(["git", "clone", "--depth", "1", "--branch", args.branch, args.repository_url, checkout])
+    if args.repository_bundle:
+        if not args.remote_base_checkout:
+            raise ValueError("Git bundle deployment requires an existing base checkout")
+        bundle = Path(args.repository_bundle).resolve()
+        remote_bundle = remote_root + "/code.bundle"
+        subprocess.run(["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", str(bundle), args.host + ":" + remote_bundle], check=True, timeout=180)
+        remote(["git", "clone", "--no-hardlinks", "--no-checkout", args.remote_base_checkout, checkout])
+        remote(["git", "-C", checkout, "fetch", remote_bundle, "refs/heads/" + args.branch])
+        remote(["git", "-C", checkout, "switch", "--detach", args.revision])
+    else:
+        remote(["git", "clone", "--depth", "1", "--branch", args.branch, args.repository_url, checkout])
     revision = remote(["git", "-C", checkout, "rev-parse", "HEAD"], capture=True)
     if revision != args.revision:
         raise ValueError("Remote branch revision differs from the requested commit")
@@ -78,6 +90,7 @@ def main():
         "remote_root": remote_root,
         "checkout": checkout,
         "revision": revision,
+        "repository_bundle_sha256": sha256_file(Path(args.repository_bundle)) if args.repository_bundle else None,
         "source": remote_source,
         "environment": environment,
         "environment_archive_sha256": sha256_file(Path(args.environment_archive)),
